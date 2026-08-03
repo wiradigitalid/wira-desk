@@ -728,7 +728,7 @@ version = "0.1.0"
 dependencies = [
  "embed-resource",
  "shared",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -2773,7 +2773,7 @@ dependencies = [
  "embed-resource",
  "shared",
  "ttf-parser",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]

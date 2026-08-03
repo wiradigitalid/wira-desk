@@ -20,7 +20,7 @@ shared = { path = "../shared" }
 # silently, so it is requested explicitly rather than assumed.
 eframe = { version = "0.35", features = ["accesskit"] }
 egui = "0.35"
-windows-sys = { version = "0.52", features = [
+windows-sys = { version = "0.61", features = [
     "Win32_Foundation",
     "Win32_UI_WindowsAndMessaging",
     "Win32_System_Registry",
