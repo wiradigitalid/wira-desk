@@ -68,6 +68,7 @@ $checked = 0
 function Write-Head($msg) { Write-Host "[gate] $msg" -ForegroundColor Cyan }
 function Write-Pass($msg) { Write-Host "[gate] PASS  $msg" -ForegroundColor Green }
 function Write-Fail($msg) { Write-Host "[gate] FAIL  $msg" -ForegroundColor Red }
+function Write-Skip($msg) { Write-Host "[gate] SKIP  $msg" -ForegroundColor Yellow }
 
 function Get-TextFiles {
     # `target/` and `out/` are build output: gitignored, never published, and full of
@@ -400,6 +401,18 @@ if (-not $SkipHistory) {
         }
         finally { Pop-Location }
     }
+    else {
+        # Not counted as a check, and said out loud rather than passed over. A missing `.git`
+        # is a legitimate state -- verifying a plain directory -- but silence here would be
+        # indistinguishable from a check that ran and approved.
+        Write-Skip 'fresh history: no .git directory, nothing to inspect'
+    }
+}
+else {
+    # Announced, because the alternative caused real doubt. Under `-SkipHistory` the total drops
+    # by one, and a smaller number with no explanation reads exactly like a gate that quietly
+    # lost a rule -- which took a dig through CI logs to rule out. The count must explain itself.
+    Write-Skip 'fresh history: skipped (-SkipHistory), so the total below is one lower'
 }
 
 # ---------------------------------------------------------------------------------------
