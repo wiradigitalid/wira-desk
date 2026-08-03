@@ -39,7 +39,7 @@ windows-sys = { version = "0.52", features = [
 ttf-parser = "0.25"
 
 [build-dependencies]
-embed-resource = "2.5"
+embed-resource = "3.0"
 
 
 [lints]
