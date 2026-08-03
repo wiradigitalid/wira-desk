@@ -1,2 +1,22 @@
 /target/
 /out/
+
+# Installer-managed AI tooling. `npx bmad-method install` writes the planning workflow's
+# agent definitions into whichever editors you select, and they are reinstalled rather than
+# committed -- see CONTRIBUTING.md. Vendoring them would mean carrying hundreds of generated
+# files that the installer replaces on its next run.
+#
+# Ignored here rather than left untracked, for a specific reason: the publication-hygiene
+# gate refuses to publish these paths, so a `git add -A` after installing would produce a
+# commit that CI rejects. The gate is right to refuse and stays as it is; this keeps the
+# situation from arising.
+/_bmad/
+/.claude/
+/.cursor/
+/.agents/
+/.agent/
+/.Codex/
+/.cursorrules.local
+
+# The planning archive under `_bmad-output/` is NOT ignored. It is committed source, and the
+# leading slash above matters: `_bmad/` is the tooling, `_bmad-output/` is the work product.
