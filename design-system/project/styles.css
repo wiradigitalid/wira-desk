@@ -1,0 +1,11 @@
+/* Wira Digital Indonesia — Design System
+ * Global entry point. Consumers link THIS file only.
+ * Contains @import lines exclusively — no rules live here. */
+
+@import "tokens/fonts.css";
+@import "tokens/colors.css";
+@import "tokens/typography.css";
+@import "tokens/spacing.css";
+@import "tokens/effects.css";
+@import "tokens/native.css";
+@import "tokens/semantic.css";

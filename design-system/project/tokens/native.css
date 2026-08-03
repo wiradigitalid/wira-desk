@@ -1,0 +1,72 @@
+/* Wira Digital — Native Windows 11 surface tokens
+ * WinTick's app UI (wintick-settings.exe, onboarding, tray) intentionally mirrors the
+ * Windows 11 (Fluent) design language so it reads as a first-party OS utility. These
+ * tokens are a SEPARATE world from the brand tokens — do not mix brand saga into native
+ * chrome. Apply the `.native` scope (light) or `.native.dark` on a native surface root.
+ *
+ * Values follow Windows 11 / Fluent 2: Mica-ish backgrounds, 8px window rounding,
+ * the default Windows accent, and the mandated tray-alert red (#E81123). */
+
+.native {
+  /* Backgrounds */
+  --n-bg-app:      #F3F3F3;  /* window backdrop (Mica base) */
+  --n-bg-layer:    #FBFBFB;  /* cards / grouped settings */
+  --n-bg-solid:    #FFFFFF;  /* solid controls, inputs */
+  --n-bg-subtle:   #EDEDED;  /* hovered rows, sunken */
+  --n-bg-control:  #FFFFFF;
+  --n-bg-control-hover: #F6F6F6;
+
+  /* Text */
+  --n-text-primary:   #1A1A1A;
+  --n-text-secondary: #5D5D5D;
+  --n-text-disabled:  #A0A0A0;
+
+  /* Strokes / dividers */
+  --n-stroke:        #E5E5E5;
+  --n-stroke-strong: #D2D2D2;
+  --n-stroke-control:#DADADA;
+
+  /* Accent — default Windows 11 light accent */
+  --n-accent:        #0067C0;
+  --n-accent-hover:  #0058A8;
+  --n-accent-text:   #FFFFFF;
+
+  /* Radii (Fluent) */
+  --n-radius-window:  8px;
+  --n-radius-control: 4px;
+  --n-radius-card:    8px;
+
+  /* Flyout / menu shadow */
+  --n-shadow-flyout: 0 8px 16px rgba(0, 0, 0, 0.14);
+  --n-shadow-window: 0 16px 40px rgba(0, 0, 0, 0.22);
+
+  /* Tray signal (mandated) */
+  --n-tray-alert: #E81123;
+
+  font-family: var(--font-native);
+  color: var(--n-text-primary);
+}
+
+.native.dark {
+  --n-bg-app:      #202020;
+  --n-bg-layer:    #2B2B2B;
+  --n-bg-solid:    #2D2D2D;
+  --n-bg-subtle:   #383838;
+  --n-bg-control:  #333333;
+  --n-bg-control-hover: #3A3A3A;
+
+  --n-text-primary:   #FFFFFF;
+  --n-text-secondary: #C8C8C8;
+  --n-text-disabled:  #767676;
+
+  --n-stroke:        #3A3A3A;
+  --n-stroke-strong: #4A4A4A;
+  --n-stroke-control:#4A4A4A;
+
+  --n-accent:        #4CC2FF; /* Win11 dark accent */
+  --n-accent-hover:  #63CBFF;
+  --n-accent-text:   #003354;
+
+  --n-shadow-flyout: 0 8px 16px rgba(0, 0, 0, 0.4);
+  --n-shadow-window: 0 16px 40px rgba(0, 0, 0, 0.5);
+}

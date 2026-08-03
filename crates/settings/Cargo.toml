@@ -1,0 +1,46 @@
+[package]
+name = "settings"
+version = "0.1.0"
+edition = "2021"
+description = "Settings UI for Wira Desk"
+license = "MIT"
+repository = "https://github.com/kodesh87/wira-desk"
+publish = false
+default-run = "wiradesk-settings"
+
+[[bin]]
+name = "wiradesk-settings"
+path = "src/main.rs"
+
+[dependencies]
+shared = { path = "../shared" }
+# Runtime verification harness freezes eframe 0.35.x with the AccessKit-backed Windows adapter.
+# `accesskit` is not a default eframe feature — without it the UI Automation
+# tree is never published and every accessibility acceptance criterion fails
+# silently, so it is requested explicitly rather than assumed.
+eframe = { version = "0.35", features = ["accesskit"] }
+egui = "0.35"
+windows-sys = { version = "0.52", features = [
+    "Win32_Foundation",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_System_Registry",
+] }
+# Sanity-check on-disk font bytes before handing them to egui, so a corrupt font
+# degrades to the fallback chain instead of panicking the app.
+#
+# This is a genuine direct dependency, not a convenience alias for something already in
+# the tree. An earlier comment here claimed it arrived transitively via
+# `ab_glyph`/`owned_ttf_parser`; that is false for the target this product ships for.
+# `cargo tree -i ttf-parser --target x86_64-pc-windows-msvc` shows only `ttf-parser ->
+# settings`, because `ab_glyph` enters solely through `sctk-adwaita`, a Wayland
+# decoration crate absent from the Windows graph. So this line is the only reason
+# `ttf-parser` is in the Windows build, which is also why its unmaintained advisory
+# cannot be filtered away by target and is instead accepted explicitly in `deny.toml`.
+ttf-parser = "0.25"
+
+[build-dependencies]
+embed-resource = "2.5"
+
+
+[lints]
+workspace = true

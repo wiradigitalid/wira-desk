@@ -1,0 +1,27 @@
+<!-- @dsCard group="Effects" viewport="700x170" name="Shadows & focus ring" subtitle="warm-tinted, low-spread · never pure black · 3px saga focus ring" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body { margin: 0; background: var(--surface-page); font-family: var(--font-mono); padding: 26px 24px; }
+  .row { display: flex; gap: 26px; align-items: center; }
+  .item { text-align: center; }
+  .box { width: 90px; height: 64px; background: var(--white); border-radius: var(--radius-md); }
+  .lab { font-size: 10px; color: var(--text-body); margin-top: 12px; }
+  .lab b { display:block; color: var(--text-strong); font-size: 11px; }
+</style>
+</head>
+<body>
+  <div class="row">
+    <div class="item"><div class="box" style="box-shadow:var(--shadow-xs)"></div><div class="lab"><b>xs</b></div></div>
+    <div class="item"><div class="box" style="box-shadow:var(--shadow-sm)"></div><div class="lab"><b>sm</b></div></div>
+    <div class="item"><div class="box" style="box-shadow:var(--shadow-md)"></div><div class="lab"><b>md</b> cards</div></div>
+    <div class="item"><div class="box" style="box-shadow:var(--shadow-lg)"></div><div class="lab"><b>lg</b> popovers</div></div>
+    <div class="item"><div class="box" style="box-shadow:var(--shadow-xl)"></div><div class="lab"><b>xl</b> modals</div></div>
+    <div class="item"><div class="box" style="box-shadow:var(--ring-brand);border:1px solid var(--border-subtle)"></div><div class="lab"><b>ring</b> focus</div></div>
+  </div>
+</body>
+</html>

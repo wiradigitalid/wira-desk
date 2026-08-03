@@ -1,0 +1,27 @@
+<!-- @dsCard group="Effects" viewport="700x150" name="Corner radii" subtitle="moderate rounding · nothing sharp, nothing bubbly" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body { margin: 0; background: var(--surface-page); font-family: var(--font-mono); padding: 20px 24px; }
+  .row { display: flex; gap: 18px; align-items: flex-end; }
+  .item { text-align: center; }
+  .box { width: 74px; height: 60px; background: var(--white); border: 1.5px solid var(--saga-400); }
+  .lab { font-size: 10px; color: var(--text-body); margin-top: 6px; }
+  .lab b { display:block; color: var(--text-strong); font-size: 11px; }
+</style>
+</head>
+<body>
+  <div class="row">
+    <div class="item"><div class="box" style="border-radius:var(--radius-xs)"></div><div class="lab"><b>xs</b>4px</div></div>
+    <div class="item"><div class="box" style="border-radius:var(--radius-sm)"></div><div class="lab"><b>sm</b>8px · inputs</div></div>
+    <div class="item"><div class="box" style="border-radius:var(--radius-md)"></div><div class="lab"><b>md</b>12px · cards</div></div>
+    <div class="item"><div class="box" style="border-radius:var(--radius-lg)"></div><div class="lab"><b>lg</b>16px</div></div>
+    <div class="item"><div class="box" style="border-radius:var(--radius-xl)"></div><div class="lab"><b>xl</b>24px</div></div>
+    <div class="item"><div class="box" style="width:100px;border-radius:var(--radius-pill)"></div><div class="lab"><b>pill</b>tags</div></div>
+  </div>
+</body>
+</html>

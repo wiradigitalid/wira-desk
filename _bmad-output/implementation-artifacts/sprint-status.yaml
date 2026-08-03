@@ -1,0 +1,173 @@
+# generated: 2026-07-07
+# last_updated: 2026-07-26
+# project: WinTick
+# project_key: NOKEY
+# tracking_system: file-system
+# story_location: {project-root}/_bmad-output/implementation-artifacts
+
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+#
+# Epic Status Transitions:
+#   - backlog → in-progress: Automatically when first story is created (via create-story)
+#   - in-progress → done: Manually when all stories reach 'done' status
+#
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created in stories folder
+#   - in-progress: Developer actively working on implementation
+#   - review: Ready for code review (via Dev's code-review workflow)
+#   - done: Story completed
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+#
+# Action Item Status:
+#   - open: Committed during a retrospective, not yet addressed
+#   - in-progress: Actively being worked on
+#   - done: Completed
+#
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when first story is created
+# - Stories can be worked in parallel if team capacity allows
+# - Developer typically creates next story after previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+# - Retrospective appends its action items to action_items; sprint-status surfaces open ones
+
+# RECONCILIATION NOTE (2026-07-26):
+# =================================
+# Hand-reconciled against the restructured `epics.md` merged in a8f95d3, which
+# expanded the backlog from 12 to 27 stories across 5 epics (5/6/4/5/7). The
+# previous file still described the pre-restructure 3-story Epic 2 and a 4-epic
+# layout, and still listed 2-1 as `ready-for-dev` although its chain closed as
+# `done`. This was NOT produced by `bmad-sprint-planning`; validate against that
+# workflow's output before relying on it for automation.
+#
+# Epic 1 keys deliberately retain their original slugs because the existing
+# story files are named that way. `epics.md` reworded several Epic 1 titles
+# during the restructure; renaming the keys here would orphan real files.
+
+generated: 2026-07-07
+last_updated: 2026-08-02
+project: WinTick
+project_key: NOKEY
+tracking_system: file-system
+story_location: "{project-root}/_bmad-output/implementation-artifacts"
+
+development_status:
+  epic-1: done
+  1-1-core-daemon-and-cargo-workspace-setup: done
+  1-2-administrator-elevation-and-uipi-bypass: done
+  1-3-system-tray-resident-and-auto-recovery: done
+  1-4-tray-context-menu-view-logs-and-auto-start: done
+  1-5-3-tier-error-protocol-and-tray-state-machine: done
+  epic-1-retrospective: optional
+
+  epic-2: in-progress
+  2-1-asynchronous-keyboard-hook-foundation: done
+  2-2-deterministic-cycling-candidate-contract-and-harness: done
+  2-3-live-z-order-and-executable-identity-discovery: done
+  2-4-eligible-window-filtering-and-ux-honesty: done
+  2-5-stateless-selection-and-resilient-activation: done
+  2-6-instant-same-application-cycling-convergence: in-progress
+  epic-2-retrospective: optional
+
+  epic-3: in-progress
+  3-1-context-safety-contract-and-deterministic-harness: done
+  3-2-physical-monitor-and-virtual-desktop-decision-adapter: in-progress
+  3-3-vm-and-remote-desktop-passthrough-decision-adapter: done
+  3-4-context-safe-cycling-convergence: in-progress
+  epic-3-retrospective: optional
+
+  epic-4: in-progress
+  4-1-arrangement-contract-and-deterministic-harness: done
+  4-2-dpi-aware-snap-planning: done
+  4-3-overlapping-stack-planning: done
+  4-4-non-blocking-win32-arrangement-adapter: in-progress
+  4-5-window-arrangement-integration-and-convergence: in-progress
+  epic-4-retrospective: optional
+
+  epic-5: in-progress
+  5-1-shared-settings-persistence-and-ipc-contract: done
+  5-2-accessible-native-theme-runtime-contract: in-progress
+  5-3-modular-settings-shell-and-safe-editing: in-progress
+  5-4-accessible-physical-shortcut-capturer: in-progress
+  5-5-interactive-first-run-shortcut-training: in-progress
+  5-6-daemon-settings-bridge-and-first-run-orchestration: in-progress
+  5-7-personalized-and-accessible-experience-convergence: backlog
+  epic-5-retrospective: optional
+
+# EXECUTION RESULTS (2026-07-26, elevated):
+#   cargo test --workspace ................ 293/293 PASS (3 consecutive runs)
+#   verify-story-5-settings-runtime.ps1 ... 10/10 PASS
+#   verify-story-2-6-convergence.ps1 ...... 7 pass, 2 miss, 2 FAIL
+#
+# Stories whose gates fully executed are now `done`. Story 2.6 stays
+# `in-progress` on a real failure, not a missing measurement: NFR10 measured
+# p95 = 17.5 ms against a < 1 ms target. Stories 3.2/3.4/4.4/4.5 remain
+# unfinished because their own runtime matrices (COM lifecycle, multi-monitor,
+# helper-window placement) have no harness yet.
+
+# CODE REVIEW RESULTS (2026-08-02, bmad-code-review, 3 fresh-context passes
+# in a dedicated worktree — branch review/fase4-code-review-epic4-5):
+#   4-4 review .................... 2 decision-needed, 4 patch (applied), 4 defer, 7 dismissed
+#   5-2 review .................... 2 decision-needed, 8 patch (applied), 3 defer, 4 dismissed
+#   5-3/5-4/5-5/5-6 review ........ 7 decision-needed, 6 patch (applied), 3 defer, 2 dismissed
+#
+# All 18 patch-tagged findings were applied and verified (cargo build/test/
+# clippy clean for the touched crates). None of the 11 decision-needed
+# findings were resolved — they need a human/architecture call, not a
+# mechanical fix — so per the review workflow's own status rule all six
+# stories move back to `in-progress` rather than staying `review` or
+# advancing to `done`. Full findings are in each story's own
+# `### Review Findings` section. Most notable: 5-6's claim "Settings→daemon
+# direction is done" is incomplete — the daemon never actually handles
+# `WM_APP_RELOAD_CONFIG`. 4-4's AC-4.4-005 (no real-window exercise) remains
+# genuinely open, and surfaced two concrete related bugs (maximized-window
+# restore, unfiltered shell-surface targets).
+
+# SPRINT CHANGE PROPOSAL 2026-08-02 (bmad-correct-course, partially executed):
+# ===========================================================================
+# The proposal resolves the 11 `decision-needed` findings into three groups:
+# seven already answered by a binding AC (ordinary dev work, no decision to
+# make), two needing a new AC, and one genuine requirement conflict (NFR10).
+#
+# §4.2 DONE — commit 0e81cfb. `daemon/config.rs` created and
+# `WM_APP_RELOAD_CONFIG` handled, with owned per-actor snapshots. This closes
+# the most user-visible finding above: Settings reported "saved and applied"
+# while the message fell through to DefWindowProcW, and a changed shortcut
+# never took effect without a restart. 12 desktop-free tests; accept and
+# reject paths both verified at runtime. Story 5-6 stays `in-progress` because
+# two pieces remain: the §4.7 capture-state signal, and the Story 5.7 AC that
+# a captured shortcut goes live with no restart (epics.md:1342).
+#
+# §4.1 (NFR10) HELD — the threshold is deliberately not set. Measurement work
+# on 2026-08-02 showed every NFR10 figure on record (17.5 ms, 27.6 ms) came
+# from `WM_APP_DEBUG_CYCLE_BURST`, which posts past the keyboard hook so the
+# daemon never holds foreground rights: `activated=0, exhausted=1000`. Those
+# numbers measure enumeration cost, not window rotation. The one valid sample,
+# from physical keypresses, is p50 29.5 / p95 47.1 / max 197 ms over 36
+# samples — 6% under the 50 ms the proposal had suggested, and still a debug
+# build. `[profile.release-metrics]` now exists so NFR10 can be measured on
+# release codegen; samples must come from physical keystrokes, as no SendInput
+# harness can reach the activation path. Epics 3/4/5 therefore remain formally
+# held by the latency figure until a valid measurement lands.
+#
+# NOT a regression, recorded because it was briefly misdiagnosed as one:
+# cycling activation works. `verify-scenario-two-windows.ps1` reporting
+# `exhausted` is a harness limitation — the same foreground-rights constraint —
+# not a product defect. Its `never-jumps-to-another-application` assertion is
+# vacuous while that holds, since it passes on any non-activating verdict.
+#
+# Also found: `verify-story-2-6-convergence.ps1` measures idle RAM on the debug
+# binary while checking binary size on release, so its RAM verdict is not a
+# product result.
+#
+# Next unit of work: Story 5.3 (§4.6 shortcut-collision AC + §4.9 pane
+# grouping) — the only remaining item with no dependency and no open decision.

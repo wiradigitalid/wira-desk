@@ -1,0 +1,102 @@
+# cargo-deny configuration — dependency gate for the release checklist.
+#
+# Why cargo-deny rather than bare `cargo audit`: `cargo audit` scans
+# `Cargo.lock`, which is platform-agnostic. This workspace ships a Windows-only
+# product but pulls a GUI stack whose Linux backends (Wayland, D-Bus/AT-SPI) sit in
+# the lockfile and never compile for `x86_64-pc-windows-msvc`. A bare `cargo audit`
+# therefore reports advisories against code the product does not contain, which
+# would make CI red from day one for reasons outside the product — and the usual
+# reaction to that is a blanket `ignore`, which hides the Windows advisories that
+# do matter. The `[graph] targets` filter below is what avoids both outcomes.
+#
+# Run: cargo deny check
+
+[graph]
+# The only target the product is built for. This is the entire point of the file.
+targets = ["x86_64-pc-windows-msvc"]
+all-features = false
+
+[advisories]
+version = 2
+yanked = "deny"
+unmaintained = "all"
+
+ignore = [
+    # `ttf-parser` is unmaintained, with no safe upgrade available. Accepted for now, and
+    # the reasoning is recorded because its reachability is easy to get wrong: the
+    # `[targets]` filter above does not remove it, and it is not a transitive inheritance
+    # from the GUI stack the way the Linux-only advisories are.
+    #
+    # Verified with `cargo tree -i --target x86_64-pc-windows-msvc`: on Windows,
+    # `ab_glyph` and `owned_ttf_parser` are absent from the graph entirely — they enter
+    # only through `sctk-adwaita`, a Wayland decoration crate. So `ttf-parser` is in the
+    # Windows build for exactly one reason: `crates/settings` depends on it directly.
+    # The `[targets]` filter above does not and cannot remove this one.
+    #
+    # Why it is accepted rather than fixed today:
+    #   - Unmaintained is not the same as vulnerable; no advisory reports a flaw in it.
+    #   - The single call site is `settings/src/theme.rs`, which parses a font file to
+    #     confirm it is well-formed before handing the bytes to egui. That guard exists
+    #     so a corrupt font degrades to the fallback chain instead of panicking the app.
+    #   - The input is a system font under `%SystemRoot%\Fonts`, a directory only
+    #     administrators can write. It is not attacker-supplied data.
+    #
+    # Future work, deliberately not done unilaterally: `skrifa` is the maintained
+    # replacement the advisory names. Swapping a reviewed validation path for a new
+    # dependency is a change worth making on purpose, not as a side effect of silencing
+    # a warning. Removing the direct dependency and hand-rolling a magic-byte check
+    # would be worse than either option.
+    { id = "RUSTSEC-2026-0192", reason = "ttf-parser unmaintained; no known vulnerability, trusted input, single defensive call site. See notes above." },
+]
+
+[licenses]
+version = 2
+# MIT-licensed product; these are the permissive licenses the dependency graph is
+# allowed to carry. A copyleft license appearing here should fail the build and be a
+# deliberate decision, not a surprise discovered after publication.
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Zlib",
+    "Unicode-3.0",
+    "MPL-2.0",
+    "CC0-1.0",
+    "Unlicense",
+    "BSL-1.0",
+    # Font licences, and they are not hypothetical. `epaint_default_fonts` is licensed
+    # `(MIT OR Apache-2.0) AND OFL-1.1 AND Ubuntu-font-1.0`, and it really is in the
+    # shipped binary: `settings/src/theme.rs` builds on `FontDefinitions::default()`, so
+    # egui's bundled faces remain the last-resort glyph fallback behind Segoe UI and
+    # Tahoma. Both licences permit redistribution of the unmodified fonts and neither
+    # reaches our own source; what they require is attribution, which `NOTICE` carries
+    # (generated from `cargo metadata`, so it cannot silently omit a dependency).
+    "OFL-1.1",
+    "Ubuntu-font-1.0",
+]
+confidence-threshold = 0.8
+
+[bans]
+# Duplicate versions are a size and audit-surface concern, not a correctness one, so
+# they warn rather than fail — a GUI stack routinely carries a few. (Currently three
+# `windows_x86_64_msvc` majors, pulled in by `embed-resource`, our own `windows-sys`,
+# and `arboard` via eframe.)
+multiple-versions = "warn"
+# A wildcard version requirement on a published crate is a real supply-chain hazard:
+# it accepts any future release, including a compromised one.
+wildcards = "deny"
+# ...but `shared = { path = "../shared" }` is counted as a wildcard too, and that is
+# not the hazard the rule is for. A workspace-internal path dependency resolves to the
+# source in this repository, never to the registry, so no unreviewed code can arrive
+# through it. Without this, the gate fails on `daemon` and `settings` permanently and
+# the honest fix would be misread as loosening `wildcards`.
+allow-wildcard-paths = true
+
+[sources]
+# Everything must come from crates.io. An unexpected git or alternative-registry
+# dependency is exactly the supply-chain change worth failing on.
+unknown-registry = "deny"
+unknown-git = "deny"

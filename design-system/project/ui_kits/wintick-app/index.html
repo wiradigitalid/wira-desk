@@ -1,0 +1,157 @@
+<!-- @dsCard group="WinTick App" viewport="1280x760" name="WinTick — desktop, onboarding, settings, tray" subtitle="Interactive Windows-11 recreation · first-run → tray → settings · 3-tier tray states" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>WinTick — App UI Kit</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="../../styles.css">
+<style>
+  html, body { margin: 0; height: 100%; }
+  body { font-family: var(--font-native); overflow: hidden; }
+  #root { height: 100vh; }
+  .desktop {
+    position: relative; height: 100vh; width: 100%; overflow: hidden;
+    background:
+      radial-gradient(120% 100% at 20% 0%, #2a3a52 0%, #1d2a3d 45%, #14202f 100%);
+  }
+  .wall-glow { position: absolute; inset: 0; background: radial-gradient(60% 50% at 70% 30%, rgba(233,177,92,.16), transparent 70%); pointer-events: none; }
+  /* taskbar */
+  .taskbar {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 48px;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    background: rgba(243,243,243,.72); backdrop-filter: blur(24px) saturate(160%);
+    border-top: 1px solid rgba(255,255,255,.35);
+  }
+  .tb-icon { width: 34px; height: 34px; border-radius: 7px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background 120ms; }
+  .tb-icon:hover { background: rgba(0,0,0,.06); }
+  .tray-region { position: absolute; right: 8px; bottom: 0; height: 48px; display: flex; align-items: center; gap: 6px; padding: 0 10px; cursor: pointer; border-radius: 7px; }
+  .tray-region:hover { background: rgba(0,0,0,.06); }
+  .clock { text-align: right; font-size: 11.5px; color: #1a1a1a; line-height: 1.25; }
+  .demo-bar {
+    position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
+    display: flex; align-items: center; gap: 8px; z-index: 40;
+    background: rgba(26,22,17,.72); backdrop-filter: blur(12px);
+    border-radius: 999px; padding: 6px 8px 6px 14px; color: #fff;
+    font-family: var(--font-mono); font-size: 11px;
+  }
+  .demo-bar button { font-family: var(--font-sans); font-size: 12px; border: 0; cursor: pointer; border-radius: 999px; padding: 5px 12px; background: rgba(255,255,255,.14); color: #fff; }
+  .demo-bar button.on { background: var(--saga-500); }
+  .overlay { position: absolute; inset: 0; background: rgba(10,14,20,.55); display: flex; align-items: center; justify-content: center; z-index: 30; }
+  .toast {
+    position: absolute; right: 12px; bottom: 60px; width: 340px; z-index: 25;
+    background: var(--n-bg-layer, #fbfbfb); border: 1px solid var(--n-stroke,#e5e5e5);
+    border-radius: 8px; box-shadow: var(--n-shadow-flyout);
+    padding: 14px 16px; font-family: var(--font-native);
+    animation: toastIn 220ms cubic-bezier(0.2,0,0,1);
+  }
+  @keyframes toastIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  .win-float { position: absolute; z-index: 20; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<script type="text/babel" src="Onboarding.jsx"></script>
+<script type="text/babel" src="SettingsWindow.jsx"></script>
+<script type="text/babel">
+const DS = window.WiraDigitalDesignSystem_61a646;
+const { TrayIcon, TrayMenu } = DS;
+
+function Desktop() {
+  const [phase, setPhase] = React.useState("onboarding"); // onboarding | idle
+  const [menu, setMenu] = React.useState(false);
+  const [settings, setSettings] = React.useState(false);
+  const [trayState, setTrayState] = React.useState("normal");
+  const [toast, setToast] = React.useState(false);
+
+  const setState = (s) => {
+    setTrayState(s);
+    setToast(s === "error");
+  };
+
+  const onMenuSelect = (it) => {
+    setMenu(false);
+    if (it.label === "Settings\u2026") setSettings(true);
+  };
+
+  return (
+    <div className="desktop" onClick={() => setMenu(false)}>
+      <div className="wall-glow" />
+
+      {/* demo controls */}
+      <div className="demo-bar" onClick={(e) => e.stopPropagation()}>
+        <span>Tray state</span>
+        <button className={trayState==="normal"?"on":""} onClick={() => setState("normal")}>Normal</button>
+        <button className={trayState==="warning"?"on":""} onClick={() => setState("warning")}>Warning</button>
+        <button className={trayState==="error"?"on":""} onClick={() => setState("error")}>Error</button>
+      </div>
+
+      {/* floating settings window */}
+      {settings && (
+        <div className="win-float" style={{ left: "50%", top: "48%", transform: "translate(-50%,-50%)" }} onClick={(e) => e.stopPropagation()}>
+          <SettingsWindow onClose={() => setSettings(false)} />
+        </div>
+      )}
+
+      {/* onboarding */}
+      {phase === "onboarding" && (
+        <div className="overlay" onClick={(e) => e.stopPropagation()}>
+          <Onboarding onFinish={() => setPhase("idle")} onSkip={() => setPhase("idle")} />
+        </div>
+      )}
+
+      {/* error toast */}
+      {toast && (
+        <div className="toast" onClick={(e) => e.stopPropagation()}>
+          <div style={{ display: "flex", gap: 10 }}>
+            <TrayIcon state="error" size={26} onDark={false} />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 13.5, fontWeight: 600, color: "var(--n-text-primary)" }}>WinTick</div>
+              <div style={{ fontSize: 12.5, color: "var(--n-text-secondary)", marginTop: 2, lineHeight: 1.45 }}>
+                Keyboard hook terlepas oleh OS. Coba jalankan sebagai Administrator, atau buka Settings untuk memulai ulang hook.
+              </div>
+            </div>
+            <button onClick={() => setToast(false)} style={{ border: 0, background: "transparent", cursor: "pointer", color: "var(--n-text-secondary)", alignSelf: "flex-start" }}>✕</button>
+          </div>
+        </div>
+      )}
+
+      {/* tray menu */}
+      {menu && (
+        <div style={{ position: "absolute", right: 10, bottom: 56, zIndex: 26 }} onClick={(e) => e.stopPropagation()}>
+          <TrayMenu onSelect={onMenuSelect} />
+        </div>
+      )}
+
+      {/* taskbar */}
+      <div className="taskbar">
+        <div className="tb-icon" title="Start"><StartGlyph /></div>
+        <div className="tb-icon" title="Search"><Dot /></div>
+        <div className="tb-icon" title="Files"><Dot /></div>
+        <div className="tb-icon" title="Chrome"><Dot accent /></div>
+      </div>
+      <div className="tray-region" title="WinTick (right-click for menu)"
+        onClick={(e) => { e.stopPropagation(); setMenu((m) => !m); }}
+        onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); setMenu(true); }}>
+        <span style={{ display: "inline-flex" }}><TrayIcon state={trayState} size={18} onDark={false} /></span>
+        <div className="clock"><div>9:41</div><div>09/07/2026</div></div>
+      </div>
+    </div>
+  );
+}
+
+function StartGlyph() {
+  return (<svg width="18" height="18" viewBox="0 0 18 18"><rect x="1" y="1" width="7" height="7" rx="1.5" fill="#0067C0"/><rect x="10" y="1" width="7" height="7" rx="1.5" fill="#0067C0"/><rect x="1" y="10" width="7" height="7" rx="1.5" fill="#0067C0"/><rect x="10" y="10" width="7" height="7" rx="1.5" fill="#0067C0"/></svg>);
+}
+function Dot({ accent }) {
+  return (<span style={{ width: 18, height: 18, borderRadius: 5, background: accent ? "linear-gradient(135deg,#e7b15c,#c63a28)" : "#c9c9c9", display: "inline-block" }} />);
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<Desktop />);
+</script>
+</body>
+</html>

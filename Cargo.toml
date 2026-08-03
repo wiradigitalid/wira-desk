@@ -1,0 +1,64 @@
+[workspace]
+members = [
+    "crates/daemon",
+    "crates/settings",
+    "crates/shared"
+]
+resolver = "2"
+
+# Safety-documentation gate for the unsafe surface.
+#
+# This daemon runs elevated and installs a global low-level keyboard hook, so the
+# FFI boundary is the part of the codebase most worth holding to a standard. The
+# gate is the compiler rather than a regex someone has to remember to run: every
+# `unsafe` block must carry a `SAFETY:` comment stating the precondition it
+# relies on, and the lint counts them for us.
+#
+# Level is `deny`. It was `warn` while the backlog was worked down — 67 sites on
+# 2026-08-03, across daemon (62), the daemon test target (3), and settings (2) —
+# and raised the moment the count reached zero, because a warn-level gate at zero
+# is one careless commit away from being a gate in name only. A new `unsafe`
+# block without a `SAFETY:` comment is now a compile error, so CI needs no
+# `-D warnings` for this rule to hold.
+#
+# What the comments are expected to contain: the precondition the block actually
+# relies on, not a restatement of what the call does. For this codebase that is
+# usually one of — buffer capacity matching the size argument handed to Win32,
+# who owns a handle or `Box` and where it is released exactly once, which thread
+# a call must run on, or why an invalid handle is tolerable because the API
+# reports failure instead of faulting.
+#
+# `missing_safety_doc` covers the other half: an `unsafe fn` must document what
+# the caller has to guarantee.
+[workspace.lints.clippy]
+undocumented_unsafe_blocks = "deny"
+missing_safety_doc = "deny"
+
+[profile.release]
+lto = true
+opt-level = "z"
+strip = true
+panic = "abort"
+codegen-units = 1
+
+# Measurement-only profile: release codegen with the instrumentation compiled in.
+#
+# Every metric seam in the daemon is `#[cfg(debug_assertions)]`-gated, so the cycling
+# latency could only ever be measured on an unoptimised debug build — a build no user
+# ever runs. Enabling `debug-assertions` on top of the release settings compiles
+# the same seams into a binary that is otherwise byte-for-byte the release
+# configuration (`lto`, `opt-level = "z"`, `codegen-units = 1`).
+#
+# `overflow-checks` is pinned off deliberately. It normally follows
+# `debug-assertions`, and leaving it on would add arithmetic cost that the
+# shipped build does not pay — the measurement would then report a latency no
+# user experiences, which is the exact failure this profile exists to end.
+#
+# `strip` is off so a profiler can resolve symbols if a measurement needs to be
+# attributed. This profile is NEVER shipped: `build.ps1` and the release gate
+# both use `--release`.
+[profile.release-metrics]
+inherits = "release"
+debug-assertions = true
+overflow-checks = false
+strip = false

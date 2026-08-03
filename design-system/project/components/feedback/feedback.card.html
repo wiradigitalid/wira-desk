@@ -1,0 +1,51 @@
+<!-- @dsCard group="Components" viewport="700x220" name="Feedback" subtitle="Badge · TrayIcon (normal / warning / error)" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="../../styles.css">
+<style>
+  body { margin: 0; background: var(--surface-page); font-family: var(--font-sans); padding: 22px; color: var(--text-strong); }
+  .lbl { font-family: var(--font-mono); font-size: 10px; letter-spacing: var(--tracking-caps); text-transform: uppercase; color: var(--text-muted); margin: 0 0 12px; }
+  .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .lbl.two { margin-top: 22px; }
+  .tray { display: flex; gap: 26px; align-items: flex-start; }
+  .ti { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .ti .cap { font-family: var(--font-mono); font-size: 10px; color: var(--text-muted); }
+  .bar { width: 56px; height: 40px; border-radius: 8px; background: var(--tanah-800); display: flex; align-items: center; justify-content: center; }
+</style>
+</head>
+<body>
+  <div id="root"></div>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <script src="../../_ds_bundle.js"></script>
+  <script type="text/babel">
+    const { Badge, TrayIcon } = window.WiraDigitalDesignSystem_61a646;
+    function Demo() {
+      return (
+        <div>
+          <p className="lbl">Badge</p>
+          <div className="row">
+            <Badge tone="brand" caps>Gratis</Badge>
+            <Badge tone="gold" appearance="soft" dot>Beta</Badge>
+            <Badge tone="neutral" appearance="outline">v0.1.0</Badge>
+            <Badge tone="success" dot>Aktif</Badge>
+            <Badge tone="warning" dot>Logged</Badge>
+            <Badge tone="danger" appearance="solid" dot>Hook dead</Badge>
+          </div>
+          <p className="lbl two">TrayIcon — 3-tier health</p>
+          <div className="tray">
+            <div className="ti"><div className="bar"><TrayIcon state="normal" /></div><span className="cap">normal</span></div>
+            <div className="ti"><div className="bar"><TrayIcon state="warning" /></div><span className="cap">warning · dot</span></div>
+            <div className="ti"><div className="bar"><TrayIcon state="error" /></div><span className="cap">error · cross</span></div>
+          </div>
+        </div>
+      );
+    }
+    ReactDOM.createRoot(document.getElementById("root")).render(<Demo />);
+  </script>
+</body>
+</html>

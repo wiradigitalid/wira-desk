@@ -1,0 +1,92 @@
+# Two tools are downloaded and checksum-verified rather than installed through an
+# action. Actions are referenced by tag and kept current by Dependabot, which is a
+# reasonable integrity story for them; gitleaks and cargo-deny are raw binary
+# downloads with no other mechanism, and they are the security gates themselves, so
+# a pinned version plus a published SHA-256 is the least this should do. Bumping
+# either version means updating its checksum in the same commit â€” deliberately, so
+# the bump is visible.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Format
+        run: cargo fmt --all -- --check
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - name: Test
+        run: cargo test --workspace --locked
+        env:
+          # The daemon links an elevation manifest, which would make the test harness
+          # itself require elevation and fail before a single test ran.
+          WIRADESK_SKIP_MANIFEST: "1"
+      - name: Release build
+        run: cargo build --workspace --release --locked
+
+  secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Required. `gitleaks git` walks history, and the default shallow clone
+          # would leave it scanning a single commit while still reporting success.
+          fetch-depth: 0
+      - name: Install gitleaks
+        run: |
+          set -euo pipefail
+          VERSION=8.30.1
+          SHA256=551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+          curl -sSfL -o gitleaks.tar.gz \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${VERSION}/gitleaks_${VERSION}_linux_x64.tar.gz"
+          echo "${SHA256}  gitleaks.tar.gz" | sha256sum -c -
+          tar xzf gitleaks.tar.gz gitleaks
+      - name: Scan history
+        run: ./gitleaks git . --redact --no-banner -c .gitleaks.toml
+      - name: Scan working tree
+        run: ./gitleaks dir . --redact --no-banner -c .gitleaks.toml
+
+  dependencies:
+    # Windows, matching the only target the product is built for and the platform this
+    # configuration was verified on. `deny.toml` pins the graph to
+    # `x86_64-pc-windows-msvc`, which is what keeps Linux-only advisories in the
+    # lockfile from failing a Windows-only product.
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install cargo-deny
+        shell: pwsh
+        run: |
+          $version = '0.20.2'
+          $expected = '975a22143262fd27476d19ee00c7af67978426e40e1dee94eed6bbade1cf87dc'
+          $asset = "cargo-deny-$version-x86_64-pc-windows-msvc"
+          Invoke-WebRequest -Uri "https://github.com/EmbarkStudios/cargo-deny/releases/download/$version/$asset.tar.gz" -OutFile deny.tar.gz
+          $actual = (Get-FileHash deny.tar.gz -Algorithm SHA256).Hash.ToLower()
+          if ($actual -ne $expected) { throw "cargo-deny checksum mismatch: got $actual" }
+          tar xzf deny.tar.gz
+          Join-Path $PWD $asset | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+      - name: Advisories, licences, bans, sources
+        run: cargo-deny check
+
+  publication-hygiene:
+    # The same gate the export runs, so a contribution cannot reintroduce what the export
+    # was built to keep out: a local path, an internal identifier, an unapproved claim.
+    # `-SkipHistory` because this repository legitimately accumulates commits after its
+    # initial release, while a fresh export must have exactly one.
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Publication hygiene
+        shell: pwsh
+        run: ./scripts/verify-public-export.ps1 -Path . -SkipHistory

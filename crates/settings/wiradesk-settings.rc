@@ -1,0 +1,42 @@
+// Resources for the Settings executable.
+//
+// Deliberately NO manifest. Settings must not request elevation: it edits a file in
+// `%APPDATA%` and needs no privilege the user does not already have, and the daemon
+// launches it with `ShellExecuteW` so it inherits whatever the launcher had. Adding
+// `requireAdministrator` here would put a UAC prompt in front of editing a shortcut.
+
+// Shares the daemon's icon rather than carrying a second copy of the same bytes. The
+// path is relative to this file, and `crates/` moves as one tree, so the reference
+// holds in the public export too.
+1 ICON "..\\daemon\\wiradesk.ico"
+
+// Version is duplicated from `Cargo.toml` because a resource script cannot read it;
+// `version_resource_matches_cargo_manifest` in `main.rs` asserts the two agree.
+1 VERSIONINFO
+FILEVERSION 0,1,0,0
+PRODUCTVERSION 0,1,0,0
+FILEFLAGSMASK 0x3fL
+FILEFLAGS 0x0L
+FILEOS 0x40004L
+FILETYPE 0x1L
+FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904b0"
+        BEGIN
+            VALUE "CompanyName", "Wira Digital Indonesia"
+            VALUE "FileDescription", "Wira Desk Settings"
+            VALUE "FileVersion", "0.1.0"
+            VALUE "InternalName", "wiradesk-settings"
+            VALUE "LegalCopyright", "Copyright (c) 2026 Wira Digital Indonesia"
+            VALUE "OriginalFilename", "wiradesk-settings.exe"
+            VALUE "ProductName", "Wira Desk"
+            VALUE "ProductVersion", "0.1.0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200
+    END
+END

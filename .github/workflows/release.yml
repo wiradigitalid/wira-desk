@@ -1,0 +1,50 @@
+# Publishes binaries with checksums on a version tag.
+#
+# Read `SECURITY.md` before trusting a download: these binaries are NOT code-signed,
+# and a checksum published beside the file it describes proves the download was not
+# corrupted in transit â€” it does not prove who produced it. Building from source is
+# still the stronger check.
+name: release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build release
+        run: cargo build --workspace --release --locked
+      - name: Stage artefacts and checksums
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory dist | Out-Null
+          Copy-Item target\release\wiradesk.exe dist\
+          Copy-Item target\release\wiradesk-settings.exe dist\
+          Get-FileHash dist\*.exe -Algorithm SHA256 |
+            ForEach-Object { '{0}  {1}' -f $_.Hash.ToLower(), (Split-Path $_.Path -Leaf) } |
+            Set-Content dist\SHA256SUMS -Encoding ascii
+          Get-Content dist\SHA256SUMS
+      - name: Publish
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $notes = @(
+            'Verify your download against SHA256SUMS before running:',
+            '',
+            '    Get-FileHash .\wiradesk.exe -Algorithm SHA256',
+            '',
+            'These binaries are not code-signed, so Windows SmartScreen will warn and the',
+            'UAC prompt will show an unverified publisher. See SECURITY.md for what that',
+            'does and does not tell you, and for the hardening note about where to install.'
+          ) -join "`n"
+          gh release create $env:GITHUB_REF_NAME `
+            dist\wiradesk.exe dist\wiradesk-settings.exe dist\SHA256SUMS `
+            --title $env:GITHUB_REF_NAME --notes $notes

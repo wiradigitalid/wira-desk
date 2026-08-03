@@ -1,0 +1,27 @@
+<!-- @dsCard group="Type" viewport="700x150" name="Mono — JetBrains Mono" subtitle="keys, shortcuts, config.toml, and the performance proof-numbers" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500&display=swap">
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body { margin: 0; background: var(--surface-page); font-family: var(--font-sans); padding: 20px 24px; color: var(--text-strong); }
+  .row { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
+  .nums { display: flex; gap: 22px; }
+  .num b { font-family: var(--font-mono); font-weight: 700; font-size: 28px; color: var(--saga-600); display: block; letter-spacing: -0.02em; }
+  .num span { font-size: 11px; color: var(--text-muted); }
+  .code { margin-top: 14px; background: var(--surface-sunken); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 10px 12px; font-family: var(--font-mono); font-size: 12.5px; color: var(--text-body); line-height: 1.7; }
+  .code .k { color: var(--saga-600); }
+  .code .s { color: var(--signal-success); }
+</style>
+</head>
+<body>
+  <div class="row nums">
+    <span class="num"><b>&lt; 2 MB</b><span>RAM statis</span></span>
+    <span class="num"><b>~0%</b><span>CPU idle</span></span>
+    <span class="num"><b>&lt; 1 ms</b><span>latensi rotasi</span></span>
+  </div>
+  <div class="code"><span class="k">shortcut</span> = <span class="s">"Win + \`"</span>&nbsp;&nbsp;<span class="k">fallback</span> = <span class="s">"Alt + \`"</span></div>
+</body>
+</html>

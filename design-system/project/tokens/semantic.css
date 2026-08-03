@@ -1,0 +1,38 @@
+/* Wira Digital — Semantic aliases
+ * Brand surfaces reference THESE, not the raw ramps. Warm, minimal, light-first. */
+
+:root {
+  /* ---- Surfaces ---- */
+  --surface-page:    var(--tanah-50);   /* app / page background (warm paper) */
+  --surface-card:    var(--white);      /* raised cards */
+  --surface-sunken:  var(--tanah-100);  /* wells, code blocks, insets */
+  --surface-inverse: var(--tanah-900);  /* dark sections, footers */
+  --surface-brand:   var(--saga-500);   /* brand-filled blocks */
+
+  /* ---- Text ---- */
+  --text-strong:   var(--tanah-900);
+  --text-body:     var(--tanah-700);
+  --text-muted:    var(--tanah-500);
+  --text-faint:    var(--tanah-400);
+  --text-inverse:  var(--tanah-50);
+  --text-on-brand: var(--white);
+  --text-link:     var(--saga-600);
+  --text-link-hover: var(--saga-700);
+
+  /* ---- Borders ---- */
+  --border-subtle: var(--tanah-200);
+  --border-strong: var(--tanah-300);
+  --border-brand:  var(--saga-500);
+
+  /* ---- Brand roles ---- */
+  --brand:          var(--saga-500);
+  --brand-hover:    var(--saga-600);
+  --brand-active:   var(--saga-700);
+  --brand-soft:     var(--saga-50);
+  --brand-contrast: var(--white);
+  --accent:         var(--emas-500);
+  --accent-soft:    #FBF1DC;
+
+  /* ---- Eyebrow / caps label ---- */
+  --eyebrow: var(--saga-600);
+}

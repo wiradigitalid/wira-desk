@@ -1,0 +1,37 @@
+<!-- @dsCard group="Colors" viewport="700x160" name="Emas accent + functional signals" subtitle="gold accent (sparing) · danger / warning / success / info held separate from brand" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@500;600&display=swap">
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body { margin: 0; background: var(--surface-page); font-family: var(--font-sans); padding: 18px; }
+  .row { display: flex; gap: 10px; }
+  .row + .row { margin-top: 12px; }
+  .chip { flex: 1; border-radius: var(--radius-sm); padding: 10px 12px; display: flex; align-items: center; gap: 10px; }
+  .dot { width: 18px; height: 18px; border-radius: 50%; flex: none; }
+  .lab { font-family: var(--font-mono); font-size: 11px; }
+  .lab b { display:block; font-weight: 600; }
+  .lab span { opacity: .7; font-size: 10px; }
+  .eyebrow { font-family: var(--font-mono); font-size: 10px; letter-spacing: var(--tracking-caps); text-transform: uppercase; color: var(--text-muted); margin: 0 0 8px; }
+</style>
+</head>
+<body>
+  <p class="eyebrow">Accent — Emas (gold)</p>
+  <div class="row">
+    <div class="chip" style="background:var(--emas-300)"><span class="lab"><b>300</b><span>#F0C983</span></span></div>
+    <div class="chip" style="background:var(--emas-400)"><span class="lab"><b>400</b><span>#E7B15C</span></span></div>
+    <div class="chip" style="background:var(--emas-500);color:#fff"><span class="lab"><b>500 ●</b><span>#D99A32</span></span></div>
+    <div class="chip" style="background:var(--emas-600);color:#fff"><span class="lab"><b>600</b><span>#B87E1F</span></span></div>
+    <div class="chip" style="background:var(--emas-700);color:#fff"><span class="lab"><b>700</b><span>#8F6013</span></span></div>
+  </div>
+  <p class="eyebrow" style="margin-top:14px">Functional signals</p>
+  <div class="row">
+    <div class="chip" style="background:var(--signal-danger-soft)"><span class="dot" style="background:var(--signal-danger)"></span><span class="lab"><b>Danger</b><span>#E81123 · tray alert</span></span></div>
+    <div class="chip" style="background:var(--signal-warning-soft)"><span class="dot" style="background:var(--signal-warning)"></span><span class="lab"><b>Warning</b><span>#E0A11B</span></span></div>
+    <div class="chip" style="background:var(--signal-success-soft)"><span class="dot" style="background:var(--signal-success)"></span><span class="lab"><b>Success</b><span>#2E9E5B</span></span></div>
+    <div class="chip" style="background:var(--signal-info-soft)"><span class="dot" style="background:var(--signal-info)"></span><span class="lab"><b>Info</b><span>#2D74C4</span></span></div>
+  </div>
+</body>
+</html>
