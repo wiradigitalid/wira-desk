@@ -19,7 +19,7 @@ jobs:
   build:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
       - name: Format
         run: cargo fmt --all -- --check
@@ -37,7 +37,7 @@ jobs:
   secrets:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           # Required. `gitleaks git` walks history, and the default shallow clone
           # would leave it scanning a single commit while still reporting success.
@@ -63,7 +63,7 @@ jobs:
     # lockfile from failing a Windows-only product.
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
       - name: Install cargo-deny
         shell: pwsh
@@ -86,7 +86,7 @@ jobs:
     # initial release, while a fresh export must have exactly one.
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Publication hygiene
         shell: pwsh
         run: ./scripts/verify-public-export.ps1 -Path . -SkipHistory
