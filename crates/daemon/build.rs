@@ -23,25 +23,68 @@
 //! also carries no icon and no version metadata. That is acceptable because the
 //! switch exists for the test harness, and `build.ps1` and the release gate both
 //! build without it — but it is the reason the name understates what is dropped.
+//!
+//! # Why the outcome is checked rather than assumed
+//! Until `embed-resource` 3.0 this script called `compile` and discarded the result,
+//! because there was no result to discard: the 2.x signature returned nothing. So a
+//! resource compiler that was missing or that failed produced a **successful build of a
+//! binary with no manifest**, and nothing anywhere would say so. That failure is silent
+//! all the way to the user's machine — tests pass because they are built with
+//! `WIRADESK_SKIP_MANIFEST` set, clippy is clean, the release build succeeds, CI is
+//! green, and the daemon then refuses to start because it cannot elevate.
+//!
+//! That is not hypothetical. A release binary was built manifest-less during this
+//! project's own release verification, and it was caught by reading bytes out of the
+//! `.exe` by hand rather than by any check.
+//!
+//! Two things close it. `manifest_required()` turns a missing or failed resource
+//! compilation into a build failure — `NotAttempted` counts as failure here, because a
+//! daemon without its manifest cannot do the one thing it exists to do. And every path
+//! through this script reports what it did in `WIRADESK_RESOURCE_STATE`, which `main.rs`
+//! reads with `env!`, so a path that returns without embedding *and* without saying so
+//! fails to compile the crate.
+
+/// Reported on every path, and consumed by `main.rs` via `env!` so that adding a path
+/// which forgets to set it is a compile error rather than a silent gap.
+fn report(state: &str) {
+    println!("cargo:rustc-env=WIRADESK_RESOURCE_STATE={state}");
+}
 
 fn main() {
     let target_os = std::env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
-    if target_os == "windows" {
-        println!("cargo:rerun-if-changed=wiradesk.rc");
-        println!("cargo:rerun-if-changed=wiradesk.manifest");
-        println!("cargo:rerun-if-env-changed=WIRADESK_SKIP_MANIFEST");
-
-        if std::env::var_os("WIRADESK_SKIP_MANIFEST").is_some() {
-            // Loud on purpose: this must never pass unnoticed in a real build.
-            println!(
-                "cargo:warning=WIRADESK_SKIP_MANIFEST is set - building without the \
-                 elevation manifest. Test-only; the daemon will refuse to start."
-            );
-            return;
-        }
-
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap_or_default();
-        let rc_path = std::path::Path::new(&manifest_dir).join("wiradesk.rc");
-        embed_resource::compile(rc_path, embed_resource::NONE);
+    if target_os != "windows" {
+        report("not-windows");
+        return;
     }
+
+    println!("cargo:rerun-if-changed=wiradesk.rc");
+    println!("cargo:rerun-if-changed=wiradesk.manifest");
+    println!("cargo:rerun-if-env-changed=WIRADESK_SKIP_MANIFEST");
+
+    if std::env::var_os("WIRADESK_SKIP_MANIFEST").is_some() {
+        // Loud on purpose: this must never pass unnoticed in a real build.
+        println!(
+            "cargo:warning=WIRADESK_SKIP_MANIFEST is set - building without the \
+             elevation manifest. Test-only; the daemon will refuse to start."
+        );
+        report("skipped");
+        return;
+    }
+
+    let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap_or_default();
+    let rc_path = std::path::Path::new(&manifest_dir).join("wiradesk.rc");
+
+    // Panicking here is the point: the alternative is shipping a daemon that cannot
+    // elevate, which fails at the user rather than at the build.
+    if let Err(e) = embed_resource::compile(rc_path, embed_resource::NONE).manifest_required() {
+        panic!(
+            "failed to embed wiradesk.rc: {e:?}\n\
+             The daemon requires its requireAdministrator manifest to install a low-level \
+             keyboard hook, and refuses to start without it. Building on without the \
+             resource would produce a binary that fails on the user's machine instead of \
+             here. If you are building for a test harness, set WIRADESK_SKIP_MANIFEST=1 \
+             deliberately."
+        );
+    }
+    report("embedded");
 }

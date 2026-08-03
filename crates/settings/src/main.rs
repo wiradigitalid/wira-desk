@@ -368,6 +368,28 @@ fn key_name(key: egui::Key) -> Option<&'static str> {
 
 #[cfg(test)]
 mod resource_tests {
+    /// Consumes the build script's report, so a path through `build.rs` that returns
+    /// without embedding the resource *and* without saying so stops this crate from
+    /// compiling. Unlike the daemon there is no skip switch here, so on Windows the only
+    /// honest outcome is `embedded` — anything else means the resource did not compile.
+    #[test]
+    fn build_script_reports_what_it_did_with_the_resource() {
+        const STATE: &str = env!("WIRADESK_SETTINGS_RESOURCE_STATE");
+        assert!(
+            matches!(STATE, "embedded" | "not-windows"),
+            "unrecognised resource state {STATE:?} - build.rs reported something this test \
+             does not know how to interpret, which means one of them is out of date"
+        );
+
+        #[cfg(windows)]
+        assert_eq!(
+            STATE, "embedded",
+            "the Settings resource was not embedded. There is no opt-out for this crate, so \
+             the only way to reach this is a resource compilation that did not happen - which \
+             ships a binary with no icon and no version metadata"
+        );
+    }
+
     /// Mirrors the daemon's guard: the version lives in both `Cargo.toml` and the
     /// resource script, and only a test can keep the two from drifting apart.
     #[test]

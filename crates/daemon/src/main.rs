@@ -135,6 +135,38 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
+    /// The build script reports what it did with the resource script, and this is where
+    /// that report is consumed. `env!` rather than `option_env!` on purpose: if a future
+    /// edit adds a path through `build.rs` that returns without embedding the resource
+    /// *and* without saying so, this crate stops compiling. That is the whole point —
+    /// the failure being guarded against is a silent one, so the guard cannot be a
+    /// runtime check that a silent failure would also skip.
+    ///
+    /// This does not assert the manifest is present in *this* binary, and cannot: the
+    /// test harness is built with `WIRADESK_SKIP_MANIFEST` set, so during `cargo test`
+    /// the honest answer is `skipped`. The guarantee for a real build comes from
+    /// `build.rs` panicking, which fails the build rather than a test.
+    #[test]
+    fn build_script_reports_what_it_did_with_the_resource() {
+        const STATE: &str = env!("WIRADESK_RESOURCE_STATE");
+        assert!(
+            matches!(STATE, "embedded" | "skipped" | "not-windows"),
+            "unrecognised resource state {STATE:?} - build.rs reported something this test \
+             does not know how to interpret, which means one of them is out of date"
+        );
+
+        // On Windows there are exactly two honest outcomes, and `embedded` is the one a
+        // shipped binary must have. `skipped` is only reachable through the explicit
+        // opt-out, so seeing it here confirms the harness took that route rather than
+        // the resource silently failing to compile.
+        #[cfg(windows)]
+        assert_ne!(
+            STATE, "not-windows",
+            "build.rs decided this is not a Windows target while the crate is compiled \
+             for Windows - the target detection in build.rs disagrees with cfg(windows)"
+        );
+    }
+
     /// A resource script cannot read `Cargo.toml`, so the version is written in both
     /// places. This is what keeps the duplicate honest: an edit that updates one and
     /// forgets the other fails here, instead of shipping a binary whose properties
