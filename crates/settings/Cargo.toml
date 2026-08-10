@@ -18,7 +18,7 @@ shared = { path = "../shared" }
 # `accesskit` is not a default eframe feature — without it the UI Automation
 # tree is never published and every accessibility acceptance criterion fails
 # silently, so it is requested explicitly rather than assumed.
-eframe = { version = "0.35", features = ["accesskit"] }
+eframe = { version = "0.36", features = ["accesskit"] }
 egui = "0.35"
 windows-sys = { version = "0.52", features = [
     "Win32_Foundation",
