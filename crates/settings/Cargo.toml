@@ -19,7 +19,7 @@ shared = { path = "../shared" }
 # tree is never published and every accessibility acceptance criterion fails
 # silently, so it is requested explicitly rather than assumed.
 eframe = { version = "0.35", features = ["accesskit"] }
-egui = "0.35"
+egui = "0.36"
 windows-sys = { version = "0.52", features = [
     "Win32_Foundation",
     "Win32_UI_WindowsAndMessaging",
