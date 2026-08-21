@@ -3,7 +3,7 @@
 defects:
   - id: DEF-1
     title: Two hook tests depend on the live desktop and fail with no foreground window
-    status: open
+    status: fixed
     severity: high
     component: window-management
     violates: [NFR-4]
@@ -40,4 +40,22 @@ defects:
       a swallowed Win key-up left the focused application treating every later keystroke as
       Win+key.
     owner: repo owner
+    fixed_in: W1
+    fixed_by: >-
+      `handle_key_event` split into a thin wrapper plus
+      `handle_key_event_with_bypass`, which takes the bypass check as an
+      `FnOnce(&mut HookRuntime) -> bool`. A closure rather than a `bool` on purpose: the live
+      Win32 query must stay lazy so it still runs only after a chord matches, never on every
+      keystroke. Production behaviour is unchanged -- the wrapper supplies the real
+      `evaluate_foreground` call -- and the two tests supply `|_| false`. Every assertion and
+      expected value is unchanged. Verified: `cargo test --workspace` exits 0, 330 passing;
+      clippy clean under `-D warnings`.
+    residual: >-
+      `hook::tests::no_modifier_release_is_ever_swallowed` still calls the live
+      `handle_key_event`, so it still queries the desktop. Its assertion holds on both branches
+      -- a bypassed chord never sets `swallow_release_vk`, so the modifier release passes
+      through either way -- which means it would also pass if the bypass swallowed everything.
+      That is the shape `docs/decisions.md` warns about: a test that can pass for the wrong
+      reason. Left alone deliberately, since it is outside this defect and the wave forbids
+      code changes beyond it. Worth routing through the same seam next time that file is open.
 

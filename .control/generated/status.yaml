@@ -5,7 +5,7 @@ rtm_rows:
   excluded_no_uc: 7
 work_progress:
 - wave: W1
-  status: open
+  status: closed
   stories_done: 6
   stories_total: 6
   work_progress: 100%
@@ -14,7 +14,7 @@ validators_red: []
 validators_skipped:
   V14: generated/timeline.yaml does not exist yet — overdue-ness is still computed from the registry,
     but its presence in generated/report is not checked
-  V19: only the RTR- line item is checked mechanically; the rest of the distillation is guarded by wdi-build
+  V19: 'advisory — wave S/M closed without an RTR-: W1'
   V27: the `.constitution/project/` room is empty, and that is a valid state — a generic rule MUST NOT
     be moved here just to give the room content
 open_questions:
