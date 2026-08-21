@@ -1022,11 +1022,11 @@ mod tests {
         let fallback = Shortcut::parse("alt+backtick").unwrap();
         for modifier in [VK_LWIN, VK_RWIN, VK_LCONTROL, VK_LMENU, VK_LSHIFT] {
             let mut rt = test_runtime(primary, fallback);
-            let _ = handle_key_event(&mut rt, VK_LWIN, true);
-            let _ = handle_key_event(&mut rt, VK_BACKTICK, true);
-            let _ = handle_key_event(&mut rt, VK_BACKTICK, false);
+            let _ = handle_key_event_with_bypass(&mut rt, VK_LWIN, true, |_| false);
+            let _ = handle_key_event_with_bypass(&mut rt, VK_BACKTICK, true, |_| false);
+            let _ = handle_key_event_with_bypass(&mut rt, VK_BACKTICK, false, |_| false);
             assert_eq!(
-                handle_key_event(&mut rt, modifier, false).disposition,
+                handle_key_event_with_bypass(&mut rt, modifier, false, |_| false).disposition,
                 KeyHandleResult::PassToNext,
                 "modifier {modifier:#x} release was swallowed - it would stick"
             );

@@ -56,6 +56,6 @@ defects:
       -- a bypassed chord never sets `swallow_release_vk`, so the modifier release passes
       through either way -- which means it would also pass if the bypass swallowed everything.
       That is the shape `docs/decisions.md` warns about: a test that can pass for the wrong
-      reason. Left alone deliberately, since it is outside this defect and the wave forbids
-      code changes beyond it. Worth routing through the same seam next time that file is open.
+      reason. Now routed through the same seam, so all three tests supply the bypass decision
+      explicitly and none of them reads the desktop. Assertion and failure message unchanged.
 
