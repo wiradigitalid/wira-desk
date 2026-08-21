@@ -7,7 +7,7 @@ updated: 2026-08-21
 satisfies: [FR-1, FR-2, FR-3, FR-4, FR-5, FR-6, FR-8, FR-9, FR-10, FR-11, FR-12, FR-14, FR-15]
 reviewed:
   date: '2026-08-21'
-  sha: pending
+  sha: '7f95c48'
   lenses: [structure, prose, edge-case-hunter]
 ---
 

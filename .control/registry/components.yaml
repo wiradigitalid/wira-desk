@@ -13,7 +13,7 @@ product_components:
       - tray-health-state
       - arrangement-command
     containers: [daemon]
-    g4_passed: false
+    g4_passed: true
 
   - id: settings
     mode: deep
@@ -26,7 +26,7 @@ product_components:
       - onboarding-completion
       - auto-start-preference
     containers: [settings]
-    g4_passed: false
+    g4_passed: true
 
 platform_owns:
   - app-config

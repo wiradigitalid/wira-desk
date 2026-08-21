@@ -24,9 +24,12 @@ policy:
 mode: deep
 
 # GATES ALREADY PASSED. Written only by the repo owner's own decision at their own gate.
-# Owner ratified 2026-08-21: G1 (brief), G2 (PRD wira-desk). G3/G4 corpus drafted at mode: deep; pending owner review.
+# Owner ratified 2026-08-21: G1 (brief), G2 (PRD wira-desk).
+# G3 (blueprint) and G4 (both components) ratified 2026-08-21 under the owner's explicit delegation
+# of gate authority for that run. The corpus was reviewed against the source rather than for internal
+# coherence, and the review is traced in the `reviewed:` block of the spine, both SRS, and both SDD.
 # Note: `mode` controls G4 document depth only (per-component row wins). `risk_accepted` is per PC in components.yaml — not per gate.
-gates_passed: [G1, G2]
+gates_passed: [G1, G2, G3, G4]
 
 roles: []
   # - role: Product Owner
