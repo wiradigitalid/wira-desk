@@ -9,79 +9,138 @@ rtm:
   FR: FR-1
   DEC: []
   UC: UC-1
-  story: ''
-  wave: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  story: S1
+  wave: W1
+  release: 0.1.0
+  test:
+  - cycling::tests::activates_next_window_of_same_application
+  - cycling::tests::same_executable_different_pid_is_same_application
+  - cycling::tests::multi_process_same_executable_groups_together
+  - cycling::tests::excluded_windows_are_skipped
+  - cycling::tests::invalid_target_continues_to_next_candidate
+  - cycling::selection::tests::wraps_to_beginning_from_last_window
+  - cycling::selection::tests::wraps_at_most_once
+  - cycling::selection::tests::active_absent_order_covers_every_eligible_window_once
+  - cycling::selection::tests::closing_window_mid_cycle_falls_through_to_next
+  - cycling::eligibility::tests::synthetic_hung_application_window_remains_eligible
+  - cycling::eligibility::tests::minimized_is_excluded
+  - cycling::eligibility::tests::ghost_outranks_every_other_exclusion
+  - cycling::eligibility::tests::same_executable_across_processes_stays_eligible
+  - context::tests::different_monitor_is_rejected
+  - context::tests::non_current_virtual_desktop_is_rejected
+  - context::tests::unknown_virtual_desktop_fails_closed
+  - context::vm_bypass::tests::configured_process_passes_through
+  - context::vm_bypass::tests::configured_class_passes_through_when_process_does_not_match
+  - context::vm_bypass::tests::fully_unresolved_fails_open
+  - hook::tests::exact_primary_match
+  - hook::tests::extra_modifier_is_non_match
+  - hook::tests::throttle_boundary
+  status: done
   exempt: false
-  broken_at: story
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-9
   FR: FR-10
   DEC: []
   UC: UC-3
-  story: ''
-  wave: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  story: S3
+  wave: W1
+  release: 0.1.0
+  test:
+  - tray::tests::next_hook_check_state_escalates_after_threshold
+  - tray::tests::next_hook_check_state_keeps_escalating_while_still_failing
+  - tray::tests::next_hook_check_state_resets_on_success
+  - tray::tests::state_after_recovery_restores_latched_warning
+  - menu::tests::settings_exe_matches_cargo_bin_name
+  - log::tests::format_timestamp_pads_single_digit_fields
+  status: done
   exempt: false
-  broken_at: story
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-9
   FR: FR-11
   DEC: []
   UC: UC-3
-  story: ''
-  wave: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  story: S3
+  wave: W1
+  release: 0.1.0
+  test:
+  - tray::tests::next_hook_check_state_escalates_after_threshold
+  - tray::tests::next_hook_check_state_keeps_escalating_while_still_failing
+  - tray::tests::next_hook_check_state_resets_on_success
+  - tray::tests::state_after_recovery_restores_latched_warning
+  - menu::tests::settings_exe_matches_cargo_bin_name
+  - log::tests::format_timestamp_pads_single_digit_fields
+  status: done
   exempt: false
-  broken_at: story
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-11
   FR: FR-12
   DEC: []
   UC: UC-3
-  story: ''
-  wave: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  story: S3
+  wave: W1
+  release: 0.1.0
+  test:
+  - tray::tests::next_hook_check_state_escalates_after_threshold
+  - tray::tests::next_hook_check_state_keeps_escalating_while_still_failing
+  - tray::tests::next_hook_check_state_resets_on_success
+  - tray::tests::state_after_recovery_restores_latched_warning
+  - menu::tests::settings_exe_matches_cargo_bin_name
+  - log::tests::format_timestamp_pads_single_digit_fields
+  status: done
   exempt: false
-  broken_at: story
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-10
   FR: FR-13
   DEC: []
   UC: UC-6
-  story: ''
-  wave: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  story: S6
+  wave: W1
+  release: 0.1.0
+  test:
+  - autostart::tests::create_args_carries_logon_elevation_flags
+  - autostart::tests::create_args_wraps_exe_path_in_quotes
+  - autostart::tests::query_and_delete_target_the_pinned_task_name
+  status: done
   exempt: false
-  broken_at: story
+  green: true
+  broken_at: ''
 - BG: BG-3
   CAP: CAP-2
   FR: FR-14
   DEC: []
   UC: UC-2
-  story: ''
-  wave: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  story: S2
+  wave: W1
+  release: 0.1.0
+  test:
+  - arrangement::snap::tests::snap_left_returns_left_half
+  - arrangement::snap::tests::snap_right_returns_complementary_half
+  - arrangement::snap::tests::halves_tile_the_work_area_without_gap_or_overlap
+  - arrangement::snap::tests::halves_stay_inside_the_work_area
+  - arrangement::snap::tests::maximize_never_exceeds_the_work_area
+  - arrangement::snap::tests::maximize_returns_the_whole_work_area
+  - arrangement::snap::tests::identical_geometry_yields_identical_plans_at_every_dpi
+  - arrangement::snap::tests::odd_width_is_split_deterministically
+  - arrangement::snap::tests::halves_work_at_negative_origin
+  - arrangement::snap::tests::inverted_work_area_fails_without_placement
+  - arrangement::snap::tests::empty_work_area_fails_without_placement
+  - arrangement::snap::tests::one_pixel_wide_work_area_still_splits_safely
+  - arrangement::tests::arrangement_shortcut_defaults_are_frozen
+  - arrangement::tests::command_set_contains_no_inter_monitor_arrangement
+  - arrangement::win32::tests::an_invalid_target_is_skipped_and_the_rest_continue
+  - arrangement::win32::tests::negative_monitor_coordinates_survive_conversion
+  status: done
   exempt: false
-  broken_at: story
+  green: true
+  broken_at: ''
 - BG: BG-3
   CAP: CAP-2
   FR: FR-15
@@ -113,27 +172,56 @@ rtm:
   FR: FR-17
   DEC: []
   UC: UC-5
-  story: ''
-  wave: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  story: S5
+  wave: W1
+  release: 0.1.0
+  test:
+  - app::tests::onboarding_is_absent_unless_requested
+  - app::tests::onboarding_starts_at_welcome_and_advances_to_done
+  - app::tests::every_onboarding_step_has_heading_and_body
+  - app::tests::onboarding_teaches_the_spatial_philosophy
+  - app::tests::skip_reaches_the_same_terminal_state_as_completing
+  - persistence::tests::missing_config_selects_onboarding
+  - persistence::tests::existing_config_selects_settings
+  - persistence::tests::explicit_flag_forces_onboarding
+  - persistence::tests::onboarding_flag_is_the_frozen_spelling
+  - persistence::tests::completing_onboarding_writes_a_valid_config_so_it_does_not_repeat
+  status: done
   exempt: false
-  broken_at: story
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-5
   FR: FR-18
   DEC: []
   UC: UC-4
-  story: ''
-  wave: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  story: S4
+  wave: W1
+  release: 0.1.0
+  test:
+  - app::tests::capture_starts_idle
+  - app::tests::beginning_capture_targets_exactly_one_field
+  - app::tests::accepting_a_valid_capture_stores_the_canonical_form
+  - app::tests::accepting_without_listening_is_a_no_op
+  - app::tests::cancelling_capture_changes_nothing
+  - app::tests::editing_the_draft_marks_dirty_without_touching_saved
+  - app::tests::a_successful_save_promotes_the_draft_and_clears_dirty
+  - app::tests::a_rejected_save_reports_an_error_and_does_not_promote_the_draft
+  - persistence::tests::valid_shortcut_returns_canonical_form
+  - persistence::tests::bare_main_key_without_a_modifier_is_rejected
+  - persistence::tests::modifier_only_is_reported_as_no_main_key
+  - persistence::tests::two_main_keys_are_reported_distinctly
+  - persistence::tests::unsupported_token_is_reported_as_such
+  - persistence::tests::an_invalid_field_names_itself
+  - persistence::tests::rejection_leaves_the_previous_file_intact
+  - persistence::tests::saved_config_round_trips_without_loss
+  - persistence::tests::default_config_uses_frozen_shortcuts
+  - persistence::tests::reload_uses_the_frozen_message_identifier
+  - persistence::tests::reload_signal_is_harmless_when_no_daemon_is_running
+  status: done
   exempt: false
-  broken_at: story
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-5
   FR: FR-19
@@ -152,14 +240,36 @@ rtm:
   FR: FR-2
   DEC: []
   UC: UC-1
-  story: ''
-  wave: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  story: S1
+  wave: W1
+  release: 0.1.0
+  test:
+  - cycling::tests::activates_next_window_of_same_application
+  - cycling::tests::same_executable_different_pid_is_same_application
+  - cycling::tests::multi_process_same_executable_groups_together
+  - cycling::tests::excluded_windows_are_skipped
+  - cycling::tests::invalid_target_continues_to_next_candidate
+  - cycling::selection::tests::wraps_to_beginning_from_last_window
+  - cycling::selection::tests::wraps_at_most_once
+  - cycling::selection::tests::active_absent_order_covers_every_eligible_window_once
+  - cycling::selection::tests::closing_window_mid_cycle_falls_through_to_next
+  - cycling::eligibility::tests::synthetic_hung_application_window_remains_eligible
+  - cycling::eligibility::tests::minimized_is_excluded
+  - cycling::eligibility::tests::ghost_outranks_every_other_exclusion
+  - cycling::eligibility::tests::same_executable_across_processes_stays_eligible
+  - context::tests::different_monitor_is_rejected
+  - context::tests::non_current_virtual_desktop_is_rejected
+  - context::tests::unknown_virtual_desktop_fails_closed
+  - context::vm_bypass::tests::configured_process_passes_through
+  - context::vm_bypass::tests::configured_class_passes_through_when_process_does_not_match
+  - context::vm_bypass::tests::fully_unresolved_fails_open
+  - hook::tests::exact_primary_match
+  - hook::tests::extra_modifier_is_non_match
+  - hook::tests::throttle_boundary
+  status: done
   exempt: false
-  broken_at: story
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-5
   FR: FR-20
@@ -191,66 +301,173 @@ rtm:
   FR: FR-3
   DEC: []
   UC: UC-1
-  story: ''
-  wave: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  story: S1
+  wave: W1
+  release: 0.1.0
+  test:
+  - cycling::tests::activates_next_window_of_same_application
+  - cycling::tests::same_executable_different_pid_is_same_application
+  - cycling::tests::multi_process_same_executable_groups_together
+  - cycling::tests::excluded_windows_are_skipped
+  - cycling::tests::invalid_target_continues_to_next_candidate
+  - cycling::selection::tests::wraps_to_beginning_from_last_window
+  - cycling::selection::tests::wraps_at_most_once
+  - cycling::selection::tests::active_absent_order_covers_every_eligible_window_once
+  - cycling::selection::tests::closing_window_mid_cycle_falls_through_to_next
+  - cycling::eligibility::tests::synthetic_hung_application_window_remains_eligible
+  - cycling::eligibility::tests::minimized_is_excluded
+  - cycling::eligibility::tests::ghost_outranks_every_other_exclusion
+  - cycling::eligibility::tests::same_executable_across_processes_stays_eligible
+  - context::tests::different_monitor_is_rejected
+  - context::tests::non_current_virtual_desktop_is_rejected
+  - context::tests::unknown_virtual_desktop_fails_closed
+  - context::vm_bypass::tests::configured_process_passes_through
+  - context::vm_bypass::tests::configured_class_passes_through_when_process_does_not_match
+  - context::vm_bypass::tests::fully_unresolved_fails_open
+  - hook::tests::exact_primary_match
+  - hook::tests::extra_modifier_is_non_match
+  - hook::tests::throttle_boundary
+  status: done
   exempt: false
-  broken_at: story
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-1
   FR: FR-4
   DEC: []
   UC: UC-1
-  story: ''
-  wave: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  story: S1
+  wave: W1
+  release: 0.1.0
+  test:
+  - cycling::tests::activates_next_window_of_same_application
+  - cycling::tests::same_executable_different_pid_is_same_application
+  - cycling::tests::multi_process_same_executable_groups_together
+  - cycling::tests::excluded_windows_are_skipped
+  - cycling::tests::invalid_target_continues_to_next_candidate
+  - cycling::selection::tests::wraps_to_beginning_from_last_window
+  - cycling::selection::tests::wraps_at_most_once
+  - cycling::selection::tests::active_absent_order_covers_every_eligible_window_once
+  - cycling::selection::tests::closing_window_mid_cycle_falls_through_to_next
+  - cycling::eligibility::tests::synthetic_hung_application_window_remains_eligible
+  - cycling::eligibility::tests::minimized_is_excluded
+  - cycling::eligibility::tests::ghost_outranks_every_other_exclusion
+  - cycling::eligibility::tests::same_executable_across_processes_stays_eligible
+  - context::tests::different_monitor_is_rejected
+  - context::tests::non_current_virtual_desktop_is_rejected
+  - context::tests::unknown_virtual_desktop_fails_closed
+  - context::vm_bypass::tests::configured_process_passes_through
+  - context::vm_bypass::tests::configured_class_passes_through_when_process_does_not_match
+  - context::vm_bypass::tests::fully_unresolved_fails_open
+  - hook::tests::exact_primary_match
+  - hook::tests::extra_modifier_is_non_match
+  - hook::tests::throttle_boundary
+  status: done
   exempt: false
-  broken_at: story
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-1
   FR: FR-5
   DEC: []
   UC: UC-1
-  story: ''
-  wave: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  story: S1
+  wave: W1
+  release: 0.1.0
+  test:
+  - cycling::tests::activates_next_window_of_same_application
+  - cycling::tests::same_executable_different_pid_is_same_application
+  - cycling::tests::multi_process_same_executable_groups_together
+  - cycling::tests::excluded_windows_are_skipped
+  - cycling::tests::invalid_target_continues_to_next_candidate
+  - cycling::selection::tests::wraps_to_beginning_from_last_window
+  - cycling::selection::tests::wraps_at_most_once
+  - cycling::selection::tests::active_absent_order_covers_every_eligible_window_once
+  - cycling::selection::tests::closing_window_mid_cycle_falls_through_to_next
+  - cycling::eligibility::tests::synthetic_hung_application_window_remains_eligible
+  - cycling::eligibility::tests::minimized_is_excluded
+  - cycling::eligibility::tests::ghost_outranks_every_other_exclusion
+  - cycling::eligibility::tests::same_executable_across_processes_stays_eligible
+  - context::tests::different_monitor_is_rejected
+  - context::tests::non_current_virtual_desktop_is_rejected
+  - context::tests::unknown_virtual_desktop_fails_closed
+  - context::vm_bypass::tests::configured_process_passes_through
+  - context::vm_bypass::tests::configured_class_passes_through_when_process_does_not_match
+  - context::vm_bypass::tests::fully_unresolved_fails_open
+  - hook::tests::exact_primary_match
+  - hook::tests::extra_modifier_is_non_match
+  - hook::tests::throttle_boundary
+  status: done
   exempt: false
-  broken_at: story
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-1
   FR: FR-6
   DEC: []
   UC: UC-1
-  story: ''
-  wave: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  story: S1
+  wave: W1
+  release: 0.1.0
+  test:
+  - cycling::tests::activates_next_window_of_same_application
+  - cycling::tests::same_executable_different_pid_is_same_application
+  - cycling::tests::multi_process_same_executable_groups_together
+  - cycling::tests::excluded_windows_are_skipped
+  - cycling::tests::invalid_target_continues_to_next_candidate
+  - cycling::selection::tests::wraps_to_beginning_from_last_window
+  - cycling::selection::tests::wraps_at_most_once
+  - cycling::selection::tests::active_absent_order_covers_every_eligible_window_once
+  - cycling::selection::tests::closing_window_mid_cycle_falls_through_to_next
+  - cycling::eligibility::tests::synthetic_hung_application_window_remains_eligible
+  - cycling::eligibility::tests::minimized_is_excluded
+  - cycling::eligibility::tests::ghost_outranks_every_other_exclusion
+  - cycling::eligibility::tests::same_executable_across_processes_stays_eligible
+  - context::tests::different_monitor_is_rejected
+  - context::tests::non_current_virtual_desktop_is_rejected
+  - context::tests::unknown_virtual_desktop_fails_closed
+  - context::vm_bypass::tests::configured_process_passes_through
+  - context::vm_bypass::tests::configured_class_passes_through_when_process_does_not_match
+  - context::vm_bypass::tests::fully_unresolved_fails_open
+  - hook::tests::exact_primary_match
+  - hook::tests::extra_modifier_is_non_match
+  - hook::tests::throttle_boundary
+  status: done
   exempt: false
-  broken_at: story
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-3
   FR: FR-7
   DEC: []
   UC: UC-4
-  story: ''
-  wave: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  story: S4
+  wave: W1
+  release: 0.1.0
+  test:
+  - app::tests::capture_starts_idle
+  - app::tests::beginning_capture_targets_exactly_one_field
+  - app::tests::accepting_a_valid_capture_stores_the_canonical_form
+  - app::tests::accepting_without_listening_is_a_no_op
+  - app::tests::cancelling_capture_changes_nothing
+  - app::tests::editing_the_draft_marks_dirty_without_touching_saved
+  - app::tests::a_successful_save_promotes_the_draft_and_clears_dirty
+  - app::tests::a_rejected_save_reports_an_error_and_does_not_promote_the_draft
+  - persistence::tests::valid_shortcut_returns_canonical_form
+  - persistence::tests::bare_main_key_without_a_modifier_is_rejected
+  - persistence::tests::modifier_only_is_reported_as_no_main_key
+  - persistence::tests::two_main_keys_are_reported_distinctly
+  - persistence::tests::unsupported_token_is_reported_as_such
+  - persistence::tests::an_invalid_field_names_itself
+  - persistence::tests::rejection_leaves_the_previous_file_intact
+  - persistence::tests::saved_config_round_trips_without_loss
+  - persistence::tests::default_config_uses_frozen_shortcuts
+  - persistence::tests::reload_uses_the_frozen_message_identifier
+  - persistence::tests::reload_signal_is_harmless_when_no_daemon_is_running
+  status: done
   exempt: false
-  broken_at: story
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-4
   FR: FR-8
