@@ -1,3 +1,43 @@
 # defects.yaml — SSOT for defects: ordinary bugs and hotfixes.
 
-defects: []
+defects:
+  - id: DEF-1
+    title: Two hook tests depend on the live desktop and fail with no foreground window
+    status: open
+    severity: high
+    component: window-management
+    violates: [NFR-4]
+    found_in: "0.1.0"
+    found_by: W1 verification wave, 2026-08-21
+    tests:
+      - hook::tests::win_up_passes_through_after_win_shortcut
+      - hook::tests::win_up_not_suppressed_for_alt_fallback
+    summary: >-
+      `handle_key_event` asks the OS whether the foreground window is a VM or RDP client the
+      moment a chord matches, and correctly so -- in production that question can only be
+      answered live. But it reaches `GetForegroundWindow` through
+      `vm_bypass::evaluate_foreground`, and the two tests above call `handle_key_event`
+      directly. When the calling process has no resolvable foreground window,
+      `HookIdentityCollector::collect` returns `WideIdentity::default()`,
+      `classify_wide` returns `Passthrough(BypassReason::IdentityUnavailable)` -- failing open,
+      by design -- and the matched chord returns `PassToNext`. The assertion expects `Swallow`,
+      and the observed failure is exactly `left: PassToNext, right: Swallow`.
+    why_it_hid: >-
+      The sibling test `hook::tests::no_modifier_release_is_ever_swallowed` walks the same key
+      sequence and passes, because it discards the backtick dispositions with `let _ =` and
+      asserts only the modifier release. So the strongest-looking guard on this behaviour is
+      the one that cannot catch this, and the suite looks healthier than it is.
+    impact: >-
+      The suite is not deterministic: it passes when the test process can resolve a foreground
+      window and fails when it cannot. CI runs `cargo test --workspace --locked` on
+      `windows-latest`, where a job has no interactive desktop, so these two are expected to
+      fail there every run. The product code is NOT at fault -- asking the OS live is the
+      correct production behaviour, and the VM/RDP passthrough it guards is deliberate.
+    fix_direction: >-
+      Give `handle_key_event` a seam for the bypass decision, as it already has one for
+      `BypassPolicy`, so a unit test supplies the identity instead of the desktop. MUST NOT be
+      fixed by weakening or deleting the assertions: they guard the sticky-modifier bug, where
+      a swallowed Win key-up left the focused application treating every later keystroke as
+      Win+key.
+    owner: repo owner
+

@@ -14,9 +14,8 @@ work_progress:
   stories_done: 6
   stories_total: 6
   work_progress: 100%
-gate_readiness: 96%
-validators_red:
-- V13
+gate_readiness: 100%
+validators_red: []
 validators_skipped:
   V14: generated/timeline.yaml does not exist yet — overdue-ness is still computed from the registry,
     but its presence in generated/report is not checked

@@ -1,15 +1,15 @@
 risks:
 - id: RISK-1
-  impact: null
-  likelihood: null
+  impact: medium
+  likelihood: low
   owner: repo owner
   status: open
   pivot_trigger: A second shell-integration requirement arrives with no way to test it, or FR-10 regresses
     once in a release. Either makes a runtime harness worth its cost; one untestable requirement does
     not.
 - id: RISK-2
-  impact: null
-  likelihood: null
+  impact: low
+  likelihood: low
   owner: repo owner
   status: open
   pivot_trigger: The log-opening mechanism changes again. It has already moved once in documentation only

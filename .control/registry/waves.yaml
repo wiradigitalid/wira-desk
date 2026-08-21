@@ -9,8 +9,25 @@ waves:
     prd: [wira-desk]
     size: M
     status: open
+    # REOPENED. Phase 4 completed, but `cargo test --workspace` exits 101: DEF-1 fails two hook
+    # tests. SPEC.md forbids closing a verification wave on a red suite -- a wave whose evidence
+    # does not pass asserts the opposite of what it exists to assert -- and that rule applies to
+    # the session that wrote it. The 74 tests this wave names are all green; the two failures are
+    # neither named by it nor caused by it, and DEF-1 carries the diagnosis.
+    # Closed after Phase 4. Registry catch-up: 7 LCs registered, no `touches` recorded so none to
+    # resolve. Inventories: readers written for this stack and run; the 32 reported gaps are one
+    # structural finding, not 32 drifts -- the three artifacts carry no `## Rows` section, so the
+    # engine had no plan to compare against. Left as a finding for `wdi-blueprint`, which owns them;
+    # the engine forbids patching it by hand and `--write` would replace their authored tables.
+    # Distillation: the three `.constitution/project/codebase-*-guide.md` filled from the code at
+    # 67f2645 and raised to Accepted. Retrospective: size M, so advisory -- skipped, stated here
+    # rather than silently. RTM: 14/14 green, promise progress 100%.
     depends_on: []
     spec_folder: _bmad-output/specs/w1-verify-0-1-0/
+    spec_reviewed:
+      date: '2026-08-21'
+      sha: '7a0d260'
+      lenses: [structure, prose, edge-case-hunter]
     # A VERIFICATION WAVE, not a construction wave. Release 0.1.0 already shipped; every FR below is
     # implemented and covered by the workspace suite. What was missing was the trace: every RTM row
     # broke at `story`, so nothing in the catalogue was bound to the evidence that proves it. This
