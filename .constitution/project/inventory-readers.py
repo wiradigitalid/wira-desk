@@ -78,10 +78,14 @@ def derive_db(root: Path) -> "Derived":       # noqa: F821 — injected by the e
         if not cols:
             unread.append(f"{rel}: `[{section}]` has no readable `pub` fields")
             continue
+        # The key MUST be exactly what the engine's `plan_keys` derives from the first cell --
+        # for `db` that is `cells[0].strip("`")`. Any other shape makes every row read as both
+        # "planned but not in code" and "in code but not planned", which is how a reader reports
+        # ten findings about a file that agrees with it perfectly.
         rows.append(Row(                                                  # noqa: F821
-            key=f"config.toml#{section}",
+            key=f"config.toml [{section}]",
             cells=[
-                f"`config.toml` `[{section}]`",
+                f"`config.toml [{section}]`",
                 "`_platform`",
                 f"Persisted user configuration for {section.replace('_', ' ')}",
                 ", ".join(cols),
@@ -123,7 +127,6 @@ def derive_api(root: Path) -> "Derived":      # noqa: F821 — injected by the e
 
     # Which crate references a constant decides the owning component. Read, not assumed: a message
     # named for the hook may well be posted by the settings binary.
-    daemon = read(root / "crates/daemon/src")  # directory read fails -> "", handled below
     def refs(name: str) -> set[str]:
         out = set()
         for crate, pc in (("daemon", "window-management"), ("settings", "settings")):
