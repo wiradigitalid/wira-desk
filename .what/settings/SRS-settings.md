@@ -40,7 +40,7 @@ Configuration customization and user onboarding are episodic, UI-intensive tasks
 
 - Must adhere strictly to Architecture Spine invariants AD-1, AD-5, AD-11, AD-11a, AD-12, and AD-13.
 - Must persist configuration changes atomically to `%APPDATA%\WiraDesk\config.toml` before dispatching `WM_APP_RELOAD_CONFIG` to the daemon (BR-1, BR-2, AD-5).
-- Must register auto-start scheduled tasks with `/RL HIGHEST` for `%USERNAME%` with empty/secure Start In directory to prevent DLL hijacking (BR-4, AD-13).
+- Must record the auto-start preference and hand task registration to the daemon, which creates the task with `/RL HIGHEST` for `%USERNAME%` and an empty/secure Start In directory to prevent DLL hijacking (BR-4, AD-13). This component never invokes `schtasks` itself.
 - Must provide complete keyboard navigation (Tab/Shift+Tab, arrow keys, Escape/Enter) across all interactive dialogs (FR-20).
 - Must expose full UI Automation properties (names, roles, states, shortcut values) to assistive technologies via AccessKit (FR-21, AD-11a).
 - Must render UI in pure native Rust (`egui`/`eframe`) without webview wrappers or heavy runtime frameworks (AD-11).
@@ -71,14 +71,14 @@ A user customizes a shortcut combination in Settings, saves preferences, and imm
 - Potential configuration write races if multiple settings instances were launched simultaneously, mitigated by single-instance dialog behavior and atomic file replacement.
 
 ### To Be Confirmed
-- None; all architectural invariants and functional requirements ratified at G3.
+- None; all architectural invariants and functional requirements are stated and traced. Ratification is the owner's act at G3, recorded in `gates_passed`.
 
 ## Gate Checklist · [G3]
 
 - ★ Every functional requirement (FR-7, FR-13, FR-16..21) mapped to a usecase or carries explicit `no_uc:` justification? Yes.
 - ★ All use case titles phrased as natural user sentences? Yes.
 - ★ Actor Register complete and aligned with PRD journeys? Yes.
-- ★ Invariants AD-11..13 and cross-component business rules BR-1..5 respected? Yes.
+- ★ Invariants AD-1, AD-5, AD-11, AD-11a, AD-12, AD-13 and cross-component business rules BR-1..5 respected? Yes.
 
 ## Design Reference · [G3]
 
@@ -88,7 +88,7 @@ Paired SDD: `.how/settings/SDD-settings.md`. UX Design: `.how/settings/01-ux/DES
 
 ## Slots
 
-- `02-rules/rules-settings.md`: Local component rules (LBR-ST-1..5).
+- `02-rules/rules-settings.md`: Local component rules (LBR-ST-1..7).
 - `03-domain/domain-model.md`: Conceptual domain entities (`user-shortcut-preference`, `onboarding-completion`, `auto-start-preference`).
 - `03-domain/state-machines.md`: First-run tutorial progression and shortcut capture listening state machine.
 - `04-usecases/`: Detailed step-by-step flows (`UC-4-change-shortcut.md`, `UC-5-first-run-tutorial.md`, `UC-6-toggle-auto-start.md`).
