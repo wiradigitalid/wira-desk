@@ -1,21 +1,90 @@
 # components.yaml — SSOT for Product Components, containers, and Logical Components
-#
-# Three different things, two of which share the word "component":
-#   Product Component (PC) — a DOMAIN slice, a surface a user could name
-#   Container              — a unit that runs or deploys on its own; owned by C4 L2
-#   Logical Component (LC) — one nameable build unit
-#
-# `mode` — DOCUMENT DEPTH. Written ONLY on a component that genuinely needs to differ from global.
-# `risk_accepted` — REVIEW INTENSITY, not depth. low · medium · high
-# `owns` — the domain entities this component is AUTHORISED TO WRITE.
-# `g4_passed` — only means something on a component at a mode above catalog.
-#
-# A component is born through wdi-init intent `component` at the tail of G2. This file is born empty.
 
-product_components: []
+product_components:
+  - id: window-management
+    mode: deep
+    risk_accepted: medium
+    risk_note: >-
+      Global low-level keyboard hook, Administrator elevation, UIPI bypass,
+      and real-time Win32 window enumeration.
+    owns:
+      - hook-command
+      - window-focus-state
+      - tray-health-state
+      - arrangement-command
+    containers: [daemon]
+    g4_passed: false
 
-platform_owns: []
+  - id: settings
+    mode: deep
+    risk_accepted: medium
+    risk_note: >-
+      Writes local configuration, spawns elevated settings process,
+      and signals daemon reload over IPC.
+    owns:
+      - user-shortcut-preference
+      - onboarding-completion
+      - auto-start-preference
+    containers: [settings]
+    g4_passed: false
 
-containers: []
+platform_owns:
+  - app-config
+  - ipc-reload-signal
+  - runtime-paths
 
-logical_components: []
+containers:
+  - id: daemon
+    name: wiradesk.exe
+    built: true
+    crate: daemon
+    serves: [window-management]
+
+  - id: settings
+    name: wiradesk-settings.exe
+    built: true
+    crate: settings
+    serves: [settings]
+
+logical_components:
+  - id: LC-hook-thread
+    type: service
+    component: window-management
+    container: daemon
+    description: WH_KEYBOARD_LL interception, throttle, VM/RDP bypass evaluation.
+
+  - id: LC-worker-thread
+    type: service
+    component: window-management
+    container: daemon
+    description: Z-order enumeration, focus transitions, snap and arrangement execution.
+
+  - id: LC-tray-controller
+    type: service
+    component: window-management
+    container: daemon
+    description: Tray icon state machine, context menu, toast for Tier-3 hook failure.
+
+  - id: LC-arrangement-engine
+    type: service
+    component: window-management
+    container: daemon
+    description: DPI-aware snap and stack layout planning.
+
+  - id: LC-settings-shell
+    type: ui-composite
+    component: settings
+    container: settings
+    description: egui settings dialog, theme, and navigation shell.
+
+  - id: LC-config-writer
+    type: service
+    component: settings
+    container: settings
+    description: Atomic TOML persistence and IPC reload signal to daemon.
+
+  - id: LC-shortcut-capturer
+    type: control
+    component: settings
+    container: settings
+    description: Listening-mode keyboard capture for shortcut fields.

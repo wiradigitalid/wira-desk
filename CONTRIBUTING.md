@@ -51,7 +51,7 @@ they are byte-identical on purpose â€” three tools, three filenames, one se
 one and change all three in the same commit; drift between them is silent, and the tool that
 reads the stale copy is the one that misbehaves.
 
-`.constitution/constitution.md` records how work is conducted here. `3p.md` and `docs/3p.md`
+`.constitution/project/constitution.md` records how work is conducted here. `3p.md` and `docs/3p.md`
 track progress for code and documentation respectively â€” read the relevant one before starting
 and add an entry when finished.
 

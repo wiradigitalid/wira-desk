@@ -38,6 +38,29 @@ design-system/                # UI kits and brand assets
 | `settings` | `wiradesk-settings.exe` | Config editor, onboarding, IPC reload |
 | `shared` | (lib) | TOML config, WinTick→WiraDesk migration, paths, constants |
 
+## Containers
+
+### daemon
+
+```text
+crates/daemon/src/
+  main.rs           # Entry, elevation, message loop
+  hook.rs           # Hook thread, throttle, bypass
+  worker.rs         # Z-order, focus, snap
+  tray.rs           # Tray icon, menu, TaskbarCreated
+  config.rs         # Reload on WM_APP_RELOAD_CONFIG
+  health.rs         # Hook heartbeat
+```
+
+### settings
+
+```text
+crates/settings/src/
+  main.rs           # egui application entry
+  ui_settings.rs    # Settings panels
+  ui_onboarding.rs  # First-run tutorial
+```
+
 ## Build outputs
 
 ```text

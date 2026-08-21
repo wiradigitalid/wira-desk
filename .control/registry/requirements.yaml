@@ -1,15 +1,177 @@
 # requirements.yaml — SSOT for BG · CAP · FR · NFR · UJ
-#
-# Keys are English; prose values follow the product's chosen `doc_language`.
-# Numbers are allocated FROM HERE and MUST NOT restart per document, per component, or per release.
-# The sequence is global to one product.
 
-goals: []
+goals:
+  - id: BG-1
+    text: >-
+      Give Windows users macOS-style same-application window cycling that feels
+      instant and stays on the current monitor and virtual desktop.
+  - id: BG-2
+    text: >-
+      Run as an invisible background utility with near-zero idle CPU and a
+      static RAM footprint under 2 MB for the daemon.
+  - id: BG-3
+    text: >-
+      Offer optional keyboard-driven window snapping without turning the product
+      into a full window manager overlay.
 
-capabilities: []
+capabilities:
+  - id: CAP-1
+    goal: BG-1
+    text: Cycle focus among visible windows of the active application via a precise global shortcut.
+  - id: CAP-2
+    goal: BG-3
+    text: Snap and resize the active window with keyboard shortcuts, DPI-aware per monitor.
+  - id: CAP-3
+    goal: BG-2
+    text: Load user preferences from a local TOML file in a writable user directory.
+  - id: CAP-4
+    goal: BG-1
+    text: Operate on elevated windows by running the daemon with Administrator privileges.
+  - id: CAP-5
+    goal: BG-2
+    text: Provide on-demand settings and first-run onboarding via a separate settings binary.
+  - id: CAP-6
+    goal: BG-2
+    text: Alert the user when the keyboard hook dies at runtime via tray state and one toast.
+  - id: CAP-7
+    goal: BG-1
+    text: Restrict cycling to the same physical monitor and virtual desktop as the active window.
+  - id: CAP-8
+    goal: BG-1
+    text: Pass shortcuts through unchanged when the foreground window is a VM or RDP client.
+  - id: CAP-9
+    goal: BG-2
+    text: Recover the tray icon after explorer.exe restarts and follow the three-tier error protocol.
+  - id: CAP-10
+    goal: BG-2
+    text: Launch the daemon silently at logon via a scheduled task without repeated UAC prompts.
+  - id: CAP-11
+    goal: BG-2
+    text: Expose runtime diagnostic logs from the tray context menu.
 
-functional: []
+functional:
+  - id: FR-1
+    capability: CAP-1
+    component: window-management
+    text: Cycle only among windows of the same application identity (exe name), not global Alt+Tab.
+  - id: FR-2
+    capability: CAP-7
+    component: window-management
+    text: Lock cycling to the same physical monitor and virtual desktop as the active window.
+  - id: FR-3
+    capability: CAP-8
+    component: window-management
+    text: Bypass interception when the foreground window is a known VM or Remote Desktop client.
+  - id: FR-4
+    capability: CAP-1
+    component: window-management
+    text: Bring Not Responding windows to the foreground instead of hiding them during a cycle.
+  - id: FR-5
+    capability: CAP-1
+    component: window-management
+    text: Skip minimized, ghost, and tool-window overlays; cycle only visibly open windows.
+  - id: FR-6
+    capability: CAP-1
+    component: window-management
+    text: Require an exact shortcut match; extra modifiers must not trigger cycling.
+  - id: FR-7
+    capability: CAP-3
+    component: settings
+    text: Allow configurable primary and fallback cycling shortcuts via config.toml.
+  - id: FR-8
+    capability: CAP-4
+    component: window-management
+    no_uc: Elevated manifest at daemon startup; not a user-triggered use case.
+    text: Run the daemon elevated so UIPI does not block focus on administrator windows.
+  - id: FR-9
+    capability: CAP-9
+    component: window-management
+    no_uc: Architectural constraint on daemon binary composition.
+    text: Run tray-resident using native Win32 APIs without a third-party GUI framework in the daemon.
+  - id: FR-10
+    capability: CAP-9
+    component: window-management
+    text: Re-create the tray icon when TaskbarCreated is broadcast after explorer restarts.
+  - id: FR-11
+    capability: CAP-9
+    component: window-management
+    text: Apply the three-tier error protocol for startup fatal, runtime warning, and hook-dead critical.
+  - id: FR-12
+    capability: CAP-11
+    component: window-management
+    text: Provide View Logs in the tray menu opening the silent log file location.
+  - id: FR-13
+    capability: CAP-10
+    component: settings
+    text: Toggle auto-start via a logon scheduled task with highest privileges for the active user.
+  - id: FR-14
+    capability: CAP-2
+    component: window-management
+    text: Snap the active window with Ctrl+Win+arrow and fullscreen shortcuts, DPI-aware.
+  - id: FR-15
+    capability: CAP-2
+    component: window-management
+    no_uc: Covered by arrangement engine; optional P2 layout variant of snap (FR-14).
+    text: Apply overlapping stack layout on small monitors with up to three half-width windows.
+  - id: FR-16
+    capability: CAP-5
+    component: settings
+    no_uc: Tray menu structure; items exercised by UC-4, UC-6, and View Logs action.
+    text: Tray menu order Settings, View Logs, Auto-Start toggle, updates, About, Exit.
+  - id: FR-17
+    capability: CAP-5
+    component: settings
+    text: First-run interactive tutorial with dummy window practice and Skip Tutorial.
+  - id: FR-18
+    capability: CAP-5
+    component: settings
+    text: Shortcut fields use listening mode capturing physical key combinations.
+  - id: FR-19
+    capability: CAP-5
+    component: settings
+    no_uc: Visual property applied to every settings and onboarding screen.
+    text: Settings UI follows OS light or dark theme automatically.
+  - id: FR-20
+    capability: CAP-5
+    component: settings
+    no_uc: Cross-cutting accessibility requirement on all settings controls.
+    text: All interactive settings controls are fully keyboard-navigable.
+  - id: FR-21
+    capability: CAP-5
+    component: settings
+    no_uc: Cross-cutting accessibility requirement on all settings controls.
+    text: Toggles and shortcut fields expose state clearly to screen readers via UI Automation.
 
-nonfunctional: []
+nonfunctional:
+  - id: NFR-1
+    goal: BG-2
+    enforced_by: release profile and windows-sys crate choice
+    text: Daemon static RAM under 2 MB; hard ceiling 10 MB.
+  - id: NFR-2
+    goal: BG-2
+    enforced_by: hook thread priority and worker separation
+    text: Hook callback completes within 10 ms; perceived focus change sub-millisecond target.
+  - id: NFR-3
+    goal: BG-2
+    enforced_by: lock-free u8 ring buffer (16 slots)
+    text: Cross-thread commands use zero heap allocation in the hot path.
+  - id: NFR-4
+    goal: BG-2
+    enforced_by: EnumWindows callback policy
+    text: Window filtering uses only non-blocking kernel APIs in the worker thread.
+  - id: NFR-5
+    goal: BG-2
+    enforced_by: cargo release profile
+    text: Release binary size target 250–400 KB, ceiling 500 KB.
+  - id: NFR-6
+    goal: BG-2
+    enforced_by: single-instance mutex and hook retry loop
+    text: Daemon tolerates logon race and refuses a second instance per session.
 
-journeys: []
+journeys:
+  - id: UJ-1
+    text: Developer cycles Word documents on one monitor without focus jumping to another monitor.
+  - id: UJ-2
+    text: Designer encounters a hung Chrome window during cycling and sees the honest Not Responding state.
+  - id: UJ-3
+    text: Sysadmin cycles between normal and elevated CMD windows without OS refusal.

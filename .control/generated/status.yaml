@@ -1,0 +1,24 @@
+promise_progress: 0%
+rtm_rows:
+  green: 0
+  counted: 14
+  excluded_no_uc: 7
+work_progress: []
+gate_readiness: 100%
+validators_red: []
+validators_skipped:
+  V14: generated/timeline.yaml does not exist yet — overdue-ness is still computed from the registry,
+    but its presence in generated/report is not checked
+  V19: only the RTR- line item is checked mechanically; the rest of the distillation is guarded by wdi-build
+  V27: the `.constitution/project/` room is empty, and that is a valid state — a generic rule MUST NOT
+    be moved here just to give the room content
+  V3: no wave yet, so no story yet — every unscheduled UC is the correct state. Full catalogue coverage
+    is checked at G5
+open_questions:
+  blocking: 0
+  assumptions: 0
+  external: 0
+  answered: 0
+  blocking_budget: 6
+  blocking_over_budget: false
+  assumptions_budget_per_gate: 15

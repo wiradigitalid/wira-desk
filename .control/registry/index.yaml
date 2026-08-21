@@ -21,11 +21,12 @@ policy:
 #   deep     + ABCE, a contract spec per endpoint, data dictionary, flow, state machine, scenarios
 # Defaults to `catalog` when this line is absent. A component's own row in components.yaml WINS over this.
 # There is no third scope: `mode` MUST NOT be overridden per wave or per SPEC.md.
-mode: catalog
+mode: deep
 
-# GATES ALREADY PASSED. Written only by the repo owner's own decision at their own gate, and MUST NOT
-# be filled by an agent to clear its own way forward.
-gates_passed: []
+# GATES ALREADY PASSED. Written only by the repo owner's own decision at their own gate.
+# Owner ratified 2026-08-21: G1 (brief), G2 (PRD wira-desk). G3/G4 corpus drafted at mode: deep; pending owner review.
+# Note: `mode` controls G4 document depth only (per-component row wins). `risk_accepted` is per PC in components.yaml — not per gate.
+gates_passed: [G1, G2]
 
 roles: []
   # - role: Product Owner

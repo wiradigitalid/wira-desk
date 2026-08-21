@@ -7,41 +7,31 @@ commit: pending
 
 # Document Structure
 
-Written and refreshed by `wdi-init` intent `structure`. Rules live in
-`.constitution/method/structure-guide.md`.
+Written and refreshed by `wdi-init` intent `structure`.
 
 ## Verified
 
-2026-08-21 — brownfield scaffold after WDI Method 0.5.10 install. Corpus landing not started.
+2026-08-21 — WDI corpus landed G1–G4 (brownfield harvest).
 
 ## Top level
 
 ```text
 .constitution/
   method/                     # WDI method (overwritten on update)
-  project/                    # Product rules (constitution, codebase guides)
-.control/                     # Registries, structure maps, questions, decisions
-.what/                        # Promises (empty — pending landing from _bmad-output)
-.how/                         # Blueprint (empty — pending landing)
-  _platform/                  # Spine, C4, inventories (skeleton only)
-_bmad-output/                 # BMAD archive + prior-knowledge migration notes
-  prior-knowledge/            # wdi-init inventory and landing map
-  planning-artifacts/         # PRD, architecture, epics, MoM, readiness reports
-  implementation-artifacts/   # Story specs, sprint-status, validation reports
-  specs/                      # SPEC kernel
-  brainstorming/              # Original intent
-design-system/                # UX assets (partial redaction for public)
-docs/                         # Product engineering docs (decisions, threat-model)
-```
-
-## Planned corpus (after landing)
-
-```text
+  project/                    # Product rules, inventory-readers (pending)
+.control/                     # Registries, structure maps, memlog
 .what/
-  _product-brief/
-  _prd/wira-desk/
-  wira-desk/                  # SRS, use cases, domain (PC: wira-desk)
+  _product-brief/             # G1 brief
+  _prd/wira-desk/             # G2 PRD + addendum (ID map)
+  business-rules.md           # G3 cross-component rules
+  window-management/          # PC: cycling, tray, snapping
+  settings/                   # PC: config, onboarding, a11y
 .how/
-  _platform/                  # ARCHITECTURE-SPINE, C4, inventories, design-system
-  wira-desk/                  # SDD, UX design, integrations
+  _platform/                  # G3 spine, C4, inventories, design-system
+  window-management/          # G4 SDD outline
+  settings/                   # G4 SDD + UX design
+_bmad-output/                 # BMAD archive (input until retirement)
+  prior-knowledge/            # Harvest queue, landing map
+design-system/                # UX assets
+docs/                         # Engineering decisions, threat model
 ```

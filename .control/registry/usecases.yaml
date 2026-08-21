@@ -1,6 +1,44 @@
 # usecases.yaml — SSOT for UC
-#
-# `critical: true` when the UC touches MONEY, PERSONAL DATA, or an IRREVERSIBLE ACTION.
-# This label decides something ONLY at `mode: deep`.
 
-usecases: []
+usecases:
+  - id: UC-1
+    component: window-management
+    title: Cycle to the next window of the same app on this monitor
+    actor: Power User
+    satisfies: [FR-1, FR-2, FR-3, FR-4, FR-5, FR-6]
+    critical: false
+
+  - id: UC-2
+    component: window-management
+    title: Snap the active window to the left or right half of the screen
+    actor: Power User
+    satisfies: [FR-14]
+    critical: false
+
+  - id: UC-3
+    component: window-management
+    title: See the tray icon return after Windows Explorer restarts
+    actor: Power User
+    satisfies: [FR-10, FR-11, FR-12]
+    critical: false
+
+  - id: UC-4
+    component: settings
+    title: Change a keyboard shortcut in Settings
+    actor: Power User
+    satisfies: [FR-7, FR-18]
+    critical: false
+
+  - id: UC-5
+    component: settings
+    title: Complete or skip the first-run tutorial
+    actor: New User
+    satisfies: [FR-17]
+    critical: false
+
+  - id: UC-6
+    component: settings
+    title: Turn auto-start on boot on or off
+    actor: Power User
+    satisfies: [FR-13]
+    critical: false

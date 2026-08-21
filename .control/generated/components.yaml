@@ -1,0 +1,54 @@
+product_components:
+- id: settings
+  name: null
+  containers:
+  - settings
+  logical_components:
+  - LC-config-writer
+  - LC-settings-shell
+  - LC-shortcut-capturer
+- id: window-management
+  name: null
+  containers:
+  - daemon
+  logical_components:
+  - LC-arrangement-engine
+  - LC-hook-thread
+  - LC-tray-controller
+  - LC-worker-thread
+logical_components:
+- id: LC-arrangement-engine
+  type: service
+  component: window-management
+  area: null
+  owner: null
+- id: LC-config-writer
+  type: service
+  component: settings
+  area: null
+  owner: null
+- id: LC-hook-thread
+  type: service
+  component: window-management
+  area: null
+  owner: null
+- id: LC-settings-shell
+  type: ui-composite
+  component: settings
+  area: null
+  owner: null
+- id: LC-shortcut-capturer
+  type: control
+  component: settings
+  area: null
+  owner: null
+- id: LC-tray-controller
+  type: service
+  component: window-management
+  area: null
+  owner: null
+- id: LC-worker-thread
+  type: service
+  component: window-management
+  area: null
+  owner: null
