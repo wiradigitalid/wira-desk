@@ -9,25 +9,24 @@
 sequenceDiagram
     participant Health as health.rs heartbeat
     participant Hook as LC-hook-thread
-    participant Worker as LC-worker-thread
-    participant Tray as LC-tray-controller
+    participant Tray as LC-tray-controller (hosts the hidden window loop)
     participant User
 
     loop Every 10 seconds
         Health->>Hook: WM_APP_HOOK_CHECK
-        Hook->>Hook: SetWindowsHookExW (re-register on the hook thread)
+        Hook->>Hook: SetWindowsHookExW (re-register, on the hook thread)
         alt Re-register succeeds
-            Hook->>Worker: WM_APP_HOOK_REFRESH_OK
-            Worker->>Tray: set_tier(normal or warning if warning_latched)
-            Worker->>Worker: toast_sent = false
+            Hook->>Tray: WM_APP_HOOK_REFRESH_OK
+            Tray->>Tray: set_tier(normal, or warning when warning_latched)
+            Tray->>Tray: hook_dead_toast_sent = false
         else Re-register fails, fail_count < 3
             Hook->>Hook: increment fail_count, retain prior HHOOK
         else Re-register fails, fail_count >= 3
-            Hook->>Worker: WM_APP_HOOK_DEAD
-            Worker->>Tray: set_tier(critical)
-            alt toast_sent == false
+            Hook->>Tray: WM_APP_HOOK_DEAD
+            Tray->>Tray: set_tier(critical)
+            alt hook_dead_toast_sent == false
                 Tray->>User: one balloon toast
-                Tray->>Tray: toast_sent = true
+                Tray->>Tray: hook_dead_toast_sent = true
             end
         end
     end
