@@ -1,0 +1,6 @@
+# usecases.yaml — SSOT for UC
+#
+# `critical: true` when the UC touches MONEY, PERSONAL DATA, or an IRREVERSIBLE ACTION.
+# This label decides something ONLY at `mode: deep`.
+
+usecases: []

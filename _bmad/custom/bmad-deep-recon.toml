@@ -1,0 +1,12 @@
+# This skill ships with `persistent_facts = []`, so unlike the other 41 skills it picks up no
+# project context of its own. This file closes that gap; without it, research ahead of G1 runs
+# with no vocabulary and no repo rules, and its output uses terms that don't exist in the
+# Glossary.
+
+[workflow]
+
+persistent_facts = [
+  "file:{project-root}/.control/product-glossary.md",
+  "A research report lands in _bmad-output/ and stays there permanently. It MUST NOT be promoted into .what/ and MUST NOT be folded into the brief or a PRD; a `DEC-` or PRD references it by path instead. Its run folder MUST NOT be deleted — intent Update reads it back as original inputs.",
+  "A domain term MUST use the Glossary entry as written. A new term surfacing from research MUST be proposed as a Glossary entry, not used silently.",
+]

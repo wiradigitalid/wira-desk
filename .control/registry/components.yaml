@@ -1,0 +1,21 @@
+# components.yaml — SSOT for Product Components, containers, and Logical Components
+#
+# Three different things, two of which share the word "component":
+#   Product Component (PC) — a DOMAIN slice, a surface a user could name
+#   Container              — a unit that runs or deploys on its own; owned by C4 L2
+#   Logical Component (LC) — one nameable build unit
+#
+# `mode` — DOCUMENT DEPTH. Written ONLY on a component that genuinely needs to differ from global.
+# `risk_accepted` — REVIEW INTENSITY, not depth. low · medium · high
+# `owns` — the domain entities this component is AUTHORISED TO WRITE.
+# `g4_passed` — only means something on a component at a mode above catalog.
+#
+# A component is born through wdi-init intent `component` at the tail of G2. This file is born empty.
+
+product_components: []
+
+platform_owns: []
+
+containers: []
+
+logical_components: []

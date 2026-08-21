@@ -1,0 +1,6 @@
+# Installed at runbook step 1 — MUST come before anything else.
+#
+# bmad-help and bmad-correct-course read {project_knowledge}. As long as it points at docs/,
+# both read a folder that has already been dissolved.
+
+project_knowledge = "{project-root}/.control"

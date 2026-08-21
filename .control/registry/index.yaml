@@ -1,0 +1,50 @@
+# index.yaml — the control map
+#
+# Holds what has no home in another registry: product identity, global depth, roles, gate time
+# budgets, the open-question budget, and the `touches` vocabulary.
+
+# PRODUCT IDENTITY. The one structured place for it. Filled at G1.
+# constitution.md Article 1 and the brief's title quote this value — they MUST NOT become a second source.
+product:
+  name: "Wira Desk"
+  client: "Wira Digital Indonesia"
+
+policy:
+  doc_language: "English"
+  doc_filename_language: "English"
+
+# GLOBAL DEPTH. The only document-depth knob, and it MUST NOT also govern review intensity —
+# that is `risk_accepted` per component in components.yaml.
+#   catalog  UC list + three inventories + C4; zero extra files per component. G4 is skipped
+#   outline  + full flows for at most 3 UC, local business rules, Decision Summary, LC list
+#   guarded  + Failure Behaviour for every boundary, Inherited Constraints, integration documents
+#   deep     + ABCE, a contract spec per endpoint, data dictionary, flow, state machine, scenarios
+# Defaults to `catalog` when this line is absent. A component's own row in components.yaml WINS over this.
+# There is no third scope: `mode` MUST NOT be overridden per wave or per SPEC.md.
+mode: catalog
+
+# GATES ALREADY PASSED. Written only by the repo owner's own decision at their own gate, and MUST NOT
+# be filled by an agent to clear its own way forward.
+gates_passed: []
+
+roles: []
+  # - role: Product Owner
+  #   files: []
+
+gates:
+  G1: { name: Problem,   stage: 1, budget_minutes: 20 }
+  G2: { name: Product,   stage: 2, budget_minutes: 45 }
+  G3: { name: Blueprint, stage: 3, budget_minutes: 45 }
+  G4: { name: Component, stage: 4, budget_minutes: 30 }
+  G5: { name: Release,   stage: 5, budget_minutes: 10 }
+
+question_budget:
+  blocking_per_component: 3
+  assumptions_per_gate: 15
+
+wave_sizes:
+  S: { stories: "<=3", note: "no new FR; G4 and G5 merge into one 20-minute session" }
+  M: { stories: "4-12", note: "as usual" }
+  L: { stories: ">12",  note: "or a new container; a retrospective runs" }
+
+touches_vocabulary: []

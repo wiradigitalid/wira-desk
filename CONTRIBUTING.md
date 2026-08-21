@@ -55,24 +55,28 @@ reads the stale copy is the one that misbehaves.
 track progress for code and documentation respectively â€” read the relevant one before starting
 and add an entry when finished.
 
-## Planning with BMAD
+## Planning with BMAD and WDI Method
 
-`_bmad-output/` is the output of [BMAD-METHOD](https://github.com/bmad-code-org/BMAD-METHOD),
-an agentic planning workflow that produced this product's PRD, architecture, epics, and
-per-story specifications. Those artifacts are published and readable on their own; BMAD is
-what regenerates and extends them.
+`_bmad-output/` holds the planning archive from [BMAD-METHOD](https://github.com/bmad-code-org/BMAD-METHOD).
+Read `_bmad-output/README.md` first â€” it explains what is historical and what was redacted.
 
-The tooling is **not committed**, because its installer writes into whichever editor you use
-and maintains its own bundled agent definitions â€” vendoring that would mean carrying hundreds
-of generated files that the installer replaces anyway. Install it yourself:
+The tooling **is committed** so contributors get the same agent setup without re-running the
+installer:
+
+| Path | Purpose |
+| --- | --- |
+| `_bmad/` | BMAD configuration, team overrides in `_bmad/custom/`, and `config.user.toml` |
+| `.claude/skills/` | Skills for Claude Code |
+| `.agents/skills/` | Skills for Cursor and Antigravity |
+| `.work/` | Ephemeral agent workspace (committed when present) |
+| `.constitution/` | WDI Method guides plus product rules |
+| `.control/` | Registries and structure maps |
+
+After cloning, install or refresh only if versions drift:
 
 ```powershell
 npx bmad-method install
+npx wdi-method update --yes
 ```
 
-The installer asks which editors to configure and writes its agent definitions there. Point it
-at this repository root, and `_bmad-output/` becomes its working directory. Read
-`_bmad-output/README.md` first â€” it explains what in that archive is historical, which is most
-of it.
-
-Contributing to the code does not require any of this.
+Contributing to the code does not require running those commands.

@@ -1,0 +1,6 @@
+# decisions.yaml — SSOT for `DEC-` decisions
+#
+# Numbering is GLOBAL. `status`: draft | accepted | applied | superseded | rejected.
+# A decision FREEZES at `applied`, not at `accepted`.
+
+decisions: []

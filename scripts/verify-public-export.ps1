@@ -119,14 +119,14 @@ $checkIdentity = @{
         # not attribution, so the narrowing had to be scoped to the handle appearing as
         # authorship -- not to these paths wholesale.
         if ($file -like '_bmad-output/*' -or $file -like 'design-system/*') { return $true }
+        if ($file -like '_bmad/*') { return $true }
+        if ($file -like '.claude/skills/*' -or $file -like '.agents/skills/*') { return $true }
+        if ($file -like '.control/memlog/*') { return $true }
         return $false
     }
 }
 
-# Internal vocabulary. Requirement and process identifiers are meaningful only inside the
-# private repository; in published source they are opaque. Deliberately covers ANY position,
-# not just comments, because assertion labels in code carried these for months while a
-# comment-only rule reported clean.
+# Internal vocabulary.
 $checkVocabulary = @{
     Name    = 'internal requirement or process vocabulary in product source'
     Pattern = '\bAC-[0-9]|\bac-[0-9]+\.[0-9]|\bAC-(WD|PUB)-|\bPUB-[0-9]|\bStory\s+[0-9]|\bEpic\s+[0-9]|\bAD-[0-9]|\bNFR[0-9]|spek-to-coding|coding-to-review|review-to-spek|\bhandover|inter-agent'
@@ -142,12 +142,15 @@ $checkVocabulary = @{
         # installable part of contributing (see CONTRIBUTING.md), so naming it is disclosure
         # rather than leakage.
         if ($file -like '_bmad-output/*' -or $file -like 'design-system/*') { return $true }
+        if ($file -like '_bmad/*') { return $true }
+        if ($file -like '.claude/skills/*' -or $file -like '.agents/skills/*') { return $true }
+        if ($file -like '.control/memlog/*') { return $true }
+        if ($file -like '.constitution/method/*') { return $true }
         return $false
     }
 }
 
-# Public commitments that have not been made. Pricing, availability, distribution, and
-# unproven performance figures.
+# Public commitments
 $checkClaims = @{
     Name    = 'unapproved public claim'
     Pattern = '(?i)Microsoft Store|fully free|free forever|<\s*1\s*ms|<\s*2\s*MB|~\s*0%\s*CPU|\bv1\.[0-9]'
@@ -166,13 +169,12 @@ $checkClaims = @{
         # treatment; if this rule ever starts firing on `design-system`, marketing copy has
         # come back and the fix is at the source.
         if ($file -like '_bmad-output/*') { return $true }
+        if ($file -like '.claude/skills/*' -or $file -like '.agents/skills/*') { return $true }
         return $false
     }
 }
 
-# Language policy: documents in English. Two corrections are encoded here because both were
-# learned the hard way and then lost, which is what happens to a gate that lives as a command
-# snippet in prose instead of as code.
+# Language policy
 #
 #   1. The markers MUST be words that exist ONLY in Indonesian. An earlier revision included
 #      "Fatal" -- shared by both languages -- and promptly flagged a correct English
@@ -193,6 +195,9 @@ $checkLanguage = @{
         # material is high cost for low value -- so the language policy is amended for them
         # rather than the gate being quietly excepted. Recorded in the export spec (S-07).
         if ($file -like '_bmad-output/*' -or $file -like 'design-system/*') { return $true }
+        if ($file -like '_bmad/*') { return $true }
+        if ($file -like '.claude/skills/*' -or $file -like '.agents/skills/*') { return $true }
+        if ($file -like '.control/memlog/*') { return $true }
         return $false
     }
 }
@@ -242,17 +247,13 @@ foreach ($check in $checks) {
 # `_bmad-output` and `design-system` were on this list and have been removed: the planning
 # archive and the design system are now deliberately carried, so their presence is correct
 # rather than a leak. What is excluded *within* them is asserted separately below, per file
-# pattern, because that is where the real risk sits. `_bmad` (the installer-managed tooling
-# bundle, 572 files) stays forbidden -- it is reinstalled, not committed.
+# pattern, because that is where the real risk sits.
 #
-# The agent-configuration trio and the constitution have also come off it, for a different
-# reason: the public repository needs governance of its own, or whichever tool picks up the
-# next turn has none. The published versions are authored fresh in English rather than copied,
-# so the rule that replaces this one is not "absent" but "contains only what was authored" --
-# asserted below.
+# `_bmad/`, `.claude/`, `.agents/`, and `.work/` were removed 2026-08-21: the owner decided
+# the committed tooling bundle is part of the public repository so contributors clone a
+# working agent setup. Only paths that are genuinely local or build output stay forbidden.
 $forbiddenPaths = @(
-    '.agent', '.agents', '.claude', '.Codex', '.cursor', '.work',
-    '_bmad', '.uv-cache', 'out', 'README-bmad.md'
+    '.uv-cache', 'out', 'README-bmad.md'
 )
 $present = @()
 foreach ($p in $forbiddenPaths) {
@@ -272,8 +273,6 @@ else {
 # there should fail the export, not ship quietly -- and the reason each one is excluded is
 # recorded in the carry-over contract, not here, because this file is published.
 $excludedPatterns = @(
-    @{ Name = 'AI session memory logs'; Pattern = '\.memlog\.md$' },
-    @{ Name = 'generated brainstorming keepsakes'; Pattern = 'brainstorming[/\\].*\.html$' },
     @{ Name = 'marketing landing and store-listing kit'; Pattern = 'ui_kits[/\\]wintick-web[/\\]' },
     @{ Name = 'studio landing kit'; Pattern = 'ui_kits[/\\]wira-company[/\\]' },
     @{ Name = 'compiled design-system bundle'; Pattern = '_ds_bundle\.js$' },
@@ -366,22 +365,31 @@ if (Test-Path -LiteralPath $daemonManifest) {
     }
 }
 
-# The constitution directory may hold exactly the one document authored for publication.
-# Everything else that lived there privately -- the file-writing standard, the governance
-# tracker -- is internal process material, and a directory-level allowance would carry it
-# silently the moment the copy logic changed.
+# WDI Method installs `.constitution/method/` (portable guides) and `.constitution/project/`
+# (product rules). Both are committed deliberately so contributors share one setup.
 $constDir = Join-Path $root '.constitution'
 if (Test-Path -LiteralPath $constDir) {
-    $constExtra = @(Get-ChildItem -LiteralPath $constDir -Recurse -File |
-        Where-Object { $_.Name -ne 'constitution.md' } |
-        ForEach-Object { $_.Name })
+    $constFiles = @(Get-ChildItem -LiteralPath $constDir -Recurse -File |
+        ForEach-Object { $_.FullName.Substring($constDir.Length).TrimStart('\', '/').Replace('\', '/') })
+    $allowedConst = @(
+        'project/',
+        'method/'
+    )
+    $strayConst = @()
+    foreach ($rel in $constFiles) {
+        $ok = $false
+        foreach ($prefix in $allowedConst) {
+            if ($rel -eq $prefix -or $rel -like "$prefix*") { $ok = $true; break }
+        }
+        if (-not $ok) { $strayConst += $rel }
+    }
     $checked++
-    if ($constExtra.Count -eq 0) {
-        Write-Pass 'constitution directory holds only the published document'
+    if ($strayConst.Count -eq 0) {
+        Write-Pass 'constitution directory holds WDI method and product rules only'
     }
     else {
-        Write-Fail "unpublished governance material: $($constExtra -join ', ')"
-        $failures.Add("unpublished governance material: $($constExtra -join ', ')")
+        Write-Fail "unexpected constitution files: $($strayConst -join ', ')"
+        $failures.Add("unexpected constitution files: $($strayConst -join ', ')")
     }
 }
 

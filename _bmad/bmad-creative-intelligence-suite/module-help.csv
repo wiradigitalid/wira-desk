@@ -1,0 +1,11 @@
+module,skill,display-name,menu-code,description,action,args,phase,preceded-by,followed-by,required,output-location,outputs
+Creative Intelligence Suite,bmad-cis-agent-brainstorming-coach,Cis Agent Brainstorming Coach,CAB,Elite brainstorming specialist for facilitated ideation sessions. Use when the user asks to talk to Carson or requests the Brainstorming Specialist.,activate,,anytime,,,false,,
+Creative Intelligence Suite,bmad-cis-agent-creative-problem-solver,Cis Agent Creative Problem Solver,CAC,Master problem solver for systematic problem-solving methodologies. Use when the user asks to talk to Dr. Quinn or requests the Master Problem Solver.,activate,,anytime,,,false,,
+Creative Intelligence Suite,bmad-cis-agent-design-thinking-coach,Cis Agent Design Thinking Coach,CAD,Design thinking maestro for human-centered design processes. Use when the user asks to talk to Maya or requests the Design Thinking Maestro.,activate,,anytime,,,false,,
+Creative Intelligence Suite,bmad-cis-agent-innovation-strategist,Cis Agent Innovation Strategist,CAI,Disruptive innovation oracle for business model innovation and strategic disruption. Use when the user asks to talk to Victor or requests the Disruptive Innovation Oracle.,activate,,anytime,,,false,,
+Creative Intelligence Suite,bmad-cis-agent-presentation-master,Cis Agent Presentation Master,CAP,"Visual communication and presentation expert for slide decks, pitch decks, and visual storytelling. Use when the user asks to talk to Caravaggio or requests the Presentation Expert.",activate,,anytime,,,false,,
+Creative Intelligence Suite,bmad-cis-agent-storyteller,Cis Agent Storyteller,CAS,Master storyteller for compelling narratives using proven frameworks. Use when the user asks to talk to Sophia or requests the Master Storyteller.,activate,,anytime,,,false,,
+Creative Intelligence Suite,bmad-cis-design-thinking,Cis Design Thinking,CDT,,activate,,anytime,,,false,,
+Creative Intelligence Suite,bmad-cis-innovation-strategy,Cis Innovation Strategy,CIS,,activate,,anytime,,,false,,
+Creative Intelligence Suite,bmad-cis-problem-solving,Cis Problem Solving,CPS,,activate,,anytime,,,false,,
+Creative Intelligence Suite,bmad-cis-storytelling,Cis Storytelling,CS,,activate,,anytime,,,false,,
