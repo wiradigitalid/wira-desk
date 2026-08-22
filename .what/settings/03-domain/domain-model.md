@@ -16,13 +16,13 @@ Conceptual domain model for the `settings` component. Represents domain entities
 | --- | --- | --- |
 | `user-shortcut-preference` | The user's customized physical key combinations for primary cycling, fallback cycling, window snapping, and application passthrough lists. | Shortcut action identifier (e.g. `cycle_primary`, `cycle_fallback`, `snap_left`) |
 | `onboarding-completion` | The status record indicating whether the initial interactive simulation tutorial has been completed, skipped, or is still pending. | User profile configuration identity and completion timestamp |
-| `auto-start-preference` | The persistent configuration controlling whether Wira Desk launches silently at user logon via Windows Task Scheduler with elevated privileges. | Scheduled task identifier (`WiraDeskAutoStart`) and target user profile |
+| `auto-start-preference` | The persistent configuration controlling whether Wira Desk launches silently at user logon via Windows Task Scheduler with elevated privileges. | Scheduled task identifier (`WiraDesk`, frozen as `shared::constants::TASK_NAME`) and target user profile |
 
 ## Relationships
 
 - `user-shortcut-preference` is **persisted within** the shared platform configuration schema (`app-config`).
 - `onboarding-completion` **gates** the presentation of the interactive tutorial dialog on application startup.
-- `auto-start-preference` **governs** the registration and removal of the Windows Scheduled Task via `settings-shell`.
+- `auto-start-preference` **governs** the registration and removal of the Windows Scheduled Task, which the daemon performs when it reloads configuration; this component only records the preference.
 - Saving `user-shortcut-preference` **triggers** an atomic write to `app-config` followed by an explicit `ipc-reload-signal` dispatch.
 
 ## State Lifecycle

@@ -52,13 +52,13 @@ Conceptual domain model for the `settings` component. Represents domain entities
 | --- | --- | --- |
 | `user-shortcut-preference` | The user's customized physical key combinations for primary cycling, fallback cycling, window snapping, and application passthrough lists. | Shortcut action identifier (e.g. `cycle_primary`, `cycle_fallback`, `snap_left`) |
 | `onboarding-completion` | The status record indicating whether the initial interactive simulation tutorial has been completed, skipped, or is still pending. | User profile configuration identity and completion timestamp |
-| `auto-start-preference` | The persistent configuration controlling whether Wira Desk launches silently at user logon via Windows Task Scheduler with elevated privileges. | Scheduled task identifier (`WiraDeskAutoStart`) and target user profile |
+| `auto-start-preference` | The persistent configuration controlling whether Wira Desk launches silently at user logon via Windows Task Scheduler with elevated privileges. | Scheduled task identifier (`WiraDesk`, frozen as `shared::constants::TASK_NAME`) and target user profile |
 
 #### Relationships
 
 - `user-shortcut-preference` is **persisted within** the shared platform configuration schema (`app-config`).
 - `onboarding-completion` **gates** the presentation of the interactive tutorial dialog on application startup.
-- `auto-start-preference` **governs** the registration and removal of the Windows Scheduled Task via `settings-shell`.
+- `auto-start-preference` **governs** the registration and removal of the Windows Scheduled Task, which the daemon performs when it reloads configuration; this component only records the preference.
 - Saving `user-shortcut-preference` **triggers** an atomic write to `app-config` followed by an explicit `ipc-reload-signal` dispatch.
 
 #### State Lifecycle
@@ -151,7 +151,7 @@ Wira Desk does not use an RDBMS or embedded SQL database. All persistence uses l
 | Store | Format | Owner | Path / Location | Schema & Keys | Lifetime & Access Pattern |
 | --- | --- | --- | --- | --- | --- |
 | **User Configuration** | TOML | `_platform` (shared) | `%APPDATA%\WiraDesk\config.toml` | **Sections:**<br/>- `[general]`: `auto_start` (bool)<br/>- `[switcher]`: `shortcut`, `fallback_shortcut`<br/>- `[snapping]`: `snap_half_left`, `snap_half_right`, `snap_maximize`<br/>- `[layout]`: `enable_overlapping_stack`, `stack_width_percent`, `stack_shortcut`<br/>- `[vm_bypass]`: `bypass_processes` (vec), `bypass_classes` (vec) | Written atomically by `settings` process via temp file + rename. Read on startup and on `WM_APP_RELOAD_CONFIG` by `daemon`. |
-| **Diagnostic Log** | Plaintext (append-only) | `_platform` (shared) | `%APPDATA%\WiraDesk\wiradesk.log` | Formatted log lines: `[YYYY-MM-DD HH:MM:SS.mmm] [LEVEL] Message` | Append-only. Written by `daemon` on warnings/errors. Opened in default editor via tray "View Logs". |
+| **Diagnostic Log** | Plaintext (append-only) | `_platform` (shared) | `%APPDATA%\WiraDesk\wiradesk.log` | Formatted log lines: `[YYYY-MM-DD HH:MM:SS.mmm] [LEVEL] Message` | Append-only. Written by `daemon` on warnings/errors. Opened as a file in `notepad.exe` via tray "View Logs". |
 | **Legacy Config (Migration)** | TOML | `_platform` (shared) | `%APPDATA%\WinTick\config.toml` | Legacy schema (WinTick keys). | Read-only during one-time bootstrap migration if `%APPDATA%\WiraDesk\config.toml` does not yet exist. |
 
 #### In-Memory Runtime State
@@ -162,6 +162,16 @@ Wira Desk does not use an RDBMS or embedded SQL database. All persistence uses l
 | **Tray Icon State Machine** | `window-management` | `daemon` | Mutex / message-loop owned (`Normal`, `Warning`, `Critical`). | Reflects 3-Tier error protocol visually. |
 | **Hook Health Status** | `window-management` | `daemon` | Atomic / 10s timer state in `health.rs`. | Heartbeat counter tracking consecutive hook check failures. |
 | **Settings Working Copy** | `settings` | `settings` | UI thread mutable state (`Config` struct). | Edits are held in GUI memory until the user clicks Save / Applies changes. |
+
+#### Rows
+
+| No | Table | Owning component | What it holds | Key columns | Status |
+| --- | --- | --- | --- | --- | --- |
+| 1 | `config.toml [general]` | `_platform` | Persisted user configuration for general | `auto_start` | active |
+| 2 | `config.toml [switcher]` | `_platform` | Persisted user configuration for switcher | `shortcut`, `fallback_shortcut` | active |
+| 3 | `config.toml [snapping]` | `_platform` | Persisted user configuration for snapping | `snap_half_left`, `snap_half_right`, `snap_maximize` | active |
+| 4 | `config.toml [layout]` | `_platform` | Persisted user configuration for layout | `enable_overlapping_stack`, `stack_width_percent`, `stack_shortcut` | active |
+| 5 | `config.toml [vm_bypass]` | `_platform` | Persisted user configuration for vm bypass | `bypass_processes`, `bypass_classes` | active |
 
 ### List of endpoints — `inventory-api.md`
 
@@ -180,6 +190,8 @@ Wira Desk contains no HTTP, REST, GraphQL, or RPC network APIs. All inter-proces
 | **Hook Check / Heartbeat** | `WM_APP_HOOK_CHECK`<br/>(`0x8005`) | `window-management` | `health.rs` → Hook Thread | Win32 `PostThreadMessageW` | `wParam = 0`, `lParam = 0` | Instructs the Hook Thread to verify active hook state and increment health counters. |
 | **Hook Thread Ready** | `WM_APP_HOOK_READY`<br/>(`0x8006`) | `window-management` | `Hook Thread` → Main Thread | Win32 message loop dispatch | `wParam = thread_id`, `lParam = 0` | Reports successful hook installation and thread initialization. |
 | **Hook Init Failed** | `WM_APP_HOOK_INIT_FAILED`<br/>(`0x8007`) | `window-management` | `Hook Thread` → Main Thread | Win32 message loop dispatch | `wParam = error_code`, `lParam = 0` | Reports fatal hook initialization failure (escalates to Tier 1 fatal popup). |
+| **Hook Refresh OK** | `WM_APP_HOOK_REFRESH_OK`<br/>(`0x8008`) | `window-management` | `Hook Thread` → Main Thread | Win32 message loop dispatch | `wParam = 0`, `lParam = 0` | Reports a successful re-registration. Returns the tray to `Normal` (or `Warning` when `warning_latched`) and resets the Tier-3 toast latch — this is the message that makes recovery restart-free. |
+| **Hook Shutdown** | `WM_APP_HOOK_SHUTDOWN`<br/>(`0x8009`) | `window-management` | Main Thread → Hook Thread | Win32 `PostThreadMessageW` | `wParam = 0`, `lParam = 0` | Instructs the Hook Thread to unhook and exit its message loop so the thread can be joined on a clean shutdown. |
 | **Hook Config Snapshot** | `WM_APP_CONFIG_SNAPSHOT`<br/>(`0x801E`) | `window-management` | Main Thread → Hook Thread | Win32 `PostThreadMessageW` | `lParam = Box::into_raw(HookSnapshot)` | Transfers owned, immutable snapshot of bypass rules and shortcut mappings to Hook Thread. |
 | **Ring Buffer Command** | `Command` enum (`0..=5`) | `window-management` | `Hook Thread` → `Worker Thread` | In-process lock-free static ring buffer (`16` slots) | Raw `u8` byte (`1`=Cycle, `2`=SnapLeft, `3`=SnapRight, `4`=SnapMax, `5`=Stack) | Fire-and-forget command transfer with zero heap allocation. |
 | **Settings Spawn** | Executable invocation | `_platform` | `daemon` → `settings` | Win32 `ShellExecuteW` | Path: `wiradesk-settings.exe`, optional arg: `--onboarding` | Spawns GUI process on demand inheriting elevation. |
@@ -196,6 +208,31 @@ Wira Desk contains no HTTP, REST, GraphQL, or RPC network APIs. All inter-proces
 | **Tray & Notification** | `Shell_NotifyIconW`, `RegisterWindowMessageW("TaskbarCreated")` | `daemon::tray` | Tray icon lifecycle, status overlays, and explorer restart recovery (AD-10). |
 | **Task Scheduler** | `schtasks.exe /Create /Query /Delete` | `daemon::autostart`, `settings::app` | Elevated logon auto-start management (AD-13). |
 | **UI Automation (a11y)** | AccessKit Windows backend | `settings` | Screen reader accessibility tree publication for egui controls (AD-11a). |
+
+#### Rows
+
+| No | Host | Method | Path | Owning component | Description | Status |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | win32-message | POST | `WM_APP_RELOAD_CONFIG` | `settings`, `window-management` | `WM_APP + 1` (0x8001). Message: Settings tells the daemon to reload `config.toml`. | active |
+| 2 | win32-message | POST | `WM_APP_COMMAND_READY` | `window-management` | `WM_APP + 2` (0x8002). Internal message: Worker thread receives a ready-to-read `u8` command from the ring buffer. | active |
+| 3 | win32-message | POST | `WM_APP_HOOK_DEAD` | `window-management` | `WM_APP + 3` (0x8003). Internal message: heartbeat monitor reports a dead hook (escalates to Tier 3). | active |
+| 4 | win32-message | POST | `WM_APP_LOG_WARNING` | `window-management` | `WM_APP + 4` (0x8004). Internal message: a runtime warning was logged (triggers Tier 2 red-dot tray state). | active |
+| 5 | win32-message | POST | `WM_APP_HOOK_CHECK` | `window-management` | `WM_APP + 5` (0x8005). Internal message: heartbeat tick from `health.rs` — asks `wndproc_impl` to verify or refresh the keyboard hook on each heartbeat tick. Separate from `WM_APP_HOOK_DEAD` (which means "transition to Tier 3 Critical"). | active |
+| 6 | win32-message | POST | `WM_APP_HOOK_READY` | `window-management` | `WM_APP + 6` (0x8006). Hook Thread ready — `wParam` = hook thread id (`PostThreadMessageW` target). | active |
+| 7 | win32-message | POST | `WM_APP_HOOK_INIT_FAILED` | `window-management` | `WM_APP + 7` (0x8007). Hook Thread failed initialization (fatal policy). | active |
+| 8 | win32-message | POST | `WM_APP_HOOK_REFRESH_OK` | `window-management` | `WM_APP + 8` (0x8008). Hook Thread reports successful hook refresh (resets the consecutive fail counter). | active |
+| 9 | win32-message | POST | `WM_APP_HOOK_SHUTDOWN` | `window-management` | `WM_APP + 9` (0x8009). Request Hook Thread shutdown (unhook + exit message loop). | active |
+| 10 | win32-message | POST | `WM_APP_DEBUG_TOGGLE_HOOK_FAIL` | `window-management` | `WM_APP + 20` (0x8014). Toggle forced hook refresh failure (Hook Thread). | debug-only |
+| 11 | win32-message | POST | `WM_APP_DEBUG_TRIGGER_WARN` | `window-management` | `WM_APP + 21` (0x8015). Force one Tier-2 warning (`log::warn`) to verify the red-dot tray state. | debug-only |
+| 12 | win32-message | POST | `WM_APP_DEBUG_HOOK_CHECK` | `window-management` | `WM_APP + 22` (0x8016). Force one `WM_APP_HOOK_CHECK` tick to the Hook Thread (without waiting for heartbeat). | debug-only |
+| 13 | win32-message | POST | `WM_APP_DEBUG_DUMP_HOOK_LATENCY` | `window-management` | `WM_APP + 23` (0x8017). Write QPC callback statistics to trace (`HOOK_LATENCY: ...`). | debug-only |
+| 14 | win32-message | POST | `WM_APP_DEBUG_SIMULATE_SHORTCUT` | `window-management` | `WM_APP + 24` (0x8018). Simulate a shortcut (`wParam` 0=primary, 1=extra modifier) on the Hook Thread. | debug-only |
+| 15 | win32-message | POST | `WM_APP_DEBUG_DUMP_CYCLE_METRICS` | `window-management` | `WM_APP + 25` (0x8019). Write cycle latency distribution and reconciliation counters to the debug trace. Separate from `WM_APP_DEBUG_DUMP_HOOK_LATENCY`: end-to-end Worker distribution must be reported independently of hook callback timing. | debug-only |
+| 16 | win32-message | POST | `WM_APP_DEBUG_RESET_CYCLE_METRICS` | `window-management` | `WM_APP + 26` (0x801A). Reset all cycle latency samples and reconciliation counters. | debug-only |
+| 17 | win32-message | POST | `WM_APP_DEBUG_CYCLE_BURST` | `window-management` | `WM_APP + 27` (0x801B). Run `wParam` consecutive cycles through the Worker path. Deliberately does NOT use `WM_APP_DEBUG_SIMULATE_SHORTCUT`: that seam drains the ring and resets throttle on every call, so at high volume it drops commands before they are drained and produces false dropouts. This seam measures "Worker command receipt → activation completion", so it drives exactly that path. | debug-only |
+| 18 | win32-message | POST | `WM_APP_DEBUG_RUN_COMMAND` | `window-management` | `WM_APP + 28` (0x801C). Run **one** command (`wParam` = `u8` `Command` value) through the full Worker path using the actual foreground window. Unlike `WM_APP_DEBUG_CYCLE_BURST`, which only repeats `Cycle` for measurement, this seam is used by scenario harnesses to prove the *success* path — that a candidate is actually accepted, focus actually moves, and windows are actually placed. Until something runs it, that entire path is only proven "does not crash". | debug-only |
+| 19 | win32-message | POST | `WM_APP_DEBUG_TOGGLE_ACCEPT_INJECTED` | `window-management` | `WM_APP + 29` (0x801D). Toggle acceptance of `LLKHF_INJECTED`-flagged input by the hook (Hook Thread). The hook permanently rejects injected input on the normal path, and that is **required**: Wira Desk itself injects `VK_NONAME` to suppress the Start Menu, so accepting injected input would make the hook consume its own injection. As a result, the entire harness can only drive the Worker via `PostMessageW`, which bypasses the hook — and because Windows grants foreground to the process that received the last input event, the daemon never obtains it, so `SetForegroundWindow` is always denied and every cycle ends `Exhausted`. Every number ever recorded therefore measures a cycle where focus did not move. This seam opens that path **only in `debug_assertions` builds** so the harness can send real `SendInput` shortcuts and drive the full hook → ring → Worker → activation chain. Safe against Wira Desk's own injection because `VK_NONAME` does not match any shortcut. | debug-only |
+| 20 | win32-message | POST | `WM_APP_CONFIG_SNAPSHOT` | `window-management` | `WM_APP + 30` (0x801E). Deliver an owned Hook configuration snapshot to the Hook thread. `lParam` carries `Box::into_raw` of `daemon::config::HookSnapshot`; the Hook Thread reconstructs it with `Box::from_raw` so **ownership fully transfers** and the old snapshot is dropped there. This satisfies AC "each owning actor receives an owned immutable configuration snapshot through explicit control-plane message passing": no shared state, no lock, and Hook-owned shortcuts are never mutated concurrently by the Worker. Not a cross-process pointer — sender and receiver are two threads in the same daemon process. If `PostThreadMessageW` fails, the sender reclaims its `Box` so nothing leaks. | active |
 
 ### List of screens — `inventory-screen.md`
 
@@ -228,3 +265,15 @@ The system tray icon reflects the 3-Tier error protocol via visual overlays:
 | **Normal** | Default Wira Desk icon (clean monochrome / brand mark) | Hook active, no unread warnings. | Normal cycling operation. |
 | **Warning (Tier 2)** | Default icon + **Amber / Red Dot overlay** | One or more runtime warnings logged to `wiradesk.log` (e.g. non-fatal API refusal). | Clicking "View Logs" in the tray context menu opens log file and clears the dot. |
 | **Critical (Tier 3)** | Default icon + **Red X overlay** | Keyboard hook died and could not be recovered after 3 heartbeat retries. | User inspects logs or restarts utility; toast alert fired once. |
+
+#### Rows
+
+| No | Screen | Route | States | Owning component | UC served |
+| --- | --- | --- | --- | --- | --- |
+| 1 | `settings/General` | `/general` | — | `settings` |  |
+| 2 | `settings/Shortcuts` | `/shortcuts` | — | `settings` |  |
+| 3 | `settings/Layout` | `/layout` | — | `settings` |  |
+| 4 | `settings/About` | `/about` | — | `settings` |  |
+| 5 | `onboarding/Welcome` | `/welcome` | — | `settings` |  |
+| 6 | `onboarding/TrySwitching` | `/try-switching` | — | `settings` |  |
+| 7 | `onboarding/Done` | `/done` | — | `settings` |  |

@@ -198,6 +198,21 @@ fn is_win_vk(vk: u32) -> bool {
 }
 
 fn handle_key_event(rt: &mut HookRuntime, vk: u32, key_down: bool) -> KeyHandleOutcome {
+    handle_key_event_with_bypass(rt, vk, key_down, |rt| {
+        crate::context::vm_bypass::evaluate_foreground(&rt.bypass_policy, &mut rt.identity)
+            .is_passthrough()
+    })
+}
+
+fn handle_key_event_with_bypass<F>(
+    rt: &mut HookRuntime,
+    vk: u32,
+    key_down: bool,
+    eval_bypass: F,
+) -> KeyHandleOutcome
+where
+    F: FnOnce(&mut HookRuntime) -> bool,
+{
     rt.mods.apply_vk(vk, key_down);
 
     // The chord is over once every modifier is up; only then may the bypass
@@ -248,9 +263,7 @@ fn handle_key_event(rt: &mut HookRuntime, vk: u32, key_down: bool) -> KeyHandleO
     // belongs to a VM or Remote Desktop guest. This runs only on a
     // matched chord — rare — and uses bounded non-blocking metadata queries
     // against reusable buffers, so the callback stays within its budget.
-    if crate::context::vm_bypass::evaluate_foreground(&rt.bypass_policy, &mut rt.identity)
-        .is_passthrough()
-    {
+    if eval_bypass(rt) {
         rt.bypass_latched = true;
         // No ring publication, no Worker wake, no throttle advancement, and no
         // swallow state — the chord is not ours.
@@ -979,23 +992,25 @@ mod tests {
         let fallback = Shortcut::parse("alt+backtick").unwrap();
         let mut rt = test_runtime(primary, fallback);
 
+        // Explicitly supply `|_| false` for the bypass check so this unit test
+        // does not depend on the live foreground window state of the desktop.
         assert_eq!(
-            handle_key_event(&mut rt, VK_LWIN, true).disposition,
+            handle_key_event_with_bypass(&mut rt, VK_LWIN, true, |_| false).disposition,
             KeyHandleResult::PassToNext
         );
         assert_eq!(
-            handle_key_event(&mut rt, VK_BACKTICK, true).disposition,
+            handle_key_event_with_bypass(&mut rt, VK_BACKTICK, true, |_| false).disposition,
             KeyHandleResult::Swallow
         );
         // The main key-up is still swallowed: the application never saw the
         // key-down, so delivering only its release would be incoherent.
         assert_eq!(
-            handle_key_event(&mut rt, VK_BACKTICK, false).disposition,
+            handle_key_event_with_bypass(&mut rt, VK_BACKTICK, false, |_| false).disposition,
             KeyHandleResult::Swallow
         );
         // The modifier release, however, must always get through.
         assert_eq!(
-            handle_key_event(&mut rt, VK_LWIN, false).disposition,
+            handle_key_event_with_bypass(&mut rt, VK_LWIN, false, |_| false).disposition,
             KeyHandleResult::PassToNext
         );
     }
@@ -1007,11 +1022,11 @@ mod tests {
         let fallback = Shortcut::parse("alt+backtick").unwrap();
         for modifier in [VK_LWIN, VK_RWIN, VK_LCONTROL, VK_LMENU, VK_LSHIFT] {
             let mut rt = test_runtime(primary, fallback);
-            let _ = handle_key_event(&mut rt, VK_LWIN, true);
-            let _ = handle_key_event(&mut rt, VK_BACKTICK, true);
-            let _ = handle_key_event(&mut rt, VK_BACKTICK, false);
+            let _ = handle_key_event_with_bypass(&mut rt, VK_LWIN, true, |_| false);
+            let _ = handle_key_event_with_bypass(&mut rt, VK_BACKTICK, true, |_| false);
+            let _ = handle_key_event_with_bypass(&mut rt, VK_BACKTICK, false, |_| false);
             assert_eq!(
-                handle_key_event(&mut rt, modifier, false).disposition,
+                handle_key_event_with_bypass(&mut rt, modifier, false, |_| false).disposition,
                 KeyHandleResult::PassToNext,
                 "modifier {modifier:#x} release was swallowed - it would stick"
             );
@@ -1024,16 +1039,18 @@ mod tests {
         let fallback = Shortcut::parse("alt+backtick").unwrap();
         let mut rt = test_runtime(primary, fallback);
 
+        // Explicitly supply `|_| false` for the bypass check so this unit test
+        // does not depend on the live foreground window state of the desktop.
         assert_eq!(
-            handle_key_event(&mut rt, VK_LMENU, true).disposition,
+            handle_key_event_with_bypass(&mut rt, VK_LMENU, true, |_| false).disposition,
             KeyHandleResult::PassToNext
         );
         assert_eq!(
-            handle_key_event(&mut rt, VK_BACKTICK, true).disposition,
+            handle_key_event_with_bypass(&mut rt, VK_BACKTICK, true, |_| false).disposition,
             KeyHandleResult::Swallow
         );
         assert_eq!(
-            handle_key_event(&mut rt, VK_LWIN, false).disposition,
+            handle_key_event_with_bypass(&mut rt, VK_LWIN, false, |_| false).disposition,
             KeyHandleResult::PassToNext
         );
     }

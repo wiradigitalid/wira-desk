@@ -6,7 +6,7 @@ created: 2026-07-06
 updated: 2026-08-21
 reviewed:
   date: '2026-08-21'
-  sha: pending
+  sha: '7f95c48'
   lenses: [structure, prose]
 provenance: >-
   Harvested and updated from _bmad-output/planning-artifacts/architecture/architecture-WinTick-2026-07-06/ARCHITECTURE-SPINE.md
@@ -153,9 +153,9 @@ graph TD
 | Name | Version / Specification |
 | --- | --- |
 | Rust (stable) | 2021 edition |
-| `windows-sys` | 0.59.x |
-| `egui` + `eframe` (settings only) | 0.31.x (with AccessKit) |
-| `toml` + `serde` (shared) | 0.8.x / 1.0.x |
+| `windows-sys` | 0.52.x |
+| `egui` + `eframe` (settings only) | 0.35.x (with AccessKit) |
+| `toml` + `serde` (shared) | 1.1.x / 1.0.x |
 | Target platform | Windows 10+ (x86_64-pc-windows-msvc) |
 | Build profile (release) | `lto = true`, `opt-level = "z"`, `strip = true`, `panic = "abort"` |
 

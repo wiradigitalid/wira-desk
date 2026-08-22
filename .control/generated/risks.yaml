@@ -1,1 +1,17 @@
-risks: []
+risks:
+- id: RISK-1
+  impact: medium
+  likelihood: low
+  owner: repo owner
+  status: open
+  pivot_trigger: A second shell-integration requirement arrives with no way to test it, or FR-10 regresses
+    once in a release. Either makes a runtime harness worth its cost; one untestable requirement does
+    not.
+- id: RISK-2
+  impact: low
+  likelihood: low
+  owner: repo owner
+  status: open
+  pivot_trigger: The log-opening mechanism changes again. It has already moved once in documentation only
+    -- the corpus described `ShellExecuteW(L"explore", ...)` against code that never did that -- and an
+    untested path is exactly where that kind of drift survives.

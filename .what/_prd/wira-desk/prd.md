@@ -287,7 +287,7 @@ The system can execute a structured error protocol: Tier 1 (fatal startup displa
 #### FR-12: Diagnostic Log Inspection from Tray Menu
 The system can open the local silent log file location in File Explorer when the user selects "View Logs" from the tray context menu.
 
-**Proof of done:** Clicking "View Logs" in the tray menu opens the directory containing Wira Desk diagnostic logs.
+**Proof of done:** Clicking "View Logs" in the tray menu opens the Wira Desk diagnostic log file in a plain-text viewer, creating an empty log first if none exists yet.
 
 **Consequences (testable):**
 - Menu action opens `%APPDATA%\WiraDesk\logs\` in Windows Explorer.
@@ -304,7 +304,7 @@ The system can open the local silent log file location in File Explorer when the
 **Functional Requirements:**
 
 #### FR-13: Elevated Logon Auto-Start Scheduled Task
-The system can create or delete a Windows scheduled task (`WiraDeskAutoStart`) configured to launch the daemon with highest privileges upon user logon (`ONLOGON`).
+The system can create or delete a Windows scheduled task (`WiraDesk`) configured to launch the daemon with highest privileges upon user logon (`ONLOGON`).
 
 **Proof of done:** Toggling the Auto-Start option in the tray menu creates a scheduled task that launches Wira Desk silently upon next reboot without prompting for UAC credentials.
 

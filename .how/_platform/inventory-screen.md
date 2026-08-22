@@ -1,3 +1,15 @@
+---
+type: inventory
+kind: screen
+derived_from: code
+# `states` maps a state-route to its parent screen's route. None of this product's surfaces has a
+# distinct state-route: the settings panes and the onboarding steps are the routes themselves.
+states: {}
+# `platform_rows` is deliberately NOT declared. It names rows with no Product Component promise
+# behind them, and every row below already carries its owner in the `Owning component` column.
+# Declaring it here would add V21 documentation demands for names that are not cross-cutting.
+---
+
 # Screen & UI Surface Inventory
 
 This document catalogues all graphical user interface surfaces, dialogs, menus, and transient visual states across Wira Desk.
@@ -27,3 +39,15 @@ The system tray icon reflects the 3-Tier error protocol via visual overlays:
 | **Normal** | Default Wira Desk icon (clean monochrome / brand mark) | Hook active, no unread warnings. | Normal cycling operation. |
 | **Warning (Tier 2)** | Default icon + **Amber / Red Dot overlay** | One or more runtime warnings logged to `wiradesk.log` (e.g. non-fatal API refusal). | Clicking "View Logs" in the tray context menu opens log file and clears the dot. |
 | **Critical (Tier 3)** | Default icon + **Red X overlay** | Keyboard hook died and could not be recovered after 3 heartbeat retries. | User inspects logs or restarts utility; toast alert fired once. |
+
+## Rows
+
+| No | Screen | Route | States | Owning component | UC served |
+| --- | --- | --- | --- | --- | --- |
+| 1 | `settings/General` | `/general` | — | `settings` |  |
+| 2 | `settings/Shortcuts` | `/shortcuts` | — | `settings` |  |
+| 3 | `settings/Layout` | `/layout` | — | `settings` |  |
+| 4 | `settings/About` | `/about` | — | `settings` |  |
+| 5 | `onboarding/Welcome` | `/welcome` | — | `settings` |  |
+| 6 | `onboarding/TrySwitching` | `/try-switching` | — | `settings` |  |
+| 7 | `onboarding/Done` | `/done` | — | `settings` |  |

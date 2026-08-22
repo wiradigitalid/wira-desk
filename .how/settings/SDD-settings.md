@@ -8,7 +8,7 @@ realizes: [UC-4, UC-5, UC-6]
 binds: [AD-1, AD-5, AD-11, AD-11a, AD-12, AD-13]
 reviewed:
   date: '2026-08-21'
-  sha: pending
+  sha: '7f95c48'
   lenses: [structure, prose, edge-case-hunter]
 ---
 
@@ -29,7 +29,7 @@ The three Logical Components (LCs) operate strictly within the `settings` contai
 | LC | type | Responsibility |
 | --- | --- | --- |
 | `LC-settings-shell` | ui-composite | Hosts the `eframe` window and immediate-mode `egui` rendering loops; manages pane routing (`General`, `Shortcuts`, `Layout`, `About`); detects OS theme (`AppsUseLightTheme`) and applies two-theme visuals with widened focus outlines; implements first-run onboarding wizard progression; renders save feedback and diagnostic typeface information. |
-| `LC-config-writer` | service | Executes strict pre-persistence shortcut validation; performs atomic file writes (`Config::save`) to `%APPDATA%\WiraDesk\config.toml`; dispatches non-blocking `WM_APP_RELOAD_CONFIG` (0x8001) signals via `PostMessageW` to `WiraDeskDaemonHiddenWindow`; queries and manages Windows Task Scheduler `ONLOGON` tasks via `schtasks.exe`. |
+| `LC-config-writer` | service | Executes strict pre-persistence shortcut validation; performs atomic file writes (`Config::save`) to `%APPDATA%\WiraDesk\config.toml`; dispatches non-blocking `WM_APP_RELOAD_CONFIG` (0x8001) signals via `PostMessageW` to `WiraDeskDaemonHiddenWindow`. It records the auto-start *preference* only; the scheduled task itself is created and deleted by the daemon (`daemon::autostart`) when it reloads config. |
 | `LC-shortcut-capturer` | control | Implements interactive key interception within the Settings window; translates raw egui input events into canonical modifier-plus-key strings (`ctrl+shift+a`); enforces modifier requirements; exposes live first-class `Listening` state and screen reader announcements via AccessKit. |
 
 ### Dependency & Communication Direction
@@ -50,7 +50,7 @@ The three Logical Components (LCs) operate strictly within the `settings` contai
                  └───────────────────> [Daemon Hidden Window]
                                     (WiraDeskDaemonHiddenWindow)
 
-[Windows Task Scheduler] <──(schtasks.exe)── LC-config-writer
+[Windows Task Scheduler] <──(schtasks.exe)── daemon::autostart  (NOT settings)
 [Windows Registry]       <──(RegGetValueW)─── LC-settings-shell (Theme)
 [Windows Fonts]          <──(segoeui.ttf)──── LC-settings-shell (Typography)
 [Windows UI Automation]  <──(AccessKit)────── LC-settings-shell (Assistive Tech)
@@ -108,7 +108,7 @@ The Robustness Analysis classifies the technical design for all realized use cas
 - **`C-CaptureManager` (`LC-shortcut-capturer`):** Manages `CaptureState` transitions (`Idle` ↔ `Listening`), translates `egui::Key` + `Modifiers` into candidate strings, filters modifier-only states, and emits screen reader announcements.
 - **`C-PersistenceManager` (`LC-config-writer`):** Orchestrates configuration validation (`validate_config`), atomic disk serialization (`Config::save`), and IPC signal emission (`signal_reload`).
 - **`C-OnboardingWizard` (`LC-settings-shell`):** Drives the 3-step first-run tutorial state machine (`Welcome` → `TrySwitching` → `Done`) and writes initial configuration on completion or skip.
-- **`C-AutoStartController` (`LC-config-writer` / `daemon::autostart`):** Evaluates `schtasks.exe` arguments (`/Create`, `/Query`, `/Delete`) and synchronizes configuration state.
+- **`C-AutoStartController` (`daemon::autostart`):** Evaluates `schtasks.exe` arguments (`/Create`, `/Query`, `/Delete`) and synchronizes configuration state. It lives in the daemon, not in this component; `settings` reaches it only by writing `general.auto_start` and signalling reload.
 
 ### 3. Entity Objects
 
@@ -154,9 +154,9 @@ The Robustness Analysis classifies the technical design for all realized use cas
 2. `model.draft.general.auto_start` is modified, marking `model.is_dirty() = true`.
 3. User clicks **Save**.
 4. `C-PersistenceManager` validates configuration and atomically commits `config.toml`.
-5. If `auto_start` was enabled, `C-AutoStartController` invokes `schtasks.exe /Create /TN WiraDesk /TR "\"<exe_path>\"" /SC ONLOGON /RL HIGHEST /RU "%USERNAME%" /F`.
-6. If `auto_start` was disabled, `C-AutoStartController` invokes `schtasks.exe /Delete /TN WiraDesk /F`.
-7. `C-PersistenceManager` signals `WM_APP_RELOAD_CONFIG` to the daemon hidden window.
+5. `C-PersistenceManager` signals `WM_APP_RELOAD_CONFIG` to the daemon hidden window.
+6. The daemon reloads config and reconciles the task: if `auto_start` was enabled, `C-AutoStartController` invokes `schtasks.exe /Create /TN WiraDesk /TR "\"<exe_path>\"" /SC ONLOGON /RL HIGHEST /RU "%USERNAME%" /F`; if disabled, `schtasks.exe /Delete /TN WiraDesk /F`.
+7. The tray menu checkmark is read back from `schtasks /Query`, never from the config value.
 
 #### SCN-01: Invalid Shortcut Combination Rejected
 1. User enters listening mode on a shortcut field and presses a bare key without modifiers (e.g. `Tab` or `A`) or a multi-key chord (`Ctrl + A + B`).

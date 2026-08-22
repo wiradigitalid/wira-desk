@@ -146,6 +146,20 @@ $checkVocabulary = @{
         if ($file -like '.claude/skills/*' -or $file -like '.agents/skills/*') { return $true }
         if ($file -like '.control/memlog/*') { return $true }
         if ($file -like '.constitution/method/*') { return $true }
+        # The WDI corpus, added when it landed rather than when it started failing CI --
+        # it landed one commit after this gate was last aligned, and went red immediately.
+        #
+        # Same reasoning as the planning archive above, and it has to be, because it is the
+        # same category of file. `.how/_platform/ARCHITECTURE-SPINE.md` is where `AD-9` is
+        # *defined*; `.control/registry/requirements.yaml` is where `FR-13` is defined. An
+        # identifier is opaque when it is referenced far from its meaning -- these are the
+        # meaning. Excluding them keeps the rule pointed at what it was written for:
+        # `AD-9` turning up in `README.md` or in a Rust doc comment, with nothing in the
+        # published tree to say what it is.
+        #
+        # The pattern itself is untouched, and product source is still enforced. If this
+        # rule ever fires on `crates/`, `docs/`, or a root document, that is a real finding.
+        if ($file -like '.what/*' -or $file -like '.how/*' -or $file -like '.control/*') { return $true }
         return $false
     }
 }
@@ -170,6 +184,16 @@ $checkClaims = @{
         # come back and the fix is at the source.
         if ($file -like '_bmad-output/*') { return $true }
         if ($file -like '.claude/skills/*' -or $file -like '.agents/skills/*') { return $true }
+        # The WDI corpus, on the same asymmetry that admits `_bmad-output` and refuses
+        # `design-system`. `< 2 MB` in `NFR-1`, in the brief's sizing table, and in the
+        # spine's RAM budget is a requirement target -- the number the design aims at, in the
+        # document that exists to state what the design aims at. `v1.0.0` in a PRD revision
+        # history is a document version, not a shipped release.
+        #
+        # `README.md`, `docs/`, and `crates/` stay enforced, which is where the same figures
+        # would become promises to a reader. That split is the whole rule; it is not widened
+        # here, only told where the requirement documents now live.
+        if ($file -like '.what/*' -or $file -like '.how/*' -or $file -like '.control/*') { return $true }
         return $false
     }
 }

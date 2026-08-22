@@ -2,4 +2,31 @@
 #
 # `pivot_trigger` is a measurable condition that makes turning or giving up the right call.
 
-risks: []
+risks:
+  - id: RISK-1
+    risk: >-
+      FR-10 (tray icon returns after Windows Explorer restarts) has no automated test. The
+      behaviour is a shell broadcast handled in another process, so the suite proves the tray
+      state machine around it rather than the `Shell_NotifyIconW(NIM_ADD)` call itself. A
+      regression here is invisible to CI and shows up only as a user losing the tray icon.
+    impact: medium
+    likelihood: low
+    owner: repo owner
+    status: open
+    pivot_trigger: >-
+      A second shell-integration requirement arrives with no way to test it, or FR-10 regresses
+      once in a release. Either makes a runtime harness worth its cost; one untestable
+      requirement does not.
+  - id: RISK-2
+    risk: >-
+      FR-12 (View Logs opens the diagnostic log) has no automated test. `menu::view_logs`
+      spawns `notepad.exe` on the log path, and asserting on that means asserting on another
+      process. Covered manually at release.
+    impact: low
+    likelihood: low
+    owner: repo owner
+    status: open
+    pivot_trigger: >-
+      The log-opening mechanism changes again. It has already moved once in documentation only
+      -- the corpus described `ShellExecuteW(L"explore", ...)` against code that never did that
+      -- and an untested path is exactly where that kind of drift survives.

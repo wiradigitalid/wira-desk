@@ -42,9 +42,15 @@ stateDiagram-v2
 
 ---
 
-## 2. Low-Level Keyboard Hook Lifecycle (`hook-command`)
+## 2. Low-Level Keyboard Hook Lifecycle (hook instance, not `hook-command`)
 
 Governs the operational lifecycle of the `WH_KEYBOARD_LL` hook instance on the dedicated Hook Thread.
+
+This machine belongs to the **hook instance**, which is not a domain entity and deliberately has no
+row in `domain-model.md`. The entity named `hook-command` has its own, much shorter lifecycle there —
+`Pending` → `Dispatched` | `Dropped` — describing one intercepted keypress rather than the hook that
+intercepted it. They were briefly filed under one name; two machines under one entity name is how a
+reader ends up looking for `Degraded` in the wrong table.
 
 ```mermaid
 stateDiagram-v2

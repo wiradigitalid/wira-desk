@@ -28,7 +28,7 @@ Notify the daemon that `config.toml` was written atomically and may be re-read. 
 | Condition | Response | Caller should |
 | --- | --- | --- |
 | Daemon window not found | `FindWindowW` returns null; reload not sent | Log warning; user may restart daemon |
-| PostMessage fails | Win32 error | Retry once; show Settings error banner |
+| PostMessage fails | `signal_reload` returns `false`; not retried | Report it; the file is already written, so the daemon picks the change up on its next start. A retry is deliberately absent — the post is a nudge to re-read, not the delivery of the change |
 | Partial write before signal | Prevented by module ordering in `persistence.rs` | N/A — signal is last |
 
 ## Compatibility

@@ -7,7 +7,7 @@ updated: 2026-08-21
 satisfies: [FR-1, FR-2, FR-3, FR-4, FR-5, FR-6, FR-8, FR-9, FR-10, FR-11, FR-12, FR-14, FR-15]
 reviewed:
   date: '2026-08-21'
-  sha: pending
+  sha: '7f95c48'
   lenses: [structure, prose, edge-case-hunter]
 ---
 
@@ -41,7 +41,7 @@ Users manage multiple windows within the same application (multiple browser sess
 
 - Must adhere strictly to Architecture Spine invariants AD-1 through AD-10 and AD-12.
 - Must execute live, stateless Z-order window enumeration via `EnumWindows` on every keypress without caching Z-order (AD-3).
-- Must restrict window enumeration to non-blocking kernel APIs (`IsWindowVisible`, `GetWindowLongPtrW`, `SetWindowPos`), executing off the hook thread on the worker thread (NFR-4, AD-2).
+- Must restrict window enumeration to the non-blocking kernel APIs named in the spine's sterilization convention (`IsWindowVisible`, `GetWindowLongPtrW`, `GetWindowThreadProcessId`, `QueryFullProcessImageNameW`, `GetClassNameW`) and never a blocking `SendMessage` or `GetWindowText`, executing off the hook thread on the worker thread (NFR-4, AD-2).
 - Must run with elevated Administrator privileges via application manifest (`requireAdministrator`) to guarantee UIPI focus control (FR-8).
 - Must maintain a static RAM footprint under 2 MB idle (NFR-1) and release binary size under 500 KB (NFR-5).
 - Must not watch configuration files on disk; configuration reload occurs exclusively via explicit `WM_APP_RELOAD_CONFIG` IPC message (BR-1, AD-5).
@@ -62,7 +62,7 @@ Users manage multiple windows within the same application (multiple browser sess
 
 ## Success Signal
 
-Pressing `Win + \`` immediately shifts keyboard focus to the next visible, same-application window on the active physical monitor and virtual desktop in under 1 ms perceived latency, with zero visual flicker, zero cross-monitor jump, and full support for elevated console windows.
+Pressing `Win + \`` immediately shifts keyboard focus to the next visible, same-application window on the active physical monitor and virtual desktop, with the hook callback returning in under 10 ms (NFR-2, NFR-3), zero visual flicker, zero cross-monitor jump, and full support for elevated console windows.
 
 ## Assumptions, Risks, and To Be Confirmed
 
@@ -75,7 +75,7 @@ Pressing `Win + \`` immediately shifts keyboard focus to the next visible, same-
 - Windows OS `LowLevelHooksTimeout` (~300 ms) unhooking the hook thread if blocked, mitigated by sub-10 ms hook execution and off-thread worker processing.
 
 ### To Be Confirmed
-- None; all architectural invariants and functional requirements ratified at G3.
+- None; all architectural invariants and functional requirements are stated and traced. Ratification is the owner's act at G3, recorded in `gates_passed`.
 
 ## Gate Checklist · [G3]
 
