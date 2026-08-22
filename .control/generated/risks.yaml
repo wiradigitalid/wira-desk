@@ -15,11 +15,3 @@ risks:
   pivot_trigger: The log-opening mechanism changes again. It has already moved once in documentation only
     -- the corpus described `ShellExecuteW(L"explore", ...)` against code that never did that -- and an
     untested path is exactly where that kind of drift survives.
-- id: RISK-3
-  impact: medium
-  likelihood: medium
-  owner: repo owner
-  status: open
-  pivot_trigger: Narrator reports a missing name, role, value, or listening state on any settings control
-    after the bump. That is the point at which an automated UIA check earns its cost, because the manual
-    pass has then failed once and will be repeated on every future egui release.

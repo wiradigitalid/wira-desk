@@ -1,0 +1,209 @@
+=== Step 0: Initial App Launch & Tutorial (pid 26312) ===
+orca computer get-app-state --app pid:26312 --json
+Snapshot:
+Window: "Wira Desk Settings", App: wiradesk-settings.
+0 region Wira Desk Settings
+	1 text Welcome to Wira Desk
+	2 text Wira Desk switches between windows of the application you are already using, instead of every window on the system like Alt+Tab does. Cycling also stays on the current monitor and virtual desktop, rather than reaching across all of them.
+	3 button Next
+	4 button Skip Tutorial
+
+uia-dump.ps1 -ProcessId 26312:
+- [Window] name='Wira Desk Settings' focusable **FOCUSED**
+  - [Text] name='Welcome to Wira Desk'
+  - [Text] name='Wira Desk switches between windows of the application you are already using, instead of every window on the system like Alt+Tab does. Cycling also stays on the current monitor and virtual desktop, rather than reaching across all of them.'
+  - [Button] name='Next' focusable
+  - [Button] name='Skip Tutorial' focusable
+
+orca computer click --app pid:26312 --element-index 4 --json (Skip Tutorial)
+0 region Wira Desk Settings
+	1 text You are all set
+	2 text You can change any shortcut later from the Shortcuts pane.
+	3 button Finish
+
+orca computer click --app pid:26312 --element-index 3 --json (Finish)
+0 region Wira Desk Settings
+	1 button General, Secondary Actions: Toggle
+	2 button Shortcuts, Secondary Actions: Toggle
+	3 button Layout, Secondary Actions: Toggle
+	4 button About, Secondary Actions: Toggle
+	5 check box Start Wira Desk with Windows, Secondary Actions: Toggle
+	6 button Save
+	7 button Revert
+	8 text Settings saved. They apply the next time Wira Desk starts.
+
+=== Step 1: Shortcuts Pane Tab Order Walk ===
+orca computer click --app pid:26312 --element-index 2 --json (Shortcuts tab)
+uia-dump.ps1 -ProcessId 26312:
+- [Window] name='Wira Desk Settings'
+  - [Button] name='General' focusable toggle=Off
+  - [Button] name='Shortcuts' focusable **FOCUSED** toggle=On
+  - [Button] name='Layout' focusable toggle=Off
+  - [Button] name='About' focusable toggle=Off
+  - [Text] name='Switch windows of the same application'
+  - [Button] name='Switch windows of the same application. Current shortcut win+backtick.' focusable
+  - [Text] name='Fallback switch shortcut'
+  - [Button] name='Fallback switch shortcut. Current shortcut alt+backtick.' focusable
+  - [Text] name='Snap to left half'
+  - [Button] name='Snap to left half. Current shortcut ctrl+win+left.' focusable
+  - [Text] name='Snap to right half'
+  - [Button] name='Snap to right half. Current shortcut ctrl+win+right.' focusable
+  - [Text] name='Maximize'
+  - [Button] name='Maximize. Current shortcut ctrl+win+enter.' focusable
+  - [Text] name='Overlapping stack'
+  - [Button] name='Overlapping stack. Current shortcut ctrl+win+down.' focusable
+  - [Button] name='Save' focusable
+  - [Button] name='Revert' focusable
+  - [Text] name='Settings saved. They apply the next time Wira Desk starts.'
+
+focused.ps1 across Tab presses:
+Tab 1: [Button] 'Layout'
+Tab 2: [Button] 'About'
+Tab 3: [Button] 'Switch windows of the same application. Current shortcut win+backtick.'
+Tab 4: [Button] 'Fallback switch shortcut. Current shortcut alt+backtick.'
+Tab 5: [Button] 'Snap to left half. Current shortcut ctrl+win+left.'
+Tab 6: [Button] 'Snap to right half. Current shortcut ctrl+win+right.'
+Tab 7: [Button] 'Maximize. Current shortcut ctrl+win+enter.'
+Tab 8: [Button] 'Overlapping stack. Current shortcut ctrl+win+down.'
+Tab 9: [Button] 'Save'
+Tab 10: [Button] 'General'
+Tab 11: [Button] 'Shortcuts'
+Tab 12: [Button] 'Layout'
+Tab 13: [Button] 'About'
+Tab 14: [Button] 'Switch windows of the same application. Current shortcut win+backtick.'
+Tab 15: [Button] 'Fallback switch shortcut. Current shortcut alt+backtick.'
+
+=== Step 2: About Pane Tab Order Walk ===
+orca computer click --app pid:26312 --element-index 4 --json (About tab)
+uia-dump.ps1 -ProcessId 26312:
+- [Window] name='Wira Desk Settings'
+  - [Button] name='General' focusable toggle=Off
+  - [Button] name='Shortcuts' focusable toggle=Off
+  - [Button] name='Layout' focusable toggle=Off
+  - [Button] name='About' focusable **FOCUSED** toggle=On
+  - [Text] name='Wira Desk'
+  - [Text] name='Version 0.1.0'
+  - [Text] name='Typeface: Segoe UI'
+  - [Text] name='Wira Desk switches between windows of the application you are already using, rather than every window on the system.'
+  - [Button] name='Save' focusable
+  - [Button] name='Revert' focusable
+  - [Text] name='Settings saved. They apply the next time Wira Desk starts.'
+
+focused.ps1 across Tab presses:
+Tab 1: [Button] 'Save'
+Tab 2: [Button] 'General'
+Tab 3: [Button] 'Shortcuts'
+Tab 4: [Button] 'Layout'
+Tab 5: [Button] 'About'
+Tab 6: [Button] 'Save'
+Tab 7: [Button] 'General'
+Tab 8: [Button] 'Shortcuts'
+Tab 9: [Button] 'Layout'
+Tab 10: [Button] 'About'
+
+=== Step 3: Shift+Tab Reversal ===
+Initial focused element: [Button] 'About'
+orca computer hotkey --app pid:26312 --key Shift+Tab --no-screenshot --json
+focused.ps1: [Button] 'Layout'
+Shift+Tab 1: [Button] 'Shortcuts'
+Shift+Tab 2: [Button] 'General'
+Shift+Tab 3: [Button] 'Save'
+Shift+Tab 4: [Button] 'About'
+Shift+Tab 5: [Button] 'Layout'
+Shift+Tab 6: [Button] 'Shortcuts'
+
+=== Step 4: Escape Cancels Armed Shortcut Capture ===
+Switch to Shortcuts pane:
+orca computer click --app pid:26312 --element-index 2 --json
+Arm capture on field 1 (Switch windows of the same application):
+orca computer click --app pid:26312 --element-index 6 --json
+uia-dump.ps1 -ProcessId 26312:
+- [Window] name='Wira Desk Settings'
+  - [Button] name='General' focusable toggle=Off
+  - [Button] name='Shortcuts' focusable toggle=On
+  - [Button] name='Layout' focusable toggle=Off
+  - [Button] name='About' focusable toggle=Off
+  - [Text] name='Switch windows of the same application'
+  - [Button] name='Listening for a key combination. Press Escape to cancel.' focusable **FOCUSED**
+  - [Text] name='Fallback switch shortcut'
+  - [Button] name='Fallback switch shortcut. Current shortcut alt+backtick.' focusable
+  - [Text] name='Snap to left half'
+  - [Button] name='Snap to left half. Current shortcut ctrl+win+left.' focusable
+  - [Text] name='Snap to right half'
+  - [Button] name='Snap to right half. Current shortcut ctrl+win+right.' focusable
+  - [Text] name='Maximize'
+  - [Button] name='Maximize. Current shortcut ctrl+win+enter.' focusable
+  - [Text] name='Overlapping stack'
+  - [Button] name='Overlapping stack. Current shortcut ctrl+win+down.' focusable
+  - [Text] name='Listening for a key combination. Press Escape to cancel.'
+  - [Button] name='Save' focusable
+  - [Button] name='Revert' focusable
+  - [Text] name='Settings saved. They apply the next time Wira Desk starts.'
+
+Cancel capture via Escape:
+orca computer press-key --app pid:26312 --key Escape --no-screenshot --json
+uia-dump.ps1 -ProcessId 26312:
+- [Window] name='Wira Desk Settings' focusable **FOCUSED**
+  - [Button] name='General' focusable toggle=Off
+  - [Button] name='Shortcuts' focusable toggle=On
+  - [Button] name='Layout' focusable toggle=Off
+  - [Button] name='About' focusable toggle=Off
+  - [Text] name='Switch windows of the same application'
+  - [Button] name='Switch windows of the same application. Current shortcut win+backtick.' focusable
+  - [Text] name='Fallback switch shortcut'
+  - [Button] name='Fallback switch shortcut. Current shortcut alt+backtick.' focusable
+  - [Text] name='Snap to left half'
+  - [Button] name='Snap to left half. Current shortcut ctrl+win+left.' focusable
+  - [Text] name='Snap to right half'
+  - [Button] name='Snap to right half. Current shortcut ctrl+win+right.' focusable
+  - [Text] name='Maximize'
+  - [Button] name='Maximize. Current shortcut ctrl+win+enter.' focusable
+  - [Text] name='Overlapping stack'
+  - [Button] name='Overlapping stack. Current shortcut ctrl+win+down.' focusable
+  - [Button] name='Save' focusable
+  - [Button] name='Revert' focusable
+  - [Text] name='Settings saved. They apply the next time Wira Desk starts.'
+
+=== Step 5: Pane UIA Tree Dumps for Accessible Names Inspection ===
+
+Pane: General
+uia-dump.ps1:
+- [Window] name='Wira Desk Settings'
+  - [Button] name='General' focusable **FOCUSED** toggle=On
+  - [Button] name='Shortcuts' focusable toggle=Off
+  - [Button] name='Layout' focusable toggle=Off
+  - [Button] name='About' focusable toggle=Off
+  - [CheckBox] name='Start Wira Desk with Windows' focusable toggle=Off
+  - [Button] name='Save' focusable
+  - [Button] name='Revert' focusable
+  - [Text] name='Settings saved. They apply the next time Wira Desk starts.'
+
+Pane: Layout
+uia-dump.ps1:
+- [Window] name='Wira Desk Settings'
+  - [Button] name='General' focusable toggle=Off
+  - [Button] name='Shortcuts' focusable toggle=Off
+  - [Button] name='Layout' focusable **FOCUSED** toggle=On
+  - [Button] name='About' focusable toggle=Off
+  - [CheckBox] name='Enable overlapping stack layout' focusable toggle=Off
+  - [Slider] name='Stack width percent' focusable range=50[10..100]
+  - [Spinner] name='Stack width percent' focusable value='50' readonly=False range=50[10..100]
+  - [Text] name='Stack width percent'
+  - [Button] name='Save' focusable
+  - [Button] name='Revert' focusable
+  - [Text] name='Settings saved. They apply the next time Wira Desk starts.'
+
+Pane: About
+uia-dump.ps1:
+- [Window] name='Wira Desk Settings'
+  - [Button] name='General' focusable toggle=Off
+  - [Button] name='Shortcuts' focusable toggle=Off
+  - [Button] name='Layout' focusable toggle=Off
+  - [Button] name='About' focusable **FOCUSED** toggle=On
+  - [Text] name='Wira Desk'
+  - [Text] name='Version 0.1.0'
+  - [Text] name='Typeface: Segoe UI'
+  - [Text] name='Wira Desk switches between windows of the application you are already using, rather than every window on the system.'
+  - [Button] name='Save' focusable
+  - [Button] name='Revert' focusable
+  - [Text] name='Settings saved. They apply the next time Wira Desk starts.'
