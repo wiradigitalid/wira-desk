@@ -17,6 +17,22 @@ risks:
       A second shell-integration requirement arrives with no way to test it, or FR-10 regresses
       once in a release. Either makes a runtime harness worth its cost; one untestable
       requirement does not.
+  - id: RISK-3
+    risk: >-
+      The accessibility evidence for FR-20 and FR-21 was gathered against the AccessKit adapter in
+      eframe 0.35, by inspecting the UI Automation surface of a probe. Raising eframe and egui to
+      0.36.1 replaces that adapter, and nothing automated stands behind those two requirements --
+      `app::tests::focus_order_*` proves the declared focus order, not the UIA tree. So the bump is
+      mechanically verified (one egui in the graph, 330 tests green) while its accessibility claim
+      is inherited rather than re-proven.
+    impact: medium
+    likelihood: medium
+    owner: repo owner
+    status: open
+    pivot_trigger: >-
+      Narrator reports a missing name, role, value, or listening state on any settings control after
+      the bump. That is the point at which an automated UIA check earns its cost, because the
+      manual pass has then failed once and will be repeated on every future egui release.
   - id: RISK-2
     risk: >-
       FR-12 (View Logs opens the diagnostic log) has no automated test. `menu::view_logs`

@@ -6,7 +6,7 @@ created: 2026-07-06
 updated: 2026-08-21
 reviewed:
   date: '2026-08-21'
-  sha: '7f95c48'
+  sha: '325b78d'
   lenses: [structure, prose]
 provenance: >-
   Harvested and updated from _bmad-output/planning-artifacts/architecture/architecture-WinTick-2026-07-06/ARCHITECTURE-SPINE.md
@@ -108,6 +108,8 @@ The paradigm maps to the execution units:
 - **Binds:** FR-20, FR-21, CAP-5
 - **Prevents:** A Settings window that looks correct but exposes nothing to a screen reader. `accesskit` is not an eframe default feature; without it the UI Automation tree is never published and every accessibility criterion fails silently.
 - **Rule:** `wiradesk-settings.exe` depends on `eframe` with `accesskit` enabled and `egui`. The AccessKit-backed Windows adapter is the accepted accessibility mechanism.
+- **Version coupling:** `eframe` and `egui` MUST be raised together and MUST end on the same minor version. Raising one alone leaves two `egui` versions in the graph, and `eframe::egui::Context` and `egui::Context` then stop being the same type — a compile error, not a subtle bug.
+- **Evidence does not travel:** the UI Automation surface — role, name, value, and listening state — was confirmed against one adapter version, and no automated test stands behind FR-20 or FR-21. A version change therefore obliges re-verifying that surface before the release carrying it.
 - **Typography:** Segoe UI is loaded from system fonts (`C:\Windows\Fonts\segoeui.ttf`), falling back to Tahoma, then to egui's bundled face.
 - **Theme:** Focus treatment is applied to both light and dark styles via `all_styles_mut` so the focus indicator remains consistent across OS theme switches.
 
@@ -154,7 +156,7 @@ graph TD
 | --- | --- |
 | Rust (stable) | 2021 edition |
 | `windows-sys` | 0.52.x |
-| `egui` + `eframe` (settings only) | 0.35.x (with AccessKit) |
+| `egui` + `eframe` (settings only) | 0.36.x (with AccessKit) |
 | `toml` + `serde` (shared) | 1.1.x / 1.0.x |
 | Target platform | Windows 10+ (x86_64-pc-windows-msvc) |
 | Build profile (release) | `lto = true`, `opt-level = "z"`, `strip = true`, `panic = "abort"` |

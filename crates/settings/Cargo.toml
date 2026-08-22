@@ -14,12 +14,12 @@ path = "src/main.rs"
 
 [dependencies]
 shared = { path = "../shared" }
-# Runtime verification harness freezes eframe 0.35.x with the AccessKit-backed Windows adapter.
+# Runtime verification harness freezes eframe 0.36.x with the AccessKit-backed Windows adapter.
 # `accesskit` is not a default eframe feature — without it the UI Automation
 # tree is never published and every accessibility acceptance criterion fails
 # silently, so it is requested explicitly rather than assumed.
-eframe = { version = "0.35", features = ["accesskit"] }
-egui = "0.35"
+eframe = { version = "0.36", features = ["accesskit"] }
+egui = "0.36"
 windows-sys = { version = "0.52", features = [
     "Win32_Foundation",
     "Win32_UI_WindowsAndMessaging",
