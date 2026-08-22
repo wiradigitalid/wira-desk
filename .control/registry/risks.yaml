@@ -22,17 +22,37 @@ risks:
       The accessibility evidence for FR-20 and FR-21 was gathered against the AccessKit adapter in
       eframe 0.35, by inspecting the UI Automation surface of a probe. Raising eframe and egui to
       0.36.1 replaces that adapter, and nothing automated stands behind those two requirements --
-      `app::tests::focus_order_*` proves the declared focus order, not the UIA tree. So the bump is
+      `app::tests::focus_order_*` proves the declared focus order, not the UIA tree. So the bump was
       mechanically verified (one egui in the graph, 330 tests green) while its accessibility claim
-      is inherited rather than re-proven.
+      was inherited rather than re-proven.
     impact: medium
     likelihood: medium
     owner: repo owner
-    status: open
+    status: closed
+    closed_on: '2026-08-22'
+    closed_by: >-
+      A UIA pass over the live 0.36.1 build, driven through Orca computer-use with a
+      `System.Windows.Automation` client reading role, name, ToggleState, Value, RangeValue and
+      keyboard focus. Raw captures: `.work/a11y/raw-dumps.txt`. The tree is published and every
+      property FR-21 names survives the adapter change -- pane tabs carry a TogglePattern, the
+      auto-start control is a `CheckBox` whose `toggle` flips live, the layout controls expose
+      `value` and `range`, each shortcut button embeds its current value in its accessible name,
+      and arming a capture renames that button to "Listening for a key combination. Press Escape
+      to cancel." FR-20 was walked pane by pane: General, Shortcuts and About match
+      `focus_order` exactly, Shift+Tab reverses the cycle exactly, and Escape cancels an armed
+      capture and restores the previous name. `Revert` is absent from the cycle only while the
+      draft is clean, because it is disabled there -- not a defect. The pivot trigger did NOT
+      fire: no control was missing a name, role, value or listening state. One deviation found
+      and recorded separately as `DEF-2` (two focusable controls sharing one name in the Layout
+      pane), which is a focus-order imprecision rather than a missing property.
     pivot_trigger: >-
       Narrator reports a missing name, role, value, or listening state on any settings control after
       the bump. That is the point at which an automated UIA check earns its cost, because the
       manual pass has then failed once and will be repeated on every future egui release.
+    residual: >-
+      Still nothing AUTOMATED stands behind FR-20 or FR-21, so the same manual pass is owed on the
+      next eframe or egui bump. `DEF-2` is the case for automating it: a UIA-level check would have
+      caught that deviation, and `focus_order_mismatch` structurally cannot.
   - id: RISK-2
     risk: >-
       FR-12 (View Logs opens the diagnostic log) has no automated test. `menu::view_logs`

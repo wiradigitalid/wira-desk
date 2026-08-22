@@ -59,3 +59,32 @@ defects:
       reason. Now routed through the same seam, so all three tests supply the bypass decision
       explicitly and none of them reads the desktop. Assertion and failure message unchanged.
 
+
+  - id: DEF-2
+    title: Two focusable controls share the accessible name "Stack width percent"
+    status: open
+    severity: low
+    component: settings
+    violates: [FR-20]
+    found_in: "0.1.0"
+    found_by: RISK-3 accessibility re-verification on eframe 0.36.1, 2026-08-22
+    tests: []
+    summary: >-
+      `focus_order(Pane::Layout)` declares "Stack width percent" as ONE focus stop, but the
+      published UI Automation tree carries two focusable controls with that identical name --
+      a `Slider` (`range=50[10..100]`) and a `Spinner` (`value='50'`, `range=50[10..100]`) --
+      plus a static `Text` with the same string. A Tab walk of the Layout pane therefore lands
+      nine times, not eight, and a screen reader announces the same name twice with nothing to
+      distinguish the slider from the spin box.
+    why_it_hid: >-
+      `focus_order_mismatch` compares the declaration against the stops the RENDERER reports it
+      drew, not against the UIA tree. The renderer reports one stop for the widget, so the
+      declaration and the renderer agree with each other and the assertion passes -- while
+      neither matches what assistive technology actually sees. This is the exact blind spot
+      RISK-3 named: `app::tests::focus_order_*` proves the declared focus order, not the tree.
+    impact: >-
+      Minor. Both stops are reachable, correctly named, and expose their value and range, so no
+      control is unreachable or silent -- FR-21 is unaffected. What suffers is FR-20's
+      "Tab order follows intuitive visual flow": one logical field costs two Tab presses and
+      announces one name twice.
+    owner: repo owner
