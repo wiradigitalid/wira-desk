@@ -54,7 +54,7 @@ silently never fires.
 | Crate | Version | Note |
 | --- | --- | --- |
 | `windows-sys` | 0.52 | Raw C-FFI only. The full `windows` crate's COM metadata is deliberately avoided |
-| `eframe` + `egui` | 0.35 | `settings` only, and `eframe` carries `features = ["accesskit"]` |
+| `eframe` + `egui` | 0.36 | `settings` only, and `eframe` carries `features = ["accesskit"]`. Bump the two together, never one |
 | `ttf-parser` | 0.25 | Validates a system font's bytes before egui is asked to load them |
 | `toml` | 1.1 | Moved from 0.8 by #5 |
 | `serde` | 1.0 | `derive` |
