@@ -22,14 +22,14 @@ This is what the owner reads at **G3 Blueprint**, instead of seven files. Its co
 ## Actor list
 
 
-### settings — 
+### settings
 
 | Actor | Who they are | What they may do |
 | --- | --- | --- |
 | Power User | Desktop user wanting customized shortcut chords, auto-start management, or diagnostic preferences. | Customize primary/fallback shortcuts, toggle auto-start on boot, modify passthrough lists. |
 | New User | First-time user encountering Wira Desk upon installation or initial launch. | Step through interactive mock window cycling simulation or dismiss onboarding via Skip Tutorial. |
 
-### window-management — 
+### window-management
 
 | Actor | Who they are | What they may do |
 | --- | --- | --- |
