@@ -208,6 +208,16 @@ pub const TOGGLE_OVERLAPPING_STACK: ControlSemantics = ControlSemantics {
     description: "Arranges up to three windows of the active application in a clickable stack.",
 };
 
+pub const STACK_WIDTH_SLIDER: ControlSemantics = ControlSemantics {
+    name: "Stack width slider",
+    description: "Adjust the width percentage of stacked windows using a slider.",
+};
+
+pub const STACK_WIDTH_INPUT: ControlSemantics = ControlSemantics {
+    name: "Stack width input",
+    description: "Enter or spin the exact width percentage of stacked windows.",
+};
+
 pub const SHORTCUT_SWITCHER: ControlSemantics = ControlSemantics {
     name: "Switch between windows of the same application",
     description: "Press the button, then press the key combination you want to use.",
@@ -305,6 +315,8 @@ mod tests {
         for c in [
             TOGGLE_AUTO_START,
             TOGGLE_OVERLAPPING_STACK,
+            STACK_WIDTH_SLIDER,
+            STACK_WIDTH_INPUT,
             SHORTCUT_SWITCHER,
         ] {
             assert!(!c.name.trim().is_empty(), "control has no accessible name");
@@ -332,6 +344,8 @@ mod tests {
         let names = [
             TOGGLE_AUTO_START.name,
             TOGGLE_OVERLAPPING_STACK.name,
+            STACK_WIDTH_SLIDER.name,
+            STACK_WIDTH_INPUT.name,
             SHORTCUT_SWITCHER.name,
         ];
         for (i, a) in names.iter().enumerate() {

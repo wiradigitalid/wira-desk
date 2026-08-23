@@ -62,13 +62,17 @@ defects:
 
   - id: DEF-2
     title: Two focusable controls share the accessible name "Stack width percent"
-    status: open
+    status: fixed
     severity: low
     component: settings
     violates: [FR-20]
     found_in: "0.1.0"
     found_by: RISK-3 accessibility re-verification on eframe 0.36.1, 2026-08-22
-    tests: []
+    tests:
+      - theme::tests::accessible_names_are_unique
+      - app::tests::focus_order_has_no_duplicates
+      - app::tests::focus_order_is_stable_across_calls
+      - app::tests::focus_order_starts_with_navigation_and_ends_with_actions
     summary: >-
       `focus_order(Pane::Layout)` declares "Stack width percent" as ONE focus stop, but the
       published UI Automation tree carries two focusable controls with that identical name --
@@ -88,3 +92,10 @@ defects:
       "Tab order follows intuitive visual flow": one logical field costs two Tab presses and
       announces one name twice.
     owner: repo owner
+    fixed_in: main
+    fixed_by: >-
+      Split into distinct accessible semantics in `crates/settings/src/theme.rs` (`STACK_WIDTH_SLIDER`
+      and `STACK_WIDTH_INPUT`). `crates/settings/src/main.rs` binds the slider text to
+      `STACK_WIDTH_SLIDER.name` and records both stops into drawn list; `crates/settings/src/app.rs`
+      declares both in `focus_order(Pane::Layout)`. Uniqueness and focus-stop order verified by
+      unit tests and full workspace test run.

@@ -8,7 +8,8 @@ use shared::Config;
 
 use crate::persistence::{save_and_notify, validate_shortcut, SaveOutcome, ShortcutError};
 use crate::theme::{
-    self, ThemeMode, LISTENING_ANNOUNCEMENT, TOGGLE_AUTO_START, TOGGLE_OVERLAPPING_STACK,
+    self, ThemeMode, LISTENING_ANNOUNCEMENT, STACK_WIDTH_INPUT, STACK_WIDTH_SLIDER,
+    TOGGLE_AUTO_START, TOGGLE_OVERLAPPING_STACK,
 };
 
 /// Which pane the shell is showing.
@@ -319,7 +320,8 @@ pub fn focus_order(pane: Pane) -> Vec<&'static str> {
         }
         Pane::Layout => {
             order.push(TOGGLE_OVERLAPPING_STACK.name);
-            order.push("Stack width percent");
+            order.push(STACK_WIDTH_SLIDER.name);
+            order.push(STACK_WIDTH_INPUT.name);
         }
         Pane::About => {}
     }

@@ -218,7 +218,8 @@ impl SettingsApp {
     fn layout_pane(&mut self, ui: &mut egui::Ui, drawn: &mut Vec<&'static str>) {
         let c = theme::TOGGLE_OVERLAPPING_STACK;
         drawn.push(c.name);
-        drawn.push("Stack width percent");
+        drawn.push(theme::STACK_WIDTH_SLIDER.name);
+        drawn.push(theme::STACK_WIDTH_INPUT.name);
         ui.checkbox(
             &mut self.model.draft.layout.enable_overlapping_stack,
             c.name,
@@ -226,7 +227,7 @@ impl SettingsApp {
         .on_hover_text(c.description);
         ui.add(
             egui::Slider::new(&mut self.model.draft.layout.stack_width_percent, 10..=100)
-                .text("Stack width percent"),
+                .text(theme::STACK_WIDTH_SLIDER.name),
         );
     }
 

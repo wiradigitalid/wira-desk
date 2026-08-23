@@ -60,7 +60,7 @@ $selfName = 'verify-public-export.ps1'
 # reading rather than by the gate. A rule that cannot see its own subject is not a rule.
 $textExtensions = @('.rs', '.ps1', '.psm1', '.psd1', '.toml', '.lock', '.md', '.yml', '.yaml',
     '.rc', '.manifest', '.json', '.txt', '.html', '.htm', '.jsx', '.js', '.mjs', '.css', '.ts',
-    '.svg', '')
+    '.svg', '.log', '')
 
 $failures = New-Object System.Collections.Generic.List[string]
 $checked = 0
