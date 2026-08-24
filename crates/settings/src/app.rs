@@ -18,18 +18,26 @@ pub enum Pane {
     General,
     Shortcuts,
     Layout,
+    VmExceptions,
     About,
 }
 
 impl Pane {
-    pub const ALL: [Pane; 4] = [Pane::General, Pane::Shortcuts, Pane::Layout, Pane::About];
+    pub const ALL: [Pane; 5] = [
+        Pane::General,
+        Pane::Shortcuts,
+        Pane::Layout,
+        Pane::VmExceptions,
+        Pane::About,
+    ];
 
     /// Accessible name, also used as the visible tab label.
     pub fn label(self) -> &'static str {
         match self {
             Pane::General => "General",
             Pane::Shortcuts => "Shortcuts",
-            Pane::Layout => "Layout",
+            Pane::Layout => "Layout & Snapping",
+            Pane::VmExceptions => "VM & Exceptions",
             Pane::About => "About",
         }
     }
@@ -206,6 +214,10 @@ pub struct SettingsModel {
     pub feedback: SaveFeedback,
     pub theme: ThemeMode,
     pub onboarding: Option<OnboardingStep>,
+    /// Which simulated dummy window has focus in Step 2 of Onboarding (0 or 1).
+    pub onboarding_focus_index: usize,
+    /// Whether simulated cycling has been triggered at least once in Step 2.
+    pub onboarding_simulated_success: bool,
 }
 
 impl SettingsModel {
@@ -218,6 +230,8 @@ impl SettingsModel {
             feedback: SaveFeedback::None,
             theme: theme::detect_theme(),
             onboarding: onboarding.then_some(OnboardingStep::Welcome),
+            onboarding_focus_index: 0,
+            onboarding_simulated_success: false,
         }
     }
 
@@ -295,6 +309,16 @@ impl SettingsModel {
         }
     }
 
+    /// Simulate toggling dummy window focus in Onboarding Step 2.
+    pub fn toggle_onboarding_simulation(&mut self) {
+        self.onboarding_focus_index = if self.onboarding_focus_index == 0 {
+            1
+        } else {
+            0
+        };
+        self.onboarding_simulated_success = true;
+    }
+
     /// Skip Tutorial. Equivalent to completing it: a valid configuration is
     /// still written so onboarding does not repeat unintentionally.
     pub fn skip_onboarding(&mut self) {
@@ -322,6 +346,10 @@ pub fn focus_order(pane: Pane) -> Vec<&'static str> {
             order.push(TOGGLE_OVERLAPPING_STACK.name);
             order.push(STACK_WIDTH_SLIDER.name);
             order.push(STACK_WIDTH_INPUT.name);
+        }
+        Pane::VmExceptions => {
+            order.push(theme::VM_BYPASS_PROCESS_LIST.name);
+            order.push(theme::VM_BYPASS_CLASS_LIST.name);
         }
         Pane::About => {}
     }
@@ -611,6 +639,29 @@ mod tests {
         while !completed.advance_onboarding() {}
 
         assert_eq!(skipped.onboarding, completed.onboarding);
+    }
+
+    #[test]
+    fn onboarding_dummy_window_focus_toggles_on_shortcut() {
+        let mut m = SettingsModel::new(Config::default(), true);
+        assert_eq!(m.onboarding_focus_index, 0);
+        assert!(!m.onboarding_simulated_success);
+
+        m.toggle_onboarding_simulation();
+        assert_eq!(m.onboarding_focus_index, 1);
+        assert!(m.onboarding_simulated_success);
+
+        m.toggle_onboarding_simulation();
+        assert_eq!(m.onboarding_focus_index, 0);
+        assert!(m.onboarding_simulated_success);
+    }
+
+    #[test]
+    fn onboarding_escape_triggers_skip() {
+        let mut m = SettingsModel::new(Config::default(), true);
+        assert_eq!(m.onboarding, Some(OnboardingStep::Welcome));
+        m.skip_onboarding();
+        assert_eq!(m.onboarding, Some(OnboardingStep::Done));
     }
 
     #[test]

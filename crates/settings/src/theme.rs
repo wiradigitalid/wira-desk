@@ -14,7 +14,8 @@ pub enum ThemeMode {
 }
 
 /// Documented Windows UI typeface, with the fallback the contract allows.
-pub const PRIMARY_FONT: &str = "Segoe UI";
+pub const PRIMARY_FONT: &str = "Segoe UI Variable Text";
+pub const SECONDARY_FONT: &str = "Segoe UI";
 pub const FALLBACK_FONT: &str = "Tahoma";
 
 /// On-disk locations, in preference order.
@@ -24,11 +25,12 @@ pub const FALLBACK_FONT: &str = "Tahoma";
 /// installed on a non-C: volume (enterprise imaging, VDI, Windows-To-Go), and
 /// a literal drive letter would silently fall back to the bundled face on
 /// those machines with no diagnostic.
-fn font_candidates() -> [(&'static str, std::path::PathBuf); 2] {
+fn font_candidates() -> [(&'static str, std::path::PathBuf); 3] {
     let windows_dir = std::env::var("SystemRoot").unwrap_or_else(|_| r"C:\Windows".to_string());
     let fonts_dir = std::path::Path::new(&windows_dir).join("Fonts");
     [
-        (PRIMARY_FONT, fonts_dir.join("segoeui.ttf")),
+        (PRIMARY_FONT, fonts_dir.join("SegUIVar.ttf")),
+        (SECONDARY_FONT, fonts_dir.join("segoeui.ttf")),
         (FALLBACK_FONT, fonts_dir.join("tahoma.ttf")),
     ]
 }
@@ -144,11 +146,87 @@ fn read_apps_use_light_theme() -> Option<u32> {
 /// Map a theme mode onto egui visuals.
 /// `apply` goes through `Context::set_theme`, so this exists for the
 /// accessibility probe and for tests that assert the two modes really differ.
+// Exact Fluent 2 Dark Theme Palette (Matching prototype.html pixel-for-pixel)
+pub const COLOR_BG_PAGE: egui::Color32 = egui::Color32::from_rgb(0x12, 0x14, 0x18);
+pub const COLOR_BG_MICA: egui::Color32 = egui::Color32::from_rgb(0x19, 0x1d, 0x23);
+pub const COLOR_BG_SIDEBAR: egui::Color32 = egui::Color32::from_rgb(0x15, 0x18, 0x1e);
+pub const COLOR_BG_CARD: egui::Color32 = egui::Color32::from_rgb(0x20, 0x24, 0x2b);
+pub const COLOR_BG_CARD_HOVER: egui::Color32 = egui::Color32::from_rgb(0x27, 0x2c, 0x35);
+pub const COLOR_BG_SUBTLE: egui::Color32 = egui::Color32::from_rgb(0x1a, 0x1c, 0x21);
+pub const COLOR_BG_KEYCAP: egui::Color32 = egui::Color32::from_rgb(0x2b, 0x30, 0x3a);
+#[allow(dead_code)]
+pub const COLOR_BG_HEADER: egui::Color32 = egui::Color32::from_rgb(0x16, 0x19, 0x20);
+pub const COLOR_STROKE_CARD: egui::Color32 =
+    egui::Color32::from_rgba_premultiplied(255, 255, 255, 20);
+#[allow(dead_code)]
+pub const COLOR_STROKE_DIVIDER: egui::Color32 =
+    egui::Color32::from_rgba_premultiplied(255, 255, 255, 14);
+pub const COLOR_ACCENT_PRIMARY: egui::Color32 = egui::Color32::from_rgb(0x4c, 0xc2, 0xff);
+#[allow(dead_code)]
+pub const COLOR_ACCENT_HOVER: egui::Color32 = egui::Color32::from_rgb(0x60, 0xcb, 0xff);
+#[allow(dead_code)]
+pub const COLOR_ACCENT_SUBTLE: egui::Color32 =
+    egui::Color32::from_rgba_premultiplied(76, 194, 255, 28);
+pub const COLOR_TEXT_PRIMARY: egui::Color32 = egui::Color32::from_rgb(0xf3, 0xf5, 0xf8);
+pub const COLOR_TEXT_SECONDARY: egui::Color32 = egui::Color32::from_rgb(0xa0, 0xa6, 0xb4);
+pub const COLOR_TEXT_TERTIARY: egui::Color32 = egui::Color32::from_rgb(0x6b, 0x72, 0x80);
+pub const COLOR_SUCCESS: egui::Color32 = egui::Color32::from_rgb(0x6c, 0xcb, 0x5f);
+#[allow(dead_code)]
+pub const COLOR_SUCCESS_BG: egui::Color32 =
+    egui::Color32::from_rgba_premultiplied(108, 203, 95, 30);
+
 #[allow(dead_code)]
 pub(crate) fn visuals(mode: ThemeMode) -> egui::Visuals {
     match mode {
-        ThemeMode::Light => egui::Visuals::light(),
-        ThemeMode::Dark => egui::Visuals::dark(),
+        ThemeMode::Light => {
+            let mut v = egui::Visuals::light();
+            v.override_text_color = Some(egui::Color32::from_rgb(0x1c, 0x1f, 0x24));
+            v.panel_fill = egui::Color32::from_rgb(0xf3, 0xf3, 0xf3);
+            v.window_fill = egui::Color32::from_rgb(0xff, 0xff, 0xff);
+            v.faint_bg_color = egui::Color32::from_rgb(0xf0, 0xf2, 0xf6);
+            v.extreme_bg_color = egui::Color32::from_rgb(0xe8, 0xec, 0xf2);
+            v.hyperlink_color = egui::Color32::from_rgb(0x00, 0x67, 0xc0);
+            v.selection.stroke.color = egui::Color32::from_rgb(0x00, 0x67, 0xc0);
+            v.selection.bg_fill = egui::Color32::from_rgba_premultiplied(0, 103, 192, 40);
+            v.widgets.noninteractive.bg_fill = egui::Color32::from_rgb(0xff, 0xff, 0xff);
+            v.widgets.noninteractive.bg_stroke.color =
+                egui::Color32::from_rgba_premultiplied(0, 0, 0, 24);
+            v.widgets.inactive.bg_fill = egui::Color32::from_rgb(0xff, 0xff, 0xff);
+            v.widgets.inactive.bg_stroke.color =
+                egui::Color32::from_rgba_premultiplied(0, 0, 0, 30);
+            v.widgets.hovered.bg_fill = egui::Color32::from_rgb(0xf7, 0xf9, 0xfc);
+            v.widgets.hovered.bg_stroke.color = egui::Color32::from_rgb(0x00, 0x67, 0xc0);
+            v.widgets.active.bg_fill = egui::Color32::from_rgba_premultiplied(0, 103, 192, 28);
+            v.widgets.active.bg_stroke.color = egui::Color32::from_rgb(0x00, 0x67, 0xc0);
+            v.widgets.inactive.corner_radius = egui::CornerRadius::same(6);
+            v.widgets.hovered.corner_radius = egui::CornerRadius::same(6);
+            v.widgets.active.corner_radius = egui::CornerRadius::same(6);
+            v
+        }
+        ThemeMode::Dark => {
+            let mut v = egui::Visuals::dark();
+            v.override_text_color = Some(COLOR_TEXT_PRIMARY);
+            v.panel_fill = COLOR_BG_MICA;
+            v.window_fill = COLOR_BG_MICA;
+            v.faint_bg_color = COLOR_BG_SIDEBAR;
+            v.extreme_bg_color = COLOR_BG_PAGE;
+            v.hyperlink_color = COLOR_ACCENT_PRIMARY;
+            v.selection.stroke.color = COLOR_ACCENT_PRIMARY;
+            v.selection.bg_fill = egui::Color32::from_rgba_premultiplied(76, 194, 255, 40);
+            v.window_stroke.color = COLOR_STROKE_CARD;
+            v.widgets.noninteractive.bg_fill = COLOR_BG_CARD;
+            v.widgets.noninteractive.bg_stroke.color = COLOR_STROKE_CARD;
+            v.widgets.inactive.bg_fill = COLOR_BG_KEYCAP;
+            v.widgets.inactive.bg_stroke.color = COLOR_STROKE_CARD;
+            v.widgets.hovered.bg_fill = COLOR_BG_CARD_HOVER;
+            v.widgets.hovered.bg_stroke.color = COLOR_ACCENT_PRIMARY;
+            v.widgets.active.bg_fill = egui::Color32::from_rgba_premultiplied(76, 194, 255, 30);
+            v.widgets.active.bg_stroke.color = COLOR_ACCENT_PRIMARY;
+            v.widgets.inactive.corner_radius = egui::CornerRadius::same(6);
+            v.widgets.hovered.corner_radius = egui::CornerRadius::same(6);
+            v.widgets.active.corner_radius = egui::CornerRadius::same(6);
+            v
+        }
     }
 }
 
@@ -156,7 +234,8 @@ pub(crate) fn visuals(mode: ThemeMode) -> egui::Visuals {
 /// Called on start **and** whenever the OS theme changes while the window is
 /// open, so a mid-session switch is picked up rather than requiring a restart
 pub fn apply(ctx: &egui::Context, mode: ThemeMode) {
-    ctx.set_theme(egui_theme(mode));
+    let custom_visuals = visuals(mode);
+    ctx.set_visuals(custom_visuals);
     apply_typography(ctx);
 }
 
@@ -183,6 +262,7 @@ fn apply_typography(ctx: &egui::Context) {
     });
 }
 
+#[allow(dead_code)]
 pub(crate) fn egui_theme(mode: ThemeMode) -> egui::Theme {
     match mode {
         ThemeMode::Light => egui::Theme::Light,
@@ -223,6 +303,46 @@ pub const SHORTCUT_SWITCHER: ControlSemantics = ControlSemantics {
     description: "Press the button, then press the key combination you want to use.",
 };
 
+pub const ONBOARDING_FINISH_BUTTON: ControlSemantics = ControlSemantics {
+    name: "Finish & Start Using Wira Desk",
+    description: "Finish onboarding and start running Wira Desk in the background.",
+};
+
+pub const ONBOARDING_NEXT_BUTTON: ControlSemantics = ControlSemantics {
+    name: "Next step",
+    description: "Advance to the next onboarding tutorial step.",
+};
+
+pub const ONBOARDING_SKIP_BUTTON: ControlSemantics = ControlSemantics {
+    name: "Skip Tutorial",
+    description: "Skip the tutorial, save default configuration, and start Wira Desk.",
+};
+
+pub const ONBOARDING_DUMMY_WIN_1: ControlSemantics = ControlSemantics {
+    name: "Simulated Window 1: Chrome - Project Brief",
+    description: "First simulated window in the interactive cycling practice area.",
+};
+
+pub const ONBOARDING_DUMMY_WIN_2: ControlSemantics = ControlSemantics {
+    name: "Simulated Window 2: Chrome - Design System",
+    description: "Second simulated window in the interactive cycling practice area.",
+};
+
+pub const ONBOARDING_SIMULATE_BUTTON: ControlSemantics = ControlSemantics {
+    name: "Practice Shortcut: Win + `",
+    description: "Simulates pressing the cycling shortcut to switch window focus.",
+};
+
+pub const VM_BYPASS_PROCESS_LIST: ControlSemantics = ControlSemantics {
+    name: "VM and Remote Desktop Bypass Processes",
+    description: "List of virtual machine and remote desktop client executables that receive raw keystroke passthrough.",
+};
+
+pub const VM_BYPASS_CLASS_LIST: ControlSemantics = ControlSemantics {
+    name: "VM and Remote Desktop Bypass Window Classes",
+    description: "List of window class names that receive raw keystroke passthrough.",
+};
+
 /// Text announced while a shortcut capturer is listening.
 /// The accessibility contract forbids communicating Listening mode through
 /// visual text alone, so this string is attached to the control's accessible
@@ -255,7 +375,8 @@ mod tests {
 
     #[test]
     fn typography_constants_are_the_documented_ones() {
-        assert_eq!(PRIMARY_FONT, "Segoe UI");
+        assert_eq!(PRIMARY_FONT, "Segoe UI Variable Text");
+        assert_eq!(SECONDARY_FONT, "Segoe UI");
         assert_eq!(FALLBACK_FONT, "Tahoma");
     }
 
@@ -283,7 +404,8 @@ mod tests {
     fn font_candidates_are_ordered_primary_then_fallback() {
         let candidates = font_candidates();
         assert_eq!(candidates[0].0, PRIMARY_FONT);
-        assert_eq!(candidates[1].0, FALLBACK_FONT);
+        assert_eq!(candidates[1].0, SECONDARY_FONT);
+        assert_eq!(candidates[2].0, FALLBACK_FONT);
     }
 
     #[test]
@@ -292,7 +414,7 @@ mod tests {
         match load_ui_font(&ctx) {
             LoadedFont::System(name) => {
                 assert!(
-                    name == PRIMARY_FONT || name == FALLBACK_FONT,
+                    name == PRIMARY_FONT || name == SECONDARY_FONT || name == FALLBACK_FONT,
                     "installed an undocumented face: {name}"
                 );
             }
@@ -318,6 +440,14 @@ mod tests {
             STACK_WIDTH_SLIDER,
             STACK_WIDTH_INPUT,
             SHORTCUT_SWITCHER,
+            ONBOARDING_FINISH_BUTTON,
+            ONBOARDING_NEXT_BUTTON,
+            ONBOARDING_SKIP_BUTTON,
+            ONBOARDING_DUMMY_WIN_1,
+            ONBOARDING_DUMMY_WIN_2,
+            ONBOARDING_SIMULATE_BUTTON,
+            VM_BYPASS_PROCESS_LIST,
+            VM_BYPASS_CLASS_LIST,
         ] {
             assert!(!c.name.trim().is_empty(), "control has no accessible name");
             assert!(
@@ -347,6 +477,14 @@ mod tests {
             STACK_WIDTH_SLIDER.name,
             STACK_WIDTH_INPUT.name,
             SHORTCUT_SWITCHER.name,
+            ONBOARDING_FINISH_BUTTON.name,
+            ONBOARDING_NEXT_BUTTON.name,
+            ONBOARDING_SKIP_BUTTON.name,
+            ONBOARDING_DUMMY_WIN_1.name,
+            ONBOARDING_DUMMY_WIN_2.name,
+            ONBOARDING_SIMULATE_BUTTON.name,
+            VM_BYPASS_PROCESS_LIST.name,
+            VM_BYPASS_CLASS_LIST.name,
         ];
         for (i, a) in names.iter().enumerate() {
             for b in names.iter().skip(i + 1) {

@@ -1,0 +1,2433 @@
+<title>Wira Desk UI/UX Redesign</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+/* ==========================================================================
+   WIRA DESK (WIRADEX) — DESIGN TOKENS & SYSTEM
+   ========================================================================== */
+:root {
+  --font-sans: "Segoe UI Variable Text", "Segoe UI", "Plus Jakarta Sans", -apple-system, sans-serif;
+  --font-display: "Segoe UI Variable Display", "Segoe UI", "Plus Jakarta Sans", sans-serif;
+  --font-mono: "Cascadia Code", "JetBrains Mono", Consolas, monospace;
+
+  /* Fluent 2 Mica Light Ground */
+  --bg-page: #f0f3f8;
+  --bg-canvas: #e8ecf2;
+  --bg-mica: rgba(243, 243, 243, 0.88);
+  --bg-acrylic: rgba(255, 255, 255, 0.72);
+  --bg-card: #ffffff;
+  --bg-card-hover: #fbfbfb;
+  --bg-subtle: #f4f5f8;
+  --bg-input: #ffffff;
+  --bg-keycap: #f0f2f5;
+
+  /* Strokes & Borders */
+  --stroke-subtle: rgba(0, 0, 0, 0.06);
+  --stroke-card: rgba(0, 0, 0, 0.09);
+  --stroke-focus: #0067c0;
+  --stroke-divider: rgba(0, 0, 0, 0.08);
+
+  /* Typography Colors */
+  --text-primary: #1c1f24;
+  --text-secondary: #5c6370;
+  --text-tertiary: #8c93a0;
+  --text-inverse: #ffffff;
+  --text-accent: #0067c0;
+
+  /* Accent & Semantics */
+  --accent-primary: #0067c0;
+  --accent-hover: #1879cd;
+  --accent-active: #005a9e;
+  --accent-subtle: rgba(0, 103, 192, 0.1);
+  --accent-glow: rgba(0, 103, 192, 0.25);
+
+  --success: #0f7b0f;
+  --success-bg: rgba(15, 123, 15, 0.12);
+  --warning: #c45b00;
+  --warning-bg: rgba(196, 91, 0, 0.12);
+  --danger: #d13438;
+  --danger-bg: rgba(209, 52, 56, 0.12);
+  --tray-alert: #e81123;
+
+  /* Shadows */
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.04);
+  --shadow-window: 0 18px 45px rgba(0, 0, 0, 0.16), 0 4px 12px rgba(0, 0, 0, 0.06);
+  --shadow-flyout: 0 12px 32px rgba(0, 0, 0, 0.14), 0 2px 6px rgba(0, 0, 0, 0.08);
+  --shadow-keycap: 0 2px 0 rgba(0, 0, 0, 0.14), 0 1px 2px rgba(0, 0, 0, 0.08);
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-pill: 9999px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg-page: #14161a;
+    --bg-canvas: #181b20;
+    --bg-mica: rgba(32, 34, 38, 0.88);
+    --bg-acrylic: rgba(44, 46, 52, 0.75);
+    --bg-card: #202227;
+    --bg-card-hover: #262930;
+    --bg-subtle: #1c1e23;
+    --bg-input: #282a30;
+    --bg-keycap: #2b2e35;
+
+    --stroke-subtle: rgba(255, 255, 255, 0.06);
+    --stroke-card: rgba(255, 255, 255, 0.09);
+    --stroke-focus: #4cc2ff;
+    --stroke-divider: rgba(255, 255, 255, 0.08);
+
+    --text-primary: #f3f5f8;
+    --text-secondary: #a0a6b4;
+    --text-tertiary: #6b7280;
+    --text-inverse: #101216;
+    --text-accent: #4cc2ff;
+
+    --accent-primary: #4cc2ff;
+    --accent-hover: #60cbff;
+    --accent-active: #38b4f2;
+    --accent-subtle: rgba(76, 194, 255, 0.12);
+    --accent-glow: rgba(76, 194, 255, 0.28);
+
+    --success: #6ccb5f;
+    --success-bg: rgba(108, 203, 95, 0.16);
+    --warning: #fce100;
+    --warning-bg: rgba(252, 225, 0, 0.14);
+    --danger: #ff5252;
+    --danger-bg: rgba(255, 82, 82, 0.18);
+    --tray-alert: #ff4343;
+
+    --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.3);
+    --shadow-window: 0 24px 60px rgba(0, 0, 0, 0.55), 0 6px 16px rgba(0, 0, 0, 0.35);
+    --shadow-flyout: 0 16px 40px rgba(0, 0, 0, 0.5), 0 3px 10px rgba(0, 0, 0, 0.3);
+    --shadow-keycap: 0 2px 0 rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg-page: #14161a;
+  --bg-canvas: #181b20;
+  --bg-mica: rgba(32, 34, 38, 0.88);
+  --bg-acrylic: rgba(44, 46, 52, 0.75);
+  --bg-card: #202227;
+  --bg-card-hover: #262930;
+  --bg-subtle: #1c1e23;
+  --bg-input: #282a30;
+  --bg-keycap: #2b2e35;
+
+  --stroke-subtle: rgba(255, 255, 255, 0.06);
+  --stroke-card: rgba(255, 255, 255, 0.09);
+  --stroke-focus: #4cc2ff;
+  --stroke-divider: rgba(255, 255, 255, 0.08);
+
+  --text-primary: #f3f5f8;
+  --text-secondary: #a0a6b4;
+  --text-tertiary: #6b7280;
+  --text-inverse: #101216;
+  --text-accent: #4cc2ff;
+
+  --accent-primary: #4cc2ff;
+  --accent-hover: #60cbff;
+  --accent-active: #38b4f2;
+  --accent-subtle: rgba(76, 194, 255, 0.12);
+  --accent-glow: rgba(76, 194, 255, 0.28);
+
+  --success: #6ccb5f;
+  --success-bg: rgba(108, 203, 95, 0.16);
+  --warning: #fce100;
+  --warning-bg: rgba(252, 225, 0, 0.14);
+  --danger: #ff5252;
+  --danger-bg: rgba(255, 82, 82, 0.18);
+  --tray-alert: #ff4343;
+
+  --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.3);
+  --shadow-window: 0 24px 60px rgba(0, 0, 0, 0.55), 0 6px 16px rgba(0, 0, 0, 0.35);
+  --shadow-flyout: 0 16px 40px rgba(0, 0, 0, 0.5), 0 3px 10px rgba(0, 0, 0, 0.3);
+  --shadow-keycap: 0 2px 0 rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+:root[data-theme="light"] {
+  --bg-page: #f0f3f8;
+  --bg-canvas: #e8ecf2;
+  --bg-mica: rgba(243, 243, 243, 0.88);
+  --bg-acrylic: rgba(255, 255, 255, 0.72);
+  --bg-card: #ffffff;
+  --bg-card-hover: #fbfbfb;
+  --bg-subtle: #f4f5f8;
+  --bg-input: #ffffff;
+  --bg-keycap: #f0f2f5;
+
+  --stroke-subtle: rgba(0, 0, 0, 0.06);
+  --stroke-card: rgba(0, 0, 0, 0.09);
+  --stroke-focus: #0067c0;
+  --stroke-divider: rgba(0, 0, 0, 0.08);
+
+  --text-primary: #1c1f24;
+  --text-secondary: #5c6370;
+  --text-tertiary: #8c93a0;
+  --text-inverse: #ffffff;
+  --text-accent: #0067c0;
+
+  --accent-primary: #0067c0;
+  --accent-hover: #1879cd;
+  --accent-active: #005a9e;
+  --accent-subtle: rgba(0, 103, 192, 0.1);
+  --accent-glow: rgba(0, 103, 192, 0.25);
+
+  --success: #0f7b0f;
+  --success-bg: rgba(15, 123, 15, 0.12);
+  --warning: #c45b00;
+  --warning-bg: rgba(196, 91, 0, 0.12);
+  --danger: #d13438;
+  --danger-bg: rgba(209, 52, 56, 0.12);
+  --tray-alert: #e81123;
+
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.04);
+  --shadow-window: 0 18px 45px rgba(0, 0, 0, 0.16), 0 4px 12px rgba(0, 0, 0, 0.06);
+  --shadow-flyout: 0 12px 32px rgba(0, 0, 0, 0.14), 0 2px 6px rgba(0, 0, 0, 0.08);
+  --shadow-keycap: 0 2px 0 rgba(0, 0, 0, 0.14), 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+/* ==========================================================================
+   BASE & RESET
+   ========================================================================== */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--bg-page);
+  color: var(--text-primary);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  padding: 0;
+  margin: 0;
+  min-height: 100vh;
+}
+
+/* Top Studio Bar */
+.top-header {
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--stroke-card);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  backdrop-filter: blur(12px);
+}
+.header-inner {
+  max-width: 1360px;
+  margin: 0 auto;
+  padding: 12px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.brand-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.brand-logo {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, var(--accent-primary), #004b87);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 700;
+  font-size: 16px;
+  box-shadow: 0 4px 10px var(--accent-glow);
+}
+.brand-title {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.brand-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--accent-subtle);
+  color: var(--text-accent);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Navigation Tabs */
+.nav-tabs {
+  display: flex;
+  background: var(--bg-subtle);
+  padding: 3px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--stroke-subtle);
+  gap: 2px;
+}
+.nav-tab-btn {
+  border: none;
+  background: transparent;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: all 0.18s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.nav-tab-btn:hover {
+  color: var(--text-primary);
+}
+.nav-tab-btn.active {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.theme-select-btn {
+  background: var(--bg-subtle);
+  border: 1px solid var(--stroke-card);
+  color: var(--text-primary);
+  padding: 6px 12px;
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Main Container */
+.main-wrapper {
+  max-width: 1360px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+/* Section Containers */
+.view-section {
+  display: none;
+  animation: fadeIn 0.25s ease-out forwards;
+}
+.view-section.active {
+  display: block;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Hero / Overview Banner */
+.hero-banner {
+  background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-subtle) 100%);
+  border: 1px solid var(--stroke-card);
+  border-radius: var(--radius-xl);
+  padding: 24px 28px;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  overflow: hidden;
+}
+.hero-banner::after {
+  content: "";
+  position: absolute;
+  top: -50%;
+  right: -10%;
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+  pointer-events: none;
+}
+.hero-content h1 {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+.hero-content p {
+  color: var(--text-secondary);
+  font-size: 14px;
+  max-width: 650px;
+}
+.hero-stats {
+  display: flex;
+  gap: 18px;
+  z-index: 1;
+}
+.stat-pill {
+  background: var(--bg-card);
+  border: 1px solid var(--stroke-card);
+  padding: 10px 16px;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  text-align: right;
+}
+.stat-pill .num {
+  font-family: var(--font-mono);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-accent);
+}
+.stat-pill .label {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ==========================================================================
+   SIMULATOR WORKSPACE (DESKTOP SHELL)
+   ========================================================================== */
+.desktop-stage {
+  background: var(--bg-canvas);
+  border: 1px solid var(--stroke-card);
+  border-radius: var(--radius-xl);
+  padding: 24px;
+  position: relative;
+  min-height: 740px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: inset 0 2px 8px rgba(0,0,0,0.04);
+}
+
+.stage-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--stroke-card);
+  padding: 8px 16px;
+  border-radius: var(--radius-lg);
+}
+.stage-title {
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.stage-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.pill-btn {
+  background: var(--bg-subtle);
+  border: 1px solid var(--stroke-subtle);
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.pill-btn:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--stroke-card);
+}
+.pill-btn.active {
+  background: var(--accent-primary);
+  color: var(--text-inverse);
+  border-color: var(--accent-primary);
+}
+
+/* Simulated Desktop Canvas */
+.desktop-viewport {
+  flex: 1;
+  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #172a4d 100%);
+  border-radius: var(--radius-lg);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 640px;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.1);
+}
+.desktop-bg-pattern {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(255,255,255,0.15) 1px, transparent 1px);
+  background-size: 24px 24px;
+  opacity: 0.4;
+}
+
+/* ==========================================================================
+   FLUENT 2 MICA WINDOW SPEC (SETTINGS APP)
+   ========================================================================== */
+.fluent-window {
+  width: 620px;
+  height: 560px;
+  background: var(--bg-mica);
+  backdrop-filter: blur(28px) saturate(140%);
+  -webkit-backdrop-filter: blur(28px) saturate(140%);
+  border: 1px solid var(--stroke-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-window);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 10;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s;
+  position: relative;
+}
+
+/* Titlebar */
+.fluent-titlebar {
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-left: 14px;
+  border-bottom: 1px solid var(--stroke-subtle);
+  background: rgba(255, 255, 255, 0.02);
+  user-select: none;
+}
+.titlebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.titlebar-icon {
+  width: 18px;
+  height: 18px;
+}
+.titlebar-text {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+.titlebar-caption-controls {
+  display: flex;
+  height: 100%;
+}
+.caption-btn {
+  width: 44px;
+  height: 100%;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.caption-btn:hover {
+  background: var(--stroke-subtle);
+}
+.caption-btn.close:hover {
+  background: #e81123;
+  color: #ffffff;
+}
+
+/* Window Body (Split View: Sidebar + Content) */
+.fluent-body {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+/* Sidebar Navigation */
+.fluent-sidebar {
+  width: 175px;
+  background: var(--bg-acrylic);
+  border-right: 1px solid var(--stroke-subtle);
+  padding: 12px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  backdrop-filter: blur(16px);
+}
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: var(--radius-md);
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s ease;
+  position: relative;
+}
+.sidebar-item:hover {
+  background: var(--stroke-subtle);
+  color: var(--text-primary);
+}
+.sidebar-item.active {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-weight: 600;
+  box-shadow: var(--shadow-sm);
+}
+.sidebar-item.active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 3px;
+  border-radius: var(--radius-pill);
+  background: var(--accent-primary);
+}
+.sidebar-icon {
+  width: 16px;
+  height: 16px;
+  opacity: 0.85;
+}
+
+/* Main Content Area */
+.fluent-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.content-header {
+  margin-bottom: 2px;
+}
+.content-header h2 {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+}
+.content-header p {
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+/* Settings Card & Groups */
+.settings-group {
+  background: var(--bg-card);
+  border: 1px solid var(--stroke-card);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--stroke-divider);
+  gap: 16px;
+}
+.settings-row:last-child {
+  border-bottom: none;
+}
+.row-meta {
+  flex: 1;
+}
+.row-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.row-desc {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+/* Interactive Controls (Fluent Switch, Keycap, Inputs) */
+.fluent-switch {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 20px;
+  flex-shrink: 0;
+}
+.fluent-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.switch-slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background-color: var(--bg-input);
+  border: 1px solid var(--text-tertiary);
+  border-radius: var(--radius-pill);
+  transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.switch-slider::before {
+  position: absolute;
+  content: "";
+  height: 12px;
+  width: 12px;
+  left: 3px;
+  bottom: 3px;
+  background-color: var(--text-secondary);
+  border-radius: 50%;
+  transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.fluent-switch input:checked + .switch-slider {
+  background-color: var(--accent-primary);
+  border-color: var(--accent-primary);
+}
+.fluent-switch input:checked + .switch-slider::before {
+  transform: translateX(20px);
+  background-color: #ffffff;
+}
+
+/* Shortcut Keycap Button (Listening Mode) */
+.hotkey-button {
+  background: var(--bg-keycap);
+  border: 1px solid var(--stroke-card);
+  border-radius: var(--radius-md);
+  padding: 6px 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  box-shadow: var(--shadow-keycap);
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+  transition: all 0.15s ease;
+  user-select: none;
+}
+.hotkey-button:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--stroke-focus);
+}
+.hotkey-button.listening {
+  background: var(--accent-subtle);
+  border-color: var(--accent-primary);
+  color: var(--text-accent);
+  animation: pulseListen 1.5s infinite;
+}
+@keyframes pulseListen {
+  0% { box-shadow: 0 0 0 0 var(--accent-glow); }
+  70% { box-shadow: 0 0 0 6px rgba(0, 103, 192, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(0, 103, 192, 0); }
+}
+
+.key-badge {
+  background: var(--bg-card);
+  border: 1px solid var(--stroke-card);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+}
+
+/* Status Footer in Settings Window */
+.fluent-footer {
+  height: 48px;
+  background: var(--bg-card);
+  border-top: 1px solid var(--stroke-card);
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.footer-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.status-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--success);
+}
+.status-indicator.warning { background: var(--warning); }
+.status-indicator.danger { background: var(--danger); }
+
+.action-buttons {
+  display: flex;
+  gap: 8px;
+}
+.fluent-btn {
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--stroke-card);
+  background: var(--bg-subtle);
+  color: var(--text-primary);
+  transition: all 0.15s ease;
+}
+.fluent-btn:hover {
+  background: var(--bg-card-hover);
+}
+.fluent-btn.primary {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: var(--text-inverse);
+}
+.fluent-btn.primary:hover {
+  background: var(--accent-hover);
+}
+
+/* ==========================================================================
+   TASKBAR & SYSTEM TRAY SIMULATOR
+   ========================================================================== */
+.simulated-taskbar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 48px;
+  background: rgba(30, 32, 38, 0.78);
+  backdrop-filter: blur(24px);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  z-index: 50;
+  user-select: none;
+}
+.taskbar-center {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.taskbar-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s;
+  color: #ffffff;
+}
+.taskbar-icon:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+.taskbar-icon.active {
+  background: rgba(255, 255, 255, 0.18);
+  position: relative;
+}
+.taskbar-icon.active::after {
+  content: "";
+  position: absolute;
+  bottom: 2px;
+  width: 14px;
+  height: 3px;
+  border-radius: var(--radius-pill);
+  background: var(--accent-primary);
+}
+
+/* System Tray Area */
+.system-tray {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.tray-item {
+  height: 34px;
+  padding: 0 8px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  color: #ffffff;
+  font-size: 12px;
+  position: relative;
+}
+.tray-item:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+.tray-wintick-icon {
+  width: 22px;
+  height: 22px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.tray-dot {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--tray-alert);
+  box-shadow: 0 0 4px var(--tray-alert);
+  display: none;
+}
+.tray-dot.visible {
+  display: block;
+}
+.tray-cross {
+  position: absolute;
+  top: -1px;
+  right: -1px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--tray-alert);
+  color: #fff;
+  font-size: 8px;
+  font-weight: 800;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+.tray-cross.visible {
+  display: flex;
+}
+
+/* Tray Context Menu Popup */
+.tray-context-menu {
+  position: absolute;
+  bottom: 56px;
+  right: 12px;
+  width: 210px;
+  background: var(--bg-mica);
+  backdrop-filter: blur(24px);
+  border: 1px solid var(--stroke-card);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-flyout);
+  padding: 6px;
+  display: none;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 60;
+  animation: fadeIn 0.15s ease-out;
+}
+.tray-context-menu.open {
+  display: flex;
+}
+.menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 10px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 12.5px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s;
+}
+.menu-item:hover {
+  background: var(--stroke-subtle);
+}
+.menu-item.danger:hover {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+.menu-divider {
+  height: 1px;
+  background: var(--stroke-divider);
+  margin: 4px 0;
+}
+
+/* Windows Toast Notification Simulation */
+.toast-container {
+  position: absolute;
+  bottom: 60px;
+  right: 16px;
+  width: 320px;
+  background: var(--bg-card);
+  border: 1px solid var(--stroke-card);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-flyout);
+  padding: 14px;
+  z-index: 70;
+  display: none;
+  animation: slideToast 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.toast-container.show {
+  display: block;
+}
+@keyframes slideToast {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+.toast-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+.toast-body {
+  font-size: 13px;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+.toast-sub {
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+/* ==========================================================================
+   INTERACTIVE WINDOW CYCLING & SPATIAL SIMULATOR
+   ========================================================================== */
+.sim-stage-container {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 20px;
+  margin-top: 16px;
+}
+.window-sandbox {
+  background: #111419;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: var(--radius-lg);
+  height: 380px;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.screen-mock {
+  width: 94%;
+  height: 90%;
+  border: 1px dashed rgba(255,255,255,0.2);
+  border-radius: var(--radius-md);
+  position: relative;
+}
+.mock-window {
+  position: absolute;
+  border-radius: var(--radius-md);
+  background: #252830;
+  border: 1px solid rgba(255,255,255,0.15);
+  box-shadow: 0 12px 28px rgba(0,0,0,0.5);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  user-select: none;
+}
+.mock-window.focused {
+  border-color: var(--accent-primary);
+  box-shadow: 0 16px 36px rgba(0,0,0,0.7), 0 0 0 2px var(--accent-primary);
+  z-index: 5;
+}
+.mock-window-header {
+  height: 24px;
+  background: #1d2026;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 8px;
+  font-size: 10px;
+  color: #ccc;
+}
+.mock-window-body {
+  flex: 1;
+  padding: 10px;
+  font-size: 11px;
+  color: #888;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Control Panel for Cycling */
+.cycling-controls {
+  background: var(--bg-card);
+  border: 1px solid var(--stroke-card);
+  border-radius: var(--radius-lg);
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.control-header {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+/* ==========================================================================
+   ITERATION HISTORY & REVIEW HUB
+   ========================================================================== */
+.history-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 16px;
+}
+.version-card {
+  background: var(--bg-card);
+  border: 1px solid var(--stroke-card);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  box-shadow: var(--shadow-sm);
+  position: relative;
+}
+.version-card.current {
+  border-left: 4px solid var(--accent-primary);
+}
+.version-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--accent-subtle);
+  color: var(--text-accent);
+}
+.version-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.version-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.version-date {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+}
+.change-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+.change-item {
+  font-size: 13px;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.change-tag {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  font-family: var(--font-mono);
+}
+.change-tag.new { background: var(--success-bg); color: var(--success); }
+.change-tag.improve { background: var(--accent-subtle); color: var(--text-accent); }
+.change-tag.fix { background: var(--warning-bg); color: var(--warning); }
+
+/* ==========================================================================
+   DESIGN SYSTEM & TOKENS SHOWCASE
+   ========================================================================== */
+.token-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px;
+  margin-top: 14px;
+}
+.token-swatch {
+  background: var(--bg-card);
+  border: 1px solid var(--stroke-card);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.swatch-color {
+  height: 48px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(0,0,0,0.06);
+}
+.swatch-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.swatch-hex {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text-tertiary);
+}
+
+/* Modal Simulation (First-Run Onboarding) */
+.onboarding-modal {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 480px;
+  background: var(--bg-mica);
+  backdrop-filter: blur(28px);
+  border: 1px solid var(--stroke-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-window);
+  padding: 24px;
+  z-index: 80;
+  display: none;
+}
+.onboarding-modal.active {
+  display: block;
+}
+.onboarding-step-indicator {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+.step-dot {
+  flex: 1;
+  height: 3px;
+  border-radius: var(--radius-pill);
+  background: var(--stroke-divider);
+}
+.step-dot.active {
+  background: var(--accent-primary);
+}
+
+/* Interactive Slider */
+.fluent-range-slider {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--stroke-divider);
+  outline: none;
+}
+.fluent-range-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--accent-primary);
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  transition: transform 0.1s;
+}
+.fluent-range-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+</style>
+
+<!-- Top Studio Bar -->
+<header class="top-header">
+  <div class="header-inner">
+    <div class="brand-group">
+      <div class="brand-logo">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="3"></rect>
+          <path d="M3 9h18"></path>
+          <path d="M9 21V9"></path>
+        </svg>
+      </div>
+      <div>
+        <div class="brand-title">
+          Wira Desk
+          <span class="brand-badge">UI/UX Redesign Lab</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- View Switcher -->
+    <nav class="nav-tabs" role="tablist">
+      <button class="nav-tab-btn active" data-target="view-prototype" onclick="switchView('view-prototype')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+        Live Prototype
+      </button>
+      <button class="nav-tab-btn" data-target="view-architecture" onclick="switchView('view-architecture')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+        UX Architecture & Audit
+      </button>
+      <button class="nav-tab-btn" data-target="view-design-system" onclick="switchView('view-design-system')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/></svg>
+        Design Tokens & Specs
+      </button>
+      <button class="nav-tab-btn" data-target="view-iterations" onclick="switchView('view-iterations')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        Iteration Hub (v1.3)
+      </button>
+    </nav>
+
+    <!-- Theme & Quick Actions -->
+    <div class="header-actions">
+      <button class="theme-select-btn" onclick="toggleTheme()" id="theme-toggle-btn" title="Toggle Theme (Light / Dark)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" id="theme-icon"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+        <span id="theme-label">Theme</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main class="main-wrapper">
+
+  <!-- ====================================================================
+       VIEW 1: LIVE PROTOTYPE SIMULATOR
+       ==================================================================== -->
+  <section id="view-prototype" class="view-section active">
+    <!-- Hero Banner -->
+    <div class="hero-banner">
+      <div class="hero-content">
+        <h1>Wira Desk (WiraDex) Fluent 2 Interface</h1>
+        <p>Redesain modern untuk utilitas navigasi jendela macOS-style di Windows 11. Mengusung prinsip <em>Invisibility & Zero-Friction</em> dengan visual native Mica Material dan interaksi keyboard-first.</p>
+      </div>
+      <div class="hero-stats">
+        <div class="stat-pill">
+          <div class="num">&lt; 10 ms</div>
+          <div class="label">Hook Budget</div>
+        </div>
+        <div class="stat-pill">
+          <div class="num">100%</div>
+          <div class="label">Native Mica</div>
+        </div>
+        <div class="stat-pill">
+          <div class="num">UIA Ready</div>
+          <div class="label">Accessibility</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Desktop Workspace Simulator -->
+    <div class="desktop-stage">
+      <div class="stage-toolbar">
+        <div class="stage-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          Windows 11 Desktop Sandbox
+        </div>
+        <div class="stage-controls">
+          <button class="pill-btn active" id="btn-show-settings" onclick="toggleWindow('settings')">Settings Window</button>
+          <button class="pill-btn" id="btn-show-onboarding" onclick="toggleWindow('onboarding')">First-Run Tutorial</button>
+          <button class="pill-btn" onclick="triggerTierAlert(2)">Simulate Tier 2 Alert (Dot)</button>
+          <button class="pill-btn" onclick="triggerTierAlert(3)">Simulate Tier 3 Alert (Toast)</button>
+        </div>
+      </div>
+
+      <!-- Desktop Viewport -->
+      <div class="desktop-viewport">
+        <div class="desktop-bg-pattern"></div>
+
+        <!-- Simulated Fluent Settings Window -->
+        <div class="fluent-window" id="settings-window">
+          <!-- Window Titlebar -->
+          <div class="fluent-titlebar">
+            <div class="titlebar-brand">
+              <svg class="titlebar-icon" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width="2.5">
+                <rect x="3" y="3" width="18" height="18" rx="3"></rect>
+                <path d="M3 9h18"></path>
+                <path d="M9 21V9"></path>
+              </svg>
+              <span class="titlebar-text">Wira Desk — Settings</span>
+            </div>
+            <div class="titlebar-caption-controls">
+              <button class="caption-btn" aria-label="Minimize">
+                <svg width="10" height="1" viewBox="0 0 10 1"><rect width="10" height="1" fill="currentColor"/></svg>
+              </button>
+              <button class="caption-btn" aria-label="Maximize">
+                <svg width="10" height="10" viewBox="0 0 10 10"><rect width="10" height="10" fill="none" stroke="currentColor" stroke-width="1"/></svg>
+              </button>
+              <button class="caption-btn close" aria-label="Close" onclick="toggleWindow('settings')">
+                <svg width="10" height="10" viewBox="0 0 10 10"><line x1="1" y1="1" x2="9" y2="9" stroke="currentColor" stroke-width="1.2"/><line x1="9" y1="1" x2="1" y2="9" stroke="currentColor" stroke-width="1.2"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Window Body with Sidebar -->
+          <div class="fluent-body">
+            <!-- Sidebar -->
+            <nav class="fluent-sidebar" role="tablist">
+              <button class="sidebar-item active" data-pane="pane-general" onclick="switchPane('pane-general')">
+                <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                General
+              </button>
+              <button class="sidebar-item" data-pane="pane-shortcuts" onclick="switchPane('pane-shortcuts')">
+                <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 8h.001"/><path d="M10 8h.001"/><path d="M14 8h.001"/><path d="M18 8h.001"/><path d="M8 12h.001"/><path d="M12 12h.001"/><path d="M16 12h.001"/><path d="M7 16h10"/></svg>
+                Shortcuts
+              </button>
+              <button class="sidebar-item" data-pane="pane-layout" onclick="switchPane('pane-layout')">
+                <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="3" x2="12" y2="21"/></svg>
+                Layout & Snapping
+              </button>
+              <button class="sidebar-item" data-pane="pane-bypass" onclick="switchPane('pane-bypass')">
+                <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/><path d="m15 7-6 6"/><path d="m9 7 6 6"/></svg>
+                VM & Exceptions
+              </button>
+              <button class="sidebar-item" data-pane="pane-about" onclick="switchPane('pane-about')">
+                <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                About
+              </button>
+            </nav>
+
+            <!-- Content Area -->
+            <div class="fluent-content">
+
+              <!-- PANE 1: GENERAL -->
+              <div id="pane-general" class="settings-pane active">
+                <div class="content-header">
+                  <h2>General Settings</h2>
+                  <p>Konfigurasi status daemon, integrasi startup OS, dan isolasi spasial.</p>
+                </div>
+
+                <div class="settings-group">
+                  <div class="settings-row">
+                    <div class="row-meta">
+                      <div class="row-title">Auto-start on Boot</div>
+                      <div class="row-desc">Jalankan secara otomatis saat Windows boot menggunakan Task Scheduler elevated (tanpa prompt UAC).</div>
+                    </div>
+                    <label class="fluent-switch">
+                      <input type="checkbox" checked onchange="markDraftDirty()">
+                      <span class="switch-slider"></span>
+                    </label>
+                  </div>
+                  <div class="settings-row">
+                    <div class="row-meta">
+                      <div class="row-title">Spatial Preservation (Per-Monitor Lock)</div>
+                      <div class="row-desc">Kunci perputaran jendela hanya pada monitor fisik aktif saat ini.</div>
+                    </div>
+                    <label class="fluent-switch">
+                      <input type="checkbox" checked onchange="markDraftDirty()">
+                      <span class="switch-slider"></span>
+                    </label>
+                  </div>
+                  <div class="settings-row">
+                    <div class="row-meta">
+                      <div class="row-title">Virtual Desktop Isolation</div>
+                      <div class="row-desc">Jangan melompati batas Virtual Desktop Windows yang sedang aktif.</div>
+                    </div>
+                    <label class="fluent-switch">
+                      <input type="checkbox" checked onchange="markDraftDirty()">
+                      <span class="switch-slider"></span>
+                    </label>
+                  </div>
+                </div>
+
+                <div class="settings-group" style="margin-top: 14px;">
+                  <div class="settings-row">
+                    <div class="row-meta">
+                      <div class="row-title">UX Honesty Mode</div>
+                      <div class="row-desc">Angkat jendela "Not Responding" ke depan agar status macet terlihat transparan, tidak disembunyikan.</div>
+                    </div>
+                    <label class="fluent-switch">
+                      <input type="checkbox" checked onchange="markDraftDirty()">
+                      <span class="switch-slider"></span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <!-- PANE 2: SHORTCUTS -->
+              <div id="pane-shortcuts" class="settings-pane" style="display: none;">
+                <div class="content-header">
+                  <h2>Shortcut & Hotkeys</h2>
+                  <p>Klik kotak pintasan untuk mengaktifkan mode <em>Listening</em> dan tekan kombinasi tombol.</p>
+                </div>
+
+                <div class="settings-group">
+                  <div class="settings-row">
+                    <div class="row-meta">
+                      <div class="row-title">Primary Switcher</div>
+                      <div class="row-desc">Pintasan utama rotasi jendela aplikasi yang sama.</div>
+                    </div>
+                    <button class="hotkey-button" id="hk-switcher" onclick="listenHotkey('hk-switcher')">
+                      <span class="key-badge">Win</span> + <span class="key-badge">`</span>
+                    </button>
+                  </div>
+                  <div class="settings-row">
+                    <div class="row-meta">
+                      <div class="row-title">Fallback Switcher</div>
+                      <div class="row-desc">Dipakai saat tombol Win diintersepsi oleh game atau software lain.</div>
+                    </div>
+                    <button class="hotkey-button" id="hk-fallback" onclick="listenHotkey('hk-fallback')">
+                      <span class="key-badge">Alt</span> + <span class="key-badge">`</span>
+                    </button>
+                  </div>
+                  <div class="settings-row">
+                    <div class="row-meta">
+                      <div class="row-title">Precise Matching</div>
+                      <div class="row-desc">Batalkan eksekusi jika ada modifier ekstra ditekan (misal Win+Shift+`).</div>
+                    </div>
+                    <label class="fluent-switch">
+                      <input type="checkbox" checked onchange="markDraftDirty()">
+                      <span class="switch-slider"></span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <!-- PANE 3: LAYOUT & SNAPPING -->
+              <div id="pane-layout" class="settings-pane" style="display: none;">
+                <div class="content-header">
+                  <h2>Window Snapping & Stacking</h2>
+                  <p>Penataan jendela cepat sadar-DPI dan mode Overlapping Stack.</p>
+                </div>
+
+                <div class="settings-group">
+                  <div class="settings-row">
+                    <div class="row-meta">
+                      <div class="row-title">Enable Overlapping Stack</div>
+                      <div class="row-desc">Tumpuk hingga 3 jendela dengan offset horizontal teratur di monitor kecil.</div>
+                    </div>
+                    <label class="fluent-switch">
+                      <input type="checkbox" id="toggle-stack" checked onchange="updateStackPreview()">
+                      <span class="switch-slider"></span>
+                    </label>
+                  </div>
+                  <div class="settings-row" style="flex-direction: column; align-items: stretch; gap: 8px;">
+                    <div style="display: flex; justify-content: space-between;">
+                      <span class="row-title">Stack Window Width Ratio</span>
+                      <span class="row-title" style="color: var(--accent-primary);" id="stack-pct-label">50%</span>
+                    </div>
+                    <input type="range" class="fluent-range-slider" min="30" max="80" value="50" id="stack-pct-slider" oninput="updateStackWidth(this.value)">
+                  </div>
+                </div>
+
+                <div class="settings-group" style="margin-top: 14px;">
+                  <div class="settings-row" style="background: var(--success-bg); border-bottom: 1px solid var(--stroke-card);">
+                    <div class="row-meta">
+                      <div class="row-title" style="color: var(--success); display: flex; align-items: center; gap: 6px;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+                        Ultra-Safe Modifier Lock: Ctrl + Alt + Win (v1.3)
+                      </div>
+                      <div class="row-desc" style="color: var(--text-primary); font-size: 11.5px;">
+                        Menggunakan triple-modifier <strong>Ctrl + Alt + Win</strong> yang berjajar rapi di pojok kiri bawah keyboard. Dijamin 100% bebas dari segala tabrakan shortcut Windows OS, Virtual Desktop, maupun aplikasi pihak ketiga.
+                      </div>
+                    </div>
+                  </div>
+                  <div class="settings-row">
+                    <div class="row-meta">
+                      <div class="row-title">Snap Left 50%</div>
+                      <div class="row-desc">Snap setengah kiri layar sadar-DPI.</div>
+                    </div>
+                    <button class="hotkey-button" id="hk-snap-left" onclick="listenHotkey('hk-snap-left')">
+                      <span class="key-badge">Ctrl</span> + <span class="key-badge">Alt</span> + <span class="key-badge">Win</span> + <span class="key-badge">←</span>
+                    </button>
+                  </div>
+                  <div class="settings-row">
+                    <div class="row-meta">
+                      <div class="row-title">Snap Right 50%</div>
+                      <div class="row-desc">Snap setengah kanan layar sadar-DPI.</div>
+                    </div>
+                    <button class="hotkey-button" id="hk-snap-right" onclick="listenHotkey('hk-snap-right')">
+                      <span class="key-badge">Ctrl</span> + <span class="key-badge">Alt</span> + <span class="key-badge">Win</span> + <span class="key-badge">→</span>
+                    </button>
+                  </div>
+                  <div class="settings-row">
+                    <div class="row-meta">
+                      <div class="row-title">Maximize & Next Monitor</div>
+                      <div class="row-desc">Maksimalkan penuh / pindah monitor.</div>
+                    </div>
+                    <button class="hotkey-button" id="hk-snap-max" onclick="listenHotkey('hk-snap-max')">
+                      <span class="key-badge">Ctrl</span> + <span class="key-badge">Alt</span> + <span class="key-badge">Win</span> + <span class="key-badge">Enter</span>
+                    </button>
+                  </div>
+                  <div class="settings-row">
+                    <div class="row-meta">
+                      <div class="row-title">Overlapping Stack Shortcut</div>
+                      <div class="row-desc">Pintasan tata tumpuk 3 jendela cascade.</div>
+                    </div>
+                    <button class="hotkey-button" id="hk-stack" onclick="listenHotkey('hk-stack')">
+                      <span class="key-badge">Ctrl</span> + <span class="key-badge">Alt</span> + <span class="key-badge">Win</span> + <span class="key-badge">↓</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- PANE 4: VM & EXCEPTIONS -->
+              <div id="pane-bypass" class="settings-pane" style="display: none;">
+                <div class="content-header">
+                  <h2>VM & Remote Desktop Passthrough</h2>
+                  <p>Aplikasi yang dilewati secara langsung tanpa intersepsi hook pintasan.</p>
+                </div>
+
+                <div class="settings-group">
+                  <div class="settings-row">
+                    <div class="row-meta">
+                      <div class="row-title">Virtual Machine Passthrough</div>
+                      <div class="row-desc">Biarkan penekanan tombol diteruskan ke guest VM (VMware, VirtualBox, Hyper-V).</div>
+                    </div>
+                    <label class="fluent-switch">
+                      <input type="checkbox" checked onchange="markDraftDirty()">
+                      <span class="switch-slider"></span>
+                    </label>
+                  </div>
+                  <div class="settings-row">
+                    <div class="row-meta">
+                      <div class="row-title">Remote Desktop (RDP / VNC)</div>
+                      <div class="row-desc">Bypass otomatis saat jendela mstsc.exe atau MobaXterm aktif.</div>
+                    </div>
+                    <label class="fluent-switch">
+                      <input type="checkbox" checked onchange="markDraftDirty()">
+                      <span class="switch-slider"></span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <!-- PANE 5: ABOUT -->
+              <div id="pane-about" class="settings-pane" style="display: none;">
+                <div class="content-header">
+                  <h2>About Wira Desk</h2>
+                  <p>Informasi arsitektur dan status runtime biner.</p>
+                </div>
+
+                <div class="settings-group">
+                  <div class="settings-row">
+                    <div class="row-meta">
+                      <div class="row-title">Version</div>
+                      <div class="row-desc">0.1.0 (Build 2026.08)</div>
+                    </div>
+                    <span class="brand-badge" style="background: var(--success-bg); color: var(--success);">Stable</span>
+                  </div>
+                  <div class="settings-row">
+                    <div class="row-meta">
+                      <div class="row-title">Runtime Engine</div>
+                      <div class="row-desc">Rust 2021 + eframe 0.36.1 (Win32 FFI & Kernel non-blocking)</div>
+                    </div>
+                  </div>
+                  <div class="settings-row">
+                    <div class="row-meta">
+                      <div class="row-title">Memory Footprint</div>
+                      <div class="row-desc">Daemon: ~1.4 MB RAM | Settings: On-Demand</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Window Footer -->
+          <div class="fluent-footer">
+            <div class="footer-status">
+              <div class="status-indicator" id="footer-status-indicator"></div>
+              <span id="footer-status-text">Daemon running elevated (PID: 10428)</span>
+            </div>
+            <div class="action-buttons">
+              <button class="fluent-btn" id="btn-revert" onclick="revertDraft()" disabled>Revert</button>
+              <button class="fluent-btn primary" id="btn-save" onclick="saveDraft()">Save Changes</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- First-Run Onboarding Modal Simulator -->
+        <div class="onboarding-modal" id="onboarding-dialog">
+          <div class="onboarding-step-indicator">
+            <div class="step-dot active" id="dot-1"></div>
+            <div class="step-dot" id="dot-2"></div>
+            <div class="step-dot" id="dot-3"></div>
+          </div>
+          <h2 style="font-size: 18px; font-weight: 700; margin-bottom: 8px;" id="ob-title">Welcome to Wira Desk</h2>
+          <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 20px; min-height: 52px;" id="ob-desc">
+            Wira Desk switches between windows of the application you are already using, instead of every window on the system like Alt+Tab does.
+          </p>
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <button class="fluent-btn" onclick="skipOnboarding()">Skip Tutorial</button>
+            <button class="fluent-btn primary" id="ob-next-btn" onclick="nextOnboarding()">Next</button>
+          </div>
+        </div>
+
+        <!-- Simulated Taskbar -->
+        <div class="simulated-taskbar">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <div class="taskbar-icon" title="Start">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M3 3h8v8H3zm10 0h8v8h-8zM3 13h8v8H3zm10 0h8v8h-8z"/></svg>
+            </div>
+          </div>
+
+          <div class="taskbar-center">
+            <div class="taskbar-icon active" title="Wira Desk Settings (Open)">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+            </div>
+            <div class="taskbar-icon" title="Visual Studio Code">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.5 2.5 7.2 10.4l-4.7-3.6L1 8l4.4 3.4L1 14.8l1.5 1.2 4.7-3.6 10.3 7.9 4.5-2.2V4.7l-4.5-2.2z"/></svg>
+            </div>
+            <div class="taskbar-icon" title="Google Chrome">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/></svg>
+            </div>
+          </div>
+
+          <!-- System Tray -->
+          <div class="system-tray">
+            <div class="tray-item" title="Wira Desk — Background Cycler" onclick="toggleTrayMenu(event)">
+              <div class="tray-wintick-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
+                  <rect x="3" y="3" width="18" height="18" rx="3"></rect>
+                  <path d="M3 9h18"></path>
+                  <path d="M9 21V9"></path>
+                </svg>
+                <span class="tray-dot" id="sim-tray-dot"></span>
+                <span class="tray-cross" id="sim-tray-cross">✕</span>
+              </div>
+            </div>
+            <div class="tray-item" style="font-size: 11px; font-weight: 500;">
+              11:42 PM
+            </div>
+          </div>
+        </div>
+
+        <!-- Tray Context Menu -->
+        <div class="tray-context-menu" id="tray-context-menu">
+          <button class="menu-item" onclick="openSettingsFromTray()">
+            <span><strong>Settings...</strong></span>
+            <span style="font-size: 10px; color: var(--text-tertiary);">Win+,</span>
+          </button>
+          <button class="menu-item" onclick="alert('Opening silent log file: %APPDATA%/WiraDesk/daemon.log')">
+            <span>View Logs</span>
+          </button>
+          <button class="menu-item" onclick="toggleTrayAutoStart(this)">
+            <span>Auto-Start</span>
+            <span style="color: var(--success);">✓</span>
+          </button>
+          <div class="menu-divider"></div>
+          <button class="menu-item" onclick="alert('You are running the latest version (0.1.0).')">
+            <span>Check for Updates...</span>
+          </button>
+          <button class="menu-item" onclick="switchPane('pane-about'); openSettingsFromTray();">
+            <span>About Wira Desk</span>
+          </button>
+          <div class="menu-divider"></div>
+          <button class="menu-item danger" onclick="alert('Wira Desk daemon exited cleanly.')">
+            <span>Exit</span>
+          </button>
+        </div>
+
+        <!-- Toast Notification Simulator -->
+        <div class="toast-container" id="toast-notif">
+          <div class="toast-header">
+            <span>Wira Desk • Critical Alert</span>
+            <span style="cursor: pointer;" onclick="hideToast()">✕</span>
+          </div>
+          <div class="toast-body" id="toast-msg">Keyboard Hook Heartbeat Stalled</div>
+          <div class="toast-sub">LowLevelHooksTimeout threshold reached. Daemon is auto-recovering hook bindings.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Live Window Cycling & Spatial Preview Section -->
+    <div class="sim-stage-container">
+      <div>
+        <div class="content-header" style="margin-bottom: 8px;">
+          <h3 style="font-size: 16px; font-weight: 700;">Live Same-App Cycling & Stacking Preview</h3>
+          <p>Uji coba interaksi rotasi jendela aplikasi yang sama (`Win + \``) dengan mekanisme spatial lock.</p>
+        </div>
+        <div class="window-sandbox" id="cycling-sandbox">
+          <div class="screen-mock" id="screen-mock-area">
+            <!-- Window 1: Chrome (Doc A) -->
+            <div class="mock-window focused" id="win-1" style="top: 20px; left: 30px; width: 55%; height: 65%;">
+              <div class="mock-window-header">
+                <span>Google Chrome — Dashboard API Spec</span>
+                <span>✕</span>
+              </div>
+              <div class="mock-window-body">
+                <div style="background: rgba(255,255,255,0.06); height: 12px; width: 60%; border-radius: 2px;"></div>
+                <div style="background: rgba(255,255,255,0.04); height: 8px; width: 90%; border-radius: 2px;"></div>
+                <div style="background: rgba(255,255,255,0.04); height: 8px; width: 75%; border-radius: 2px;"></div>
+              </div>
+            </div>
+
+            <!-- Window 2: Chrome (Doc B) -->
+            <div class="mock-window" id="win-2" style="top: 50px; left: 80px; width: 55%; height: 65%;">
+              <div class="mock-window-header">
+                <span>Google Chrome — Design System Guidelines</span>
+                <span>✕</span>
+              </div>
+              <div class="mock-window-body">
+                <div style="background: rgba(255,255,255,0.06); height: 12px; width: 45%; border-radius: 2px;"></div>
+                <div style="background: rgba(255,255,255,0.04); height: 8px; width: 80%; border-radius: 2px;"></div>
+              </div>
+            </div>
+
+            <!-- Window 3: Chrome (Doc C) -->
+            <div class="mock-window" id="win-3" style="top: 80px; left: 130px; width: 55%; height: 65%;">
+              <div class="mock-window-header">
+                <span>Google Chrome — Pull Request Review</span>
+                <span>✕</span>
+              </div>
+              <div class="mock-window-body">
+                <div style="background: rgba(255,255,255,0.06); height: 12px; width: 70%; border-radius: 2px;"></div>
+                <div style="background: rgba(255,255,255,0.04); height: 8px; width: 85%; border-radius: 2px;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Controls Panel -->
+      <div class="cycling-controls">
+        <div class="control-header">Interactive Test Triggers</div>
+        <p style="font-size: 12px; color: var(--text-secondary);">
+          Simulasikan penekanan pintasan keyboard secara langsung untuk melihat perpindahan Z-order deterministik.
+        </p>
+
+        <button class="fluent-btn primary" style="padding: 10px;" onclick="cycleWindowsForward()">
+          ⚡ Cycle Next Window (`Win + \``)
+        </button>
+
+        <button class="fluent-btn" onclick="applySnap('left')">
+          ◧ Snap Active to Left 50%
+        </button>
+        <button class="fluent-btn" onclick="applySnap('right')">
+          ◨ Snap Active to Right 50%
+        </button>
+        <button class="fluent-btn" onclick="applyOverlappingStack()">
+          🗂️ Apply Overlapping Stack (3 Windows)
+        </button>
+        <button class="fluent-btn" onclick="resetSandboxWindows()">
+          ↺ Reset Window Positions
+        </button>
+
+        <div style="margin-top: 8px; padding-top: 10px; border-top: 1px solid var(--stroke-divider); font-size: 11.5px; color: var(--text-tertiary);">
+          Active Window Class: <code>Chrome_WidgetWin_1</code><br>
+          Target PID Match: <code>3 windows in ring</code>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ====================================================================
+       VIEW 2: UX ARCHITECTURE & AUDIT
+       ==================================================================== -->
+  <section id="view-architecture" class="view-section">
+    <div class="content-header" style="margin-bottom: 20px;">
+      <h2 style="font-size: 22px; font-weight: 700;">UX Architecture & Comparative Audit</h2>
+      <p>Analisis perbandingan antarmuka bawaan lama (egui plain tabs) dengan Redesain Fluent 2 Terpadu.</p>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px;">
+      <!-- Old UI Audit -->
+      <div class="settings-group" style="padding: 20px;">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+          <span style="color: var(--danger); font-size: 16px;">✕</span>
+          <h3 style="font-size: 15px; font-weight: 700;">Old Interface (Baseline egui / Win32)</h3>
+        </div>
+        <ul style="padding-left: 20px; font-size: 13px; color: var(--text-secondary); display: flex; flex-direction: column; gap: 8px;">
+          <li><strong>Horizontal Top Tabs:</strong> Membatasi skalabilitas penambahan kategori pengaturan dan navigasi keyboard yang kaku.</li>
+          <li><strong>Plain Button Capturer:</strong> Input shortcut hanya berupa tombol bertuliskan teks tanpa visualisasi status kombinasi keyboard fisik.</li>
+          <li><strong>Zero Spatial Feedback:</strong> Pengaturan <em>Snapping</em> dan <em>Overlapping Stack</em> hanya berupa angka slider murni tanpa preview visual posisi layar.</li>
+          <li><strong>Isolated Dialogs:</strong> Kurangnya feedback visual status daemon (apakah hook aktif, elevated, atau sedang mengalami throttling).</li>
+        </ul>
+      </div>
+
+      <!-- New UI Redesign Rationale -->
+      <div class="settings-group" style="padding: 20px; border-color: var(--accent-primary);">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+          <span style="color: var(--success); font-size: 16px;">✓</span>
+          <h3 style="font-size: 15px; font-weight: 700; color: var(--text-accent);">Fluent 2 Redesign Solution</h3>
+        </div>
+        <ul style="padding-left: 20px; font-size: 13px; color: var(--text-secondary); display: flex; flex-direction: column; gap: 8px;">
+          <li><strong>Vertical Mica Sidebar:</strong> Sesuai panduan Windows 11 Human Interface Guidelines dengan aksesibilitas Tab-stop linear.</li>
+          <li><strong>Visual Keycap Badges:</strong> Mode <em>Listening</em> dengan animasi visual denyut, live key detection, dan deteksi konflik modifier.</li>
+          <li><strong>Live Layout Previews:</strong> Slider ratio stack terhubung dengan kalkulasi representasi DPI-aware horizontal offset.</li>
+          <li><strong>3-Tier Alert System Integration:</strong> Indikator status real-time di footer jendela dan system tray icon overlay.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 3-Tier Error Protocol UX Mapping -->
+    <div class="settings-group" style="padding: 20px; margin-bottom: 24px;">
+      <h3 style="font-size: 15px; font-weight: 700; margin-bottom: 14px;">3-Tier Error Protocol UX Visualization</h3>
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;">
+        <div style="background: var(--bg-subtle); padding: 14px; border-radius: var(--radius-md); border-left: 3px solid var(--danger);">
+          <div style="font-weight: 700; font-size: 13px; color: var(--text-primary);">Tier 1: Startup Fatal</div>
+          <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">
+            Kegagalan Hook saat boot (misal diblokir Antivirus). Menampilkan tepat <strong>1x MessageBox</strong> modal sebelum keluar.
+          </div>
+        </div>
+        <div style="background: var(--bg-subtle); padding: 14px; border-radius: var(--radius-md); border-left: 3px solid var(--warning);">
+          <div style="font-weight: 700; font-size: 13px; color: var(--text-primary);">Tier 2: Runtime Warning</div>
+          <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">
+            Kegagalan non-fatal. <strong>Nol popup</strong>. Silent log + overlay titik merah kecil pada Tray Icon.
+          </div>
+        </div>
+        <div style="background: var(--bg-subtle); padding: 14px; border-radius: var(--radius-md); border-left: 3px solid var(--tray-alert);">
+          <div style="font-weight: 700; font-size: 13px; color: var(--text-primary);">Tier 3: Runtime Critical</div>
+          <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">
+            Hook mati saat runtime. Overlay silang merah pada Tray + tepat <strong>1x Toast Notification</strong> OS.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overlapping Stack Mechanism Explained -->
+    <div class="settings-group" style="padding: 20px;">
+      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+        <span style="font-size: 18px;">🗂️</span>
+        <h3 style="font-size: 15px; font-weight: 700;">Bagaimana Cara Kerja "Overlapping Stack Layout"?</h3>
+      </div>
+      <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 14px;">
+        Fitur ini terinspirasi dari kebutuhan produktivitas di layar laptop/monitor kecil di mana membuka 3 jendela berdampingan (tiling biasa) akan membuat tiap jendela terlalu sempit (&lt; 33% lebar layar).
+      </p>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
+        <div style="background: var(--bg-subtle); padding: 12px; border-radius: var(--radius-md);">
+          <div style="font-weight: 700; font-size: 12.5px; color: var(--text-primary); margin-bottom: 4px;">1. Lebar Nyaman (50% Layar)</div>
+          <div style="font-size: 12px; color: var(--text-secondary);">
+            Setiap jendela diatur memiliki lebar tetap 50% (dapat diubah via slider 30%-80%), sehingga area konten tetap lega untuk dibaca/diedit.
+          </div>
+        </div>
+        <div style="background: var(--bg-subtle); padding: 12px; border-radius: var(--radius-md);">
+          <div style="font-weight: 700; font-size: 12.5px; color: var(--text-primary); margin-bottom: 4px;">2. Offset Horizontal Merata</div>
+          <div style="font-size: 12px; color: var(--text-secondary);">
+            Hingga maksimal 3 jendela ditata bertingkat dari Kiri, Tengah, ke Kanan secara otomatis (cascade teratur), bukan bertumpuk menutupi 100%.
+          </div>
+        </div>
+        <div style="background: var(--bg-subtle); padding: 12px; border-radius: var(--radius-md);">
+          <div style="font-weight: 700; font-size: 12.5px; color: var(--text-primary); margin-bottom: 4px;">3. Tepian Selalu Klik-able</div>
+          <div style="font-size: 12px; color: var(--text-secondary);">
+            Sisa area <em>travel</em> memastikan tepi setiap jendela di belakangnya selalu tampak dan bisa langsung diklik dengan mouse kapan saja.
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ====================================================================
+       VIEW 3: DESIGN TOKENS & SPECS
+       ==================================================================== -->
+  <section id="view-design-system" class="view-section">
+    <div class="content-header" style="margin-bottom: 20px;">
+      <h2 style="font-size: 22px; font-weight: 700;">Design Tokens & Component Specs</h2>
+      <p>Palet warna sistem, tipografi, dan spesifikasi komponen native Windows 11.</p>
+    </div>
+
+    <!-- Color Tokens -->
+    <h3 style="font-size: 15px; font-weight: 700; margin-bottom: 10px;">Fluent Accent & Neutral Palette</h3>
+    <div class="token-grid">
+      <div class="token-swatch">
+        <div class="swatch-color" style="background: #0067C0;"></div>
+        <div class="swatch-name">Accent Primary (Light)</div>
+        <div class="swatch-hex">#0067C0</div>
+      </div>
+      <div class="token-swatch">
+        <div class="swatch-color" style="background: #4CC2FF;"></div>
+        <div class="swatch-name">Accent Primary (Dark)</div>
+        <div class="swatch-hex">#4CC2FF</div>
+      </div>
+      <div class="token-swatch">
+        <div class="swatch-color" style="background: #E81123;"></div>
+        <div class="swatch-name">System Tray Alert</div>
+        <div class="swatch-hex">#E81123</div>
+      </div>
+      <div class="token-swatch">
+        <div class="swatch-color" style="background: #107C10;"></div>
+        <div class="swatch-name">Success / Active</div>
+        <div class="swatch-hex">#107C10</div>
+      </div>
+    </div>
+
+    <!-- Typography Scale -->
+    <div class="settings-group" style="margin-top: 24px; padding: 20px;">
+      <h3 style="font-size: 15px; font-weight: 700; margin-bottom: 14px;">Typography Hierarchy</h3>
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        <div style="display: flex; align-items: baseline; justify-content: space-between; border-bottom: 1px solid var(--stroke-divider); padding-bottom: 8px;">
+          <div>
+            <div style="font-size: 20px; font-weight: 700;">Title Large (20px / SemiBold)</div>
+            <div style="font-size: 12px; color: var(--text-tertiary);">Heading jendela utama dan hero onboarding</div>
+          </div>
+          <code style="font-family: var(--font-mono); font-size: 11px;">Segoe UI Variable Display</code>
+        </div>
+        <div style="display: flex; align-items: baseline; justify-content: space-between; border-bottom: 1px solid var(--stroke-divider); padding-bottom: 8px;">
+          <div>
+            <div style="font-size: 14px; font-weight: 600;">Body Strong (14px / SemiBold)</div>
+            <div style="font-size: 12px; color: var(--text-tertiary);">Judul row pengaturan dan tombol aksi</div>
+          </div>
+          <code style="font-family: var(--font-mono); font-size: 11px;">Segoe UI Variable Text</code>
+        </div>
+        <div style="display: flex; align-items: baseline; justify-content: space-between;">
+          <div>
+            <div style="font-size: 12px; font-weight: 400; color: var(--text-secondary);">Caption Regular (12px / Regular)</div>
+            <div style="font-size: 12px; color: var(--text-tertiary);">Deskripsi fitur, helper text, dan status footer</div>
+          </div>
+          <code style="font-family: var(--font-mono); font-size: 11px;">Segoe UI Variable Text</code>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ====================================================================
+       VIEW 4: ITERATION HISTORY (CHANGELOG HUB)
+       ==================================================================== -->
+  <section id="view-iterations" class="view-section">
+    <div class="content-header" style="margin-bottom: 20px;">
+      <h2 style="font-size: 22px; font-weight: 700;">Design Iteration History</h2>
+      <p>Dokumentasi setiap putaran iterasi desain UI/UX Wira Desk untuk review tim dan stakeholder.</p>
+    </div>
+
+    <div class="history-timeline">
+
+      <!-- Iteration Card v1.3 -->
+      <div class="version-card current">
+        <div class="version-header">
+          <div>
+            <span class="version-badge">Latest Iteration (v1.3)</span>
+            <div class="version-title" style="margin-top: 6px;">v1.3 — Triple-Modifier Lock: Ctrl + Alt + Win Alignment</div>
+          </div>
+          <div class="version-date">2026-08-24</div>
+        </div>
+
+        <p style="font-size: 13px; color: var(--text-secondary);">
+          <strong>Optimal Shortcut Ergonomics:</strong> Mengadopsi kombinasi 3-modifier <code>Ctrl + Alt + Win</code> (berjajar di pojok kiri bawah keyboard) untuk perlindungan tabrakan 100% dari Windows OS & aplikasi lain.
+        </p>
+
+        <ul class="change-list">
+          <li class="change-item">
+            <span class="change-tag new">New Standard</span>
+            <span><strong>Default Snapping:</strong> <code>Ctrl + Alt + Win + ←</code> (Snap Kiri) dan <code>Ctrl + Alt + Win + →</code> (Snap Kanan).</span>
+          </li>
+          <li class="change-item">
+            <span class="change-tag new">New Standard</span>
+            <span><strong>Maximize & Stacking:</strong> <code>Ctrl + Alt + Win + Enter</code> (Layar Penuh) dan <code>Ctrl + Alt + Win + ↓</code> (Overlapping Stack).</span>
+          </li>
+          <li class="change-item">
+            <span class="change-tag improve">Improve</span>
+            <span><strong>Ergonomics:</strong> Sangat nyaman ditekan bersamaan dengan jari kelingking, manis, dan jempol kiri sekaligus tanpa perlu merenggangkan tangan.</span>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Iteration Card v1.2 -->
+      <div class="version-card">
+        <div class="version-header">
+          <div>
+            <span class="version-badge" style="background: var(--bg-subtle); color: var(--text-secondary);">Previous</span>
+            <div class="version-title" style="margin-top: 6px;">v1.2 — Virtual Desktop Collision Fix</div>
+          </div>
+          <div class="version-date">2026-08-24</div>
+        </div>
+
+        <p style="font-size: 13px; color: var(--text-secondary);">
+          Identifikasi tabrakan shortcut bawaan Windows 11 Virtual Desktop (<code>Ctrl + Win + ← / →</code>).
+        </p>
+      </div>
+
+      <!-- Iteration Card v1.1 -->
+      <div class="version-card">
+        <div class="version-header">
+          <div>
+            <span class="version-badge" style="background: var(--bg-subtle); color: var(--text-secondary);">Previous</span>
+            <div class="version-title" style="margin-top: 6px;">v1.1 — Hotkey Collision Audit & Overlapping Stack Clarification</div>
+          </div>
+          <div class="version-date">2026-08-24</div>
+        </div>
+
+        <p style="font-size: 13px; color: var(--text-secondary);">
+          Klarifikasi mitigasi tabrakan shortcut Windows OS serta penambahan kontrol eksplisit dan visualisasi interaktif Overlapping Stack.
+        </p>
+      </div>
+
+      <!-- Iteration Card v1.0 -->
+      <div class="version-card">
+        <div class="version-header">
+          <div>
+            <span class="version-badge" style="background: var(--bg-subtle); color: var(--text-secondary);">Baseline</span>
+            <div class="version-title" style="margin-top: 6px;">v1.0 — Initial Fluent 2 Redesign Proposal</div>
+          </div>
+          <div class="version-date">2026-08-24</div>
+        </div>
+
+        <p style="font-size: 13px; color: var(--text-secondary);">
+          Perombakan menyeluruh dari arsitektur UI Win32/egui dasar menuju sistem desain terpadu Windows 11 Fluent 2.
+        </p>
+
+        <ul class="change-list">
+          <li class="change-item">
+            <span class="change-tag new">New</span>
+            <span>Implementasi Sidebar Navigasi Vertikal dengan tab-stop teratur untuk aksesibilitas keyboard (UIA).</span>
+          </li>
+          <li class="change-item">
+            <span class="change-tag new">New</span>
+            <span>Interactive Shortcut Capturer dengan badge visual keycap fisik dan deteksi listening mode live.</span>
+          </li>
+          <li class="change-item">
+            <span class="change-tag improve">Improve</span>
+            <span>Simulasi System Tray terpadu dengan demonstrasi interaktif 3-Tier Error Protocol (Tier 2 Dot & Tier 3 Toast).</span>
+          </li>
+          <li class="change-item">
+            <span class="change-tag improve">Improve</span>
+            <span>Sandbox visualisasi rotasi jendela same-app (<code>Win + `</code>) dan preview rasio Overlapping Stack.</span>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Placeholder for future iterations (v1.1, etc.) -->
+      <div class="version-card" style="opacity: 0.7; border-style: dashed;">
+        <div class="version-header">
+          <div>
+            <span class="version-badge" style="background: var(--bg-subtle); color: var(--text-tertiary);">Upcoming</span>
+            <div class="version-title" style="margin-top: 6px;">v1.1 — Interactive Layout Grid & Advanced Macro Filters</div>
+          </div>
+          <div class="version-date">Pending Feedback</div>
+        </div>
+        <p style="font-size: 13px; color: var(--text-secondary);">
+          Slot terbuka untuk iterasi berikutnya berdasarkan feedback hasil review (misal: penyesuaian shortcut picker modal, custom rules per-process, dll).
+        </p>
+      </div>
+
+    </div>
+  </section>
+
+</main>
+
+<script>
+/* ==========================================================================
+   INTERACTIVE APP LOGIC & SIMULATOR SCRIPTS
+   ========================================================================== */
+
+// 1. Navigation & View Switcher
+function switchView(viewId) {
+  document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.nav-tab-btn').forEach(el => el.classList.remove('active'));
+
+  const targetView = document.getElementById(viewId);
+  if (targetView) targetView.classList.add('active');
+
+  const activeBtn = document.querySelector(`.nav-tab-btn[data-target="${viewId}"]`);
+  if (activeBtn) activeBtn.classList.add('active');
+}
+
+// 2. Settings Sidebar Pane Switcher
+function switchPane(paneId) {
+  document.querySelectorAll('.settings-pane').forEach(el => el.style.display = 'none');
+  document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
+
+  const targetPane = document.getElementById(paneId);
+  if (targetPane) targetPane.style.display = 'block';
+
+  const activeItem = document.querySelector(`.sidebar-item[data-pane="${paneId}"]`);
+  if (activeItem) activeItem.classList.add('active');
+}
+
+// 3. Theme Toggle (Light / Dark)
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme');
+  const next = current === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  try {
+    localStorage.setItem('wiradesk_theme_pref', next);
+  } catch(e) {}
+}
+
+// 4. Window Visibility Toggles
+function toggleWindow(type) {
+  const win = document.getElementById('settings-window');
+  const ob = document.getElementById('onboarding-dialog');
+  const btnSet = document.getElementById('btn-show-settings');
+  const btnOb = document.getElementById('btn-show-onboarding');
+
+  if (type === 'settings') {
+    if (win.style.display === 'none') {
+      win.style.display = 'flex';
+      btnSet.classList.add('active');
+    } else {
+      win.style.display = 'none';
+      btnSet.classList.remove('active');
+    }
+  } else if (type === 'onboarding') {
+    if (ob.style.display === 'block') {
+      ob.style.display = 'none';
+      btnOb.classList.remove('active');
+    } else {
+      ob.style.display = 'block';
+      btnOb.classList.add('active');
+      currentObStep = 1;
+      updateOnboardingStep();
+    }
+  }
+}
+
+// 5. Hotkey Capturer Simulation
+let activeListeningBtn = null;
+
+function listenHotkey(btnId) {
+  const btn = document.getElementById(btnId);
+  if (!btn) return;
+
+  if (activeListeningBtn === btn) {
+    btn.classList.remove('listening');
+    activeListeningBtn = null;
+    return;
+  }
+
+  if (activeListeningBtn) {
+    activeListeningBtn.classList.remove('listening');
+  }
+
+  activeListeningBtn = btn;
+  btn.classList.add('listening');
+  btn.innerHTML = '<span style="color: var(--accent-primary)">Listening keypress… (Press keys)</span>';
+
+  markDraftDirty();
+}
+
+window.addEventListener('keydown', (e) => {
+  if (!activeListeningBtn) return;
+  e.preventDefault();
+
+  if (e.key === 'Escape') {
+    activeListeningBtn.classList.remove('listening');
+    activeListeningBtn.innerHTML = '<span class="key-badge">Win</span> + <span class="key-badge">`</span>';
+    activeListeningBtn = null;
+    return;
+  }
+
+  const parts = [];
+  if (e.ctrlKey) parts.push('Ctrl');
+  if (e.metaKey || e.key === 'Meta') parts.push('Win');
+  if (e.altKey) parts.push('Alt');
+  if (e.shiftKey) parts.push('Shift');
+
+  let mainKey = e.key;
+  if (!['Control', 'Shift', 'Alt', 'Meta'].includes(mainKey)) {
+    if (mainKey === '`' || mainKey === '~') mainKey = '`';
+    if (mainKey === 'ArrowLeft') mainKey = '←';
+    if (mainKey === 'ArrowRight') mainKey = '→';
+    if (mainKey === 'ArrowUp') mainKey = '↑';
+    if (mainKey === 'ArrowDown') mainKey = '↓';
+    parts.push(mainKey.toUpperCase());
+  }
+
+  if (parts.length > 0) {
+    activeListeningBtn.innerHTML = parts.map(p => `<span class="key-badge">${p}</span>`).join(' + ');
+    activeListeningBtn.classList.remove('listening');
+    activeListeningBtn = null;
+  }
+});
+
+// 6. Draft Dirty / Save / Revert Logic
+let isDirty = false;
+
+function markDraftDirty() {
+  isDirty = true;
+  document.getElementById('btn-revert').disabled = false;
+  document.getElementById('footer-status-indicator').className = 'status-indicator warning';
+  document.getElementById('footer-status-text').innerText = 'Unsaved changes in draft';
+}
+
+function saveDraft() {
+  isDirty = false;
+  document.getElementById('btn-revert').disabled = true;
+  document.getElementById('footer-status-indicator').className = 'status-indicator';
+  document.getElementById('footer-status-text').innerText = 'Settings saved and applied to daemon.';
+}
+
+function revertDraft() {
+  isDirty = false;
+  document.getElementById('btn-revert').disabled = true;
+  document.getElementById('footer-status-indicator').className = 'status-indicator';
+  document.getElementById('footer-status-text').innerText = 'Reverted to saved config.';
+}
+
+// 7. System Tray Simulation & Alerts
+function toggleTrayMenu(e) {
+  e.stopPropagation();
+  const menu = document.getElementById('tray-context-menu');
+  menu.classList.toggle('open');
+}
+
+document.addEventListener('click', () => {
+  const menu = document.getElementById('tray-context-menu');
+  if (menu) menu.classList.remove('open');
+});
+
+function openSettingsFromTray() {
+  const win = document.getElementById('settings-window');
+  win.style.display = 'flex';
+  document.getElementById('btn-show-settings').classList.add('active');
+}
+
+function toggleTrayAutoStart(btn) {
+  const check = btn.querySelector('span:last-child');
+  if (check.innerText === '✓') {
+    check.innerText = '';
+  } else {
+    check.innerText = '✓';
+  }
+}
+
+function triggerTierAlert(tier) {
+  const dot = document.getElementById('sim-tray-dot');
+  const cross = document.getElementById('sim-tray-cross');
+  const toast = document.getElementById('toast-notif');
+
+  if (tier === 2) {
+    dot.classList.add('visible');
+    cross.classList.remove('visible');
+    toast.classList.remove('show');
+  } else if (tier === 3) {
+    dot.classList.remove('visible');
+    cross.classList.add('visible');
+    toast.classList.add('show');
+    setTimeout(() => { toast.classList.remove('show'); }, 6000);
+  }
+}
+
+function hideToast() {
+  document.getElementById('toast-notif').classList.remove('show');
+}
+
+// 8. Onboarding Flow
+let currentObStep = 1;
+const obSteps = [
+  { title: "Welcome to Wira Desk", desc: "Wira Desk switches between windows of the application you are already using, instead of every window on the system like Alt+Tab does." },
+  { title: "Try Switching Windows", desc: "Open multiple windows of an app, then press Win + `. Focus cycles instantaneously between same-app windows on the active monitor." },
+  { title: "You're All Set", desc: "You can customize shortcuts, snapping rules, and monitor isolation anytime from the Settings pane." }
+];
+
+function updateOnboardingStep() {
+  const data = obSteps[currentObStep - 1];
+  document.getElementById('ob-title').innerText = data.title;
+  document.getElementById('ob-desc').innerText = data.desc;
+
+  document.querySelectorAll('.step-dot').forEach((dot, idx) => {
+    dot.className = (idx === currentObStep - 1) ? 'step-dot active' : 'step-dot';
+  });
+
+  const nextBtn = document.getElementById('ob-next-btn');
+  nextBtn.innerText = (currentObStep === 3) ? 'Finish' : 'Next';
+}
+
+function nextOnboarding() {
+  if (currentObStep < 3) {
+    currentObStep++;
+    updateOnboardingStep();
+  } else {
+    toggleWindow('onboarding');
+  }
+}
+
+function skipOnboarding() {
+  toggleWindow('onboarding');
+}
+
+// 9. Interactive Window Cycling Sandbox
+let activeWinIndex = 0;
+const winIds = ['win-1', 'win-2', 'win-3'];
+
+function cycleWindowsForward() {
+  activeWinIndex = (activeWinIndex + 1) % winIds.length;
+  winIds.forEach((id, idx) => {
+    const el = document.getElementById(id);
+    if (idx === activeWinIndex) {
+      el.classList.add('focused');
+      el.style.zIndex = '10';
+    } else {
+      el.classList.remove('focused');
+      el.style.zIndex = '2';
+    }
+  });
+}
+
+function applySnap(side) {
+  const activeEl = document.getElementById(winIds[activeWinIndex]);
+  if (!activeEl) return;
+
+  if (side === 'left') {
+    activeEl.style.left = '10px';
+    activeEl.style.top = '10px';
+    activeEl.style.width = '48%';
+    activeEl.style.height = '88%';
+  } else if (side === 'right') {
+    activeEl.style.left = '50%';
+    activeEl.style.top = '10px';
+    activeEl.style.width = '48%';
+    activeEl.style.height = '88%';
+  }
+}
+
+function applyOverlappingStack() {
+  const w1 = document.getElementById('win-1');
+  const w2 = document.getElementById('win-2');
+  const w3 = document.getElementById('win-3');
+
+  const pct = parseInt(document.getElementById('stack-pct-slider').value) || 50;
+
+  if (w1) {
+    w1.style.left = '20px';
+    w1.style.top = '20px';
+    w1.style.width = pct + '%';
+    w1.style.height = '80%';
+  }
+  if (w2) {
+    w2.style.left = '26%';
+    w2.style.top = '20px';
+    w2.style.width = pct + '%';
+    w2.style.height = '80%';
+  }
+  if (w3) {
+    w3.style.left = '48%';
+    w3.style.top = '20px';
+    w3.style.width = pct + '%';
+    w3.style.height = '80%';
+  }
+}
+
+function updateStackWidth(val) {
+  document.getElementById('stack-pct-label').innerText = val + '%';
+  applyOverlappingStack();
+  markDraftDirty();
+}
+
+function resetSandboxWindows() {
+  const w1 = document.getElementById('win-1');
+  const w2 = document.getElementById('win-2');
+  const w3 = document.getElementById('win-3');
+
+  if (w1) { w1.style.top = '20px'; w1.style.left = '30px'; w1.style.width = '55%'; w1.style.height = '65%'; }
+  if (w2) { w2.style.top = '50px'; w2.style.left = '80px'; w2.style.width = '55%'; w2.style.height = '65%'; }
+  if (w3) { w3.style.top = '80px'; w3.style.left = '130px'; w3.style.width = '55%'; w3.style.height = '65%'; }
+}
+</script>

@@ -1,0 +1,848 @@
+<title>Wira Desk Settings</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+/* ==========================================================================
+   WIRA DESK SETTINGS — DESIGN TOKENS & SYSTEM
+   ========================================================================== */
+:root {
+  --font-sans: "Segoe UI Variable Text", "Segoe UI", "Plus Jakarta Sans", -apple-system, sans-serif;
+  --font-display: "Segoe UI Variable Display", "Segoe UI", "Plus Jakarta Sans", sans-serif;
+  --font-mono: "Cascadia Code", "JetBrains Mono", Consolas, monospace;
+
+  /* Light Theme (Mica / Acrylic ground) */
+  --bg-page: #e8ecf2;
+  --bg-mica: rgba(243, 243, 243, 0.92);
+  --bg-acrylic: rgba(255, 255, 255, 0.72);
+  --bg-card: #ffffff;
+  --bg-card-hover: #f7f9fc;
+  --bg-subtle: #f0f2f6;
+  --bg-input: #ffffff;
+  --bg-keycap: #edf0f5;
+
+  --stroke-subtle: rgba(0, 0, 0, 0.06);
+  --stroke-card: rgba(0, 0, 0, 0.09);
+  --stroke-focus: #0067c0;
+  --stroke-divider: rgba(0, 0, 0, 0.08);
+
+  --text-primary: #1c1f24;
+  --text-secondary: #5c6370;
+  --text-tertiary: #8c93a0;
+  --text-inverse: #ffffff;
+  --text-accent: #0067c0;
+
+  --accent-primary: #0067c0;
+  --accent-hover: #1879cd;
+  --accent-subtle: rgba(0, 103, 192, 0.1);
+  --accent-glow: rgba(0, 103, 192, 0.25);
+
+  --success: #0f7b0f;
+  --success-bg: rgba(15, 123, 15, 0.12);
+  --warning: #c45b00;
+  --warning-bg: rgba(196, 91, 0, 0.12);
+  --danger: #d13438;
+  --danger-bg: rgba(209, 52, 56, 0.12);
+
+  --shadow-window: 0 24px 60px rgba(0, 0, 0, 0.2), 0 4px 16px rgba(0, 0, 0, 0.08);
+  --shadow-keycap: 0 2px 0 rgba(0, 0, 0, 0.14), 0 1px 2px rgba(0, 0, 0, 0.08);
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-pill: 9999px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg-page: #121418;
+    --bg-mica: rgba(30, 32, 36, 0.92);
+    --bg-acrylic: rgba(40, 42, 48, 0.75);
+    --bg-card: #202227;
+    --bg-card-hover: #262930;
+    --bg-subtle: #1a1c21;
+    --bg-input: #282a30;
+    --bg-keycap: #2b2e35;
+
+    --stroke-subtle: rgba(255, 255, 255, 0.06);
+    --stroke-card: rgba(255, 255, 255, 0.09);
+    --stroke-focus: #4cc2ff;
+    --stroke-divider: rgba(255, 255, 255, 0.08);
+
+    --text-primary: #f3f5f8;
+    --text-secondary: #a0a6b4;
+    --text-tertiary: #6b7280;
+    --text-inverse: #101216;
+    --text-accent: #4cc2ff;
+
+    --accent-primary: #4cc2ff;
+    --accent-hover: #60cbff;
+    --accent-subtle: rgba(76, 194, 255, 0.12);
+    --accent-glow: rgba(76, 194, 255, 0.28);
+
+    --success: #6ccb5f;
+    --success-bg: rgba(108, 203, 95, 0.16);
+    --warning: #fce100;
+    --warning-bg: rgba(252, 225, 0, 0.14);
+    --danger: #ff5252;
+    --danger-bg: rgba(255, 82, 82, 0.18);
+
+    --shadow-window: 0 28px 70px rgba(0, 0, 0, 0.6), 0 6px 20px rgba(0, 0, 0, 0.4);
+    --shadow-keycap: 0 2px 0 rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg-page: #121418;
+  --bg-mica: rgba(30, 32, 36, 0.92);
+  --bg-acrylic: rgba(40, 42, 48, 0.75);
+  --bg-card: #202227;
+  --bg-card-hover: #262930;
+  --bg-subtle: #1a1c21;
+  --bg-input: #282a30;
+  --bg-keycap: #2b2e35;
+
+  --stroke-subtle: rgba(255, 255, 255, 0.06);
+  --stroke-card: rgba(255, 255, 255, 0.09);
+  --stroke-focus: #4cc2ff;
+  --stroke-divider: rgba(255, 255, 255, 0.08);
+
+  --text-primary: #f3f5f8;
+  --text-secondary: #a0a6b4;
+  --text-tertiary: #6b7280;
+  --text-inverse: #101216;
+  --text-accent: #4cc2ff;
+
+  --accent-primary: #4cc2ff;
+  --accent-hover: #60cbff;
+  --accent-subtle: rgba(76, 194, 255, 0.12);
+  --accent-glow: rgba(76, 194, 255, 0.28);
+
+  --success: #6ccb5f;
+  --success-bg: rgba(108, 203, 95, 0.16);
+  --warning: #fce100;
+  --warning-bg: rgba(252, 225, 0, 0.14);
+  --danger: #ff5252;
+  --danger-bg: rgba(255, 82, 82, 0.18);
+
+  --shadow-window: 0 28px 70px rgba(0, 0, 0, 0.6), 0 6px 20px rgba(0, 0, 0, 0.4);
+  --shadow-keycap: 0 2px 0 rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+:root[data-theme="light"] {
+  --bg-page: #e8ecf2;
+  --bg-mica: rgba(243, 243, 243, 0.92);
+  --bg-acrylic: rgba(255, 255, 255, 0.72);
+  --bg-card: #ffffff;
+  --bg-card-hover: #f7f9fc;
+  --bg-subtle: #f0f2f6;
+  --bg-input: #ffffff;
+  --bg-keycap: #edf0f5;
+
+  --stroke-subtle: rgba(0, 0, 0, 0.06);
+  --stroke-card: rgba(0, 0, 0, 0.09);
+  --stroke-focus: #0067c0;
+  --stroke-divider: rgba(0, 0, 0, 0.08);
+
+  --text-primary: #1c1f24;
+  --text-secondary: #5c6370;
+  --text-tertiary: #8c93a0;
+  --text-inverse: #ffffff;
+  --text-accent: #0067c0;
+
+  --accent-primary: #0067c0;
+  --accent-hover: #1879cd;
+  --accent-subtle: rgba(0, 103, 192, 0.1);
+  --accent-glow: rgba(0, 103, 192, 0.25);
+
+  --success: #0f7b0f;
+  --success-bg: rgba(15, 123, 15, 0.12);
+  --warning: #c45b00;
+  --warning-bg: rgba(196, 91, 0, 0.12);
+  --danger: #d13438;
+  --danger-bg: rgba(209, 52, 56, 0.12);
+
+  --shadow-window: 0 24px 60px rgba(0, 0, 0, 0.2), 0 4px 16px rgba(0, 0, 0, 0.08);
+  --shadow-keycap: 0 2px 0 rgba(0, 0, 0, 0.14), 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--bg-page);
+  color: var(--text-primary);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header toolbar */
+.settings-header-bar {
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--stroke-card);
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.brand-title {
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.brand-tag {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--accent-subtle);
+  color: var(--text-accent);
+}
+
+/* Stage Canvas */
+.stage-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: radial-gradient(circle at center, rgba(0, 103, 192, 0.08) 0%, transparent 70%);
+}
+
+/* Fluent 2 Mica Settings Window */
+.fluent-window {
+  width: 640px;
+  height: 560px;
+  background: var(--bg-mica);
+  backdrop-filter: blur(28px) saturate(140%);
+  -webkit-backdrop-filter: blur(28px) saturate(140%);
+  border: 1px solid var(--stroke-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-window);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: popIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes popIn {
+  from { opacity: 0; transform: scale(0.97) translateY(6px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* Titlebar */
+.fluent-titlebar {
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-left: 14px;
+  border-bottom: 1px solid var(--stroke-subtle);
+  background: rgba(255, 255, 255, 0.02);
+  user-select: none;
+}
+.titlebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.titlebar-text {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+.titlebar-caption-controls {
+  display: flex;
+  height: 100%;
+}
+.caption-btn {
+  width: 44px;
+  height: 100%;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.caption-btn:hover { background: var(--stroke-subtle); }
+.caption-btn.close:hover { background: #e81123; color: #ffffff; }
+
+/* Body Split View */
+.fluent-body {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+/* Vertical Sidebar */
+.fluent-sidebar {
+  width: 180px;
+  background: var(--bg-acrylic);
+  border-right: 1px solid var(--stroke-subtle);
+  padding: 12px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  backdrop-filter: blur(16px);
+}
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: var(--radius-md);
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s ease;
+  position: relative;
+}
+.sidebar-item:hover {
+  background: var(--stroke-subtle);
+  color: var(--text-primary);
+}
+.sidebar-item.active {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-weight: 600;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+}
+.sidebar-item.active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 3px;
+  border-radius: var(--radius-pill);
+  background: var(--accent-primary);
+}
+.sidebar-icon {
+  width: 16px;
+  height: 16px;
+  opacity: 0.85;
+}
+
+/* Content Area */
+.fluent-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 18px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.content-header h2 {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+}
+.content-header p {
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+/* Settings Group & Rows */
+.settings-group {
+  background: var(--bg-card);
+  border: 1px solid var(--stroke-card);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+}
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--stroke-divider);
+  gap: 16px;
+}
+.settings-row:last-child { border-bottom: none; }
+.row-meta { flex: 1; }
+.row-title { font-size: 13.5px; font-weight: 600; color: var(--text-primary); }
+.row-desc { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+
+/* Switch Control */
+.fluent-switch {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 20px;
+  flex-shrink: 0;
+}
+.fluent-switch input { opacity: 0; width: 0; height: 0; }
+.switch-slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background-color: var(--bg-input);
+  border: 1px solid var(--text-tertiary);
+  border-radius: var(--radius-pill);
+  transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.switch-slider::before {
+  position: absolute;
+  content: "";
+  height: 12px;
+  width: 12px;
+  left: 3px;
+  bottom: 3px;
+  background-color: var(--text-secondary);
+  border-radius: 50%;
+  transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.fluent-switch input:checked + .switch-slider {
+  background-color: var(--accent-primary);
+  border-color: var(--accent-primary);
+}
+.fluent-switch input:checked + .switch-slider::before {
+  transform: translateX(20px);
+  background-color: #ffffff;
+}
+
+/* Hotkey Button & Keycaps */
+.hotkey-button {
+  background: var(--bg-keycap);
+  border: 1px solid var(--stroke-card);
+  border-radius: var(--radius-md);
+  padding: 6px 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  box-shadow: var(--shadow-keycap);
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+  transition: all 0.15s ease;
+  user-select: none;
+}
+.hotkey-button:hover { background: var(--bg-card-hover); border-color: var(--stroke-focus); }
+.hotkey-button.listening {
+  background: var(--accent-subtle);
+  border-color: var(--accent-primary);
+  color: var(--text-accent);
+  animation: pulseListen 1.5s infinite;
+}
+@keyframes pulseListen {
+  0% { box-shadow: 0 0 0 0 var(--accent-glow); }
+  70% { box-shadow: 0 0 0 6px rgba(0, 103, 192, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(0, 103, 192, 0); }
+}
+.key-badge {
+  background: var(--bg-card);
+  border: 1px solid var(--stroke-card);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+}
+
+/* Range Slider */
+.fluent-range-slider {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--stroke-divider);
+  outline: none;
+}
+.fluent-range-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--accent-primary);
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+/* Footer Action Bar */
+.fluent-footer {
+  height: 48px;
+  background: var(--bg-card);
+  border-top: 1px solid var(--stroke-card);
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.footer-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.status-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--success);
+}
+.status-indicator.warning { background: var(--warning); }
+.status-indicator.danger { background: var(--danger); }
+
+.action-buttons { display: flex; gap: 8px; }
+.btn {
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--stroke-card);
+  background: var(--bg-subtle);
+  color: var(--text-primary);
+  transition: all 0.15s ease;
+}
+.btn:hover { background: var(--bg-card-hover); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn.primary { background: var(--accent-primary); border-color: var(--accent-primary); color: var(--text-inverse); }
+.btn.primary:hover { background: var(--accent-hover); }
+</style>
+
+<div class="settings-header-bar">
+  <div class="brand-title">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width="2.4">
+      <rect x="3" y="3" width="18" height="18" rx="3"></rect>
+      <path d="M3 9h18"></path>
+      <path d="M9 21V9"></path>
+    </svg>
+    Wira Desk
+    <span class="brand-tag">Fluent 2 Settings Window</span>
+  </div>
+  <button class="btn" onclick="toggleTheme()" style="padding: 4px 10px; font-size: 11px;">Toggle Theme</button>
+</div>
+
+<div class="stage-container">
+  <div class="fluent-window">
+    <!-- Titlebar -->
+    <div class="fluent-titlebar">
+      <div class="titlebar-brand">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width="2.4">
+          <rect x="3" y="3" width="18" height="18" rx="3"></rect>
+          <path d="M3 9h18"></path>
+          <path d="M9 21V9"></path>
+        </svg>
+        <span class="titlebar-text">Wira Desk — Settings</span>
+      </div>
+      <div class="titlebar-caption-controls">
+        <button class="caption-btn" aria-label="Minimize"><svg width="10" height="1" viewBox="0 0 10 1"><rect width="10" height="1" fill="currentColor"/></svg></button>
+        <button class="caption-btn" aria-label="Maximize"><svg width="10" height="10" viewBox="0 0 10 10"><rect width="10" height="10" fill="none" stroke="currentColor" stroke-width="1"/></svg></button>
+        <button class="caption-btn close" aria-label="Close" onclick="alert('Settings closed.')"><svg width="10" height="10" viewBox="0 0 10 10"><line x1="1" y1="1" x2="9" y2="9" stroke="currentColor" stroke-width="1.2"/><line x1="9" y1="1" x2="1" y2="9" stroke="currentColor" stroke-width="1.2"/></svg></button>
+      </div>
+    </div>
+
+    <!-- Body Split View -->
+    <div class="fluent-body">
+      <!-- Sidebar -->
+      <nav class="fluent-sidebar">
+        <button class="sidebar-item active" data-pane="pane-general" onclick="switchPane('pane-general')">
+          <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          General
+        </button>
+        <button class="sidebar-item" data-pane="pane-shortcuts" onclick="switchPane('pane-shortcuts')">
+          <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 8h.001"/><path d="M10 8h.001"/><path d="M14 8h.001"/><path d="M18 8h.001"/><path d="M8 12h.001"/><path d="M12 12h.001"/><path d="M16 12h.001"/><path d="M7 16h10"/></svg>
+          Shortcuts
+        </button>
+        <button class="sidebar-item" data-pane="pane-layout" onclick="switchPane('pane-layout')">
+          <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="3" x2="12" y2="21"/></svg>
+          Layout & Snapping
+        </button>
+        <button class="sidebar-item" data-pane="pane-bypass" onclick="switchPane('pane-bypass')">
+          <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/><path d="m15 7-6 6"/><path d="m9 7 6 6"/></svg>
+          VM & Exceptions
+        </button>
+        <button class="sidebar-item" data-pane="pane-about" onclick="switchPane('pane-about')">
+          <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          About
+        </button>
+      </nav>
+
+      <!-- Content Panes -->
+      <div class="fluent-content">
+        <!-- PANE 1: GENERAL -->
+        <div id="pane-general" class="settings-pane">
+          <div class="content-header">
+            <h2>General Settings</h2>
+            <p>Status daemon, startup otomatis, dan integritas isolasi spasial.</p>
+          </div>
+          <div class="settings-group" style="margin-top: 12px;">
+            <div class="settings-row">
+              <div class="row-meta">
+                <div class="row-title">Auto-start on Boot</div>
+                <div class="row-desc">Jalankan otomatis saat Windows login menggunakan Task Scheduler elevated.</div>
+              </div>
+              <label class="fluent-switch"><input type="checkbox" checked onchange="markDraftDirty()"><span class="switch-slider"></span></label>
+            </div>
+            <div class="settings-row">
+              <div class="row-meta">
+                <div class="row-title">Spatial Preservation (Per-Monitor Lock)</div>
+                <div class="row-desc">Kunci perputaran jendela hanya pada monitor fisik aktif.</div>
+              </div>
+              <label class="fluent-switch"><input type="checkbox" checked onchange="markDraftDirty()"><span class="switch-slider"></span></label>
+            </div>
+            <div class="settings-row">
+              <div class="row-meta">
+                <div class="row-title">Virtual Desktop Isolation</div>
+                <div class="row-desc">Jangan melompati batas Virtual Desktop Windows yang sedang aktif.</div>
+              </div>
+              <label class="fluent-switch"><input type="checkbox" checked onchange="markDraftDirty()"><span class="switch-slider"></span></label>
+            </div>
+            <div class="settings-row">
+              <div class="row-meta">
+                <div class="row-title">UX Honesty Mode</div>
+                <div class="row-desc">Angkat jendela "Not Responding" ke depan agar status macet transparan terlihat.</div>
+              </div>
+              <label class="fluent-switch"><input type="checkbox" checked onchange="markDraftDirty()"><span class="switch-slider"></span></label>
+            </div>
+          </div>
+        </div>
+
+        <!-- PANE 2: SHORTCUTS -->
+        <div id="pane-shortcuts" class="settings-pane" style="display: none;">
+          <div class="content-header">
+            <h2>Shortcut & Hotkeys</h2>
+            <p>Klik tombol pintasan untuk mengaktifkan mode <em>Listening</em> fisik.</p>
+          </div>
+          <div class="settings-group" style="margin-top: 12px;">
+            <div class="settings-row">
+              <div class="row-meta">
+                <div class="row-title">Primary Switcher</div>
+                <div class="row-desc">Pintasan utama rotasi jendela aplikasi yang sama.</div>
+              </div>
+              <button class="hotkey-button" id="hk-switcher" onclick="listenHotkey('hk-switcher')"><span class="key-badge">Win</span> + <span class="key-badge">`</span></button>
+            </div>
+            <div class="settings-row">
+              <div class="row-meta">
+                <div class="row-title">Fallback Switcher</div>
+                <div class="row-desc">Dipakai bila tombol Win diintersepsi oleh game atau software lain.</div>
+              </div>
+              <button class="hotkey-button" id="hk-fallback" onclick="listenHotkey('hk-fallback')"><span class="key-badge">Alt</span> + <span class="key-badge">`</span></button>
+            </div>
+            <div class="settings-row">
+              <div class="row-meta">
+                <div class="row-title">Precise Modifier Matching</div>
+                <div class="row-desc">Batalkan eksekusi bila ada tombol modifier ekstra yang ditekan.</div>
+              </div>
+              <label class="fluent-switch"><input type="checkbox" checked onchange="markDraftDirty()"><span class="switch-slider"></span></label>
+            </div>
+          </div>
+        </div>
+
+        <!-- PANE 3: LAYOUT & SNAPPING -->
+        <div id="pane-layout" class="settings-pane" style="display: none;">
+          <div class="content-header">
+            <h2>Layout & Snapping (Ctrl + Alt + Win)</h2>
+            <p>Penataan jendela sadar-DPI dengan modifier anti-bentrok.</p>
+          </div>
+          <div class="settings-group" style="margin-top: 12px;">
+            <div class="settings-row" style="background: var(--success-bg); border-bottom: 1px solid var(--stroke-card);">
+              <div class="row-meta">
+                <div class="row-title" style="color: var(--success);">Zero-Collision Protection (Ctrl + Alt + Win)</div>
+                <div class="row-desc" style="color: var(--text-primary); font-size: 11.5px;">Bebas dari tabrakan Windows Snap (`Win+Panah`) dan Virtual Desktop (`Ctrl+Win+Panah`).</div>
+              </div>
+            </div>
+            <div class="settings-row">
+              <div class="row-meta"><div class="row-title">Snap Left 50%</div></div>
+              <button class="hotkey-button" id="hk-snap-left" onclick="listenHotkey('hk-snap-left')"><span class="key-badge">Ctrl</span> + <span class="key-badge">Alt</span> + <span class="key-badge">Win</span> + <span class="key-badge">←</span></button>
+            </div>
+            <div class="settings-row">
+              <div class="row-meta"><div class="row-title">Snap Right 50%</div></div>
+              <button class="hotkey-button" id="hk-snap-right" onclick="listenHotkey('hk-snap-right')"><span class="key-badge">Ctrl</span> + <span class="key-badge">Alt</span> + <span class="key-badge">Win</span> + <span class="key-badge">→</span></button>
+            </div>
+            <div class="settings-row">
+              <div class="row-meta"><div class="row-title">Maximize / Next Monitor</div></div>
+              <button class="hotkey-button" id="hk-snap-max" onclick="listenHotkey('hk-snap-max')"><span class="key-badge">Ctrl</span> + <span class="key-badge">Alt</span> + <span class="key-badge">Win</span> + <span class="key-badge">Enter</span></button>
+            </div>
+          </div>
+          <div class="settings-group" style="margin-top: 12px;">
+            <div class="settings-row">
+              <div class="row-meta">
+                <div class="row-title">Enable Overlapping Stack</div>
+                <div class="row-desc">Tumpuk bertingkat hingga 3 jendela untuk layar laptop/monitor kecil.</div>
+              </div>
+              <label class="fluent-switch"><input type="checkbox" checked onchange="markDraftDirty()"><span class="switch-slider"></span></label>
+            </div>
+            <div class="settings-row" style="flex-direction: column; align-items: stretch; gap: 8px;">
+              <div style="display: flex; justify-content: space-between;">
+                <span class="row-title">Stack Window Width Ratio</span>
+                <span class="row-title" style="color: var(--accent-primary);" id="stack-pct">50%</span>
+              </div>
+              <input type="range" class="fluent-range-slider" min="30" max="80" value="50" oninput="document.getElementById('stack-pct').innerText = this.value + '%'; markDraftDirty();">
+            </div>
+            <div class="settings-row">
+              <div class="row-meta"><div class="row-title">Overlapping Stack Shortcut</div></div>
+              <button class="hotkey-button" id="hk-stack" onclick="listenHotkey('hk-stack')"><span class="key-badge">Ctrl</span> + <span class="key-badge">Alt</span> + <span class="key-badge">Win</span> + <span class="key-badge">↓</span></button>
+            </div>
+          </div>
+        </div>
+
+        <!-- PANE 4: VM & EXCEPTIONS -->
+        <div id="pane-bypass" class="settings-pane" style="display: none;">
+          <div class="content-header">
+            <h2>VM & Passthrough Exceptions</h2>
+            <p>Aplikasi yang dilewati secara langsung tanpa intersepsi hook.</p>
+          </div>
+          <div class="settings-group" style="margin-top: 12px;">
+            <div class="settings-row">
+              <div class="row-meta">
+                <div class="row-title">Virtual Machine Passthrough</div>
+                <div class="row-desc">Bypass otomatis untuk VMware, VirtualBox, dan Hyper-V.</div>
+              </div>
+              <label class="fluent-switch"><input type="checkbox" checked onchange="markDraftDirty()"><span class="switch-slider"></span></label>
+            </div>
+            <div class="settings-row">
+              <div class="row-meta">
+                <div class="row-title">Remote Desktop (RDP / VNC)</div>
+                <div class="row-desc">Bypass otomatis saat mstsc.exe atau MobaXterm aktif.</div>
+              </div>
+              <label class="fluent-switch"><input type="checkbox" checked onchange="markDraftDirty()"><span class="switch-slider"></span></label>
+            </div>
+          </div>
+        </div>
+
+        <!-- PANE 5: ABOUT -->
+        <div id="pane-about" class="settings-pane" style="display: none;">
+          <div class="content-header">
+            <h2>About Wira Desk</h2>
+            <p>Informasi arsitektur biner dan performa runtime.</p>
+          </div>
+          <div class="settings-group" style="margin-top: 12px;">
+            <div class="settings-row">
+              <div class="row-meta"><div class="row-title">Version</div><div class="row-desc">0.1.0 (Build 2026.08)</div></div>
+              <span class="brand-tag" style="background: var(--success-bg); color: var(--success);">Stable</span>
+            </div>
+            <div class="settings-row">
+              <div class="row-meta"><div class="row-title">Runtime Engine</div><div class="row-desc">Rust 2021 + eframe 0.36.1 (Win32 FFI & Kernel Non-blocking)</div></div>
+            </div>
+            <div class="settings-row">
+              <div class="row-meta"><div class="row-title">Memory Footprint</div><div class="row-desc">Daemon: ~1.4 MB RAM | Settings: On-Demand Process</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer Action Bar -->
+    <div class="fluent-footer">
+      <div class="footer-status">
+        <div class="status-indicator" id="footer-dot"></div>
+        <span id="footer-msg">Daemon running elevated (PID: 10428)</span>
+      </div>
+      <div class="action-buttons">
+        <button class="btn" id="btn-revert" onclick="revertDraft()" disabled>Revert</button>
+        <button class="btn primary" id="btn-save" onclick="saveDraft()">Save Changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function switchPane(paneId) {
+  document.querySelectorAll('.settings-pane').forEach(el => el.style.display = 'none');
+  document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
+
+  document.getElementById(paneId).style.display = 'block';
+  document.querySelector(`.sidebar-item[data-pane="${paneId}"]`).classList.add('active');
+}
+
+let isDirty = false;
+function markDraftDirty() {
+  isDirty = true;
+  document.getElementById('btn-revert').disabled = false;
+  document.getElementById('footer-dot').className = 'status-indicator warning';
+  document.getElementById('footer-msg').innerText = 'Unsaved changes in draft';
+}
+
+function saveDraft() {
+  isDirty = false;
+  document.getElementById('btn-revert').disabled = true;
+  document.getElementById('footer-dot').className = 'status-indicator';
+  document.getElementById('footer-msg').innerText = 'Settings saved and applied to daemon.';
+  alert('Settings saved atomically to %APPDATA%/WiraDesk/config.toml and reloaded via WM_APP_RELOAD_CONFIG.');
+}
+
+function revertDraft() {
+  isDirty = false;
+  document.getElementById('btn-revert').disabled = true;
+  document.getElementById('footer-dot').className = 'status-indicator';
+  document.getElementById('footer-msg').innerText = 'Reverted to saved config.';
+}
+
+let activeListeningBtn = null;
+function listenHotkey(btnId) {
+  const btn = document.getElementById(btnId);
+  if (activeListeningBtn === btn) {
+    btn.classList.remove('listening');
+    activeListeningBtn = null;
+    return;
+  }
+  if (activeListeningBtn) activeListeningBtn.classList.remove('listening');
+
+  activeListeningBtn = btn;
+  btn.classList.add('listening');
+  btn.innerText = 'Listening chord…';
+  markDraftDirty();
+}
+
+window.addEventListener('keydown', (e) => {
+  if (!activeListeningBtn) return;
+  e.preventDefault();
+
+  if (e.key === 'Escape') {
+    activeListeningBtn.classList.remove('listening');
+    activeListeningBtn.innerHTML = '<span class="key-badge">Win</span> + <span class="key-badge">`</span>';
+    activeListeningBtn = null;
+    return;
+  }
+
+  const parts = [];
+  if (e.ctrlKey) parts.push('Ctrl');
+  if (e.altKey) parts.push('Alt');
+  if (e.metaKey || e.key === 'Meta') parts.push('Win');
+  if (e.shiftKey) parts.push('Shift');
+
+  let k = e.key;
+  if (!['Control', 'Shift', 'Alt', 'Meta'].includes(k)) {
+    if (k === '`' || k === '~') k = '`';
+    if (k === 'ArrowLeft') k = '←';
+    if (k === 'ArrowRight') k = '→';
+    if (k === 'ArrowUp') k = '↑';
+    if (k === 'ArrowDown') k = '↓';
+    parts.push(k.toUpperCase());
+  }
+
+  if (parts.length > 0) {
+    activeListeningBtn.innerHTML = parts.map(p => `<span class="key-badge">${p}</span>`).join(' + ');
+    activeListeningBtn.classList.remove('listening');
+    activeListeningBtn = null;
+  }
+});
+
+function toggleTheme() {
+  const cur = document.documentElement.getAttribute('data-theme');
+  const next = (cur === 'dark') ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+}
+</script>
