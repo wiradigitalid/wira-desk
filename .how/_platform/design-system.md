@@ -124,11 +124,13 @@ Wira Desk adheres to native Windows 11 Fluent 2 Design and Mica Material design 
   - `Save Changes`: Background `#4CC2FF`, text `#101216`, dimensions `110 × 30 px`.
 
 ### F. Onboarding Wizard Modal
-* **Dialog Width**: `520 px` – `540 px`, Height `400 px` – `420 px`.
+* **Dialog Dimensions**: Width `560 px`, Height `400 px` (Min `480 × 340 px`).
 * **Corner Radius**: `CornerRadius::same(12)`.
-* **Background**: `#20242B` with subtle border `#323640`.
-* **Progress Bar (3-Step)**: Balanced segment width, thickness `3.5 px`, color `#4CC2FF` (Active) / `#2B303A` (Inactive).
-* **Interactive Sandbox**: Simulated dual-window focus toggle responding to physical `Win + \`` keypresses.
+* **Background**: Single clean surface `#20242B` with stroke `1.0 px`, `rgba(255, 255, 255, 0.08)`.
+* **Progress Bar (3-Segment)**: Width spans full inner width, thickness `4.0 px`, color `#4CC2FF` (Active) / `#2B303A` (Inactive).
+* **Interactive Sandbox Area**: Background `#171A1F`, radius `10 px`, padding `16 × 14 px`.
+* **Dummy Window Cards**: Width `50%` split, height `76 px`, radius `8 px`, mini titlebar (`#2B303A`) with document title & close glyph, active stroke `#4CC2FF` (`1.5 px`).
+* **Navigation Action Buttons**: Skip Tutorial (`#272C35`, radius `6 px`, `100 × 32 px`), Next (`#4CC2FF`, text `#101216`, radius `6 px`, `80 × 32 px`).
 
 ## Global Design Rules & Invariants
 

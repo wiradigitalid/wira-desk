@@ -1,659 +1,545 @@
 <title>Wira Desk Onboarding</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cascadia+Code:wght@400;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 
 <style>
-/* ==========================================================================
-   WIRA DESK ONBOARDING — DESIGN TOKENS & SYSTEM
-   ========================================================================== */
-:root {
-  --font-sans: "Segoe UI Variable Text", "Segoe UI", "Plus Jakarta Sans", -apple-system, sans-serif;
-  --font-display: "Segoe UI Variable Display", "Segoe UI", "Plus Jakarta Sans", sans-serif;
-  --font-mono: "Cascadia Code", "JetBrains Mono", Consolas, monospace;
+  :root {
+    --font-sans: "Segoe UI Variable Text", "Segoe UI", "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: "Cascadia Code", Consolas, "JetBrains Mono", monospace;
 
-  /* Light Theme (Mica / Acrylic ground) */
-  --bg-page: #e8ecf2;
-  --bg-mica: rgba(243, 243, 243, 0.92);
-  --bg-card: #ffffff;
-  --bg-card-hover: #f7f9fc;
-  --bg-subtle: #f0f2f6;
-  --bg-keycap: #edf0f5;
+    /* Fluent 2 Mica Dark Palette */
+    --bg-page: #0f1115;
+    --bg-mica: #191d23;
+    --bg-card: #20242b;
+    --bg-card-hover: #272c35;
+    --bg-subtle: #171a1f;
+    --bg-keycap: #2b303a;
+    --bg-keycap-hover: #353b47;
 
-  --stroke-subtle: rgba(0, 0, 0, 0.06);
-  --stroke-card: rgba(0, 0, 0, 0.09);
-  --stroke-focus: #0067c0;
-  --stroke-divider: rgba(0, 0, 0, 0.08);
-
-  --text-primary: #1c1f24;
-  --text-secondary: #5c6370;
-  --text-tertiary: #8c93a0;
-  --text-inverse: #ffffff;
-  --text-accent: #0067c0;
-
-  --accent-primary: #0067c0;
-  --accent-hover: #1879cd;
-  --accent-subtle: rgba(0, 103, 192, 0.1);
-  --accent-glow: rgba(0, 103, 192, 0.25);
-
-  --success: #0f7b0f;
-  --success-bg: rgba(15, 123, 15, 0.12);
-
-  --shadow-window: 0 24px 60px rgba(0, 0, 0, 0.2), 0 4px 16px rgba(0, 0, 0, 0.08);
-  --shadow-keycap: 0 2px 0 rgba(0, 0, 0, 0.14), 0 1px 2px rgba(0, 0, 0, 0.08);
-
-  --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-pill: 9999px;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg-page: #121418;
-    --bg-mica: rgba(30, 32, 36, 0.92);
-    --bg-card: #202227;
-    --bg-card-hover: #262930;
-    --bg-subtle: #1a1c21;
-    --bg-keycap: #2b2e35;
-
-    --stroke-subtle: rgba(255, 255, 255, 0.06);
-    --stroke-card: rgba(255, 255, 255, 0.09);
-    --stroke-focus: #4cc2ff;
-    --stroke-divider: rgba(255, 255, 255, 0.08);
+    --stroke-card: rgba(255, 255, 255, 0.08);
+    --stroke-subtle: rgba(255, 255, 255, 0.05);
+    --stroke-divider: rgba(255, 255, 255, 0.06);
 
     --text-primary: #f3f5f8;
     --text-secondary: #a0a6b4;
     --text-tertiary: #6b7280;
-    --text-inverse: #101216;
-    --text-accent: #4cc2ff;
+    --text-dark: #101216;
 
     --accent-primary: #4cc2ff;
     --accent-hover: #60cbff;
-    --accent-subtle: rgba(76, 194, 255, 0.12);
-    --accent-glow: rgba(76, 194, 255, 0.28);
+    --accent-glow: rgba(76, 194, 255, 0.24);
 
-    --success: #6ccb5f;
-    --success-bg: rgba(108, 203, 95, 0.16);
+    --signal-success: #6ccb5f;
+    --signal-success-bg: rgba(108, 203, 95, 0.14);
 
-    --shadow-window: 0 28px 70px rgba(0, 0, 0, 0.6), 0 6px 20px rgba(0, 0, 0, 0.4);
-    --shadow-keycap: 0 2px 0 rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-window: 0 24px 60px rgba(0, 0, 0, 0.65), 0 4px 16px rgba(0, 0, 0, 0.4);
   }
-}
 
-:root[data-theme="dark"] {
-  --bg-page: #121418;
-  --bg-mica: rgba(30, 32, 36, 0.92);
-  --bg-card: #202227;
-  --bg-card-hover: #262930;
-  --bg-subtle: #1a1c21;
-  --bg-keycap: #2b2e35;
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --bg-page: #e8ecf2;
+      --bg-mica: #f3f3f3;
+      --bg-card: #ffffff;
+      --bg-card-hover: #f7f9fc;
+      --bg-subtle: #f0f2f6;
+      --bg-keycap: #edf0f5;
+      --bg-keycap-hover: #e2e6ed;
 
-  --stroke-subtle: rgba(255, 255, 255, 0.06);
-  --stroke-card: rgba(255, 255, 255, 0.09);
-  --stroke-focus: #4cc2ff;
-  --stroke-divider: rgba(255, 255, 255, 0.08);
+      --stroke-card: rgba(0, 0, 0, 0.08);
+      --stroke-subtle: rgba(0, 0, 0, 0.04);
+      --stroke-divider: rgba(0, 0, 0, 0.06);
 
-  --text-primary: #f3f5f8;
-  --text-secondary: #a0a6b4;
-  --text-tertiary: #6b7280;
-  --text-inverse: #101216;
-  --text-accent: #4cc2ff;
+      --text-primary: #1c1f24;
+      --text-secondary: #5c6370;
+      --text-tertiary: #8c93a0;
+      --text-dark: #ffffff;
 
-  --accent-primary: #4cc2ff;
-  --accent-hover: #60cbff;
-  --accent-subtle: rgba(76, 194, 255, 0.12);
-  --accent-glow: rgba(76, 194, 255, 0.28);
+      --accent-primary: #0067c0;
+      --accent-hover: #1879cd;
+      --accent-glow: rgba(0, 103, 192, 0.2);
 
-  --success: #6ccb5f;
-  --success-bg: rgba(108, 203, 95, 0.16);
+      --signal-success: #0f7b0f;
+      --signal-success-bg: rgba(15, 123, 15, 0.12);
 
-  --shadow-window: 0 28px 70px rgba(0, 0, 0, 0.6), 0 6px 20px rgba(0, 0, 0, 0.4);
-  --shadow-keycap: 0 2px 0 rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
-}
+      --shadow-window: 0 20px 50px rgba(0, 0, 0, 0.15), 0 4px 12px rgba(0, 0, 0, 0.06);
+    }
+  }
 
-:root[data-theme="light"] {
-  --bg-page: #e8ecf2;
-  --bg-mica: rgba(243, 243, 243, 0.92);
-  --bg-card: #ffffff;
-  --bg-card-hover: #f7f9fc;
-  --bg-subtle: #f0f2f6;
-  --bg-keycap: #edf0f5;
+  :root[data-theme="dark"] {
+    --bg-page: #0f1115;
+    --bg-mica: #191d23;
+    --bg-card: #20242b;
+    --bg-card-hover: #272c35;
+    --bg-subtle: #171a1f;
+    --bg-keycap: #2b303a;
+    --bg-keycap-hover: #353b47;
 
-  --stroke-subtle: rgba(0, 0, 0, 0.06);
-  --stroke-card: rgba(0, 0, 0, 0.09);
-  --stroke-focus: #0067c0;
-  --stroke-divider: rgba(0, 0, 0, 0.08);
+    --stroke-card: rgba(255, 255, 255, 0.08);
+    --stroke-subtle: rgba(255, 255, 255, 0.05);
+    --stroke-divider: rgba(255, 255, 255, 0.06);
 
-  --text-primary: #1c1f24;
-  --text-secondary: #5c6370;
-  --text-tertiary: #8c93a0;
-  --text-inverse: #ffffff;
-  --text-accent: #0067c0;
+    --text-primary: #f3f5f8;
+    --text-secondary: #a0a6b4;
+    --text-tertiary: #6b7280;
+    --text-dark: #101216;
 
-  --accent-primary: #0067c0;
-  --accent-hover: #1879cd;
-  --accent-subtle: rgba(0, 103, 192, 0.1);
-  --accent-glow: rgba(0, 103, 192, 0.25);
+    --accent-primary: #4cc2ff;
+    --accent-hover: #60cbff;
+    --accent-glow: rgba(76, 194, 255, 0.24);
 
-  --success: #0f7b0f;
-  --success-bg: rgba(15, 123, 15, 0.12);
+    --signal-success: #6ccb5f;
+    --signal-success-bg: rgba(108, 203, 95, 0.14);
 
-  --shadow-window: 0 24px 60px rgba(0, 0, 0, 0.2), 0 4px 16px rgba(0, 0, 0, 0.08);
-  --shadow-keycap: 0 2px 0 rgba(0, 0, 0, 0.14), 0 1px 2px rgba(0, 0, 0, 0.08);
-}
+    --shadow-window: 0 24px 60px rgba(0, 0, 0, 0.65), 0 4px 16px rgba(0, 0, 0, 0.4);
+  }
 
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
+  body {
+    background: var(--bg-page);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 16px;
+    margin: 0;
+    box-sizing: border-box;
+  }
 
-body {
-  font-family: var(--font-sans);
-  background-color: var(--bg-page);
-  color: var(--text-primary);
-  line-height: 1.5;
-  -webkit-font-smoothing: antialiased;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
+  .stage-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    width: 100%;
+    max-width: 600px;
+  }
 
-/* Header toolbar */
-.onboarding-header-bar {
-  background: var(--bg-card);
-  border-bottom: 1px solid var(--stroke-card);
-  padding: 10px 20px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-.brand-title {
-  font-size: 14px;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.brand-tag {
-  font-size: 11px;
-  font-weight: 600;
-  padding: 2px 8px;
-  border-radius: var(--radius-pill);
-  background: var(--accent-subtle);
-  color: var(--text-accent);
-}
+  /* Step Switcher Tabs (Demo affordance) */
+  .step-selector-pills {
+    display: flex;
+    background: var(--bg-card);
+    border: 1px solid var(--stroke-card);
+    border-radius: 9999px;
+    padding: 4px;
+    gap: 4px;
+  }
 
-/* Stage Canvas */
-.stage-container {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  background: radial-gradient(circle at center, rgba(0, 103, 192, 0.08) 0%, transparent 70%);
-}
+  .tab-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-family: var(--font-sans);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 16px;
+    border-radius: 9999px;
+    cursor: pointer;
+    transition: all 0.18s ease;
+  }
 
-/* Modal Window Shell */
-.onboarding-window {
-  width: 540px;
-  background: var(--bg-mica);
-  backdrop-filter: blur(28px) saturate(140%);
-  -webkit-backdrop-filter: blur(28px) saturate(140%);
-  border: 1px solid var(--stroke-card);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-window);
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  animation: popIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-}
+  .tab-btn:hover {
+    color: var(--text-primary);
+  }
 
-@keyframes popIn {
-  from { opacity: 0; transform: scale(0.96) translateY(8px); }
-  to { opacity: 1; transform: scale(1) translateY(0); }
-}
+  .tab-btn.active {
+    background: var(--accent-primary);
+    color: var(--text-dark);
+  }
 
-/* Titlebar */
-.fluent-titlebar {
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 12px;
-  border-bottom: 1px solid var(--stroke-subtle);
-  background: rgba(255, 255, 255, 0.02);
-  user-select: none;
-}
-.titlebar-text {
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-secondary);
-}
+  /* Main Onboarding Modal Window */
+  .onboarding-window {
+    width: 560px;
+    min-height: 400px;
+    background: var(--bg-card);
+    border: 1px solid var(--stroke-card);
+    border-radius: 12px;
+    box-shadow: var(--shadow-window);
+    padding: 24px 28px 24px 28px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
 
-/* Progress Step Indicator */
-.step-bar {
-  display: flex;
-  gap: 6px;
-  padding: 16px 24px 0;
-}
-.step-dot {
-  flex: 1;
-  height: 3px;
-  border-radius: var(--radius-pill);
-  background: var(--stroke-divider);
-  transition: background 0.25s ease;
-}
-.step-dot.active {
-  background: var(--accent-primary);
-}
+  /* Top 3-Segment Progress Indicator */
+  .progress-track {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+    margin-bottom: 22px;
+  }
 
-/* Body Area */
-.onboarding-body {
-  padding: 20px 24px;
-  min-height: 280px;
-  display: flex;
-  flex-direction: column;
-}
-.onboarding-heading {
-  font-family: var(--font-display);
-  font-size: 20px;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-  color: var(--text-primary);
-  margin-bottom: 8px;
-}
-.onboarding-desc {
-  font-size: 13.5px;
-  color: var(--text-secondary);
-  line-height: 1.55;
-  margin-bottom: 18px;
-}
+  .progress-segment {
+    flex: 1;
+    height: 4px;
+    background: var(--bg-keycap);
+    border-radius: 2px;
+    transition: background 0.25s ease;
+  }
 
-/* Feature Cards (Step 1) */
-.feature-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-top: 6px;
-}
-.feature-card {
-  background: var(--bg-card);
-  border: 1px solid var(--stroke-card);
-  border-radius: var(--radius-md);
-  padding: 12px 14px;
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-}
-.feature-icon {
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
-  background: var(--accent-subtle);
-  color: var(--text-accent);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
+  .progress-segment.active {
+    background: var(--accent-primary);
+  }
 
-/* Interactive Sandbox (Step 2) */
-.sandbox-area {
-  background: var(--bg-subtle);
-  border: 1px solid var(--stroke-card);
-  border-radius: var(--radius-md);
-  padding: 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  align-items: center;
-}
-.dummy-windows-track {
-  display: flex;
-  gap: 14px;
-  width: 100%;
-  justify-content: center;
-}
-.dummy-window {
-  width: 48%;
-  height: 110px;
-  background: var(--bg-card);
-  border: 1.5px solid var(--stroke-card);
-  border-radius: var(--radius-md);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  opacity: 0.65;
-}
-.dummy-window.focused {
-  border-color: var(--accent-primary);
-  box-shadow: 0 8px 24px var(--accent-glow), 0 0 0 2px var(--accent-primary);
-  opacity: 1;
-  transform: translateY(-2px);
-}
-.dummy-titlebar {
-  height: 22px;
-  background: var(--bg-subtle);
-  display: flex;
-  align-items: center;
-  padding: 0 8px;
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--text-secondary);
-  border-bottom: 1px solid var(--stroke-subtle);
-}
-.dummy-content {
-  flex: 1;
-  padding: 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.dummy-bar {
-  height: 6px;
-  border-radius: 2px;
-  background: var(--stroke-divider);
-}
+  /* Content Header */
+  .onboarding-title {
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.25;
+    color: var(--text-primary);
+    margin: 0 0 10px 0;
+    letter-spacing: -0.01em;
+  }
 
-.hotkey-prompt {
-  background: var(--bg-card);
-  border: 1px solid var(--stroke-card);
-  border-radius: var(--radius-pill);
-  padding: 6px 14px;
-  font-size: 12px;
-  font-weight: 600;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  box-shadow: var(--shadow-keycap);
-}
-.keycap {
-  background: var(--bg-keycap);
-  border: 1px solid var(--stroke-card);
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-family: var(--font-mono);
-  font-size: 11px;
-}
+  .onboarding-desc {
+    font-size: 13.5px;
+    line-height: 1.55;
+    color: var(--text-secondary);
+    margin: 0 0 20px 0;
+  }
 
-/* Success Banner */
-.success-banner {
-  background: var(--success-bg);
-  border: 1px solid var(--success);
-  color: var(--success);
-  border-radius: var(--radius-md);
-  padding: 10px 14px;
-  font-size: 12.5px;
-  font-weight: 600;
-  display: none;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-}
-.success-banner.show {
-  display: flex;
-}
+  /* Step Content Area */
+  .step-content-box {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 180px;
+  }
 
-/* Footer & Buttons */
-.onboarding-footer {
-  padding: 14px 24px;
-  border-top: 1px solid var(--stroke-card);
-  background: rgba(255, 255, 255, 0.02);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-.btn {
-  padding: 8px 18px;
-  border-radius: var(--radius-sm);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  border: 1px solid var(--stroke-card);
-  background: var(--bg-card);
-  color: var(--text-primary);
-  transition: all 0.15s ease;
-}
-.btn:hover {
-  background: var(--bg-card-hover);
-}
-.btn.primary {
-  background: var(--accent-primary);
-  border-color: var(--accent-primary);
-  color: var(--text-inverse);
-}
-.btn.primary:hover {
-  background: var(--accent-hover);
-}
-.btn.primary:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
+  /* Step 2: Interactive Sandbox */
+  .sandbox-container {
+    background: var(--bg-subtle);
+    border: 1px solid var(--stroke-card);
+    border-radius: 10px;
+    padding: 16px 16px 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    box-sizing: border-box;
+    width: 100%;
+  }
+
+  .dummy-windows-row {
+    display: flex;
+    gap: 12px;
+    width: 100%;
+  }
+
+  .dummy-window-card {
+    flex: 1;
+    min-width: 0;
+    height: 84px;
+    background: var(--bg-card);
+    border: 1px solid var(--stroke-card);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+    box-sizing: border-box;
+    opacity: 0.7;
+  }
+
+  .dummy-window-card.focused {
+    border-color: var(--accent-primary);
+    border-width: 1.5px;
+    box-shadow: 0 0 18px var(--accent-glow);
+    opacity: 1;
+    transform: translateY(-2px);
+  }
+
+  .dummy-titlebar {
+    height: 24px;
+    background: rgba(255, 255, 255, 0.03);
+    border-bottom: 1px solid var(--stroke-divider);
+    padding: 0 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-secondary);
+  }
+
+  .dummy-window-card.focused .dummy-titlebar {
+    color: var(--text-primary);
+  }
+
+  .dummy-body {
+    flex: 1;
+    padding: 8px 10px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+  }
+
+  .dummy-app-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .dummy-subtext {
+    font-size: 10.5px;
+    color: var(--text-tertiary);
+  }
+
+  .sandbox-interactive-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .shortcut-trigger-btn {
+    background: var(--bg-keycap);
+    border: 1px solid var(--stroke-card);
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-primary);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.15s ease;
+  }
+
+  .shortcut-trigger-btn:hover {
+    background: var(--bg-keycap-hover);
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+  }
+
+  .feedback-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11.5px;
+    font-weight: 500;
+    color: var(--signal-success);
+    background: var(--signal-success-bg);
+    padding: 4px 10px;
+    border-radius: 9999px;
+  }
+
+  /* Step 3: Done Box */
+  .done-highlight-card {
+    background: var(--bg-subtle);
+    border: 1px solid var(--stroke-card);
+    border-radius: 10px;
+    padding: 18px 20px;
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .done-icon-badge {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: var(--signal-success-bg);
+    color: var(--signal-success);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  /* Action Buttons Footer */
+  .footer-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 24px;
+    padding-top: 4px;
+  }
+
+  .btn-secondary {
+    background: var(--bg-card-hover);
+    border: none;
+    border-radius: 6px;
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 8px 18px;
+    cursor: pointer;
+    transition: background 0.18s ease;
+  }
+
+  .btn-secondary:hover {
+    background: var(--bg-keycap);
+  }
+
+  .btn-primary {
+    background: var(--accent-primary);
+    border: none;
+    border-radius: 6px;
+    color: var(--text-dark);
+    font-family: var(--font-sans);
+    font-size: 13px;
+    font-weight: 700;
+    padding: 8px 22px;
+    cursor: pointer;
+    transition: all 0.18s ease;
+  }
+
+  .btn-primary:hover {
+    background: var(--accent-hover);
+    box-shadow: 0 2px 10px var(--accent-glow);
+  }
 </style>
 
-<div class="onboarding-header-bar">
-  <div class="brand-title">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width="2.4">
-      <rect x="3" y="3" width="18" height="18" rx="3"></rect>
-      <path d="M3 9h18"></path>
-      <path d="M9 21V9"></path>
-    </svg>
-    Wira Desk
-    <span class="brand-tag">First-Run Interactive Onboarding</span>
+<div class="stage-wrapper">
+  <!-- Interactive Step Switcher -->
+  <div class="step-selector-pills">
+    <button class="tab-btn active" onclick="setStep(1)">Step 1: Welcome</button>
+    <button class="tab-btn" onclick="setStep(2)">Step 2: Try Switching</button>
+    <button class="tab-btn" onclick="setStep(3)">Step 3: Done</button>
   </div>
-  <div style="display: flex; gap: 8px;">
-    <button class="btn" onclick="toggleTheme()" style="padding: 4px 10px; font-size: 11px;">Toggle Theme</button>
-    <button class="btn" onclick="resetTutorial()" style="padding: 4px 10px; font-size: 11px;">Reset Flow</button>
-  </div>
-</div>
 
-<div class="stage-container">
+  <!-- Onboarding Window Container -->
   <div class="onboarding-window">
-    <!-- Window Titlebar -->
-    <div class="fluent-titlebar">
-      <span class="titlebar-text">Wira Desk — Setup Wizard</span>
-      <span style="font-size: 11px; color: var(--text-tertiary);">Escape to skip</span>
+    <!-- Progress Indicator -->
+    <div class="progress-track">
+      <div id="prog-1" class="progress-segment active"></div>
+      <div id="prog-2" class="progress-segment"></div>
+      <div id="prog-3" class="progress-segment"></div>
     </div>
 
-    <!-- Step Progress Indicator -->
-    <div class="step-bar">
-      <div class="step-dot active" id="dot-1"></div>
-      <div class="step-dot" id="dot-2"></div>
-      <div class="step-dot" id="dot-3"></div>
+    <!-- Step 1 View -->
+    <div id="step-1-view" class="step-content-box">
+      <h1 class="onboarding-title">Welcome to Wira Desk</h1>
+      <p class="onboarding-desc">
+        Wira Desk switches between windows of the application you are already using, instead of every window on the system like Alt+Tab does. Cycling also stays on the current monitor and virtual desktop, rather than reaching across all of them.
+      </p>
+
+      <div style="flex: 1;"></div>
+
+      <div class="footer-actions">
+        <button class="btn-secondary" onclick="alert('Tutorial Skipped')">Skip Tutorial</button>
+        <button class="btn-primary" onclick="setStep(2)">Next</button>
+      </div>
     </div>
 
-    <!-- Dynamic Body -->
-    <div class="onboarding-body" id="step-content">
+    <!-- Step 2 View -->
+    <div id="step-2-view" class="step-content-box" style="display: none;">
+      <h1 class="onboarding-title">Try switching windows</h1>
+      <p class="onboarding-desc">
+        Open a second window of this application, then press the switch shortcut. Focus moves to the next window of the same application, on the same monitor.
+      </p>
 
-      <!-- STEP 1: WELCOME -->
-      <div id="step-1" class="step-pane">
-        <h1 class="onboarding-heading">Welcome to Wira Desk</h1>
-        <p class="onboarding-desc">
-          Navigasi jendela ultra-cepat khas macOS (<code>Cmd + `</code>) kini hadir di Windows 11 dengan arsitektur ringan &lt; 2 MB RAM.
-        </p>
-
-        <div class="feature-list">
-          <div class="feature-card">
-            <div class="feature-icon">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+      <!-- Sandbox Area -->
+      <div class="sandbox-container">
+        <div class="dummy-windows-row">
+          <div id="win-1" class="dummy-window-card focused">
+            <div class="dummy-titlebar">
+              <span>🪟 Document 1</span>
+              <span>✕</span>
             </div>
-            <div>
-              <div style="font-size: 13px; font-weight: 600;">Same-Application Isolation</div>
-              <div style="font-size: 12px; color: var(--text-secondary);">Hanya merotasi jendela milik aplikasi yang sedang aktif, bukan seluruh sistem.</div>
+            <div class="dummy-body">
+              <div class="dummy-app-name">Project Brief.docx</div>
+              <div class="dummy-subtext">Word — Active Window</div>
             </div>
           </div>
-          <div class="feature-card">
-            <div class="feature-icon">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+
+          <div id="win-2" class="dummy-window-card">
+            <div class="dummy-titlebar">
+              <span>🪟 Document 2</span>
+              <span>✕</span>
             </div>
-            <div>
-              <div style="font-size: 13px; font-weight: 600;">Spatial Preservation Lock</div>
-              <div style="font-size: 12px; color: var(--text-secondary);">Fokus kursor terkunci aman pada monitor fisik dan Virtual Desktop saat ini.</div>
+            <div class="dummy-body">
+              <div class="dummy-app-name">Design System.docx</div>
+              <div class="dummy-subtext">Word — Sibling Window</div>
             </div>
+          </div>
+        </div>
+
+        <div class="sandbox-interactive-bar">
+          <button class="shortcut-trigger-btn" onclick="toggleWindowFocus()">
+            <span>Win + `</span> <span style="font-size: 11px; opacity: 0.8;">(Click to simulate)</span>
+          </button>
+
+          <div id="feedback-pill" class="feedback-badge" style="visibility: hidden;">
+            ✔ Focus shifted instantaneously
           </div>
         </div>
       </div>
 
-      <!-- STEP 2: TRY SWITCHING -->
-      <div id="step-2" class="step-pane" style="display: none;">
-        <h1 class="onboarding-heading">Try Switching Windows</h1>
-        <p class="onboarding-desc">
-          Tekan tombol shortcut di bawah pada keyboard Anda untuk melihat simulasi perpindahan fokus jendela instan:
-        </p>
-
-        <div class="sandbox-area">
-          <div class="dummy-windows-track">
-            <div class="dummy-window focused" id="dummy-win-1">
-              <div class="dummy-titlebar">Chrome — Project Brief</div>
-              <div class="dummy-content">
-                <div class="dummy-bar" style="width: 70%;"></div>
-                <div class="dummy-bar" style="width: 40%;"></div>
-                <div class="dummy-bar" style="width: 85%;"></div>
-              </div>
-            </div>
-
-            <div class="dummy-window" id="dummy-win-2">
-              <div class="dummy-titlebar">Chrome — Design System</div>
-              <div class="dummy-content">
-                <div class="dummy-bar" style="width: 50%;"></div>
-                <div class="dummy-bar" style="width: 80%;"></div>
-              </div>
-            </div>
-          </div>
-
-          <div class="hotkey-prompt" style="cursor: pointer;" onclick="simulateKeyPress()" title="Klik untuk simulasi tombol">
-            <span>Tekan:</span>
-            <span class="keycap">Win</span> + <span class="keycap">`</span>
-            <span style="font-size: 11px; color: var(--text-accent);">(atau klik di sini)</span>
-          </div>
-
-          <div class="success-banner" id="success-banner">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
-            <span>Bagus! Fokus berpindah seketika tanpa latency HUD.</span>
-          </div>
-        </div>
+      <div class="footer-actions">
+        <button class="btn-secondary" onclick="alert('Tutorial Skipped')">Skip Tutorial</button>
+        <button class="btn-primary" onclick="setStep(3)">Next</button>
       </div>
-
-      <!-- STEP 3: DONE -->
-      <div id="step-3" class="step-pane" style="display: none;">
-        <h1 class="onboarding-heading">You are all set!</h1>
-        <p class="onboarding-desc">
-          Wira Desk kini berjalan otomatis di latar belakang melalui System Tray.
-        </p>
-
-        <div class="feature-card" style="margin-top: 8px;">
-          <div class="feature-icon" style="background: var(--success-bg); color: var(--success);">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
-          </div>
-          <div>
-            <div style="font-size: 13px; font-weight: 600;">System Tray Resident</div>
-            <div style="font-size: 12px; color: var(--text-secondary);">
-              Klik kanan ikon Wira Desk di taskbar tray kapan saja untuk membuka <strong>Settings</strong>, melihat log, atau mengaktifkan <strong>Auto-Start</strong>.
-            </div>
-          </div>
-        </div>
-      </div>
-
     </div>
 
-    <!-- Footer Controls -->
-    <div class="onboarding-footer">
-      <button class="btn" id="btn-skip" onclick="skipTutorial()">Skip Tutorial</button>
-      <button class="btn primary" id="btn-next" onclick="nextStep()">Next →</button>
+    <!-- Step 3 View -->
+    <div id="step-3-view" class="step-content-box" style="display: none;">
+      <h1 class="onboarding-title">You are all set</h1>
+      <p class="onboarding-desc">
+        Wira Desk is running quietly in the background. You can customize shortcuts and window snapping parameters anytime.
+      </p>
+
+      <div class="done-highlight-card">
+        <div class="done-icon-badge">🚀</div>
+        <div>
+          <div style="font-size: 13.5px; font-weight: 700; color: var(--text-primary); margin-bottom: 4px;">System Tray Resident</div>
+          <div style="font-size: 12.5px; line-height: 1.5; color: var(--text-secondary);">
+            Right-click the Wira Desk tray icon anytime to open Settings, view diagnostic logs, or toggle Auto-Start.
+          </div>
+        </div>
+      </div>
+
+      <div style="flex: 1;"></div>
+
+      <div class="footer-actions" style="justify-content: flex-end;">
+        <button class="btn-primary" style="padding: 9px 24px;" onclick="alert('Onboarding Finished & Ready!')">Finish & Start Using Wira Desk</button>
+      </div>
     </div>
   </div>
 </div>
 
 <script>
-let currentStep = 1;
-let simulatedFocusIndex = 0;
+  let activeWindow = 1;
 
-function updateStepUI() {
-  document.getElementById('step-1').style.display = (currentStep === 1) ? 'block' : 'none';
-  document.getElementById('step-2').style.display = (currentStep === 2) ? 'block' : 'none';
-  document.getElementById('step-3').style.display = (currentStep === 3) ? 'block' : 'none';
+  function setStep(stepNum) {
+    document.querySelectorAll('.tab-btn').forEach((btn, idx) => {
+      btn.classList.toggle('active', idx + 1 === stepNum);
+    });
 
-  document.querySelectorAll('.step-dot').forEach((dot, idx) => {
-    dot.className = (idx === currentStep - 1) ? 'step-dot active' : 'step-dot';
-  });
+    document.getElementById('prog-1').classList.toggle('active', stepNum >= 1);
+    document.getElementById('prog-2').classList.toggle('active', stepNum >= 2);
+    document.getElementById('prog-3').classList.toggle('active', stepNum >= 3);
 
-  const nextBtn = document.getElementById('btn-next');
-  const skipBtn = document.getElementById('btn-skip');
-
-  if (currentStep === 3) {
-    nextBtn.innerText = 'Finish & Start Using Wira Desk';
-    skipBtn.style.display = 'none';
-  } else {
-    nextBtn.innerText = 'Next →';
-    skipBtn.style.display = 'block';
-  }
-}
-
-function nextStep() {
-  if (currentStep < 3) {
-    currentStep++;
-    updateStepUI();
-  } else {
-    finishTutorial();
-  }
-}
-
-function skipTutorial() {
-  alert('Tutorial dilewati. Konfigurasi awal tersimpan atomik ke %APPDATA%/WiraDesk/config.toml. Wira Desk kini aktif di background.');
-  resetTutorial();
-}
-
-function finishTutorial() {
-  alert('Setup selesai! Konfigurasi tersimpan dan Wira Desk siap digunakan.');
-  resetTutorial();
-}
-
-function resetTutorial() {
-  currentStep = 1;
-  simulatedFocusIndex = 0;
-  document.getElementById('success-banner').classList.remove('show');
-  updateStepUI();
-}
-
-function simulateKeyPress() {
-  const w1 = document.getElementById('dummy-win-1');
-  const w2 = document.getElementById('dummy-win-2');
-
-  simulatedFocusIndex = (simulatedFocusIndex === 0) ? 1 : 0;
-
-  if (simulatedFocusIndex === 1) {
-    w1.classList.remove('focused');
-    w2.classList.add('focused');
-  } else {
-    w2.classList.remove('focused');
-    w1.classList.add('focused');
+    document.getElementById('step-1-view').style.display = stepNum === 1 ? 'flex' : 'none';
+    document.getElementById('step-2-view').style.display = stepNum === 2 ? 'flex' : 'none';
+    document.getElementById('step-3-view').style.display = stepNum === 3 ? 'flex' : 'none';
   }
 
-  document.getElementById('success-banner').classList.add('show');
-}
+  function toggleWindowFocus() {
+    activeWindow = activeWindow === 1 ? 2 : 1;
+    document.getElementById('win-1').classList.toggle('focused', activeWindow === 1);
+    document.getElementById('win-2').classList.toggle('focused', activeWindow === 2);
 
-// Global Keypress Interceptor for Step 2
-window.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') {
-    skipTutorial();
-    return;
+    const fb = document.getElementById('feedback-pill');
+    fb.style.visibility = 'visible';
+    fb.textContent = activeWindow === 2 ? '✔ Focus shifted to Document 2' : '✔ Focus shifted to Document 1';
   }
 
-  if (currentStep === 2) {
-    if (e.key === '`' || e.key === '~' || (e.metaKey && e.key === '`')) {
-      e.preventDefault();
-      simulateKeyPress();
+  window.addEventListener('keydown', (e) => {
+    if (e.key === '`' || e.code === 'Backquote') {
+      toggleWindowFocus();
     }
-  }
-});
-
-function toggleTheme() {
-  const cur = document.documentElement.getAttribute('data-theme');
-  const next = (cur === 'dark') ? 'light' : 'dark';
-  document.documentElement.setAttribute('data-theme', next);
-}
+  });
 </script>

@@ -40,13 +40,13 @@ The First-Run Tutorial (`wiradesk-settings.exe --onboarding`) provides an intera
   2. If launched normally with an existing configuration, onboarding is bypassed.
 
 ### CAP-OB-2: Step 1 — Welcome & Conceptual Grounding
-* **Intent:** Explain the fundamental difference between Wira Desk (same-app, per-monitor) and Windows `Alt+Tab` (all apps, all monitors) in a frameless modal dialog shell.
+* **Intent:** Explain the fundamental difference between Wira Desk (same-app, per-monitor) and Windows `Alt+Tab` (all apps, all monitors) in a balanced frameless modal dialog shell.
 * **Success Criteria:**
-  1. Displays frameless modal window (520 × 400 px, `with_decorations(false)`) centered on screen with Fluent 2 Mica material.
-  2. Integrated custom titlebar with title and clean `✕` Close caption control (`ViewportCommand::Close`).
-  3. Top step indicator highlights Step 1 of 3.
-  4. Header reads: `Welcome to Wira Desk`.
-  5. Actions: `Skip Tutorial` (dismisses wizard and persists baseline config) and `Next →` (advances to Step 2).
+  1. Displays frameless modal window (560 × 400 px, `with_decorations(false)`) centered on screen with Fluent 2 Mica material and single crisp border.
+  2. Integrated custom drag header with seamless close affordance.
+  3. Top 3-segment progress indicator spans balanced across inner width.
+  4. Header reads: `Welcome to Wira Desk` (Left-aligned, Bold 20pt).
+  5. Actions: `Skip Tutorial` (dismisses wizard and persists baseline config) and `Next` (advances to Step 2).
 
 ### CAP-OB-3: Step 2 — Interactive Same-App Cycling Simulation
 * **Intent:** Provide a live interactive simulation within the onboarding UI that shifts focus between simulated dummy windows when `Win + \`` is pressed.
