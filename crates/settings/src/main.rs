@@ -17,7 +17,7 @@ fn main() -> eframe::Result {
     let saved = Config::load_or_default(&config_path());
 
     let (width, height) = if intent == LaunchIntent::Onboarding {
-        (560.0, 400.0)
+        (580.0, 410.0)
     } else {
         (660.0, 580.0)
     };
@@ -72,21 +72,19 @@ impl eframe::App for SettingsApp {
             ui.ctx().request_repaint();
         }
 
-        // Fill entire window background with Mica Dark/Light base
-        let frame_bg = if self.model.theme == theme::ThemeMode::Dark {
-            theme::COLOR_BG_MICA
+        if self.model.onboarding.is_some() {
+            self.onboarding_ui(ui);
         } else {
-            egui::Color32::from_rgb(0xf3, 0xf3, 0xf3)
-        };
-
-        egui::Frame::new().fill(frame_bg).show(ui, |ui| {
-            ui.set_min_size(ui.available_size());
-            if self.model.onboarding.is_some() {
-                self.onboarding_ui(ui);
+            let frame_bg = if self.model.theme == theme::ThemeMode::Dark {
+                theme::COLOR_BG_MICA
             } else {
+                egui::Color32::from_rgb(0xf3, 0xf3, 0xf3)
+            };
+            egui::Frame::new().fill(frame_bg).show(ui, |ui| {
+                ui.set_min_size(ui.available_size());
                 self.settings_ui(ui);
-            }
-        });
+            });
+        }
     }
 }
 
