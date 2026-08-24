@@ -17,7 +17,7 @@ fn main() -> eframe::Result {
     let saved = Config::load_or_default(&config_path());
 
     let (width, height) = if intent == LaunchIntent::Onboarding {
-        (600.0, 440.0)
+        (580.0, 370.0)
     } else {
         (660.0, 580.0)
     };
@@ -25,7 +25,7 @@ fn main() -> eframe::Result {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_inner_size([width, height])
-            .with_min_inner_size([500.0, 360.0])
+            .with_min_inner_size([500.0, 340.0])
             .with_title("Wira Desk")
             .with_decorations(false)
             .with_transparent(true),
@@ -103,591 +103,595 @@ impl SettingsApp {
             return;
         }
 
-        // Full modal surface with single crisp Fluent 2 border
+        // Full window surface with single crisp Fluent 2 border and equal 28px margins
         egui::Frame::new()
             .fill(theme::COLOR_BG_CARD)
             .stroke(egui::Stroke::new(1.0, theme::COLOR_STROKE_CARD))
             .corner_radius(egui::CornerRadius::same(12))
-            .inner_margin(egui::Margin::symmetric(30, 24))
+            .inner_margin(egui::Margin {
+                left: 28,
+                right: 28,
+                top: 20,
+                bottom: 28,
+            })
             .show(ui, |ui| {
                 ui.set_min_size(ui.available_size());
 
-                // Top drag region across the top area (initiates native Win32 window drag smoothly on drag_started)
-                let drag_rect = egui::Rect::from_min_size(
-                    ui.min_rect().min,
-                    egui::vec2(ui.available_width(), 45.0),
+                // Top window drag area: covers from the very top of the window down through 50px
+                let win_rect = ui.max_rect();
+                let top_drag_rect = egui::Rect::from_min_size(
+                    win_rect.min,
+                    egui::vec2(win_rect.width(), 50.0),
                 );
                 let drag_response = ui.interact(
-                    drag_rect,
-                    ui.id().with("onboarding_window_drag"),
+                    top_drag_rect,
+                    ui.id().with("onboarding_full_top_drag"),
                     egui::Sense::drag(),
                 );
                 if drag_response.drag_started() {
                     ui.ctx().send_viewport_cmd(egui::ViewportCommand::StartDrag);
                 }
 
-                // Layout structured bottom-up so footer action buttons are permanently pinned at the exact bottom
-                ui.with_layout(egui::Layout::bottom_up(egui::Align::Min), |ui| {
-                    // --- PINNED FOOTER ACTION BUTTONS ---
-                    ui.horizontal(|ui| {
-                        match step {
-                            app::OnboardingStep::Welcome => {
-                                let skip_resp = ui.add(
-                                    egui::Button::new(
-                                        egui::RichText::new("Skip Tutorial")
-                                            .strong()
-                                            .size(12.5)
-                                            .color(theme::COLOR_TEXT_PRIMARY),
-                                    )
-                                    .fill(theme::COLOR_BG_CARD_HOVER)
-                                    .stroke(egui::Stroke::NONE)
-                                    .corner_radius(egui::CornerRadius::same(6))
-                                    .min_size(egui::vec2(105.0, 34.0)),
-                                );
-                                skip_resp.widget_info(|| {
-                                    egui::WidgetInfo::labeled(
-                                        egui::WidgetType::Button,
-                                        true,
-                                        theme::ONBOARDING_SKIP_BUTTON.name,
-                                    )
-                                });
-                                if skip_resp.clicked() {
-                                    self.model.skip_onboarding();
-                                    self.finish_onboarding();
-                                    ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
-                                }
+                // 1. Progress Indicator Bar (3 horizontal segments)
+                ui.horizontal(|ui| {
+                    let total_steps = 3;
+                    let current_step_num = match step {
+                        app::OnboardingStep::Welcome => 1,
+                        app::OnboardingStep::TrySwitching => 2,
+                        app::OnboardingStep::Done => 3,
+                    };
 
-                                ui.with_layout(
-                                    egui::Layout::right_to_left(egui::Align::Center),
-                                    |ui| {
-                                        let next_resp = ui.add(
-                                            egui::Button::new(
-                                                egui::RichText::new("Next")
-                                                    .strong()
-                                                    .size(13.0)
-                                                    .color(egui::Color32::from_rgb(0x10, 0x12, 0x16)),
-                                            )
-                                            .fill(theme::COLOR_ACCENT_PRIMARY)
-                                            .corner_radius(egui::CornerRadius::same(6))
-                                            .min_size(egui::vec2(90.0, 34.0)),
-                                        );
-                                        next_resp.widget_info(|| {
-                                            egui::WidgetInfo::labeled(
-                                                egui::WidgetType::Button,
-                                                true,
-                                                theme::ONBOARDING_NEXT_BUTTON.name,
-                                            )
-                                        });
-                                        if next_resp.clicked() {
-                                            self.model.advance_onboarding();
-                                        }
-                                    },
-                                );
-                            }
-                            app::OnboardingStep::TrySwitching => {
-                                let back_resp = ui.add(
-                                    egui::Button::new(
-                                        egui::RichText::new("← Back")
-                                            .strong()
-                                            .size(12.5)
-                                            .color(theme::COLOR_TEXT_PRIMARY),
-                                    )
-                                    .fill(theme::COLOR_BG_CARD_HOVER)
-                                    .stroke(egui::Stroke::NONE)
-                                    .corner_radius(egui::CornerRadius::same(6))
-                                    .min_size(egui::vec2(90.0, 34.0)),
-                                );
-                                back_resp.widget_info(|| {
-                                    egui::WidgetInfo::labeled(
-                                        egui::WidgetType::Button,
-                                        true,
-                                        theme::ONBOARDING_BACK_BUTTON.name,
-                                    )
-                                });
-                                if back_resp.clicked() {
-                                    self.model.onboarding = Some(app::OnboardingStep::Welcome);
-                                }
+                    let total_w = ui.available_width();
+                    let gap = 10.0;
+                    let seg_w = (total_w - ((total_steps - 1) as f32 * gap)) / total_steps as f32;
 
-                                ui.with_layout(
-                                    egui::Layout::right_to_left(egui::Align::Center),
-                                    |ui| {
-                                        let next_resp = ui.add(
-                                            egui::Button::new(
-                                                egui::RichText::new("Next")
-                                                    .strong()
-                                                    .size(13.0)
-                                                    .color(egui::Color32::from_rgb(0x10, 0x12, 0x16)),
-                                            )
-                                            .fill(theme::COLOR_ACCENT_PRIMARY)
-                                            .corner_radius(egui::CornerRadius::same(6))
-                                            .min_size(egui::vec2(90.0, 34.0)),
-                                        );
-                                        next_resp.widget_info(|| {
-                                            egui::WidgetInfo::labeled(
-                                                egui::WidgetType::Button,
-                                                true,
-                                                theme::ONBOARDING_NEXT_BUTTON.name,
-                                            )
-                                        });
-                                        if next_resp.clicked() {
-                                            self.model.advance_onboarding();
-                                        }
-                                    },
-                                );
-                            }
-                            app::OnboardingStep::Done => {
-                                let back_resp = ui.add(
-                                    egui::Button::new(
-                                        egui::RichText::new("← Back")
-                                            .strong()
-                                            .size(12.5)
-                                            .color(theme::COLOR_TEXT_PRIMARY),
-                                    )
-                                    .fill(theme::COLOR_BG_CARD_HOVER)
-                                    .stroke(egui::Stroke::NONE)
-                                    .corner_radius(egui::CornerRadius::same(6))
-                                    .min_size(egui::vec2(90.0, 34.0)),
-                                );
-                                back_resp.widget_info(|| {
-                                    egui::WidgetInfo::labeled(
-                                        egui::WidgetType::Button,
-                                        true,
-                                        theme::ONBOARDING_BACK_BUTTON.name,
-                                    )
-                                });
-                                if back_resp.clicked() {
-                                    self.model.onboarding = Some(app::OnboardingStep::TrySwitching);
-                                }
-
-                                ui.with_layout(
-                                    egui::Layout::right_to_left(egui::Align::Center),
-                                    |ui| {
-                                        let finish_resp = ui.add(
-                                            egui::Button::new(
-                                                egui::RichText::new("Start Using Wira Desk")
-                                                    .strong()
-                                                    .size(13.0)
-                                                    .color(egui::Color32::from_rgb(0x10, 0x12, 0x16)),
-                                            )
-                                            .fill(theme::COLOR_ACCENT_PRIMARY)
-                                            .corner_radius(egui::CornerRadius::same(6))
-                                            .min_size(egui::vec2(170.0, 34.0)),
-                                        );
-                                        finish_resp.widget_info(|| {
-                                            egui::WidgetInfo::labeled(
-                                                egui::WidgetType::Button,
-                                                true,
-                                                theme::ONBOARDING_FINISH_BUTTON.name,
-                                            )
-                                        });
-                                        if finish_resp.clicked() {
-                                            self.finish_onboarding();
-                                            ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
-                                        }
-                                    },
-                                );
-                            }
-                        }
-                    });
-
-                    ui.add_space(16.0);
-
-                    // --- TOP-DOWN MAIN CONTENT AREA (Naturally flowing without overlap) ---
-                    ui.with_layout(egui::Layout::top_down(egui::Align::Min), |ui| {
-                        // 1. Progress Indicator Bar (3 horizontal segments)
-                        ui.horizontal(|ui| {
-                            let total_steps = 3;
-                            let current_step_num = match step {
-                                app::OnboardingStep::Welcome => 1,
-                                app::OnboardingStep::TrySwitching => 2,
-                                app::OnboardingStep::Done => 3,
-                            };
-
-                            let total_w = ui.available_width();
-                            let gap = 10.0;
-                            let seg_w = (total_w - ((total_steps - 1) as f32 * gap)) / total_steps as f32;
-
-                            ui.spacing_mut().item_spacing.x = gap;
-                            for s in 1..=total_steps {
-                                let is_current = s <= current_step_num;
-                                let stroke_color = if is_current {
-                                    theme::COLOR_ACCENT_PRIMARY
-                                } else {
-                                    theme::COLOR_BG_KEYCAP
-                                };
-                                let (rect, _response) = ui.allocate_exact_size(
-                                    egui::vec2(seg_w, 4.0),
-                                    egui::Sense::hover(),
-                                );
-                                ui.painter().rect_filled(rect, 2.0, stroke_color);
-                            }
-                        });
-
-                        ui.add_space(18.0);
-
-                        // 2. Step Heading (Left-aligned, Bold 20pt)
-                        ui.label(
-                            egui::RichText::new(step.heading())
-                                .strong()
-                                .size(20.0)
-                                .color(theme::COLOR_TEXT_PRIMARY),
+                    ui.spacing_mut().item_spacing.x = gap;
+                    for s in 1..=total_steps {
+                        let is_current = s <= current_step_num;
+                        let stroke_color = if is_current {
+                            theme::COLOR_ACCENT_PRIMARY
+                        } else {
+                            theme::COLOR_BG_KEYCAP
+                        };
+                        let (rect, _response) = ui.allocate_exact_size(
+                            egui::vec2(seg_w, 4.0),
+                            egui::Sense::hover(),
                         );
-                        ui.add_space(6.0);
+                        ui.painter().rect_filled(rect, 2.0, stroke_color);
+                    }
+                });
 
-                        // 3. Step Description (Secondary text, 13pt, clean line height)
-                        ui.label(
-                            egui::RichText::new(step.body())
-                                .size(13.0)
-                                .color(theme::COLOR_TEXT_SECONDARY),
-                        );
+                ui.add_space(16.0);
 
-                        ui.add_space(14.0);
+                // 2. Step Heading (Left-aligned, Bold 20pt)
+                ui.label(
+                    egui::RichText::new(step.heading())
+                        .strong()
+                        .size(20.0)
+                        .color(theme::COLOR_TEXT_PRIMARY),
+                );
+                ui.add_space(6.0);
 
-                        // 4. Middle Content Cards per Step
-                        match step {
-                            app::OnboardingStep::Welcome => {
-                                egui::Frame::new()
-                                    .fill(theme::COLOR_BG_SUBTLE)
-                                    .stroke(egui::Stroke::new(1.0, theme::COLOR_STROKE_CARD))
-                                    .corner_radius(egui::CornerRadius::same(10))
-                                    .inner_margin(egui::Margin::symmetric(16, 12))
-                                    .show(ui, |ui| {
-                                        ui.set_width(ui.available_width());
-                                        ui.vertical(|ui| {
-                                            ui.horizontal(|ui| {
-                                                ui.label(egui::RichText::new("⚡").size(18.0));
-                                                ui.add_space(8.0);
-                                                ui.vertical(|ui| {
-                                                    ui.label(
-                                                        egui::RichText::new("Same-Application Spatial Cycling")
-                                                            .strong()
-                                                            .size(13.0)
-                                                            .color(theme::COLOR_TEXT_PRIMARY),
-                                                    );
-                                                    ui.label(
-                                                        egui::RichText::new(
-                                                            "Press Win + ` to cycle focus between windows of the active app with zero visual delay.",
-                                                        )
-                                                        .size(11.5)
-                                                        .color(theme::COLOR_TEXT_SECONDARY),
-                                                    );
-                                                });
-                                            });
+                // 3. Step Description (Secondary text, 13pt, clean line height)
+                ui.label(
+                    egui::RichText::new(step.body())
+                        .size(13.0)
+                        .color(theme::COLOR_TEXT_SECONDARY),
+                );
 
+                ui.add_space(14.0);
+
+                // 4. Middle Content Box (Fixed 130px height across all steps to guarantee locked button coordinates)
+                ui.allocate_ui_with_layout(
+                    egui::vec2(ui.available_width(), 130.0),
+                    egui::Layout::top_down(egui::Align::Min),
+                    |ui| match step {
+                        app::OnboardingStep::Welcome => {
+                            egui::Frame::new()
+                                .fill(theme::COLOR_BG_SUBTLE)
+                                .stroke(egui::Stroke::new(1.0, theme::COLOR_STROKE_CARD))
+                                .corner_radius(egui::CornerRadius::same(10))
+                                .inner_margin(egui::Margin::symmetric(16, 12))
+                                .show(ui, |ui| {
+                                    ui.set_width(ui.available_width());
+                                    ui.vertical(|ui| {
+                                        ui.horizontal(|ui| {
+                                            ui.label(egui::RichText::new("⚡").size(18.0));
                                             ui.add_space(8.0);
-                                            ui.separator();
-                                            ui.add_space(8.0);
-
-                                            ui.horizontal(|ui| {
-                                                ui.label(egui::RichText::new("🔒").size(18.0));
-                                                ui.add_space(8.0);
-                                                ui.vertical(|ui| {
-                                                    ui.label(
-                                                        egui::RichText::new("Multi-Monitor & Desktop Isolation")
-                                                            .strong()
-                                                            .size(13.0)
-                                                            .color(theme::COLOR_TEXT_PRIMARY),
-                                                    );
-                                                    ui.label(
-                                                        egui::RichText::new(
-                                                            "Window switching stays locked strictly to your active physical display and desktop.",
-                                                        )
-                                                        .size(11.5)
-                                                        .color(theme::COLOR_TEXT_SECONDARY),
-                                                    );
-                                                });
-                                            });
-                                        });
-                                    });
-                            }
-                            app::OnboardingStep::TrySwitching => {
-                                let simulated_key_triggered = ui.input(|i| {
-                                    i.key_pressed(egui::Key::Backtick)
-                                        || (i.modifiers.command && i.key_pressed(egui::Key::Backtick))
-                                });
-                                if simulated_key_triggered {
-                                    self.model.toggle_onboarding_simulation();
-                                }
-
-                                egui::Frame::new()
-                                    .fill(theme::COLOR_BG_SUBTLE)
-                                    .stroke(egui::Stroke::new(1.0, theme::COLOR_STROKE_CARD))
-                                    .corner_radius(egui::CornerRadius::same(10))
-                                    .inner_margin(egui::Margin::symmetric(14, 12))
-                                    .show(ui, |ui| {
-                                        ui.set_width(ui.available_width());
-                                        ui.vertical(|ui| {
-                                            let gap = 12.0;
-                                            let win_w = (ui.available_width() - gap) / 2.0;
-
-                                            ui.horizontal(|ui| {
-                                                ui.spacing_mut().item_spacing.x = gap;
-
-                                                // Dummy Window 1
-                                                let w1_active = self.model.onboarding_focus_index == 0;
-                                                let w1_border = if w1_active {
-                                                    theme::COLOR_ACCENT_PRIMARY
-                                                } else {
-                                                    theme::COLOR_STROKE_CARD
-                                                };
-                                                let w1_bg = if w1_active {
-                                                    theme::COLOR_BG_CARD_HOVER
-                                                } else {
-                                                    theme::COLOR_BG_CARD
-                                                };
-
-                                                let resp1 = egui::Frame::new()
-                                                    .fill(w1_bg)
-                                                    .stroke(egui::Stroke::new(
-                                                        if w1_active { 1.5 } else { 1.0 },
-                                                        w1_border,
-                                                    ))
-                                                    .corner_radius(egui::CornerRadius::same(8))
-                                                    .inner_margin(egui::Margin::ZERO)
-                                                    .show(ui, |ui| {
-                                                        ui.set_width(win_w);
-                                                        ui.set_height(76.0);
-                                                        ui.vertical(|ui| {
-                                                            egui::Frame::new()
-                                                                .fill(theme::COLOR_BG_KEYCAP)
-                                                                .inner_margin(egui::Margin::symmetric(10, 4))
-                                                                .show(ui, |ui| {
-                                                                    ui.set_width(ui.available_width());
-                                                                    ui.horizontal(|ui| {
-                                                                        ui.label(
-                                                                            egui::RichText::new("Document 1")
-                                                                                .size(11.0)
-                                                                                .strong()
-                                                                                .color(if w1_active {
-                                                                                    theme::COLOR_ACCENT_PRIMARY
-                                                                                } else {
-                                                                                    theme::COLOR_TEXT_SECONDARY
-                                                                                }),
-                                                                        );
-                                                                        ui.with_layout(
-                                                                            egui::Layout::right_to_left(egui::Align::Center),
-                                                                            |ui| {
-                                                                                ui.label(
-                                                                                    egui::RichText::new("✕")
-                                                                                        .size(9.5)
-                                                                                        .color(theme::COLOR_TEXT_TERTIARY),
-                                                                                );
-                                                                            },
-                                                                        );
-                                                                    });
-                                                                });
-
-                                                            ui.add_space(4.0);
-                                                            ui.horizontal(|ui| {
-                                                                ui.add_space(8.0);
-                                                                ui.vertical(|ui| {
-                                                                    ui.label(
-                                                                        egui::RichText::new("Project Brief.docx")
-                                                                            .size(11.5)
-                                                                            .strong()
-                                                                            .color(theme::COLOR_TEXT_PRIMARY),
-                                                                    );
-                                                                    ui.label(
-                                                                        egui::RichText::new(if w1_active {
-                                                                            "Active Window"
-                                                                        } else {
-                                                                            "Background"
-                                                                        })
-                                                                        .size(10.5)
-                                                                        .color(theme::COLOR_TEXT_SECONDARY),
-                                                                    );
-                                                                });
-                                                            });
-                                                        });
-                                                    });
-                                                resp1.response.widget_info(|| {
-                                                    egui::WidgetInfo::labeled(
-                                                        egui::WidgetType::Other,
-                                                        true,
-                                                        theme::ONBOARDING_DUMMY_WIN_1.name,
-                                                    )
-                                                });
-
-                                                // Dummy Window 2
-                                                let w2_active = self.model.onboarding_focus_index == 1;
-                                                let w2_border = if w2_active {
-                                                    theme::COLOR_ACCENT_PRIMARY
-                                                } else {
-                                                    theme::COLOR_STROKE_CARD
-                                                };
-                                                let w2_bg = if w2_active {
-                                                    theme::COLOR_BG_CARD_HOVER
-                                                } else {
-                                                    theme::COLOR_BG_CARD
-                                                };
-
-                                                let resp2 = egui::Frame::new()
-                                                    .fill(w2_bg)
-                                                    .stroke(egui::Stroke::new(
-                                                        if w2_active { 1.5 } else { 1.0 },
-                                                        w2_border,
-                                                    ))
-                                                    .corner_radius(egui::CornerRadius::same(8))
-                                                    .inner_margin(egui::Margin::ZERO)
-                                                    .show(ui, |ui| {
-                                                        ui.set_width(win_w);
-                                                        ui.set_height(76.0);
-                                                        ui.vertical(|ui| {
-                                                            egui::Frame::new()
-                                                                .fill(theme::COLOR_BG_KEYCAP)
-                                                                .inner_margin(egui::Margin::symmetric(10, 4))
-                                                                .show(ui, |ui| {
-                                                                    ui.set_width(ui.available_width());
-                                                                    ui.horizontal(|ui| {
-                                                                        ui.label(
-                                                                            egui::RichText::new("Document 2")
-                                                                                .size(11.0)
-                                                                                .strong()
-                                                                                .color(if w2_active {
-                                                                                    theme::COLOR_ACCENT_PRIMARY
-                                                                                } else {
-                                                                                    theme::COLOR_TEXT_SECONDARY
-                                                                                }),
-                                                                        );
-                                                                        ui.with_layout(
-                                                                            egui::Layout::right_to_left(egui::Align::Center),
-                                                                            |ui| {
-                                                                                ui.label(
-                                                                                    egui::RichText::new("✕")
-                                                                                        .size(9.5)
-                                                                                        .color(theme::COLOR_TEXT_TERTIARY),
-                                                                                );
-                                                                            },
-                                                                        );
-                                                                    });
-                                                                });
-
-                                                            ui.add_space(4.0);
-                                                            ui.horizontal(|ui| {
-                                                                ui.add_space(8.0);
-                                                                ui.vertical(|ui| {
-                                                                    ui.label(
-                                                                        egui::RichText::new("Design System.docx")
-                                                                            .size(11.5)
-                                                                            .strong()
-                                                                            .color(theme::COLOR_TEXT_PRIMARY),
-                                                                    );
-                                                                    ui.label(
-                                                                        egui::RichText::new(if w2_active {
-                                                                            "Active Window"
-                                                                        } else {
-                                                                            "Background"
-                                                                        })
-                                                                        .size(10.5)
-                                                                        .color(theme::COLOR_TEXT_SECONDARY),
-                                                                    );
-                                                                });
-                                                            });
-                                                        });
-                                                    });
-                                                resp2.response.widget_info(|| {
-                                                    egui::WidgetInfo::labeled(
-                                                        egui::WidgetType::Other,
-                                                        true,
-                                                        theme::ONBOARDING_DUMMY_WIN_2.name,
-                                                    )
-                                                });
-                                            });
-
-                                            ui.add_space(10.0);
-
-                                            // Practice trigger button & feedback
-                                            ui.horizontal(|ui| {
-                                                let sim_btn = ui.add(
-                                                    egui::Button::new(
-                                                        egui::RichText::new("Win + ` (Click to simulate)")
-                                                            .monospace()
-                                                            .strong()
-                                                            .size(11.5)
-                                                            .color(theme::COLOR_TEXT_PRIMARY),
-                                                    )
-                                                    .fill(theme::COLOR_BG_KEYCAP)
-                                                    .corner_radius(egui::CornerRadius::same(6)),
+                                            ui.vertical(|ui| {
+                                                ui.label(
+                                                    egui::RichText::new("Same-Application Spatial Cycling")
+                                                        .strong()
+                                                        .size(13.0)
+                                                        .color(theme::COLOR_TEXT_PRIMARY),
                                                 );
-                                                sim_btn.widget_info(|| {
-                                                    egui::WidgetInfo::labeled(
-                                                        egui::WidgetType::Button,
-                                                        true,
-                                                        theme::ONBOARDING_SIMULATE_BUTTON.name,
+                                                ui.label(
+                                                    egui::RichText::new(
+                                                        "Press Win + ` to cycle focus between windows of the active app with zero visual delay.",
                                                     )
-                                                });
-                                                if sim_btn.clicked() {
-                                                    self.model.toggle_onboarding_simulation();
-                                                }
+                                                    .size(11.5)
+                                                    .color(theme::COLOR_TEXT_SECONDARY),
+                                                );
+                                            });
+                                        });
 
-                                                if self.model.onboarding_focus_index == 1 {
-                                                    ui.add_space(8.0);
-                                                    ui.colored_label(
-                                                        theme::COLOR_SUCCESS,
-                                                        "✔ Focus shifted to Document 2",
-                                                    );
-                                                }
+                                        ui.add_space(8.0);
+                                        ui.separator();
+                                        ui.add_space(8.0);
+
+                                        ui.horizontal(|ui| {
+                                            ui.label(egui::RichText::new("🔒").size(18.0));
+                                            ui.add_space(8.0);
+                                            ui.vertical(|ui| {
+                                                ui.label(
+                                                    egui::RichText::new("Multi-Monitor & Desktop Isolation")
+                                                        .strong()
+                                                        .size(13.0)
+                                                        .color(theme::COLOR_TEXT_PRIMARY),
+                                                );
+                                                ui.label(
+                                                    egui::RichText::new(
+                                                        "Window switching stays locked strictly to your active physical display and desktop.",
+                                                    )
+                                                    .size(11.5)
+                                                    .color(theme::COLOR_TEXT_SECONDARY),
+                                                );
                                             });
                                         });
                                     });
-                            }
-                            app::OnboardingStep::Done => {
-                                egui::Frame::new()
-                                    .fill(theme::COLOR_BG_SUBTLE)
-                                    .stroke(egui::Stroke::new(1.0, theme::COLOR_STROKE_CARD))
-                                    .corner_radius(egui::CornerRadius::same(10))
-                                    .inner_margin(egui::Margin::symmetric(16, 12))
-                                    .show(ui, |ui| {
-                                        ui.set_width(ui.available_width());
-                                        ui.vertical(|ui| {
-                                            ui.horizontal(|ui| {
-                                                ui.label(egui::RichText::new("🚀").size(22.0));
-                                                ui.add_space(8.0);
-                                                ui.vertical(|ui| {
-                                                    ui.label(
-                                                        egui::RichText::new("System Tray Resident")
-                                                            .strong()
-                                                            .size(13.5)
-                                                            .color(theme::COLOR_TEXT_PRIMARY),
-                                                    );
-                                                    ui.label(
-                                                        egui::RichText::new(
-                                                            "Wira Desk runs quietly in the background. Right-click the tray icon anytime for Settings.",
-                                                        )
-                                                        .size(11.5)
-                                                        .color(theme::COLOR_TEXT_SECONDARY),
-                                                    );
-                                                });
-                                            });
-
-                                            ui.add_space(8.0);
-                                            ui.separator();
-                                            ui.add_space(8.0);
-
-                                            ui.horizontal(|ui| {
-                                                ui.label(egui::RichText::new("⌨").size(18.0));
-                                                ui.add_space(8.0);
-                                                ui.vertical(|ui| {
-                                                    ui.label(
-                                                        egui::RichText::new("Fully Customizable")
-                                                            .strong()
-                                                            .size(13.0)
-                                                            .color(theme::COLOR_TEXT_PRIMARY),
-                                                    );
-                                                    ui.label(
-                                                        egui::RichText::new(
-                                                            "Customize shortcuts, window snapping parameters, and VM passthrough rules anytime.",
-                                                        )
-                                                        .size(11.5)
-                                                        .color(theme::COLOR_TEXT_SECONDARY),
-                                                    );
-                                                });
-                                            });
-                                        });
-                                    });
-                            }
+                                });
                         }
-                    });
+                        app::OnboardingStep::TrySwitching => {
+                            let simulated_key_triggered = ui.input(|i| {
+                                i.key_pressed(egui::Key::Backtick)
+                                    || (i.modifiers.command && i.key_pressed(egui::Key::Backtick))
+                            });
+                            if simulated_key_triggered {
+                                self.model.toggle_onboarding_simulation();
+                            }
+
+                            egui::Frame::new()
+                                .fill(theme::COLOR_BG_SUBTLE)
+                                .stroke(egui::Stroke::new(1.0, theme::COLOR_STROKE_CARD))
+                                .corner_radius(egui::CornerRadius::same(10))
+                                .inner_margin(egui::Margin::symmetric(14, 12))
+                                .show(ui, |ui| {
+                                    ui.set_width(ui.available_width());
+                                    ui.vertical(|ui| {
+                                        let gap = 12.0;
+                                        let win_w = (ui.available_width() - gap) / 2.0;
+
+                                        ui.horizontal(|ui| {
+                                            ui.spacing_mut().item_spacing.x = gap;
+
+                                            // Dummy Window 1
+                                            let w1_active = self.model.onboarding_focus_index == 0;
+                                            let w1_border = if w1_active {
+                                                theme::COLOR_ACCENT_PRIMARY
+                                            } else {
+                                                theme::COLOR_STROKE_CARD
+                                            };
+                                            let w1_bg = if w1_active {
+                                                theme::COLOR_BG_CARD_HOVER
+                                            } else {
+                                                theme::COLOR_BG_CARD
+                                            };
+
+                                            let resp1 = egui::Frame::new()
+                                                .fill(w1_bg)
+                                                .stroke(egui::Stroke::new(
+                                                    if w1_active { 1.5 } else { 1.0 },
+                                                    w1_border,
+                                                ))
+                                                .corner_radius(egui::CornerRadius::same(8))
+                                                .inner_margin(egui::Margin::ZERO)
+                                                .show(ui, |ui| {
+                                                    ui.set_width(win_w);
+                                                    ui.set_height(72.0);
+                                                    ui.vertical(|ui| {
+                                                        egui::Frame::new()
+                                                            .fill(theme::COLOR_BG_KEYCAP)
+                                                            .inner_margin(egui::Margin::symmetric(10, 4))
+                                                            .show(ui, |ui| {
+                                                                ui.set_width(ui.available_width());
+                                                                ui.horizontal(|ui| {
+                                                                    ui.label(
+                                                                        egui::RichText::new("Document 1")
+                                                                            .size(11.0)
+                                                                            .strong()
+                                                                            .color(if w1_active {
+                                                                                theme::COLOR_ACCENT_PRIMARY
+                                                                            } else {
+                                                                                theme::COLOR_TEXT_SECONDARY
+                                                                            }),
+                                                                    );
+                                                                    ui.with_layout(
+                                                                        egui::Layout::right_to_left(egui::Align::Center),
+                                                                        |ui| {
+                                                                            ui.label(
+                                                                                egui::RichText::new("✕")
+                                                                                    .size(9.5)
+                                                                                    .color(theme::COLOR_TEXT_TERTIARY),
+                                                                            );
+                                                                        },
+                                                                    );
+                                                                });
+                                                            });
+
+                                                        ui.add_space(4.0);
+                                                        ui.horizontal(|ui| {
+                                                            ui.add_space(8.0);
+                                                            ui.vertical(|ui| {
+                                                                ui.label(
+                                                                    egui::RichText::new("Project Brief.docx")
+                                                                        .size(11.5)
+                                                                        .strong()
+                                                                        .color(theme::COLOR_TEXT_PRIMARY),
+                                                                );
+                                                                ui.label(
+                                                                    egui::RichText::new(if w1_active {
+                                                                        "Active Window"
+                                                                    } else {
+                                                                        "Background"
+                                                                    })
+                                                                    .size(10.5)
+                                                                    .color(theme::COLOR_TEXT_SECONDARY),
+                                                                );
+                                                            });
+                                                        });
+                                                    });
+                                                });
+                                            resp1.response.widget_info(|| {
+                                                egui::WidgetInfo::labeled(
+                                                    egui::WidgetType::Other,
+                                                    true,
+                                                    theme::ONBOARDING_DUMMY_WIN_1.name,
+                                                )
+                                            });
+
+                                            // Dummy Window 2
+                                            let w2_active = self.model.onboarding_focus_index == 1;
+                                            let w2_border = if w2_active {
+                                                theme::COLOR_ACCENT_PRIMARY
+                                            } else {
+                                                theme::COLOR_STROKE_CARD
+                                            };
+                                            let w2_bg = if w2_active {
+                                                theme::COLOR_BG_CARD_HOVER
+                                            } else {
+                                                theme::COLOR_BG_CARD
+                                            };
+
+                                            let resp2 = egui::Frame::new()
+                                                .fill(w2_bg)
+                                                .stroke(egui::Stroke::new(
+                                                    if w2_active { 1.5 } else { 1.0 },
+                                                    w2_border,
+                                                ))
+                                                .corner_radius(egui::CornerRadius::same(8))
+                                                .inner_margin(egui::Margin::ZERO)
+                                                .show(ui, |ui| {
+                                                    ui.set_width(win_w);
+                                                    ui.set_height(72.0);
+                                                    ui.vertical(|ui| {
+                                                        egui::Frame::new()
+                                                            .fill(theme::COLOR_BG_KEYCAP)
+                                                            .inner_margin(egui::Margin::symmetric(10, 4))
+                                                            .show(ui, |ui| {
+                                                                ui.set_width(ui.available_width());
+                                                                ui.horizontal(|ui| {
+                                                                    ui.label(
+                                                                        egui::RichText::new("Document 2")
+                                                                            .size(11.0)
+                                                                            .strong()
+                                                                            .color(if w2_active {
+                                                                                theme::COLOR_ACCENT_PRIMARY
+                                                                            } else {
+                                                                                theme::COLOR_TEXT_SECONDARY
+                                                                            }),
+                                                                    );
+                                                                    ui.with_layout(
+                                                                        egui::Layout::right_to_left(egui::Align::Center),
+                                                                        |ui| {
+                                                                            ui.label(
+                                                                                egui::RichText::new("✕")
+                                                                                    .size(9.5)
+                                                                                    .color(theme::COLOR_TEXT_TERTIARY),
+                                                                            );
+                                                                        },
+                                                                    );
+                                                                });
+                                                            });
+
+                                                        ui.add_space(4.0);
+                                                        ui.horizontal(|ui| {
+                                                            ui.add_space(8.0);
+                                                            ui.vertical(|ui| {
+                                                                ui.label(
+                                                                    egui::RichText::new("Design System.docx")
+                                                                        .size(11.5)
+                                                                        .strong()
+                                                                        .color(theme::COLOR_TEXT_PRIMARY),
+                                                                );
+                                                                ui.label(
+                                                                    egui::RichText::new(if w2_active {
+                                                                        "Active Window"
+                                                                    } else {
+                                                                        "Background"
+                                                                    })
+                                                                    .size(10.5)
+                                                                    .color(theme::COLOR_TEXT_SECONDARY),
+                                                                );
+                                                            });
+                                                        });
+                                                    });
+                                                });
+                                            resp2.response.widget_info(|| {
+                                                egui::WidgetInfo::labeled(
+                                                    egui::WidgetType::Other,
+                                                    true,
+                                                    theme::ONBOARDING_DUMMY_WIN_2.name,
+                                                )
+                                            });
+                                        });
+
+                                        ui.add_space(8.0);
+
+                                        // Practice trigger button & feedback
+                                        ui.horizontal(|ui| {
+                                            let sim_btn = ui.add(
+                                                egui::Button::new(
+                                                    egui::RichText::new("Win + ` (Click to simulate)")
+                                                        .monospace()
+                                                        .strong()
+                                                        .size(11.5)
+                                                        .color(theme::COLOR_TEXT_PRIMARY),
+                                                )
+                                                .fill(theme::COLOR_BG_KEYCAP)
+                                                .corner_radius(egui::CornerRadius::same(6)),
+                                            );
+                                            sim_btn.widget_info(|| {
+                                                egui::WidgetInfo::labeled(
+                                                    egui::WidgetType::Button,
+                                                    true,
+                                                    theme::ONBOARDING_SIMULATE_BUTTON.name,
+                                                )
+                                            });
+                                            if sim_btn.clicked() {
+                                                self.model.toggle_onboarding_simulation();
+                                            }
+
+                                            if self.model.onboarding_focus_index == 1 {
+                                                ui.add_space(8.0);
+                                                ui.colored_label(
+                                                    theme::COLOR_SUCCESS,
+                                                    "✔ Focus shifted to Document 2",
+                                                );
+                                            }
+                                        });
+                                    });
+                                });
+                        }
+                        app::OnboardingStep::Done => {
+                            egui::Frame::new()
+                                .fill(theme::COLOR_BG_SUBTLE)
+                                .stroke(egui::Stroke::new(1.0, theme::COLOR_STROKE_CARD))
+                                .corner_radius(egui::CornerRadius::same(10))
+                                .inner_margin(egui::Margin::symmetric(16, 12))
+                                .show(ui, |ui| {
+                                    ui.set_width(ui.available_width());
+                                    ui.vertical(|ui| {
+                                        ui.horizontal(|ui| {
+                                            ui.label(egui::RichText::new("🚀").size(20.0));
+                                            ui.add_space(8.0);
+                                            ui.vertical(|ui| {
+                                                ui.label(
+                                                    egui::RichText::new("System Tray Resident")
+                                                        .strong()
+                                                        .size(13.5)
+                                                        .color(theme::COLOR_TEXT_PRIMARY),
+                                                );
+                                                ui.label(
+                                                    egui::RichText::new(
+                                                        "Wira Desk runs quietly in the background. Right-click the tray icon anytime for Settings.",
+                                                    )
+                                                    .size(11.5)
+                                                    .color(theme::COLOR_TEXT_SECONDARY),
+                                                );
+                                            });
+                                        });
+
+                                        ui.add_space(8.0);
+                                        ui.separator();
+                                        ui.add_space(8.0);
+
+                                        ui.horizontal(|ui| {
+                                            ui.label(egui::RichText::new("⌨").size(18.0));
+                                            ui.add_space(8.0);
+                                            ui.vertical(|ui| {
+                                                ui.label(
+                                                    egui::RichText::new("Fully Customizable")
+                                                        .strong()
+                                                        .size(13.0)
+                                                        .color(theme::COLOR_TEXT_PRIMARY),
+                                                );
+                                                ui.label(
+                                                    egui::RichText::new(
+                                                        "Customize shortcuts, window snapping parameters, and VM passthrough rules anytime.",
+                                                    )
+                                                    .size(11.5)
+                                                    .color(theme::COLOR_TEXT_SECONDARY),
+                                                );
+                                            });
+                                        });
+                                    });
+                                });
+                        }
+                    },
+                );
+
+                ui.add_space(16.0);
+
+                // 5. Footer Action Buttons (Symmetric 28px distance from left, right, and bottom)
+                ui.horizontal(|ui| {
+                    match step {
+                        app::OnboardingStep::Welcome => {
+                            let skip_resp = ui.add(
+                                egui::Button::new(
+                                    egui::RichText::new("Skip Tutorial")
+                                        .strong()
+                                        .size(12.5)
+                                        .color(theme::COLOR_TEXT_PRIMARY),
+                                )
+                                .fill(theme::COLOR_BG_CARD_HOVER)
+                                .stroke(egui::Stroke::NONE)
+                                .corner_radius(egui::CornerRadius::same(6))
+                                .min_size(egui::vec2(105.0, 34.0)),
+                            );
+                            skip_resp.widget_info(|| {
+                                egui::WidgetInfo::labeled(
+                                    egui::WidgetType::Button,
+                                    true,
+                                    theme::ONBOARDING_SKIP_BUTTON.name,
+                                )
+                            });
+                            if skip_resp.clicked() {
+                                self.model.skip_onboarding();
+                                self.finish_onboarding();
+                                ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
+                            }
+
+                            ui.with_layout(
+                                egui::Layout::right_to_left(egui::Align::Center),
+                                |ui| {
+                                    let next_resp = ui.add(
+                                        egui::Button::new(
+                                            egui::RichText::new("Next")
+                                                .strong()
+                                                .size(13.0)
+                                                .color(egui::Color32::from_rgb(0x10, 0x12, 0x16)),
+                                        )
+                                        .fill(theme::COLOR_ACCENT_PRIMARY)
+                                        .corner_radius(egui::CornerRadius::same(6))
+                                        .min_size(egui::vec2(90.0, 34.0)),
+                                    );
+                                    next_resp.widget_info(|| {
+                                        egui::WidgetInfo::labeled(
+                                            egui::WidgetType::Button,
+                                            true,
+                                            theme::ONBOARDING_NEXT_BUTTON.name,
+                                        )
+                                    });
+                                    if next_resp.clicked() {
+                                        self.model.advance_onboarding();
+                                    }
+                                },
+                            );
+                        }
+                        app::OnboardingStep::TrySwitching => {
+                            let back_resp = ui.add(
+                                egui::Button::new(
+                                    egui::RichText::new("← Back")
+                                        .strong()
+                                        .size(12.5)
+                                        .color(theme::COLOR_TEXT_PRIMARY),
+                                )
+                                .fill(theme::COLOR_BG_CARD_HOVER)
+                                .stroke(egui::Stroke::NONE)
+                                .corner_radius(egui::CornerRadius::same(6))
+                                .min_size(egui::vec2(90.0, 34.0)),
+                            );
+                            back_resp.widget_info(|| {
+                                egui::WidgetInfo::labeled(
+                                    egui::WidgetType::Button,
+                                    true,
+                                    theme::ONBOARDING_BACK_BUTTON.name,
+                                )
+                            });
+                            if back_resp.clicked() {
+                                self.model.onboarding = Some(app::OnboardingStep::Welcome);
+                            }
+
+                            ui.with_layout(
+                                egui::Layout::right_to_left(egui::Align::Center),
+                                |ui| {
+                                    let next_resp = ui.add(
+                                        egui::Button::new(
+                                            egui::RichText::new("Next")
+                                                .strong()
+                                                .size(13.0)
+                                                .color(egui::Color32::from_rgb(0x10, 0x12, 0x16)),
+                                        )
+                                        .fill(theme::COLOR_ACCENT_PRIMARY)
+                                        .corner_radius(egui::CornerRadius::same(6))
+                                        .min_size(egui::vec2(90.0, 34.0)),
+                                    );
+                                    next_resp.widget_info(|| {
+                                        egui::WidgetInfo::labeled(
+                                            egui::WidgetType::Button,
+                                            true,
+                                            theme::ONBOARDING_NEXT_BUTTON.name,
+                                        )
+                                    });
+                                    if next_resp.clicked() {
+                                        self.model.advance_onboarding();
+                                    }
+                                },
+                            );
+                        }
+                        app::OnboardingStep::Done => {
+                            let back_resp = ui.add(
+                                egui::Button::new(
+                                    egui::RichText::new("← Back")
+                                        .strong()
+                                        .size(12.5)
+                                        .color(theme::COLOR_TEXT_PRIMARY),
+                                )
+                                .fill(theme::COLOR_BG_CARD_HOVER)
+                                .stroke(egui::Stroke::NONE)
+                                .corner_radius(egui::CornerRadius::same(6))
+                                .min_size(egui::vec2(90.0, 34.0)),
+                            );
+                            back_resp.widget_info(|| {
+                                egui::WidgetInfo::labeled(
+                                    egui::WidgetType::Button,
+                                    true,
+                                    theme::ONBOARDING_BACK_BUTTON.name,
+                                )
+                            });
+                            if back_resp.clicked() {
+                                self.model.onboarding = Some(app::OnboardingStep::TrySwitching);
+                            }
+
+                            ui.with_layout(
+                                egui::Layout::right_to_left(egui::Align::Center),
+                                |ui| {
+                                    let finish_resp = ui.add(
+                                        egui::Button::new(
+                                            egui::RichText::new("Start Using Wira Desk")
+                                                .strong()
+                                                .size(13.0)
+                                                .color(egui::Color32::from_rgb(0x10, 0x12, 0x16)),
+                                        )
+                                        .fill(theme::COLOR_ACCENT_PRIMARY)
+                                        .corner_radius(egui::CornerRadius::same(6))
+                                        .min_size(egui::vec2(170.0, 34.0)),
+                                    );
+                                    finish_resp.widget_info(|| {
+                                        egui::WidgetInfo::labeled(
+                                            egui::WidgetType::Button,
+                                            true,
+                                            theme::ONBOARDING_FINISH_BUTTON.name,
+                                        )
+                                    });
+                                    if finish_resp.clicked() {
+                                        self.finish_onboarding();
+                                        ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
+                                    }
+                                },
+                            );
+                        }
+                    }
                 });
             });
     }
