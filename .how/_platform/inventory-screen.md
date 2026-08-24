@@ -44,10 +44,11 @@ The system tray icon reflects the 3-Tier error protocol via visual overlays:
 
 | No | Screen | Route | States | Owning component | UC served |
 | --- | --- | --- | --- | --- | --- |
-| 1 | `settings/General` | `/general` | — | `settings` |  |
-| 2 | `settings/Shortcuts` | `/shortcuts` | — | `settings` |  |
-| 3 | `settings/Layout` | `/layout` | — | `settings` |  |
-| 4 | `settings/About` | `/about` | — | `settings` |  |
-| 5 | `onboarding/Welcome` | `/welcome` | — | `settings` |  |
-| 6 | `onboarding/TrySwitching` | `/try-switching` | — | `settings` |  |
-| 7 | `onboarding/Done` | `/done` | — | `settings` |  |
+| 1 | `settings/General` | `/general` | — | `settings` | `UC-6` |
+| 2 | `settings/Shortcuts` | `/shortcuts` | — | `settings` | `UC-4` |
+| 3 | `settings/Layout` | `/layout` | — | `settings` | `UC-2` |
+| 8 | `settings/VmExceptions` | `/vm-exceptions` | — | `settings` | `UC-1` |
+| 4 | `settings/About` | `/about` | — | `settings` | `UC-4` |
+| 5 | `onboarding/Welcome` | `/welcome` | — | `settings` | `UC-5` |
+| 6 | `onboarding/TrySwitching` | `/try-switching` | — | `settings` | `UC-5` |
+| 7 | `onboarding/Done` | `/done` | — | `settings` | `UC-5` |

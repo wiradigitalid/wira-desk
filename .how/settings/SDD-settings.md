@@ -28,7 +28,7 @@ The three Logical Components (LCs) operate strictly within the `settings` contai
 
 | LC | type | Responsibility |
 | --- | --- | --- |
-| `LC-settings-shell` | ui-composite | Hosts the `eframe` window and immediate-mode `egui` rendering loops; manages pane routing (`General`, `Shortcuts`, `Layout`, `About`); detects OS theme (`AppsUseLightTheme`) and applies two-theme visuals with widened focus outlines; implements first-run onboarding wizard progression; renders save feedback and diagnostic typeface information. |
+| `LC-settings-shell` | ui-composite | Hosts the `eframe` window and immediate-mode `egui` rendering loops; manages frameless window shell (`with_decorations(false)`) and 5-pane routing (`General`, `Shortcuts`, `Layout & Snapping`, `VM & Exceptions`, `About`); detects OS theme (`AppsUseLightTheme`) and applies two-theme visuals with widened focus outlines; implements first-run onboarding wizard progression; renders save feedback and diagnostic typeface information. |
 | `LC-config-writer` | service | Executes strict pre-persistence shortcut validation; performs atomic file writes (`Config::save`) to `%APPDATA%\WiraDesk\config.toml`; dispatches non-blocking `WM_APP_RELOAD_CONFIG` (0x8001) signals via `PostMessageW` to `WiraDeskDaemonHiddenWindow`. It records the auto-start *preference* only; the scheduled task itself is created and deleted by the daemon (`daemon::autostart`) when it reloads config. |
 | `LC-shortcut-capturer` | control | Implements interactive key interception within the Settings window; translates raw egui input events into canonical modifier-plus-key strings (`ctrl+shift+a`); enforces modifier requirements; exposes live first-class `Listening` state and screen reader announcements via AccessKit. |
 

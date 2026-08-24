@@ -1,5 +1,7 @@
 /target/
 /out/
+__pycache__/
+*.pyc
 
 # Local-only editor overrides — not part of the committed agent configuration.
 /.cursorrules.local

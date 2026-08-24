@@ -16,7 +16,7 @@ created: 2026-08-21
 
 `LC-settings-shell` is the egui/eframe presentation layer for `wiradesk-settings.exe`. It owns:
 
-1. Application frame, navigation tabs (Shortcuts, General, About), and adaptive light/dark theming (FR-19, AD-11a).
+1. Application frameless shell (`with_decorations(false)`), navigation tabs (General, Shortcuts, Layout & Snapping, VM & Exceptions, About), and adaptive light/dark theming (FR-19, AD-11a).
 2. Wiring shortcut fields to `LC-shortcut-capturer` listening mode (FR-18).
 3. Tab order across all interactive controls (FR-20, LBR-ST-5).
 4. First-run onboarding panels when launched with `--onboarding` (FR-17, UC-5).

@@ -20,8 +20,9 @@ Wira Desk adheres to native Windows 11 Fluent 2 Design and Mica Material design 
 
 ## Design Tokens
 
-### 1. Color Palette (Dark Theme — Default)
+### 1. Color Palette
 
+#### Dark Theme (Default)
 | Token | Hex Value | Scope | Purpose |
 |---|---|---|---|
 | `bg_page` | `#121418` | Settings UI | Outer window ground canvas / page background |
@@ -40,6 +41,28 @@ Wira Desk adheres to native Windows 11 Fluent 2 Design and Mica Material design 
 | `text_secondary` | `#A0A6B4` | Settings UI | Secondary descriptions, subheadings, and guide text |
 | `text_tertiary` | `#6B7280` | Settings UI | Captions, shortcut hints, and metadata |
 | `signal_success` | `#6CCB5F` | Global / Settings | Active daemon status dot indicator |
+| `tray_alert` | `#E81123` | Global / Tray | Warning dot (Tier 2) and critical error cross (Tier 3) overlay badge |
+| `focus_ring_stroke`| `2.0 pt` | Settings UI | High-contrast keyboard navigation focus outline |
+
+#### Light Theme (OS System Adaptive)
+| Token | Hex Value | Scope | Purpose |
+|---|---|---|---|
+| `bg_page` | `#F0F3F8` | Settings UI | Outer window ground canvas / page background |
+| `bg_mica` | `#F3F3F3` | Settings UI | Main window surface (Mica Light container) |
+| `bg_sidebar` | `#E8ECF2` | Settings UI | Left vertical sidebar navigation column |
+| `bg_card` | `#FFFFFF` | Settings UI | Grouped settings card container surface |
+| `bg_card_hover` | `#FBFBFB` | Settings UI | Hover state for card rows and sidebar items |
+| `bg_subtle` | `#F4F5F8` | Settings UI | Sunken area / sandbox preview container |
+| `bg_keycap` | `#F0F2F5` | Settings UI | Physical shortcut keycap button background |
+| `stroke_card` | `rgba(0, 0, 0, 0.09)` | Settings UI | Subtle border outline on cards and dialog shells |
+| `stroke_divider` | `rgba(0, 0, 0, 0.08)` | Settings UI | Fine horizontal divider line inside card groups |
+| `accent_primary` | `#0067C0` | Settings UI | Active Windows 11 blue accent (Switch on, Save button, Selection) |
+| `accent_hover` | `#1879CD` | Settings UI | Primary accent hover state |
+| `accent_subtle` | `rgba(0, 103, 192, 0.10)` | Settings UI | Soft accent background highlight |
+| `text_primary` | `#1C1F24` | Settings UI | Primary titles, headings, and high-contrast labels |
+| `text_secondary` | `#5C6370` | Settings UI | Secondary descriptions, subheadings, and guide text |
+| `text_tertiary` | `#8C93A0` | Settings UI | Captions, shortcut hints, and metadata |
+| `signal_success` | `#0F7B0F` | Global / Settings | Active daemon status dot indicator |
 | `tray_alert` | `#E81123` | Global / Tray | Warning dot (Tier 2) and critical error cross (Tier 3) overlay badge |
 | `focus_ring_stroke`| `2.0 pt` | Settings UI | High-contrast keyboard navigation focus outline |
 
