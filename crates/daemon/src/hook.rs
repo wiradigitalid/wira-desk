@@ -252,7 +252,16 @@ where
         };
     }
 
-    let Some(cmd) = match_shortcut(rt.primary, rt.fallback, rt.mods, vk as u16) else {
+    let Some(cmd) = match_shortcut(
+        rt.primary,
+        rt.fallback,
+        rt.snap_left,
+        rt.snap_right,
+        rt.snap_maximize,
+        rt.stack,
+        rt.mods,
+        vk as u16,
+    ) else {
         return KeyHandleOutcome {
             disposition: KeyHandleResult::PassToNext,
             enqueued: false,
@@ -425,9 +434,14 @@ impl ModifierState {
 }
 
 /// Pure shortcut equality match → command byte.
+#[allow(clippy::too_many_arguments)]
 pub fn match_shortcut(
     primary: Shortcut,
     fallback: Shortcut,
+    snap_left: Shortcut,
+    snap_right: Shortcut,
+    snap_maximize: Shortcut,
+    stack: Shortcut,
     mods: ModifierState,
     vk: u16,
 ) -> Option<u8> {
@@ -440,6 +454,14 @@ pub fn match_shortcut(
     };
     if current == primary || current == fallback {
         Some(Command::Cycle.as_u8())
+    } else if current == snap_left {
+        Some(Command::SnapLeft.as_u8())
+    } else if current == snap_right {
+        Some(Command::SnapRight.as_u8())
+    } else if current == snap_maximize {
+        Some(Command::SnapMaximize.as_u8())
+    } else if current == stack {
+        Some(Command::OverlappingStack.as_u8())
     } else {
         None
     }
@@ -464,6 +486,10 @@ struct HookRuntime {
     h_mod: HINSTANCE,
     primary: Shortcut,
     fallback: Shortcut,
+    snap_left: Shortcut,
+    snap_right: Shortcut,
+    snap_maximize: Shortcut,
+    stack: Shortcut,
     mods: ModifierState,
     last_throttle_ms: u64,
     swallow_release_vk: u16,
@@ -606,9 +632,13 @@ fn resolve_shortcut(configured: &str, default: &str) -> Shortcut {
         .unwrap_or_else(|| Shortcut::parse("win+backtick").expect("default shortcut"))
 }
 
-fn load_shortcuts(worker_hwnd: HWND) -> (Shortcut, Shortcut) {
+fn load_shortcuts(
+    worker_hwnd: HWND,
+) -> (Shortcut, Shortcut, Shortcut, Shortcut, Shortcut, Shortcut) {
     let cfg = Config::load_or_default(&config_path());
     let defaults = SwitcherConfig::default();
+    let snap_defaults = shared::config::SnappingConfig::default();
+    let layout_defaults = shared::config::LayoutConfig::default();
     let primary = match Shortcut::parse(&cfg.switcher.shortcut) {
         Some(s) => s,
         None => {
@@ -629,7 +659,54 @@ fn load_shortcuts(worker_hwnd: HWND) -> (Shortcut, Shortcut) {
             resolve_shortcut(&defaults.fallback_shortcut, "alt+backtick")
         }
     };
-    (primary, fallback)
+    let snap_left = match Shortcut::parse(&cfg.snapping.snap_half_left) {
+        Some(s) => s,
+        None => {
+            crate::log::warn(
+                worker_hwnd,
+                "Invalid snap_half_left shortcut; using default ctrl+win+left",
+            );
+            resolve_shortcut(&snap_defaults.snap_half_left, "ctrl+win+left")
+        }
+    };
+    let snap_right = match Shortcut::parse(&cfg.snapping.snap_half_right) {
+        Some(s) => s,
+        None => {
+            crate::log::warn(
+                worker_hwnd,
+                "Invalid snap_half_right shortcut; using default ctrl+win+right",
+            );
+            resolve_shortcut(&snap_defaults.snap_half_right, "ctrl+win+right")
+        }
+    };
+    let snap_maximize = match Shortcut::parse(&cfg.snapping.snap_maximize) {
+        Some(s) => s,
+        None => {
+            crate::log::warn(
+                worker_hwnd,
+                "Invalid snap_maximize shortcut; using default ctrl+win+enter",
+            );
+            resolve_shortcut(&snap_defaults.snap_maximize, "ctrl+win+enter")
+        }
+    };
+    let stack = match Shortcut::parse(&cfg.layout.stack_shortcut) {
+        Some(s) => s,
+        None => {
+            crate::log::warn(
+                worker_hwnd,
+                "Invalid stack_shortcut; using default ctrl+win+down",
+            );
+            resolve_shortcut(&layout_defaults.stack_shortcut, "ctrl+win+down")
+        }
+    };
+    (
+        primary,
+        fallback,
+        snap_left,
+        snap_right,
+        snap_maximize,
+        stack,
+    )
 }
 
 unsafe extern "system" fn low_level_keyboard_proc(
@@ -757,6 +834,10 @@ unsafe fn handle_thread_message(rt: &mut HookRuntime, msg: &MSG) -> bool {
             if let Some(snapshot) = take_staged_snapshot() {
                 rt.primary = snapshot.primary;
                 rt.fallback = snapshot.fallback;
+                rt.snap_left = snapshot.snap_left;
+                rt.snap_right = snapshot.snap_right;
+                rt.snap_maximize = snapshot.snap_maximize;
+                rt.stack = snapshot.stack;
                 rt.bypass_policy = snapshot.bypass;
                 #[cfg(debug_assertions)]
                 crate::util::append_debug_trace("CONFIG_SNAPSHOT: hook state replaced");
@@ -841,7 +922,8 @@ fn hook_thread_main(worker_hwnd: HWND, h_mod: HINSTANCE) {
             return;
         }
 
-        let (primary, fallback) = load_shortcuts(worker_hwnd);
+        let (primary, fallback, snap_left, snap_right, snap_maximize, stack) =
+            load_shortcuts(worker_hwnd);
 
         // Normalize the VM/RDP policy here — before the hook is installed and
         // therefore off the callback path entirely. It stays
@@ -872,6 +954,10 @@ fn hook_thread_main(worker_hwnd: HWND, h_mod: HINSTANCE) {
             h_mod,
             primary,
             fallback,
+            snap_left,
+            snap_right,
+            snap_maximize,
+            stack,
             mods: ModifierState::default(),
             last_throttle_ms: 0,
             swallow_release_vk: 0,
@@ -936,13 +1022,54 @@ mod tests {
     fn exact_primary_match() {
         let primary = Shortcut::parse("win+backtick").unwrap();
         let fallback = Shortcut::parse("alt+backtick").unwrap();
+        let snap_left = Shortcut::parse("ctrl+win+left").unwrap();
+        let snap_right = Shortcut::parse("ctrl+win+right").unwrap();
+        let snap_maximize = Shortcut::parse("ctrl+win+enter").unwrap();
+        let stack = Shortcut::parse("ctrl+win+down").unwrap();
         let mods = ModifierState {
             win: true,
             ..Default::default()
         };
         assert_eq!(
-            match_shortcut(primary, fallback, mods, 0xC0),
+            match_shortcut(
+                primary,
+                fallback,
+                snap_left,
+                snap_right,
+                snap_maximize,
+                stack,
+                mods,
+                0xC0
+            ),
             Some(Command::Cycle.as_u8())
+        );
+    }
+
+    #[test]
+    fn exact_snap_left_match() {
+        let primary = Shortcut::parse("win+backtick").unwrap();
+        let fallback = Shortcut::parse("alt+backtick").unwrap();
+        let snap_left = Shortcut::parse("ctrl+win+left").unwrap();
+        let snap_right = Shortcut::parse("ctrl+win+right").unwrap();
+        let snap_maximize = Shortcut::parse("ctrl+win+enter").unwrap();
+        let stack = Shortcut::parse("ctrl+win+down").unwrap();
+        let mods = ModifierState {
+            win: true,
+            ctrl: true,
+            ..Default::default()
+        };
+        assert_eq!(
+            match_shortcut(
+                primary,
+                fallback,
+                snap_left,
+                snap_right,
+                snap_maximize,
+                stack,
+                mods,
+                0x25 // VK_LEFT
+            ),
+            Some(Command::SnapLeft.as_u8())
         );
     }
 
@@ -950,12 +1077,26 @@ mod tests {
     fn extra_modifier_is_non_match() {
         let primary = Shortcut::parse("win+backtick").unwrap();
         let fallback = Shortcut::parse("alt+backtick").unwrap();
+        let snap_left = Shortcut::parse("ctrl+win+left").unwrap();
+        let snap_right = Shortcut::parse("ctrl+win+right").unwrap();
+        let snap_maximize = Shortcut::parse("ctrl+win+enter").unwrap();
+        let stack = Shortcut::parse("ctrl+win+down").unwrap();
         let mods = ModifierState {
             win: true,
             ctrl: true,
             ..Default::default()
         };
-        assert!(match_shortcut(primary, fallback, mods, 0xC0).is_none());
+        assert!(match_shortcut(
+            primary,
+            fallback,
+            snap_left,
+            snap_right,
+            snap_maximize,
+            stack,
+            mods,
+            0xC0
+        )
+        .is_none());
     }
 
     #[test]
@@ -966,11 +1107,19 @@ mod tests {
     }
 
     fn test_runtime(primary: Shortcut, fallback: Shortcut) -> HookRuntime {
+        let snap_left = Shortcut::parse("ctrl+win+left").unwrap();
+        let snap_right = Shortcut::parse("ctrl+win+right").unwrap();
+        let snap_maximize = Shortcut::parse("ctrl+win+enter").unwrap();
+        let stack = Shortcut::parse("ctrl+win+down").unwrap();
         HookRuntime {
             worker_hwnd: 0,
             h_mod: 0,
             primary,
             fallback,
+            snap_left,
+            snap_right,
+            snap_maximize,
+            stack,
             mods: ModifierState::default(),
             last_throttle_ms: 0,
             swallow_release_vk: 0,
@@ -1071,6 +1220,10 @@ mod tests {
         crate::config::HookSnapshot {
             primary: Shortcut::parse(primary).unwrap(),
             fallback: Shortcut::parse("alt+backtick").unwrap(),
+            snap_left: Shortcut::parse("ctrl+win+left").unwrap(),
+            snap_right: Shortcut::parse("ctrl+win+right").unwrap(),
+            snap_maximize: Shortcut::parse("ctrl+win+enter").unwrap(),
+            stack: Shortcut::parse("ctrl+win+down").unwrap(),
             bypass: BypassPolicy::default(),
         }
     }

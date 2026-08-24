@@ -27,9 +27,8 @@ use crate::util::{debug_log, message_box, wide};
 const CMD_SETTINGS: u32 = 1;
 const CMD_VIEW_LOGS: u32 = 2;
 const CMD_AUTOSTART: u32 = 3;
-const CMD_CHECK_UPDATES: u32 = 4;
-const CMD_ABOUT: u32 = 5;
-const CMD_EXIT: u32 = 6;
+const CMD_ABOUT: u32 = 4;
+const CMD_EXIT: u32 = 5;
 
 use shared::constants::SETTINGS_EXE_NAME;
 
@@ -86,13 +85,7 @@ pub fn show(hwnd: HWND, x: i32, y: i32) {
             wide("&Auto-Start").as_ptr(),
         );
         AppendMenuW(hmenu, MF_SEPARATOR, 0, null());
-        // Group 2: Check for Updates, About.
-        AppendMenuW(
-            hmenu,
-            MF_STRING,
-            CMD_CHECK_UPDATES as usize,
-            wide("&Check for Updates...").as_ptr(),
-        );
+        // Group 2: About.
         AppendMenuW(
             hmenu,
             MF_STRING,
@@ -124,7 +117,6 @@ pub fn show(hwnd: HWND, x: i32, y: i32) {
             CMD_SETTINGS => launch_settings(),
             CMD_VIEW_LOGS => view_logs(),
             CMD_AUTOSTART => toggle_autostart(),
-            CMD_CHECK_UPDATES => show_check_for_updates(hwnd),
             CMD_ABOUT => show_about(hwnd),
             CMD_EXIT => request_exit(hwnd),
             _ => {}
@@ -241,21 +233,10 @@ fn toggle_autostart() {
 /// About → version info.
 fn show_about(hwnd: HWND) {
     let text = format!(
-        "Wira Desk {}\n\nSame-app window switching and window arrangement for Windows.\nRuns as an elevated system-tray daemon.",
+        "Wira Desk v{}\n\nSame-application window switcher and window arrangement for Windows 10/11.\n\nRuns quietly in the background as an elevated system tray service.",
         env!("CARGO_PKG_VERSION")
     );
     message_box(hwnd, &text, "About Wira Desk", MB_OK | MB_ICONINFORMATION);
-}
-
-/// Check for Updates → placeholder (update mechanism via MSIX distribution,
-/// deferred outside this story's scope).
-fn show_check_for_updates(hwnd: HWND) {
-    message_box(
-        hwnd,
-        "Automatic update checking is not available yet.\n\nUpdates will be delivered through the app's distribution package (MSIX) in a future release.",
-        "Check for Updates",
-        MB_OK | MB_ICONINFORMATION,
-    );
 }
 
 #[cfg(test)]

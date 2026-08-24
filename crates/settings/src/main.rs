@@ -1,34 +1,115 @@
 #![windows_subsystem = "windows"]
 
 mod app;
+mod logo_data;
 mod persistence;
 mod theme;
 
 use eframe::egui;
+use windows_sys::Win32::Foundation::{CloseHandle, GetLastError, ERROR_ALREADY_EXISTS, FALSE};
+use windows_sys::Win32::System::Threading::CreateMutexW;
+use windows_sys::Win32::UI::WindowsAndMessaging::{
+    FindWindowW, SetForegroundWindow, ShowWindow, SW_RESTORE,
+};
 
+use shared::constants::SETTINGS_SINGLE_INSTANCE_MUTEX;
 use shared::{config_path, migrate_appdata, Config};
 
 use app::{Pane, SaveFeedback, SettingsModel, ShortcutField};
 use persistence::{resolve_launch_intent, LaunchIntent};
 
+fn wide(s: &str) -> Vec<u16> {
+    s.encode_utf16().chain(std::iter::once(0)).collect()
+}
+
+fn format_shortcut_display(raw: &str) -> String {
+    if raw.is_empty() {
+        return "None".to_string();
+    }
+    raw.split('+')
+        .map(|token| {
+            let lower = token.to_lowercase();
+            match lower.trim() {
+                "win" => "Win".to_string(),
+                "ctrl" => "Ctrl".to_string(),
+                "alt" => "Alt".to_string(),
+                "shift" => "Shift".to_string(),
+                "backtick" => "`".to_string(),
+                "enter" => "Enter".to_string(),
+                "tab" => "Tab".to_string(),
+                "space" => "Space".to_string(),
+                "escape" => "Esc".to_string(),
+                "left" => "←".to_string(),
+                "right" => "→".to_string(),
+                "up" => "↑".to_string(),
+                "down" => "↓".to_string(),
+                "f1" => "F1".to_string(),
+                "f2" => "F2".to_string(),
+                "f3" => "F3".to_string(),
+                "f4" => "F4".to_string(),
+                "f5" => "F5".to_string(),
+                "f6" => "F6".to_string(),
+                "f7" => "F7".to_string(),
+                "f8" => "F8".to_string(),
+                "f9" => "F9".to_string(),
+                "f10" => "F10".to_string(),
+                "f11" => "F11".to_string(),
+                "f12" => "F12".to_string(),
+                _ => token.trim().to_uppercase(),
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(" + ")
+}
+
 fn main() -> eframe::Result {
     migrate_appdata();
+
+    // Enforce single-instance for settings executable
+    let mutex_name = wide(SETTINGS_SINGLE_INSTANCE_MUTEX);
+    // SAFETY: `mutex_name` is NUL-terminated wide string that outlives the call.
+    let mutex = unsafe { CreateMutexW(std::ptr::null(), FALSE, mutex_name.as_ptr()) };
+    // SAFETY: `GetLastError` takes no parameters and reads thread-local error state from the previous Win32 call.
+    if mutex == 0 || unsafe { GetLastError() } == ERROR_ALREADY_EXISTS {
+        // Bring existing Settings window to foreground if present
+        let title = wide("Wira Desk");
+        // SAFETY: `title` is a NUL-terminated wide string and handles are validated before use.
+        unsafe {
+            let hwnd = FindWindowW(std::ptr::null(), title.as_ptr());
+            if hwnd != 0 {
+                ShowWindow(hwnd, SW_RESTORE);
+                SetForegroundWindow(hwnd);
+            }
+            if mutex != 0 {
+                CloseHandle(mutex);
+            }
+        }
+        return Ok(());
+    }
+
     let intent = resolve_launch_intent(std::env::args());
     let saved = Config::load_or_default(&config_path());
 
     let (width, height) = if intent == LaunchIntent::Onboarding {
         (580.0, 380.0)
     } else {
-        (660.0, 580.0)
+        (680.0, 590.0)
+    };
+
+    let icon_data = egui::IconData {
+        rgba: include_bytes!("logo_64.rgba").to_vec(),
+        width: 64,
+        height: 64,
     };
 
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_inner_size([width, height])
-            .with_min_inner_size([500.0, 340.0])
+            .with_min_inner_size([540.0, 400.0])
             .with_title("Wira Desk")
+            .with_icon(icon_data)
             .with_decorations(false)
-            .with_transparent(true),
+            .with_transparent(false),
         ..Default::default()
     };
 
@@ -170,10 +251,10 @@ impl SettingsApp {
                 );
                 ui.add_space(6.0);
 
-                // 3. Step Description (Secondary text, 13pt, clean line height)
+                // 3. Step Description (Secondary text, 13.5pt, clean line height)
                 ui.label(
                     egui::RichText::new(step.body())
-                        .size(13.0)
+                        .size(13.5)
                         .color(theme::COLOR_TEXT_SECONDARY),
                 );
 
@@ -196,14 +277,14 @@ impl SettingsApp {
                                             ui.label(
                                                 egui::RichText::new("Same-Application Spatial Cycling")
                                                     .strong()
-                                                    .size(13.0)
+                                                    .size(13.5)
                                                     .color(theme::COLOR_TEXT_PRIMARY),
                                             );
                                             ui.label(
                                                 egui::RichText::new(
                                                     "Press Win + ` to cycle focus between windows of the active app with zero visual delay.",
                                                 )
-                                                .size(11.5)
+                                                .size(12.0)
                                                 .color(theme::COLOR_TEXT_SECONDARY),
                                             );
                                         });
@@ -220,14 +301,14 @@ impl SettingsApp {
                                             ui.label(
                                                 egui::RichText::new("Multi-Monitor & Desktop Isolation")
                                                     .strong()
-                                                    .size(13.0)
+                                                    .size(13.5)
                                                     .color(theme::COLOR_TEXT_PRIMARY),
                                             );
                                             ui.label(
                                                 egui::RichText::new(
                                                     "Window switching stays locked strictly to your active physical display and desktop.",
                                                 )
-                                                .size(11.5)
+                                                .size(12.0)
                                                 .color(theme::COLOR_TEXT_SECONDARY),
                                             );
                                         });
@@ -487,7 +568,7 @@ impl SettingsApp {
                                                 egui::RichText::new(
                                                     "Wira Desk runs quietly in the background. Right-click the tray icon anytime for Settings.",
                                                 )
-                                                .size(11.5)
+                                                .size(12.0)
                                                 .color(theme::COLOR_TEXT_SECONDARY),
                                             );
                                         });
@@ -504,14 +585,14 @@ impl SettingsApp {
                                             ui.label(
                                                 egui::RichText::new("Fully Customizable")
                                                     .strong()
-                                                    .size(13.0)
+                                                    .size(13.5)
                                                     .color(theme::COLOR_TEXT_PRIMARY),
                                             );
                                             ui.label(
                                                 egui::RichText::new(
                                                     "Customize shortcuts, window snapping parameters, and VM passthrough rules anytime.",
                                                 )
-                                                .size(11.5)
+                                                .size(12.0)
                                                 .color(theme::COLOR_TEXT_SECONDARY),
                                             );
                                         });
@@ -711,90 +792,149 @@ impl SettingsApp {
 
         ui.vertical(|ui| {
             // 1. Fluent 2 Modern Header Bar (Custom Frameless Window Titlebar)
-            let header_response = egui::Frame::new()
+            let win_width = ui.available_width();
+            let header_bar_rect =
+                egui::Rect::from_min_size(ui.cursor().min, egui::vec2(win_width, 36.0));
+
+            // Drag handler covers the non-button area of the titlebar
+            let drag_rect = egui::Rect::from_min_max(
+                header_bar_rect.min,
+                egui::pos2(header_bar_rect.right() - 88.0, header_bar_rect.bottom()),
+            );
+            let drag_resp = ui.interact(
+                drag_rect,
+                ui.id().with("settings_titlebar_drag"),
+                egui::Sense::drag(),
+            );
+            if drag_resp.drag_started() {
+                ui.ctx().send_viewport_cmd(egui::ViewportCommand::StartDrag);
+            }
+
+            egui::Frame::new()
                 .fill(theme::COLOR_BG_MICA)
-                .inner_margin(egui::Margin::symmetric(16, 8))
+                .inner_margin(egui::Margin {
+                    left: 14,
+                    right: 0,
+                    top: 0,
+                    bottom: 0,
+                })
                 .show(ui, |ui| {
                     ui.set_width(ui.available_width());
-                    ui.horizontal(|ui| {
-                        ui.label(
-                            egui::RichText::new("🪟 Wira Desk — Settings")
-                                .strong()
-                                .size(13.5)
-                                .color(theme::COLOR_TEXT_PRIMARY),
-                        );
+                    ui.set_height(36.0);
+                    ui.horizontal_centered(|ui| {
+                        ui.horizontal(|ui| {
+                            ui.spacing_mut().item_spacing.x = 8.0;
+                            // Master Logo Pixel Rendering (18x18 Full-size)
+                            let (icon_rect, _) = ui
+                                .allocate_exact_size(egui::vec2(18.0, 18.0), egui::Sense::hover());
+                            if ui.is_rect_visible(icon_rect) {
+                                for y in 0..18 {
+                                    for x in 0..18 {
+                                        let idx = y * 18 + x;
+                                        let [r, g, b, a] = logo_data::APP_LOGO_18_RGBA[idx];
+                                        if a > 0 {
+                                            let pixel_pos = egui::pos2(
+                                                icon_rect.left() + x as f32,
+                                                icon_rect.top() + y as f32,
+                                            );
+                                            ui.painter().rect_filled(
+                                                egui::Rect::from_min_size(
+                                                    pixel_pos,
+                                                    egui::vec2(1.0, 1.0),
+                                                ),
+                                                egui::CornerRadius::ZERO,
+                                                egui::Color32::from_rgba_unmultiplied(r, g, b, a),
+                                            );
+                                        }
+                                    }
+                                }
+                            }
+                            ui.label(
+                                egui::RichText::new("Wira Desk — Settings")
+                                    .strong()
+                                    .size(13.5)
+                                    .color(theme::COLOR_TEXT_PRIMARY),
+                            );
+                        });
                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                            let (close_rect, close_resp) = ui
-                                .allocate_exact_size(egui::vec2(32.0, 24.0), egui::Sense::click());
+                            ui.spacing_mut().item_spacing.x = 0.0;
+                            let btn_size = egui::vec2(46.0, 36.0);
+
+                            // Close Button (Full Titlebar Height)
+                            let (close_rect, close_resp) =
+                                ui.allocate_exact_size(btn_size, egui::Sense::click());
                             if close_resp.clicked() {
                                 ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
                             }
                             if ui.is_rect_visible(close_rect) {
-                                let (fill, text_color) = if close_resp.hovered() {
+                                let (fill, glyph_col) = if close_resp.hovered() {
                                     (
                                         egui::Color32::from_rgb(0xc4, 0x2b, 0x1c),
                                         egui::Color32::WHITE,
                                     )
                                 } else {
-                                    (egui::Color32::TRANSPARENT, theme::COLOR_TEXT_SECONDARY)
+                                    (egui::Color32::TRANSPARENT, theme::COLOR_TEXT_PRIMARY)
                                 };
                                 if fill != egui::Color32::TRANSPARENT {
                                     ui.painter().rect_filled(
                                         close_rect,
-                                        egui::CornerRadius::same(4),
+                                        egui::CornerRadius::ZERO,
                                         fill,
                                     );
                                 }
-                                ui.painter().text(
-                                    close_rect.center(),
-                                    egui::Align2::CENTER_CENTER,
-                                    "✕",
-                                    egui::FontId::proportional(12.0),
-                                    text_color,
+                                let center = close_rect.center();
+                                let d = 5.0;
+                                ui.painter().line_segment(
+                                    [
+                                        egui::pos2(center.x - d, center.y - d),
+                                        egui::pos2(center.x + d, center.y + d),
+                                    ],
+                                    egui::Stroke::new(1.2, glyph_col),
+                                );
+                                ui.painter().line_segment(
+                                    [
+                                        egui::pos2(center.x + d, center.y - d),
+                                        egui::pos2(center.x - d, center.y + d),
+                                    ],
+                                    egui::Stroke::new(1.2, glyph_col),
                                 );
                             }
 
-                            let (min_rect, min_resp) = ui
-                                .allocate_exact_size(egui::vec2(32.0, 24.0), egui::Sense::click());
+                            // Minimize Button (Full Titlebar Height)
+                            let (min_rect, min_resp) =
+                                ui.allocate_exact_size(btn_size, egui::Sense::click());
                             if min_resp.clicked() {
                                 ui.ctx()
                                     .send_viewport_cmd(egui::ViewportCommand::Minimized(true));
                             }
                             if ui.is_rect_visible(min_rect) {
-                                let (fill, text_color) = if min_resp.hovered() {
+                                let (fill, glyph_col) = if min_resp.hovered() {
                                     (theme::COLOR_BG_CARD_HOVER, theme::COLOR_TEXT_PRIMARY)
                                 } else {
-                                    (egui::Color32::TRANSPARENT, theme::COLOR_TEXT_SECONDARY)
+                                    (egui::Color32::TRANSPARENT, theme::COLOR_TEXT_PRIMARY)
                                 };
                                 if fill != egui::Color32::TRANSPARENT {
                                     ui.painter().rect_filled(
                                         min_rect,
-                                        egui::CornerRadius::same(4),
+                                        egui::CornerRadius::ZERO,
                                         fill,
                                     );
                                 }
-                                ui.painter().text(
-                                    min_rect.center(),
-                                    egui::Align2::CENTER_CENTER,
-                                    "—",
-                                    egui::FontId::proportional(12.0),
-                                    text_color,
+                                let center = min_rect.center();
+                                ui.painter().line_segment(
+                                    [
+                                        egui::pos2(center.x - 5.0, center.y),
+                                        egui::pos2(center.x + 5.0, center.y),
+                                    ],
+                                    egui::Stroke::new(1.2, glyph_col),
                                 );
                             }
                         });
                     });
                 });
 
-            if header_response
-                .response
-                .interact(egui::Sense::drag())
-                .drag_started()
-            {
-                ui.ctx().send_viewport_cmd(egui::ViewportCommand::StartDrag);
-            }
-
             // 2. Middle Body: Left Sidebar + Right Content Area
-            let footer_height = 54.0;
+            let footer_height = 56.0;
             let body_height = (ui.available_height() - footer_height).max(280.0);
 
             ui.allocate_ui_with_layout(
@@ -813,12 +953,12 @@ impl SettingsApp {
                                     drawn.push(pane.label());
                                     let selected = self.model.pane == pane;
 
-                                    let icon_text = match pane {
-                                        Pane::General => "⚙  General",
-                                        Pane::Shortcuts => "⌨  Shortcuts",
-                                        Pane::Layout => "🗂  Layout & Snapping",
-                                        Pane::VmExceptions => "🖥  VM & Exceptions",
-                                        Pane::About => "ℹ  About",
+                                    let (kind, label_text) = match pane {
+                                        Pane::General => (0, "General"),
+                                        Pane::Shortcuts => (1, "Shortcuts"),
+                                        Pane::Layout => (2, "Layout & Snapping"),
+                                        Pane::VmExceptions => (3, "VM & Exceptions"),
+                                        Pane::About => (4, "About"),
                                     };
 
                                     let desired_size = egui::vec2(165.0, 36.0);
@@ -857,18 +997,31 @@ impl SettingsApp {
                                             );
                                         }
 
+                                        let icon_color = if selected {
+                                            theme::COLOR_ACCENT_PRIMARY
+                                        } else {
+                                            theme::COLOR_TEXT_SECONDARY
+                                        };
+
                                         let text_color = if selected {
                                             theme::COLOR_TEXT_PRIMARY
                                         } else {
                                             theme::COLOR_TEXT_SECONDARY
                                         };
 
+                                        // Draw crisp vector icon for each sidebar navigation tab
+                                        let icon_box = egui::Rect::from_min_size(
+                                            egui::pos2(rect.left() + 14.0, rect.center().y - 7.0),
+                                            egui::vec2(14.0, 14.0),
+                                        );
+                                        draw_sidebar_icon(ui, kind, icon_box, icon_color);
+
                                         let text_pos =
-                                            egui::pos2(rect.left() + 14.0, rect.center().y - 7.0);
+                                            egui::pos2(rect.left() + 36.0, rect.center().y - 7.5);
                                         ui.painter().text(
                                             text_pos,
                                             egui::Align2::LEFT_TOP,
-                                            icon_text,
+                                            label_text,
                                             egui::FontId::proportional(13.0),
                                             text_color,
                                         );
@@ -901,26 +1054,53 @@ impl SettingsApp {
                 },
             );
 
-            // 3. Fixed Footer Status & Action Bar
+            // 3. Fixed Footer Status & Action Bar (Clean Single-Line Center Aligned)
             egui::Frame::new()
                 .fill(theme::COLOR_BG_CARD)
                 .inner_margin(egui::Margin::symmetric(16, 10))
                 .stroke(egui::Stroke::new(1.0, theme::COLOR_STROKE_CARD))
                 .show(ui, |ui| {
                     ui.set_width(ui.available_width());
-                    ui.horizontal(|ui| {
-                        // Left daemon status dot
-                        ui.painter().circle_filled(
-                            egui::pos2(ui.cursor().min.x + 4.0, ui.cursor().center().y),
-                            4.0,
-                            theme::COLOR_SUCCESS,
-                        );
-                        ui.add_space(14.0);
-                        ui.label(
-                            egui::RichText::new("Daemon running elevated (Active)")
-                                .small()
-                                .color(theme::COLOR_TEXT_SECONDARY),
-                        );
+                    ui.horizontal_centered(|ui| {
+                        // Left status indicator + text
+                        ui.horizontal(|ui| {
+                            let (dot_rect, _) =
+                                ui.allocate_exact_size(egui::vec2(8.0, 8.0), egui::Sense::hover());
+                            let is_error = matches!(self.model.feedback, SaveFeedback::Error(_));
+                            let dot_color = if is_error {
+                                ui.visuals().error_fg_color
+                            } else {
+                                theme::COLOR_SUCCESS
+                            };
+
+                            ui.painter()
+                                .circle_filled(dot_rect.center(), 4.0, dot_color);
+                            ui.add_space(6.0);
+
+                            let (status_text, text_color) = match &self.model.feedback {
+                                SaveFeedback::None => {
+                                    ("Wira Desk is Active", theme::COLOR_TEXT_PRIMARY)
+                                }
+                                SaveFeedback::Saved { reload_signalled } => {
+                                    let msg = if *reload_signalled {
+                                        "Settings saved and applied"
+                                    } else {
+                                        "Settings saved for next launch"
+                                    };
+                                    (msg, theme::COLOR_SUCCESS)
+                                }
+                                SaveFeedback::Error(msg) => {
+                                    (msg.as_str(), ui.visuals().error_fg_color)
+                                }
+                            };
+
+                            ui.label(
+                                egui::RichText::new(status_text)
+                                    .strong()
+                                    .size(12.5)
+                                    .color(text_color),
+                            );
+                        });
 
                         // Right action buttons (Revert & Save Changes)
                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
@@ -931,12 +1111,12 @@ impl SettingsApp {
                                 egui::Button::new(
                                     egui::RichText::new("Save Changes")
                                         .strong()
-                                        .size(12.5)
+                                        .size(13.0)
                                         .color(egui::Color32::from_rgb(0x10, 0x12, 0x16)),
                                 )
                                 .fill(theme::COLOR_ACCENT_PRIMARY)
                                 .corner_radius(egui::CornerRadius::same(6))
-                                .min_size(egui::vec2(110.0, 30.0)),
+                                .min_size(egui::vec2(115.0, 32.0)),
                             );
                             if save_btn.clicked() {
                                 self.model.save(&config_path());
@@ -952,25 +1132,10 @@ impl SettingsApp {
                                 .fill(theme::COLOR_BG_KEYCAP)
                                 .stroke(egui::Stroke::new(1.0, theme::COLOR_STROKE_CARD))
                                 .corner_radius(egui::CornerRadius::same(6))
-                                .min_size(egui::vec2(80.0, 30.0)),
+                                .min_size(egui::vec2(80.0, 32.0)),
                             );
                             if revert_btn.clicked() {
                                 self.model.revert();
-                            }
-
-                            match &self.model.feedback {
-                                SaveFeedback::None => {}
-                                SaveFeedback::Saved { reload_signalled } => {
-                                    let msg = if *reload_signalled {
-                                        "Settings saved and applied."
-                                    } else {
-                                        "Settings saved. Applies on next launch."
-                                    };
-                                    ui.colored_label(theme::COLOR_SUCCESS, msg);
-                                }
-                                SaveFeedback::Error(msg) => {
-                                    ui.colored_label(ui.visuals().error_fg_color, msg);
-                                }
                             }
                         });
                     });
@@ -991,13 +1156,17 @@ impl SettingsApp {
         let c = theme::TOGGLE_AUTO_START;
         drawn.push(c.name);
 
-        ui.heading("General Settings");
         ui.label(
-            egui::RichText::new(
-                "Daemon status, OS startup integration, and spatial isolation integrity.",
-            )
-            .small()
-            .color(theme::COLOR_TEXT_SECONDARY),
+            egui::RichText::new("General Settings")
+                .strong()
+                .size(18.5)
+                .color(theme::COLOR_TEXT_PRIMARY),
+        );
+        ui.add_space(2.0);
+        ui.label(
+            egui::RichText::new("Startup integration and multi-monitor spatial settings.")
+                .size(12.5)
+                .color(theme::COLOR_TEXT_SECONDARY),
         );
         ui.add_space(12.0);
 
@@ -1010,20 +1179,26 @@ impl SettingsApp {
             .show(ui, |ui| {
                 ui.set_min_width(ui.available_width());
 
+                let control_width = 44.0;
+                let gap = 16.0;
+                let text_slot_w = (ui.available_width() - control_width - gap).max(180.0);
+
                 // Row 1: Auto-start
                 ui.horizontal(|ui| {
-                    ui.vertical(|ui| {
-                        ui.label(
-                            egui::RichText::new("Auto-start on Boot")
-                                .strong()
-                                .size(13.0)
-                                .color(theme::COLOR_TEXT_PRIMARY),
-                        );
-                        ui.label(
-                            egui::RichText::new(c.description)
-                                .small()
-                                .color(theme::COLOR_TEXT_SECONDARY),
-                        );
+                    ui.allocate_ui(egui::vec2(text_slot_w, 0.0), |ui| {
+                        ui.vertical(|ui| {
+                            ui.label(
+                                egui::RichText::new("Auto-start on Boot")
+                                    .strong()
+                                    .size(13.5)
+                                    .color(theme::COLOR_TEXT_PRIMARY),
+                            );
+                            ui.label(
+                                egui::RichText::new(c.description)
+                                    .size(12.0)
+                                    .color(theme::COLOR_TEXT_SECONDARY),
+                            );
+                        });
                     });
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         fluent_toggle_switch(ui, &mut self.model.draft.general.auto_start, c.name);
@@ -1036,25 +1211,30 @@ impl SettingsApp {
 
                 // Row 2: Spatial Preservation (Per-Monitor Lock)
                 ui.horizontal(|ui| {
-                    ui.vertical(|ui| {
-                        ui.label(
-                            egui::RichText::new("Spatial Preservation (Per-Monitor Lock)")
-                                .strong()
-                                .size(13.0)
-                                .color(theme::COLOR_TEXT_PRIMARY),
-                        );
-                        ui.label(
-                            egui::RichText::new(
-                                "Locks window cycling strictly to the currently active physical monitor.",
-                            )
-                            .small()
-                            .color(theme::COLOR_TEXT_SECONDARY),
-                        );
+                    ui.allocate_ui(egui::vec2(text_slot_w, 0.0), |ui| {
+                        ui.vertical(|ui| {
+                            ui.label(
+                                egui::RichText::new("Current Monitor Only")
+                                    .strong()
+                                    .size(13.5)
+                                    .color(theme::COLOR_TEXT_PRIMARY),
+                            );
+                            ui.label(
+                                egui::RichText::new(
+                                    "Switches windows only on your active display without jumping to other monitors.",
+                                )
+                                .size(12.0)
+                                .color(theme::COLOR_TEXT_SECONDARY),
+                            );
+                        });
                     });
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         let mut locked = true;
-                        let resp =
-                            fluent_toggle_switch(ui, &mut locked, "Spatial Preservation Lock");
+                        let resp = fluent_toggle_switch_disabled(
+                            ui,
+                            &mut locked,
+                            "Current Monitor Only",
+                        );
                         resp.on_hover_text(
                             "Spatial lock is an architectural guarantee in Wira Desk.",
                         );
@@ -1067,25 +1247,30 @@ impl SettingsApp {
 
                 // Row 3: Virtual Desktop Isolation
                 ui.horizontal(|ui| {
-                    ui.vertical(|ui| {
-                        ui.label(
-                            egui::RichText::new("Virtual Desktop Isolation")
-                                .strong()
-                                .size(13.0)
-                                .color(theme::COLOR_TEXT_PRIMARY),
-                        );
-                        ui.label(
-                            egui::RichText::new(
-                                "Prevents jumping across active Windows Virtual Desktop boundaries.",
-                            )
-                            .small()
-                            .color(theme::COLOR_TEXT_SECONDARY),
-                        );
+                    ui.allocate_ui(egui::vec2(text_slot_w, 0.0), |ui| {
+                        ui.vertical(|ui| {
+                            ui.label(
+                                egui::RichText::new("Current Virtual Desktop Only")
+                                    .strong()
+                                    .size(13.5)
+                                    .color(theme::COLOR_TEXT_PRIMARY),
+                            );
+                            ui.label(
+                                egui::RichText::new(
+                                    "Keeps window switching strictly inside your active Windows virtual desktop.",
+                                )
+                                .size(12.0)
+                                .color(theme::COLOR_TEXT_SECONDARY),
+                            );
+                        });
                     });
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         let mut isolated = true;
-                        let resp =
-                            fluent_toggle_switch(ui, &mut isolated, "Virtual Desktop Isolation");
+                        let resp = fluent_toggle_switch_disabled(
+                            ui,
+                            &mut isolated,
+                            "Current Virtual Desktop Only",
+                        );
                         resp.on_hover_text("Virtual desktop isolation is enabled by default.");
                     });
                 });
@@ -1096,24 +1281,27 @@ impl SettingsApp {
 
                 // Row 4: UX Honesty Mode
                 ui.horizontal(|ui| {
-                    ui.vertical(|ui| {
-                        ui.label(
-                            egui::RichText::new("UX Honesty Mode")
-                                .strong()
-                                .size(13.0)
-                                .color(theme::COLOR_TEXT_PRIMARY),
-                        );
-                        ui.label(
-                            egui::RichText::new(
-                                "Brings hanging or not-responding windows forward transparently.",
-                            )
-                            .small()
-                            .color(theme::COLOR_TEXT_SECONDARY),
-                        );
+                    ui.allocate_ui(egui::vec2(text_slot_w, 0.0), |ui| {
+                        ui.vertical(|ui| {
+                            ui.label(
+                                egui::RichText::new("Show Unresponsive Windows")
+                                    .strong()
+                                    .size(13.5)
+                                    .color(theme::COLOR_TEXT_PRIMARY),
+                            );
+                            ui.label(
+                                egui::RichText::new(
+                                    "Brings frozen or hanging windows to the front so you can see their status.",
+                                )
+                                .size(12.0)
+                                .color(theme::COLOR_TEXT_SECONDARY),
+                            );
+                        });
                     });
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         let mut honesty = true;
-                        let resp = fluent_toggle_switch(ui, &mut honesty, "UX Honesty Mode");
+                        let resp =
+                            fluent_toggle_switch_disabled(ui, &mut honesty, "Show Unresponsive Windows");
                         resp.on_hover_text(
                             "Ensures hanging windows are exposed cleanly to the user.",
                         );
@@ -1128,12 +1316,18 @@ impl SettingsApp {
         stops: &[&'static str],
         drawn: &mut Vec<&'static str>,
     ) {
-        ui.heading("Shortcuts Configuration");
+        ui.label(
+            egui::RichText::new("Shortcuts Configuration")
+                .strong()
+                .size(18.5)
+                .color(theme::COLOR_TEXT_PRIMARY),
+        );
+        ui.add_space(2.0);
         ui.label(
             egui::RichText::new(
                 "Click any shortcut button to record physical key combinations directly.",
             )
-            .small()
+            .size(12.5)
             .color(theme::COLOR_TEXT_SECONDARY),
         );
         ui.add_space(10.0);
@@ -1144,6 +1338,10 @@ impl SettingsApp {
             .corner_radius(egui::CornerRadius::same(8))
             .show(ui, |ui| {
                 ui.set_min_width(ui.available_width());
+
+                let control_width = 145.0;
+                let gap = 16.0;
+                let text_slot_w = (ui.available_width() - control_width - gap).max(180.0);
 
                 for (idx, field) in stops
                     .iter()
@@ -1159,36 +1357,42 @@ impl SettingsApp {
                     let listening = self.model.capture.is_listening_for(field);
 
                     ui.horizontal(|ui| {
-                        ui.vertical(|ui| {
-                            ui.label(egui::RichText::new(field.label()).strong().size(13.0));
-                            let subtext = match field {
-                                ShortcutField::Switcher => {
-                                    "Rotates through windows of the active application (per-monitor)."
-                                }
-                                ShortcutField::Fallback => {
-                                    "Fallback rotation chord when main key is intercepted."
-                                }
-                                ShortcutField::SnapLeft => "DPI-aware left 50% split placement.",
-                                ShortcutField::SnapRight => "DPI-aware right 50% split placement.",
-                                ShortcutField::SnapMaximize => {
-                                    "Maximizes window across active work area."
-                                }
-                                ShortcutField::Stack => {
-                                    "Arranges same-app windows in clickable overlapping stack."
-                                }
-                            };
-                            ui.label(
-                                egui::RichText::new(subtext)
-                                    .small()
-                                    .color(theme::COLOR_TEXT_SECONDARY),
-                            );
+                        ui.allocate_ui(egui::vec2(text_slot_w, 0.0), |ui| {
+                            ui.vertical(|ui| {
+                                ui.label(egui::RichText::new(field.label()).strong().size(13.5));
+                                let subtext = match field {
+                                    ShortcutField::Switcher => {
+                                        "Switches between windows of your active app on this monitor."
+                                    }
+                                    ShortcutField::Fallback => {
+                                        "Alternative shortcut if Win key is used by another app."
+                                    }
+                                    ShortcutField::SnapLeft => {
+                                        "Snaps the active window to the left half of this monitor."
+                                    }
+                                    ShortcutField::SnapRight => {
+                                        "Snaps the active window to the right half of this monitor."
+                                    }
+                                    ShortcutField::SnapMaximize => {
+                                        "Expands the active window to fill this monitor."
+                                    }
+                                    ShortcutField::Stack => {
+                                        "Arranges windows of this app in a clickable stack."
+                                    }
+                                };
+                                ui.label(
+                                    egui::RichText::new(subtext)
+                                        .size(12.0)
+                                        .color(theme::COLOR_TEXT_SECONDARY),
+                                );
+                            });
                         });
 
                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                             let text = if listening {
                                 "🔴 Listening…".to_string()
                             } else {
-                                current.clone()
+                                format_shortcut_display(&current)
                             };
 
                             let btn_color = if listening {
@@ -1200,7 +1404,7 @@ impl SettingsApp {
                             let response = ui
                                 .add(
                                     egui::Button::new(
-                                        egui::RichText::new(text).strong().size(12.0).color(
+                                        egui::RichText::new(text).strong().size(12.5).color(
                                             if listening {
                                                 egui::Color32::WHITE
                                             } else {
@@ -1211,7 +1415,7 @@ impl SettingsApp {
                                     .fill(btn_color)
                                     .stroke(egui::Stroke::new(1.0, theme::COLOR_STROKE_CARD))
                                     .corner_radius(egui::CornerRadius::same(6))
-                                    .min_size(egui::vec2(120.0, 28.0)),
+                                    .min_size(egui::vec2(135.0, 30.0)),
                                 )
                                 .on_hover_text(theme::SHORTCUT_SWITCHER.description);
 
@@ -1254,12 +1458,18 @@ impl SettingsApp {
         drawn.push(theme::STACK_WIDTH_SLIDER.name);
         drawn.push(theme::STACK_WIDTH_INPUT.name);
 
-        ui.heading("Layout & Snapping");
+        ui.label(
+            egui::RichText::new("Layout & Snapping")
+                .strong()
+                .size(18.5)
+                .color(theme::COLOR_TEXT_PRIMARY),
+        );
+        ui.add_space(2.0);
         ui.label(
             egui::RichText::new(
                 "DPI-aware window snapping and compact overlapping stack arrangement.",
             )
-            .small()
+            .size(12.5)
             .color(theme::COLOR_TEXT_SECONDARY),
         );
         ui.add_space(10.0);
@@ -1271,15 +1481,20 @@ impl SettingsApp {
             .show(ui, |ui| {
                 ui.set_min_width(ui.available_width());
 
-                // Row 1: Toggle Stack
+                let gap = 16.0;
+
+                // Row 1: Toggle Stack (Control width 44.0)
+                let text_slot_w1 = (ui.available_width() - 44.0 - gap).max(180.0);
                 ui.horizontal(|ui| {
-                    ui.vertical(|ui| {
-                        ui.label(egui::RichText::new(c.name).strong().size(13.0));
-                        ui.label(
-                            egui::RichText::new(c.description)
-                                .small()
-                                .color(theme::COLOR_TEXT_SECONDARY),
-                        );
+                    ui.allocate_ui(egui::vec2(text_slot_w1, 0.0), |ui| {
+                        ui.vertical(|ui| {
+                            ui.label(egui::RichText::new(c.name).strong().size(13.5));
+                            ui.label(
+                                egui::RichText::new(c.description)
+                                    .size(12.0)
+                                    .color(theme::COLOR_TEXT_SECONDARY),
+                            );
+                        });
                     });
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         fluent_toggle_switch(
@@ -1294,27 +1509,37 @@ impl SettingsApp {
                 ui.separator();
                 ui.add_space(8.0);
 
-                // Row 2: Stack Width Slider
+                // Row 2: Stack Width Slider (Control width 180.0)
+                let text_slot_w2 = (ui.available_width() - 180.0 - gap).max(180.0);
                 ui.horizontal(|ui| {
-                    ui.vertical(|ui| {
-                        ui.label(egui::RichText::new("Stack Width Ratio").strong().size(13.0));
-                        ui.label(
-                            egui::RichText::new(
-                                "Percentage of screen width allocated to stacked windows.",
-                            )
-                            .small()
-                            .color(theme::COLOR_TEXT_SECONDARY),
-                        );
+                    ui.allocate_ui(egui::vec2(text_slot_w2, 0.0), |ui| {
+                        ui.vertical(|ui| {
+                            ui.label(egui::RichText::new("Stack Width Ratio").strong().size(13.5));
+                            ui.label(
+                                egui::RichText::new(
+                                    "Percentage of screen width allocated to stacked windows.",
+                                )
+                                .size(12.0)
+                                .color(theme::COLOR_TEXT_SECONDARY),
+                            );
+                        });
                     });
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        ui.add(
+                        let slider_resp = ui.add(
                             egui::Slider::new(
                                 &mut self.model.draft.layout.stack_width_percent,
                                 10..=100,
                             )
-                            .text(theme::STACK_WIDTH_SLIDER.name)
+                            .show_value(true)
                             .suffix("%"),
                         );
+                        slider_resp.widget_info(|| {
+                            egui::WidgetInfo::labeled(
+                                egui::WidgetType::DragValue,
+                                true,
+                                theme::STACK_WIDTH_SLIDER.name,
+                            )
+                        });
                     });
                 });
             });
@@ -1324,12 +1549,18 @@ impl SettingsApp {
         drawn.push(theme::VM_BYPASS_PROCESS_LIST.name);
         drawn.push(theme::VM_BYPASS_CLASS_LIST.name);
 
-        ui.heading("VM & Remote Desktop Exceptions");
+        ui.label(
+            egui::RichText::new("VM & Remote Desktop Exceptions")
+                .strong()
+                .size(18.5)
+                .color(theme::COLOR_TEXT_PRIMARY),
+        );
+        ui.add_space(2.0);
         ui.label(
             egui::RichText::new(
-                "Applications exempted so keyboard shortcuts pass directly to the virtual guest.",
+                "Exempted virtual machine and remote desktop apps so keys pass directly inside.",
             )
-            .small()
+            .size(12.5)
             .color(theme::COLOR_TEXT_SECONDARY),
         );
         ui.add_space(10.0);
@@ -1342,14 +1573,15 @@ impl SettingsApp {
                 ui.set_min_width(ui.available_width());
 
                 ui.label(
-                    egui::RichText::new("Bypass Executables:")
+                    egui::RichText::new("Excluded Applications (Executables):")
                         .strong()
-                        .size(13.0),
+                        .size(13.5),
                 );
                 ui.add_space(4.0);
                 for proc in &self.model.draft.vm_bypass.bypass_processes {
                     ui.label(
                         egui::RichText::new(format!("  •  {proc}"))
+                            .size(12.5)
                             .color(theme::COLOR_TEXT_SECONDARY),
                     );
                 }
@@ -1359,14 +1591,15 @@ impl SettingsApp {
                 ui.add_space(8.0);
 
                 ui.label(
-                    egui::RichText::new("Bypass Window Classes:")
+                    egui::RichText::new("Excluded Window Types (Classes):")
                         .strong()
-                        .size(13.0),
+                        .size(13.5),
                 );
                 ui.add_space(4.0);
                 for class in &self.model.draft.vm_bypass.bypass_classes {
                     ui.label(
                         egui::RichText::new(format!("  •  {class}"))
+                            .size(12.5)
                             .color(theme::COLOR_TEXT_SECONDARY),
                     );
                 }
@@ -1374,16 +1607,27 @@ impl SettingsApp {
     }
 
     fn about_pane(&mut self, ui: &mut egui::Ui) {
-        ui.heading("Wira Desk (WiraDex)");
+        ui.label(
+            egui::RichText::new("Wira Desk (WiraDex)")
+                .strong()
+                .size(18.5)
+                .color(theme::COLOR_TEXT_PRIMARY),
+        );
+        ui.add_space(2.0);
         ui.label(
             egui::RichText::new(concat!("Version ", env!("CARGO_PKG_VERSION")))
                 .color(theme::COLOR_ACCENT_PRIMARY)
-                .strong(),
+                .strong()
+                .size(13.0),
         );
-        ui.label(match &self.font {
-            theme::LoadedFont::System(name) => format!("Typeface: {name}"),
-            theme::LoadedFont::Bundled => "Typeface: Bundled Fallback".to_string(),
-        });
+        ui.label(
+            egui::RichText::new(match &self.font {
+                theme::LoadedFont::System(name) => format!("Typeface: {name}"),
+                theme::LoadedFont::Bundled => "Typeface: Bundled Fallback".to_string(),
+            })
+            .size(12.0)
+            .color(theme::COLOR_TEXT_SECONDARY),
+        );
         ui.add_space(10.0);
 
         egui::Frame::group(ui.style())
@@ -1394,19 +1638,122 @@ impl SettingsApp {
                 ui.set_min_width(ui.available_width());
                 ui.label(
                     egui::RichText::new(
-                        "Wira Desk switches between windows of the application you are already using, rather than every window on the system.",
+                        "Wira Desk switches smoothly between windows of the active application on your current monitor.",
                     )
+                    .size(13.0)
                     .color(theme::COLOR_TEXT_SECONDARY),
                 );
                 ui.add_space(6.0);
                 ui.label(
                     egui::RichText::new(
-                        "Decoupled Architecture: The background daemon runs with zero UI overhead, while this configuration shell opens only on demand.",
+                        "Designed to be invisible, fast, and resource-efficient for all-day multitasking.",
                     )
-                    .small()
+                    .size(12.0)
                     .color(theme::COLOR_TEXT_TERTIARY),
                 );
             });
+    }
+}
+
+/// Draw crisp vector icon for sidebar navigation tabs (General, Shortcuts, Layout, VM, About)
+fn draw_sidebar_icon(ui: &mut egui::Ui, kind: usize, rect: egui::Rect, color: egui::Color32) {
+    let painter = ui.painter();
+    let stroke = egui::Stroke::new(1.3, color);
+
+    match kind {
+        // 0: General (Gear)
+        0 => {
+            let center = rect.center();
+            painter.circle_stroke(center, 3.5, stroke);
+            painter.circle_stroke(center, 5.5, egui::Stroke::new(1.0, color));
+        }
+        // 1: Shortcuts (Keyboard)
+        1 => {
+            painter.rect_stroke(
+                rect,
+                egui::CornerRadius::same(2),
+                stroke,
+                egui::StrokeKind::Inside,
+            );
+            painter.line_segment(
+                [
+                    egui::pos2(rect.left() + 3.0, rect.top() + 4.5),
+                    egui::pos2(rect.left() + 5.0, rect.top() + 4.5),
+                ],
+                stroke,
+            );
+            painter.line_segment(
+                [
+                    egui::pos2(rect.left() + 8.0, rect.top() + 4.5),
+                    egui::pos2(rect.left() + 10.0, rect.top() + 4.5),
+                ],
+                stroke,
+            );
+            painter.line_segment(
+                [
+                    egui::pos2(rect.left() + 4.0, rect.bottom() - 3.5),
+                    egui::pos2(rect.right() - 4.0, rect.bottom() - 3.5),
+                ],
+                stroke,
+            );
+        }
+        // 2: Layout & Snapping (Split Windows)
+        2 => {
+            painter.rect_stroke(
+                rect,
+                egui::CornerRadius::same(2),
+                stroke,
+                egui::StrokeKind::Inside,
+            );
+            painter.line_segment(
+                [
+                    egui::pos2(rect.center().x, rect.top()),
+                    egui::pos2(rect.center().x, rect.bottom()),
+                ],
+                stroke,
+            );
+        }
+        // 3: VM & Exceptions (Display Screen)
+        3 => {
+            let screen_rect =
+                egui::Rect::from_min_max(rect.min, egui::pos2(rect.max.x, rect.min.y + 10.0));
+            painter.rect_stroke(
+                screen_rect,
+                egui::CornerRadius::same(2),
+                stroke,
+                egui::StrokeKind::Inside,
+            );
+            painter.line_segment(
+                [
+                    egui::pos2(rect.center().x, screen_rect.bottom()),
+                    egui::pos2(rect.center().x, rect.bottom()),
+                ],
+                stroke,
+            );
+            painter.line_segment(
+                [
+                    egui::pos2(rect.left() + 3.0, rect.bottom()),
+                    egui::pos2(rect.right() - 3.0, rect.bottom()),
+                ],
+                stroke,
+            );
+        }
+        // 4: About (Info 'i')
+        _ => {
+            painter.circle_stroke(rect.center(), 6.5, stroke);
+            painter.circle_filled(
+                egui::pos2(rect.center().x, rect.center().y - 3.0),
+                1.0,
+                color,
+            );
+            painter.line_segment(
+                [
+                    egui::pos2(rect.center().x, rect.center().y - 0.5),
+                    egui::pos2(rect.center().x, rect.center().y + 3.5),
+                ],
+                stroke,
+            );
+        }
     }
 }
 
@@ -1466,6 +1813,121 @@ fn fluent_toggle_switch(ui: &mut egui::Ui, on: &mut bool, accessible_name: &str)
     response
 }
 
+/// Render a Fluent 2 toggle switch in disabled/locked ON state (Windows 11 standard).
+fn fluent_toggle_switch_disabled(
+    ui: &mut egui::Ui,
+    on: &mut bool,
+    accessible_name: &str,
+) -> egui::Response {
+    let desired_size = egui::vec2(40.0, 20.0);
+    let (rect, response) = ui.allocate_exact_size(desired_size, egui::Sense::hover());
+    response.widget_info(|| {
+        egui::WidgetInfo::selected(egui::WidgetType::Checkbox, true, *on, accessible_name)
+    });
+
+    if ui.is_rect_visible(rect) {
+        let visuals = ui.visuals();
+
+        // Muted gray track and thumb for distinct locked/read-only indication
+        let bg_color = if visuals.dark_mode {
+            egui::Color32::from_rgb(0x32, 0x37, 0x42)
+        } else {
+            egui::Color32::from_rgb(0xd4, 0xd8, 0xe2)
+        };
+
+        let stroke_color = if visuals.dark_mode {
+            egui::Color32::from_rgba_premultiplied(255, 255, 255, 20)
+        } else {
+            egui::Color32::from_rgba_premultiplied(0, 0, 0, 20)
+        };
+
+        ui.painter().rect(
+            rect,
+            egui::CornerRadius::same(10),
+            bg_color,
+            egui::Stroke::new(1.0, stroke_color),
+            egui::StrokeKind::Outside,
+        );
+
+        let center = egui::pos2(rect.right() - 10.0, rect.center().y);
+        let circle_color = if visuals.dark_mode {
+            egui::Color32::from_rgb(0x7b, 0x84, 0x96)
+        } else {
+            egui::Color32::from_rgb(0x8c, 0x93, 0xa0)
+        };
+
+        ui.painter().circle_filled(center, 6.0, circle_color);
+    }
+
+    response
+}
+
+fn is_key_down(vk: u32) -> bool {
+    #[cfg(windows)]
+    // SAFETY: `GetAsyncKeyState` is safe to call from any thread and only queries physical key state.
+    unsafe {
+        (windows_sys::Win32::UI::Input::KeyboardAndMouse::GetAsyncKeyState(vk as i32) as u16)
+            & 0x8000
+            != 0
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = vk;
+        false
+    }
+}
+
+fn is_win_key_down() -> bool {
+    #[cfg(windows)]
+    {
+        is_key_down(windows_sys::Win32::UI::Input::KeyboardAndMouse::VK_LWIN as u32)
+            || is_key_down(windows_sys::Win32::UI::Input::KeyboardAndMouse::VK_RWIN as u32)
+    }
+    #[cfg(not(windows))]
+    {
+        false
+    }
+}
+
+fn is_alt_key_down() -> bool {
+    #[cfg(windows)]
+    {
+        is_key_down(windows_sys::Win32::UI::Input::KeyboardAndMouse::VK_MENU as u32)
+            || is_key_down(windows_sys::Win32::UI::Input::KeyboardAndMouse::VK_LMENU as u32)
+            || is_key_down(windows_sys::Win32::UI::Input::KeyboardAndMouse::VK_RMENU as u32)
+    }
+    #[cfg(not(windows))]
+    {
+        false
+    }
+}
+
+fn is_ctrl_key_down() -> bool {
+    #[cfg(windows)]
+    {
+        is_key_down(windows_sys::Win32::UI::Input::KeyboardAndMouse::VK_CONTROL as u32)
+            || is_key_down(windows_sys::Win32::UI::Input::KeyboardAndMouse::VK_LCONTROL as u32)
+            || is_key_down(windows_sys::Win32::UI::Input::KeyboardAndMouse::VK_RCONTROL as u32)
+    }
+    #[cfg(not(windows))]
+    {
+        false
+    }
+}
+
+fn is_shift_key_down() -> bool {
+    #[cfg(windows)]
+    {
+        is_key_down(windows_sys::Win32::UI::Input::KeyboardAndMouse::VK_SHIFT as u32)
+            || is_key_down(windows_sys::Win32::UI::Input::KeyboardAndMouse::VK_LSHIFT as u32)
+            || is_key_down(windows_sys::Win32::UI::Input::KeyboardAndMouse::VK_RSHIFT as u32)
+    }
+    #[cfg(not(windows))]
+    {
+        false
+    }
+}
+
 /// Translate the current egui key state into a shortcut string.
 /// Returns `None` until a non-modifier key is actually pressed, so holding
 /// modifiers alone never commits a half-formed combination.
@@ -1475,17 +1937,22 @@ fn captured_combination(ctx: &egui::Context) -> Option<String> {
         let key = i.keys_down.iter().copied().find(|k| !is_modifier_key(*k))?;
         let name = key_name(key)?;
 
+        let win_pressed = m.mac_cmd || is_win_key_down();
+        let alt_pressed = m.alt || is_alt_key_down();
+        let ctrl_pressed = m.ctrl || is_ctrl_key_down();
+        let shift_pressed = m.shift || is_shift_key_down();
+
         let mut parts: Vec<&str> = Vec::new();
-        if m.ctrl {
+        if ctrl_pressed {
             parts.push("ctrl");
         }
-        if m.command {
+        if win_pressed {
             parts.push("win");
         }
-        if m.alt {
+        if alt_pressed {
             parts.push("alt");
         }
-        if m.shift {
+        if shift_pressed {
             parts.push("shift");
         }
         if parts.is_empty() {

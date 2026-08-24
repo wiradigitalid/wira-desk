@@ -28,6 +28,10 @@ use crate::context::BypassPolicy;
 pub struct HookSnapshot {
     pub primary: Shortcut,
     pub fallback: Shortcut,
+    pub snap_left: Shortcut,
+    pub snap_right: Shortcut,
+    pub snap_maximize: Shortcut,
+    pub stack: Shortcut,
     pub bypass: BypassPolicy,
 }
 
@@ -116,10 +120,21 @@ pub fn validate(text: &str) -> Result<(Config, HookSnapshot, WorkerSnapshot), Re
     let primary = Shortcut::parse(&cfg.switcher.shortcut).ok_or(RejectReason::InvalidShortcut)?;
     let fallback =
         Shortcut::parse(&cfg.switcher.fallback_shortcut).ok_or(RejectReason::InvalidShortcut)?;
+    let snap_left =
+        Shortcut::parse(&cfg.snapping.snap_half_left).ok_or(RejectReason::InvalidShortcut)?;
+    let snap_right =
+        Shortcut::parse(&cfg.snapping.snap_half_right).ok_or(RejectReason::InvalidShortcut)?;
+    let snap_maximize =
+        Shortcut::parse(&cfg.snapping.snap_maximize).ok_or(RejectReason::InvalidShortcut)?;
+    let stack = Shortcut::parse(&cfg.layout.stack_shortcut).ok_or(RejectReason::InvalidShortcut)?;
 
     let hook = HookSnapshot {
         primary,
         fallback,
+        snap_left,
+        snap_right,
+        snap_maximize,
+        stack,
         bypass: BypassPolicy::from_config(&cfg.vm_bypass),
     };
     let worker = WorkerSnapshot {

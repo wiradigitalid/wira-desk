@@ -15,10 +15,6 @@ use windows_sys::Win32::UI::WindowsAndMessaging::{CreateIconIndirect, HICON, ICO
 pub const ICON_SIZE: i32 = 32;
 const SIZE: usize = ICON_SIZE as usize;
 
-/// Windows accent color (#0078D4) and derivatives, plus alert red (#E81123).
-const ACCENT: [u8; 3] = [0xD4, 0x78, 0x00]; // BGR
-const TITLEBAR: [u8; 3] = [0x9E, 0x5A, 0x00]; // BGR (darker accent)
-const CONTENT: [u8; 3] = [0xF3, 0xF3, 0xF3]; // BGR (light gray)
 const ALERT: [u8; 3] = [0x23, 0x11, 0xE8]; // BGR of #E81123 (R=E8,G=11,B=23)
 const WHITE: [u8; 3] = [0xFF, 0xFF, 0xFF];
 
@@ -44,15 +40,6 @@ impl Pixmap {
         self.data[i + 1] = bgr[1];
         self.data[i + 2] = bgr[2];
         self.data[i + 3] = a;
-    }
-
-    /// Fill rectangle [x0,x1) x [y0,y1).
-    fn fill_rect(&mut self, x0: i32, y0: i32, x1: i32, y1: i32, bgr: [u8; 3]) {
-        for y in y0..y1 {
-            for x in x0..x1 {
-                self.set(x, y, bgr, 0xFF);
-            }
-        }
     }
 
     /// Fill circle at (cx,cy) with radius r.
@@ -84,18 +71,15 @@ impl Pixmap {
     }
 }
 
-/// Rasterize the base Wira Desk glyph (window motif).
+/// Rasterize the base Wira Desk glyph from master icon data.
 fn base_pixmap() -> Pixmap {
     let mut p = Pixmap::transparent();
-    // Window frame (accent).
-    p.fill_rect(4, 5, 28, 27, ACCENT);
-    // Title bar (darker accent).
-    p.fill_rect(4, 5, 28, 11, TITLEBAR);
-    // Content area (light gray).
-    p.fill_rect(6, 12, 26, 25, CONTENT);
-    // Round corners: trim outer corner pixels.
-    for &(x, y) in &[(4, 5), (27, 5), (4, 26), (27, 26)] {
-        p.set(x, y, [0, 0, 0], 0);
+    for y in 0..ICON_SIZE {
+        for x in 0..ICON_SIZE {
+            let idx = (y * ICON_SIZE + x) as usize;
+            let [b, g, r, a] = crate::icon_data::MASTER_ICON_DATA[idx];
+            p.set(x, y, [b, g, r], a);
+        }
     }
     p
 }

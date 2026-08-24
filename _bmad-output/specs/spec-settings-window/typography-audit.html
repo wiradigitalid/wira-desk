@@ -1,0 +1,351 @@
+<title>Fluent 2 Typography Scale Audit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+/* ==========================================================================
+   WIRA DESK FLUENT 2 TYPOGRAPHY AUDIT & DESIGN SYSTEM
+   ========================================================================== */
+:root {
+  --font-sans: "Segoe UI Variable Text", "Segoe UI", "Plus Jakarta Sans", -apple-system, sans-serif;
+  --font-mono: "Cascadia Code", "JetBrains Mono", Consolas, monospace;
+
+  /* Theme Ground (Dark Ground Default) */
+  --bg-page: #121418;
+  --bg-mica: #191d23;
+  --bg-sidebar: #15181e;
+  --bg-card: #20242b;
+  --bg-card-hover: #272c35;
+  --bg-subtle: #171a1f;
+  --bg-keycap: #2b303a;
+
+  --stroke-card: rgba(255, 255, 255, 0.08);
+  --stroke-divider: rgba(255, 255, 255, 0.06);
+  --stroke-focus: #4cc2ff;
+
+  --text-primary: #f3f5f8;
+  --text-secondary: #a0a6b4;
+  --text-tertiary: #757d8e;
+  --text-accent: #4cc2ff;
+
+  --accent-primary: #4cc2ff;
+  --accent-hover: #60cbff;
+  --signal-success: #6ccb5f;
+  --signal-danger: #ff5252;
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-pill: 9999px;
+
+  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-window: 0 28px 70px rgba(0, 0, 0, 0.6), 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="light"] {
+  --bg-page: #f0f3f8;
+  --bg-mica: #f3f3f3;
+  --bg-sidebar: #e8ecf2;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f7f9fc;
+  --bg-subtle: #f4f5f8;
+  --bg-keycap: #edf0f5;
+
+  --stroke-card: rgba(0, 0, 0, 0.09);
+  --stroke-divider: rgba(0, 0, 0, 0.06);
+  --stroke-focus: #0067c0;
+
+  --text-primary: #1c1f24;
+  --text-secondary: #5c6370;
+  --text-tertiary: #8c93a0;
+  --text-accent: #0067c0;
+
+  --accent-primary: #0067c0;
+  --accent-hover: #1879cd;
+  --signal-success: #0f7b0f;
+  --signal-danger: #c42b1c;
+
+  --shadow-card: 0 2px 4px rgba(0, 0, 0, 0.04);
+  --shadow-window: 0 24px 60px rgba(0, 0, 0, 0.20), 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--bg-page);
+  color: var(--text-primary);
+  line-height: 1.5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 32px 20px;
+  min-height: 100vh;
+}
+
+.spec-container {
+  width: 100%;
+  max-width: 980px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Header */
+.spec-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-card);
+  padding: 18px 24px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--stroke-card);
+  box-shadow: var(--shadow-card);
+}
+.spec-header h1 { font-size: 19px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.spec-header p { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
+
+.theme-toggle-btn {
+  padding: 6px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--stroke-card);
+  background: var(--bg-subtle);
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+/* Comparison Table */
+.spec-card {
+  background: var(--bg-card);
+  border: 1px solid var(--stroke-card);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+th, td {
+  padding: 12px 14px;
+  text-align: left;
+  border-bottom: 1px solid var(--stroke-divider);
+}
+
+th {
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--bg-subtle);
+}
+
+.token-badge {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-subtle);
+  color: var(--text-accent);
+}
+
+.size-old {
+  color: var(--signal-danger);
+  font-weight: 600;
+  text-decoration: line-through;
+}
+
+.size-new {
+  color: var(--signal-success);
+  font-weight: 700;
+}
+
+/* Visual Mockup Before & After */
+.side-by-side {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.mockup-box {
+  background: var(--bg-subtle);
+  border: 1px solid var(--stroke-card);
+  border-radius: var(--radius-md);
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mockup-tag {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: var(--radius-pill);
+  width: fit-content;
+}
+.mockup-tag.bad { background: rgba(255, 82, 82, 0.15); color: var(--signal-danger); }
+.mockup-tag.good { background: rgba(108, 203, 95, 0.15); color: var(--signal-success); }
+
+/* Sample Row Simulation */
+.sample-row {
+  background: var(--bg-card);
+  border: 1px solid var(--stroke-card);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.keycap {
+  font-family: var(--font-mono);
+  background: var(--bg-keycap);
+  border: 1px solid var(--stroke-card);
+  padding: 6px 12px;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  white-space: nowrap;
+}
+</style>
+
+<div class="spec-container">
+  <!-- Header -->
+  <div class="spec-header">
+    <div>
+      <h1>📐 Wira Desk — Typography Scale Audit & Ratification</h1>
+      <p>Penyempurnaan ukuran font deskripsi & sub-label agar nyaman dibaca pada resolusi 1080p, 2K, dan 4K</p>
+    </div>
+    <button class="theme-toggle-btn" onclick="toggleTheme()">Toggle Theme</button>
+  </div>
+
+  <!-- Table Scale Audit -->
+  <div class="spec-card">
+    <h2 style="font-size: 16px; font-weight: 700;">1. Tabel Perbandingan Skala Tipografi (Sebelum vs Rekomendasi Baru)</h2>
+    <div class="table-responsive">
+      <table>
+        <thead>
+          <tr>
+            <th>Elemen UI</th>
+            <th>Fungsi / Role</th>
+            <th>Ukuran Lama (Kekecilan)</th>
+            <th>Ukuran Baru (Fluent 2 Standar)</th>
+            <th>Weight & Style</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Page Heading</strong></td>
+            <td>Judul Halaman ("Shortcuts Configuration")</td>
+            <td><code>18.0 pt</code></td>
+            <td><span class="size-new">18.5 pt</span></td>
+            <td>Bold (700)</td>
+          </tr>
+          <tr>
+            <td><strong>Page Subtitle</strong></td>
+            <td>Deskripsi Halaman di bawah judul</td>
+            <td><span class="size-old">.small() (~10.0 pt)</span></td>
+            <td><span class="size-new">12.5 pt</span> (+25% lebih besar)</td>
+            <td>Regular (400), <code>text_secondary</code></td>
+          </tr>
+          <tr>
+            <td><strong>Card Item Title</strong></td>
+            <td>Judul Pengaturan ("Switch windows of same app")</td>
+            <td><code>13.0 pt</code></td>
+            <td><span class="size-new">13.5 pt</span></td>
+            <td>Semi-Bold (600), <code>text_primary</code></td>
+          </tr>
+          <tr>
+            <td><strong>Card Item Description</strong></td>
+            <td>Keterangan di bawah judul pengaturan</td>
+            <td><span class="size-old">.small() (~10.5 pt)</span></td>
+            <td><span class="size-new">12.0 pt</span> (+15% lebih besar)</td>
+            <td>Regular (400), <code>text_secondary</code></td>
+          </tr>
+          <tr>
+            <td><strong>Hotkey Keycap Badge</strong></td>
+            <td>Tombol Pintasan (<code>win + backtick</code>)</td>
+            <td><code>11.5 pt</code></td>
+            <td><span class="size-new">12.5 pt</span></td>
+            <td>Bold Monospace (600), <code>text_primary</code></td>
+          </tr>
+          <tr>
+            <td><strong>Footer Status Label</strong></td>
+            <td>Status Daemon di pojok kiri bawah</td>
+            <td><span class="size-old">.small() (~10.0 pt)</span></td>
+            <td><span class="size-new">12.0 pt</span></td>
+            <td>Medium (500), <code>text_secondary</code></td>
+          </tr>
+          <tr>
+            <td><strong>Onboarding Description</strong></td>
+            <td>Teks penjelasan wizard Step 1, 2, 3</td>
+            <td><code>13.0 pt</code></td>
+            <td><span class="size-new">13.5 pt</span></td>
+            <td>Regular (400), line-height 1.45</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Visual Side-by-Side Comparison -->
+  <div class="spec-card">
+    <h2 style="font-size: 16px; font-weight: 700;">2. Simulasi Perbandingan Visual (Tampak Nyata)</h2>
+    <div class="side-by-side">
+      <!-- Old State -->
+      <div class="mockup-box">
+        <span class="mockup-tag bad">Kondisi Lama (Kekecilan di Screenshot)</span>
+        <div style="font-size: 17px; font-weight: 700;">Shortcuts Configuration</div>
+        <div style="font-size: 10px; color: var(--text-secondary); margin-top: -6px;">Click any shortcut button to record physical key combinations directly.</div>
+
+        <div class="sample-row" style="margin-top: 8px;">
+          <div>
+            <div style="font-size: 13px; font-weight: 600;">Switch windows of the same application</div>
+            <div style="font-size: 10.5px; color: var(--text-secondary); margin-top: 2px;">Rotates through windows of the active application (per-monitor).</div>
+          </div>
+          <div class="keycap" style="font-size: 11.5px;">win+backtick</div>
+        </div>
+        <p style="font-size: 11px; color: var(--signal-danger);">❌ Teks sekunder terlalu kecil (~10px), memaksakan mata membaca pada monitor high-DPI.</p>
+      </div>
+
+      <!-- New State -->
+      <div class="mockup-box" style="border-color: rgba(76, 194, 255, 0.4); background: rgba(76, 194, 255, 0.03);">
+        <span class="mockup-tag good">Rekomendasi Baru (Nyaman & Terbaca Jelas)</span>
+        <div style="font-size: 18.5px; font-weight: 700;">Shortcuts Configuration</div>
+        <div style="font-size: 12.5px; color: var(--text-secondary); margin-top: -4px;">Click any shortcut button to record physical key combinations directly.</div>
+
+        <div class="sample-row" style="margin-top: 8px;">
+          <div>
+            <div style="font-size: 13.5px; font-weight: 600;">Switch windows of the same application</div>
+            <div style="font-size: 12.0px; color: var(--text-secondary); margin-top: 2px;">Rotates through windows of the active application (per-monitor).</div>
+          </div>
+          <div class="keycap" style="font-size: 12.5px;">win + backtick</div>
+        </div>
+        <p style="font-size: 11px; color: var(--signal-success);">✔ Proporsi ideal: Subtitle 12.5pt, Deskripsi 12.0pt, Keycap 12.5pt — sangat jelas dan elegan.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function toggleTheme() {
+  const root = document.documentElement;
+  const current = root.getAttribute('data-theme');
+  root.setAttribute('data-theme', current === 'light' ? 'dark' : 'light');
+}
+</script>

@@ -9,6 +9,7 @@ mod error;
 mod health;
 mod hook;
 mod icon;
+mod icon_data;
 mod legacy;
 mod log;
 mod menu;

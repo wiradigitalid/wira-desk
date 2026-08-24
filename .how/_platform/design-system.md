@@ -76,10 +76,11 @@ Wira Desk adheres to native Windows 11 Fluent 2 Design and Mica Material design 
 | Role | Size | Weight | Color Token |
 |---|---|---|---|
 | **Window Title** | `13.5 pt` | Bold (700) | `text_primary` (`#F3F5F8`) |
-| **Section Heading** | `18.0 pt` | Bold (700) | `text_primary` (`#F3F5F8`) |
-| **Card Item Title** | `13.0 pt` | Semi-Bold (600) | `text_primary` (`#F3F5F8`) |
-| **Card Item Description** | `11.5 pt` | Regular (400) | `text_secondary` (`#A0A6B4`) |
-| **Keycap Badge** | `12.0 pt` | Bold Monospace | `text_primary` (`#F3F5F8`) |
+| **Section Heading** | `18.5 pt` | Bold (700) | `text_primary` (`#F3F5F8`) |
+| **Section Subtitle** | `12.5 pt` | Regular (400) | `text_secondary` (`#A0A6B4`) |
+| **Card Item Title** | `13.5 pt` | Semi-Bold (600) | `text_primary` (`#F3F5F8`) |
+| **Card Item Description** | `12.0 pt` | Regular (400) | `text_secondary` (`#A0A6B4`) |
+| **Keycap Badge** | `12.5 pt` | Bold Monospace (600) | `text_primary` (`#F3F5F8`) |
 | **Status Bar Footer** | `12.0 pt` | Medium (500) | `text_secondary` (`#A0A6B4`) |
 
 ## Standard Component Specifications

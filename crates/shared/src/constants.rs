@@ -12,8 +12,11 @@ pub const CONFIG_FILE_NAME: &str = "config.toml";
 /// Append-only log file name.
 pub const LOG_FILE_NAME: &str = "wiradesk.log";
 
-/// Named mutex for single-instance locking.
+/// Named mutex for single-instance locking (daemon).
 pub const SINGLE_INSTANCE_MUTEX: &str = "Global\\WiraDeskSingleInstanceMutex";
+
+/// Named mutex for single-instance locking (settings window).
+pub const SETTINGS_SINGLE_INSTANCE_MUTEX: &str = "Global\\WiraDeskSettingsSingleInstanceMutex";
 
 /// Target `[[bin]]` name for the `settings` crate — MUST stay aligned with
 /// `crates/settings/Cargo.toml` (`default-run` `[[bin]] name`).

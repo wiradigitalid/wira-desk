@@ -1,0 +1,357 @@
+<title>Fluent 2 Card Row Slot Layout</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+/* ==========================================================================
+   WIRA DESK FLUENT 2 CARD ROW SLOT LAYOUT SYSTEM
+   ========================================================================== */
+:root {
+  --font-sans: "Segoe UI Variable Text", "Segoe UI", "Plus Jakarta Sans", sans-serif;
+  --font-mono: "Cascadia Code", "JetBrains Mono", Consolas, monospace;
+
+  /* Theme ground */
+  --bg-page: #121418;
+  --bg-mica: #191d23;
+  --bg-card: #20242b;
+  --bg-card-hover: #272c35;
+  --bg-subtle: #171a1f;
+  --bg-keycap: #2b303a;
+
+  --stroke-card: rgba(255, 255, 255, 0.08);
+  --stroke-divider: rgba(255, 255, 255, 0.06);
+  --stroke-focus: #4cc2ff;
+
+  --text-primary: #f3f5f8;
+  --text-secondary: #a0a6b4;
+  --text-tertiary: #6b7280;
+  --text-accent: #4cc2ff;
+
+  --accent-primary: #4cc2ff;
+  --signal-success: #6ccb5f;
+  --signal-danger: #ff5252;
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-pill: 9999px;
+
+  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="light"] {
+  --bg-page: #f0f3f8;
+  --bg-mica: #f3f3f3;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f7f9fc;
+  --bg-subtle: #f4f5f8;
+  --bg-keycap: #edf0f5;
+
+  --stroke-card: rgba(0, 0, 0, 0.09);
+  --stroke-divider: rgba(0, 0, 0, 0.06);
+  --stroke-focus: #0067c0;
+
+  --text-primary: #1c1f24;
+  --text-secondary: #5c6370;
+  --text-tertiary: #8c93a0;
+  --text-accent: #0067c0;
+
+  --accent-primary: #0067c0;
+  --signal-success: #0f7b0f;
+  --signal-danger: #c42b1c;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--bg-page);
+  color: var(--text-primary);
+  line-height: 1.5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 32px 20px;
+  min-height: 100vh;
+}
+
+.container {
+  width: 100%;
+  max-width: 900px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.header {
+  background: var(--bg-card);
+  border: 1px solid var(--stroke-card);
+  border-radius: 12px;
+  padding: 20px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.header h1 { font-size: 19px; font-weight: 700; }
+.header p { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
+
+.theme-btn {
+  padding: 6px 14px;
+  border-radius: 6px;
+  background: var(--bg-subtle);
+  color: var(--text-primary);
+  border: 1px solid var(--stroke-card);
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 12px;
+}
+
+/* Card comparison */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--stroke-card);
+  border-radius: 12px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.card-title-badge {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: var(--radius-pill);
+}
+.badge.bad { background: rgba(255, 82, 82, 0.15); color: var(--signal-danger); }
+.badge.good { background: rgba(108, 203, 95, 0.15); color: var(--signal-success); }
+
+/* Row Group */
+.settings-group {
+  background: var(--bg-subtle);
+  border: 1px solid var(--stroke-card);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.row-slot-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--stroke-divider);
+  gap: 16px;
+}
+.row-slot-container:last-child { border-bottom: none; }
+
+/* Left Text Slot */
+.text-slot {
+  flex: 1;
+  min-width: 0; /* Enables flex child text wrapping */
+}
+.text-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.text-desc {
+  font-size: 12.0px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+  word-wrap: break-word;
+}
+
+/* Right Control Slots with Dedicated Widths */
+.control-slot-toggle {
+  width: 44px;
+  flex-shrink: 0;
+  display: flex;
+  justify-content: flex-end;
+}
+.control-slot-keycap {
+  width: 140px;
+  flex-shrink: 0;
+  display: flex;
+  justify-content: flex-end;
+}
+.control-slot-slider {
+  width: 180px;
+  flex-shrink: 0;
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Widgets */
+.switch-sample {
+  width: 40px;
+  height: 20px;
+  border-radius: 10px;
+  background: #323742;
+  position: relative;
+}
+.switch-sample::after {
+  content: "";
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  right: 4px;
+  top: 4px;
+  background: #7b8496;
+}
+
+.keycap-sample {
+  font-family: var(--font-mono);
+  background: var(--bg-keycap);
+  border: 1px solid var(--stroke-card);
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 12px;
+  width: 135px;
+  text-align: center;
+}
+
+.slider-sample {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+.slider-val { font-size: 12px; font-weight: 600; }
+.slider-bar { flex: 1; height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px; position: relative; }
+.slider-thumb { width: 14px; height: 14px; border-radius: 50%; background: var(--accent-primary); position: absolute; left: 50%; top: -5px; }
+
+/* Diagram Illustration */
+.diagram-box {
+  background: var(--bg-card);
+  border: 1px dashed var(--accent-primary);
+  border-radius: 8px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+}
+.slot-left {
+  background: rgba(76, 194, 255, 0.12);
+  border: 1px solid var(--accent-primary);
+  padding: 8px 12px;
+  border-radius: 4px;
+  flex: 1;
+  color: var(--text-accent);
+}
+.slot-right {
+  background: rgba(108, 203, 95, 0.12);
+  border: 1px solid var(--signal-success);
+  padding: 8px 12px;
+  border-radius: 4px;
+  color: var(--signal-success);
+  margin-left: 12px;
+}
+</style>
+
+<div class="container">
+  <div class="header">
+    <div>
+      <h1>📐 Solusi Layout: Slot Pembagian 2-Kolom (Auto-Wrap Text)</h1>
+      <p>Arsitektur Text Slot Adaptif + Control Slot Berukuran Khusus per Komponen</p>
+    </div>
+    <button class="theme-btn" onclick="toggleTheme()">Toggle Theme</button>
+  </div>
+
+  <!-- Diagram concept -->
+  <div class="card">
+    <h2 style="font-size: 16px; font-weight: 700;">1. Arsitektur Pembagian Kolom (Slot Budget Allocation)</h2>
+    <p style="font-size: 13px; color: var(--text-secondary);">
+      Ya, ini <strong>sangat memungkinkan dan merupakan praktik terbaik (best-practice)</strong> dalam sistem Fluent 2. Masing-masing baris menghitung lebar slot teks secara matematis: <code>text_width = total_width - control_width - gap</code>.
+    </p>
+
+    <div class="diagram-box">
+      <div class="slot-left">
+        <strong>Kolom Kiri (Text Slot)</strong><br>
+        Width: (Available Width - Control Width - Gap)<br>
+        Fitur: Auto-wrap ke baris kedua bila deskripsi panjang!
+      </div>
+      <div class="slot-right">
+        <strong>Kolom Kanan (Control Slot)</strong><br>
+        Width: Disesuaikan per tipe kontrol:<br>
+        • Toggle: 44 px<br>
+        • Keycap: 140 px<br>
+        • Slider: 180 px
+      </div>
+    </div>
+  </div>
+
+  <!-- Live Example Grid -->
+  <div class="card">
+    <div class="card-title-badge">
+      <h2 style="font-size: 16px; font-weight: 700;">2. Simulasi Tampak Nyata (Hasil Wrapping Presisi)</h2>
+      <span class="badge good">Rapi & Tanpa Tabrakan Teks</span>
+    </div>
+
+    <div class="settings-group">
+      <!-- Item 1: Shortcuts (Control slot 140px -> Text slot wraps into 2 neat lines) -->
+      <div class="row-slot-container">
+        <div class="text-slot">
+          <div class="text-title">Switch windows of the same application</div>
+          <div class="text-desc">Rotates through windows of the active application (per-monitor).</div>
+        </div>
+        <div class="control-slot-keycap">
+          <div class="keycap-sample">Win + `</div>
+        </div>
+      </div>
+
+      <!-- Item 2: Shortcuts (Snap left) -->
+      <div class="row-slot-container">
+        <div class="text-slot">
+          <div class="text-title">Snap to left half</div>
+          <div class="text-desc">DPI-aware left 50% split placement across work area.</div>
+        </div>
+        <div class="control-slot-keycap">
+          <div class="keycap-sample">Ctrl + Win + ←</div>
+        </div>
+      </div>
+
+      <!-- Item 3: Layout Slider (Control slot 180px) -->
+      <div class="row-slot-container">
+        <div class="text-slot">
+          <div class="text-title">Stack Width Ratio</div>
+          <div class="text-desc">Percentage of screen width allocated to stacked windows.</div>
+        </div>
+        <div class="control-slot-slider">
+          <div class="slider-sample">
+            <span class="slider-val">50%</span>
+            <div class="slider-bar"><div class="slider-thumb"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Item 4: General Toggle (Control slot 44px) -->
+      <div class="row-slot-container">
+        <div class="text-slot">
+          <div class="text-title">Spatial Preservation (Per-Monitor Lock)</div>
+          <div class="text-desc">Locks window cycling strictly to the currently active physical monitor.</div>
+        </div>
+        <div class="control-slot-toggle">
+          <div class="switch-sample"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function toggleTheme() {
+  const root = document.documentElement;
+  const current = root.getAttribute('data-theme');
+  root.setAttribute('data-theme', current === 'light' ? 'dark' : 'light');
+}
+</script>

@@ -1,0 +1,313 @@
+<title>Wira Desk — Fluent 2 Disabled State Design System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+/* ==========================================================================
+   WIRA DESK FLUENT 2 DESIGN SYSTEM: TOGGLE SWITCH STATES
+   ========================================================================== */
+:root {
+  --font-sans: "Segoe UI Variable Text", "Segoe UI", "Plus Jakarta Sans", sans-serif;
+  --font-mono: "Cascadia Code", "JetBrains Mono", monospace;
+
+  /* Theme Tokens */
+  --bg-page: #121418;
+  --bg-mica: #191d23;
+  --bg-sidebar: #15181e;
+  --bg-card: #20242b;
+  --bg-card-hover: #272c35;
+  --bg-subtle: #171a1f;
+
+  --stroke-card: rgba(255, 255, 255, 0.08);
+  --stroke-divider: rgba(255, 255, 255, 0.06);
+
+  --text-primary: #f3f5f8;
+  --text-secondary: #a0a6b4;
+  --text-tertiary: #6b7280;
+
+  --accent-primary: #4cc2ff;
+  --accent-hover: #60cbff;
+
+  /* Toggle Switch Tokens */
+  --switch-track-on: #4cc2ff;
+  --switch-thumb-on: #ffffff;
+
+  --switch-track-disabled-on: #323742;
+  --switch-thumb-disabled-on: #7b8496;
+
+  --switch-track-off: #282a30;
+  --switch-thumb-off: #a0a6b4;
+}
+
+[data-theme="light"] {
+  --bg-page: #f0f3f8;
+  --bg-mica: #f3f3f3;
+  --bg-sidebar: #e8ecf2;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f7f9fc;
+  --bg-subtle: #f4f5f8;
+
+  --stroke-card: rgba(0, 0, 0, 0.09);
+  --stroke-divider: rgba(0, 0, 0, 0.06);
+
+  --text-primary: #1c1f24;
+  --text-secondary: #5c6370;
+  --text-tertiary: #8c93a0;
+
+  --accent-primary: #0067c0;
+  --accent-hover: #1879cd;
+
+  --switch-track-on: #0067c0;
+  --switch-thumb-on: #ffffff;
+
+  --switch-track-disabled-on: #d4d8e2;
+  --switch-thumb-disabled-on: #8c93a0;
+
+  --switch-track-off: #e0e4ec;
+  --switch-thumb-off: #5c6370;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--bg-page);
+  color: var(--text-primary);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 32px 20px;
+}
+
+.container {
+  width: 100%;
+  max-width: 860px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.header {
+  background: var(--bg-card);
+  border: 1px solid var(--stroke-card);
+  border-radius: 12px;
+  padding: 20px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.header h1 { font-size: 18px; font-weight: 700; }
+.header p { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
+
+.theme-btn {
+  padding: 6px 14px;
+  border-radius: 6px;
+  background: var(--bg-subtle);
+  color: var(--text-primary);
+  border: 1px solid var(--stroke-card);
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 12px;
+}
+
+/* 3-State Toggle Matrix */
+.matrix-card {
+  background: var(--bg-card);
+  border: 1px solid var(--stroke-card);
+  border-radius: 12px;
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.matrix-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.state-box {
+  background: var(--bg-subtle);
+  border: 1px solid var(--stroke-card);
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+}
+
+.state-label { font-size: 13px; font-weight: 600; }
+.state-sub { font-size: 11px; color: var(--text-secondary); }
+
+/* Switch Widget Component */
+.switch-sample {
+  width: 40px;
+  height: 20px;
+  border-radius: 10px;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.switch-sample::after {
+  content: "";
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  top: 4px;
+  transition: all 0.2s ease;
+}
+
+/* 1. Active ON */
+.switch-sample.active-on {
+  background: var(--switch-track-on);
+  border: 1px solid var(--switch-track-on);
+}
+.switch-sample.active-on::after {
+  right: 4px;
+  background: var(--switch-thumb-on);
+}
+
+/* 2. Locked/Disabled ON (Greyed Muted Track & Thumb) */
+.switch-sample.disabled-on {
+  background: var(--switch-track-disabled-on);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  cursor: not-allowed;
+  opacity: 0.85;
+}
+.switch-sample.disabled-on::after {
+  right: 4px;
+  background: var(--switch-thumb-disabled-on);
+}
+
+/* 3. Inactive OFF */
+.switch-sample.inactive-off {
+  background: var(--switch-track-off);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+}
+.switch-sample.inactive-off::after {
+  left: 4px;
+  background: var(--switch-thumb-off);
+}
+
+/* Live Settings Group Mockup */
+.settings-preview {
+  background: var(--bg-card);
+  border: 1px solid var(--stroke-card);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--stroke-divider);
+}
+.row:last-child { border-bottom: none; }
+
+.row-title { font-size: 13.5px; font-weight: 600; }
+.row-desc { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+
+.pill-info {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10.5px;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+}
+</style>
+
+<div class="container">
+  <div class="header">
+    <div>
+      <h1>Windows 11 Fluent 2 — Toggle Switch 3-State Design System</h1>
+      <p>Standar warna track dan thumb untuk membedakan Active ON vs Locked/Disabled ON</p>
+    </div>
+    <button class="theme-btn" onclick="toggleTheme()">Toggle Theme</button>
+  </div>
+
+  <div class="matrix-card">
+    <h2 style="font-size: 15px; font-weight: 700;">1. Matrix Perbandingan Visual 3-State</h2>
+    <div class="matrix-grid">
+      <!-- State 1 -->
+      <div class="state-box">
+        <div class="switch-sample active-on"></div>
+        <div class="state-label" style="color: var(--accent-primary);">1. Active User Switch (ON)</div>
+        <div class="state-sub">Track: Bright Blue (#4CC2FF)<br>Thumb: Solid White (#FFFFFF)<br>Status: Dapat diklik/diubah</div>
+      </div>
+
+      <!-- State 2 -->
+      <div class="state-box" style="border: 1px solid rgba(76, 194, 255, 0.3); background: rgba(76, 194, 255, 0.04);">
+        <div class="switch-sample disabled-on"></div>
+        <div class="state-label" style="color: var(--text-secondary);">2. Locked / Read-Only (ON)</div>
+        <div class="state-sub">Track: Muted Gray (#323742)<br>Thumb: Slate Gray (#7B8496)<br>Status: Terkunci aktif oleh sistem</div>
+      </div>
+
+      <!-- State 3 -->
+      <div class="state-box">
+        <div class="switch-sample inactive-off"></div>
+        <div class="state-label" style="color: var(--text-tertiary);">3. Inactive Switch (OFF)</div>
+        <div class="state-sub">Track: Dark (#282A30)<br>Thumb: Gray (#A0A6B4)<br>Posisi: Kiri (OFF)</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="matrix-card">
+    <h2 style="font-size: 15px; font-weight: 700;">2. Penerapan Nyata di General Settings</h2>
+    <div class="settings-preview">
+      <!-- Row 1: Auto-start (User can toggle) -->
+      <div class="row">
+        <div>
+          <div class="row-title">Auto-start on Boot</div>
+          <div class="row-desc">When enabled, Wira Desk starts automatically at sign-in.</div>
+        </div>
+        <div class="switch-sample active-on" title="User configurable toggle switch"></div>
+      </div>
+
+      <!-- Row 2: Spatial Preservation (Architectural Guarantee) -->
+      <div class="row">
+        <div>
+          <div class="row-title">Spatial Preservation (Per-Monitor Lock)</div>
+          <div class="row-desc">Locks window cycling strictly to the currently active physical monitor.</div>
+          <div class="pill-info">🔒 Core architectural guarantee (Always enforced)</div>
+        </div>
+        <div class="switch-sample disabled-on" title="Locked ON: Core architectural guarantee"></div>
+      </div>
+
+      <!-- Row 3: Virtual Desktop Isolation -->
+      <div class="row">
+        <div>
+          <div class="row-title">Virtual Desktop Isolation</div>
+          <div class="row-desc">Prevents jumping across active Windows Virtual Desktop boundaries.</div>
+          <div class="pill-info">🔒 Core architectural guarantee (Always enforced)</div>
+        </div>
+        <div class="switch-sample disabled-on" title="Locked ON: Core architectural guarantee"></div>
+      </div>
+
+      <!-- Row 4: UX Honesty Mode -->
+      <div class="row">
+        <div>
+          <div class="row-title">UX Honesty Mode</div>
+          <div class="row-desc">Brings hanging or not-responding windows forward transparently.</div>
+          <div class="pill-info">🔒 Core architectural guarantee (Always enforced)</div>
+        </div>
+        <div class="switch-sample disabled-on" title="Locked ON: Core architectural guarantee"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function toggleTheme() {
+  const root = document.documentElement;
+  const current = root.getAttribute('data-theme');
+  root.setAttribute('data-theme', current === 'light' ? 'dark' : 'light');
+}
+</script>
