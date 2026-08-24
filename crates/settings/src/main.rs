@@ -713,7 +713,7 @@ impl SettingsApp {
             // 1. Fluent 2 Modern Header Bar (Custom Frameless Window Titlebar)
             let header_response = egui::Frame::new()
                 .fill(theme::COLOR_BG_MICA)
-                .inner_margin(egui::Margin::symmetric(16, 10))
+                .inner_margin(egui::Margin::symmetric(16, 8))
                 .show(ui, |ui| {
                     ui.set_width(ui.available_width());
                     ui.horizontal(|ui| {
@@ -724,33 +724,62 @@ impl SettingsApp {
                                 .color(theme::COLOR_TEXT_PRIMARY),
                         );
                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                            let close_btn = ui.add(
-                                egui::Button::new(
-                                    egui::RichText::new("✕")
-                                        .size(13.0)
-                                        .color(theme::COLOR_TEXT_SECONDARY),
-                                )
-                                .fill(egui::Color32::TRANSPARENT)
-                                .stroke(egui::Stroke::NONE)
-                                .min_size(egui::vec2(28.0, 24.0)),
-                            );
-                            if close_btn.clicked() {
+                            let (close_rect, close_resp) = ui
+                                .allocate_exact_size(egui::vec2(32.0, 24.0), egui::Sense::click());
+                            if close_resp.clicked() {
                                 ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
                             }
+                            if ui.is_rect_visible(close_rect) {
+                                let (fill, text_color) = if close_resp.hovered() {
+                                    (
+                                        egui::Color32::from_rgb(0xc4, 0x2b, 0x1c),
+                                        egui::Color32::WHITE,
+                                    )
+                                } else {
+                                    (egui::Color32::TRANSPARENT, theme::COLOR_TEXT_SECONDARY)
+                                };
+                                if fill != egui::Color32::TRANSPARENT {
+                                    ui.painter().rect_filled(
+                                        close_rect,
+                                        egui::CornerRadius::same(4),
+                                        fill,
+                                    );
+                                }
+                                ui.painter().text(
+                                    close_rect.center(),
+                                    egui::Align2::CENTER_CENTER,
+                                    "✕",
+                                    egui::FontId::proportional(12.0),
+                                    text_color,
+                                );
+                            }
 
-                            let min_btn = ui.add(
-                                egui::Button::new(
-                                    egui::RichText::new("—")
-                                        .size(12.0)
-                                        .color(theme::COLOR_TEXT_SECONDARY),
-                                )
-                                .fill(egui::Color32::TRANSPARENT)
-                                .stroke(egui::Stroke::NONE)
-                                .min_size(egui::vec2(28.0, 24.0)),
-                            );
-                            if min_btn.clicked() {
+                            let (min_rect, min_resp) = ui
+                                .allocate_exact_size(egui::vec2(32.0, 24.0), egui::Sense::click());
+                            if min_resp.clicked() {
                                 ui.ctx()
                                     .send_viewport_cmd(egui::ViewportCommand::Minimized(true));
+                            }
+                            if ui.is_rect_visible(min_rect) {
+                                let (fill, text_color) = if min_resp.hovered() {
+                                    (theme::COLOR_BG_CARD_HOVER, theme::COLOR_TEXT_PRIMARY)
+                                } else {
+                                    (egui::Color32::TRANSPARENT, theme::COLOR_TEXT_SECONDARY)
+                                };
+                                if fill != egui::Color32::TRANSPARENT {
+                                    ui.painter().rect_filled(
+                                        min_rect,
+                                        egui::CornerRadius::same(4),
+                                        fill,
+                                    );
+                                }
+                                ui.painter().text(
+                                    min_rect.center(),
+                                    egui::Align2::CENTER_CENTER,
+                                    "—",
+                                    egui::FontId::proportional(12.0),
+                                    text_color,
+                                );
                             }
                         });
                     });
@@ -759,7 +788,7 @@ impl SettingsApp {
             if header_response
                 .response
                 .interact(egui::Sense::drag())
-                .dragged()
+                .drag_started()
             {
                 ui.ctx().send_viewport_cmd(egui::ViewportCommand::StartDrag);
             }
