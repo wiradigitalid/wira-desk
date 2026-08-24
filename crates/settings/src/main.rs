@@ -103,6 +103,19 @@ impl SettingsApp {
             return;
         }
 
+        // Full window top drag area: covers from true window (0,0) down through 48px
+        let win_rect = ui.max_rect();
+        let top_drag_rect =
+            egui::Rect::from_min_size(win_rect.min, egui::vec2(win_rect.width(), 48.0));
+        let drag_response = ui.interact(
+            top_drag_rect,
+            ui.id().with("onboarding_top_window_drag"),
+            egui::Sense::drag(),
+        );
+        if drag_response.drag_started() {
+            ui.ctx().send_viewport_cmd(egui::ViewportCommand::StartDrag);
+        }
+
         // Full modal surface with single crisp Fluent 2 border
         egui::Frame::new()
             .fill(theme::COLOR_BG_CARD)
@@ -111,27 +124,13 @@ impl SettingsApp {
             .inner_margin(egui::Margin {
                 left: 28,
                 right: 28,
-                top: 20,
+                top: 18,
                 bottom: 24,
             })
             .show(ui, |ui| {
                 ui.set_min_size(ui.available_size());
 
-                // Top window drag area: covers the entire top 45px of the window
-                let full_top_drag_rect = egui::Rect::from_min_size(
-                    ui.max_rect().min,
-                    egui::vec2(ui.available_width(), 45.0),
-                );
-                let drag_response = ui.interact(
-                    full_top_drag_rect,
-                    ui.id().with("onboarding_full_top_drag"),
-                    egui::Sense::drag(),
-                );
-                if drag_response.drag_started() {
-                    ui.ctx().send_viewport_cmd(egui::ViewportCommand::StartDrag);
-                }
-
-                // 1. Progress Indicator Bar (3 horizontal segments spanning full width)
+                // 1. Progress Indicator Bar (3 horizontal segments spanning 100% available width)
                 let total_steps = 3;
                 let current_step_num = match step {
                     app::OnboardingStep::Welcome => 1,
@@ -180,9 +179,7 @@ impl SettingsApp {
 
                 ui.add_space(14.0);
 
-                // 4. Middle Content Cards per Step (Explicit identical width across all 3 steps)
-                let full_card_w = ui.available_width();
-
+                // 4. Middle Content Cards per Step (Natural frame filling without overflow)
                 match step {
                     app::OnboardingStep::Welcome => {
                         egui::Frame::new()
@@ -191,8 +188,6 @@ impl SettingsApp {
                             .corner_radius(egui::CornerRadius::same(10))
                             .inner_margin(egui::Margin::symmetric(16, 12))
                             .show(ui, |ui| {
-                                ui.set_min_width(full_card_w);
-                                ui.set_max_width(full_card_w);
                                 ui.vertical(|ui| {
                                     ui.horizontal(|ui| {
                                         ui.label(egui::RichText::new("⚡").size(18.0));
@@ -255,8 +250,6 @@ impl SettingsApp {
                             .corner_radius(egui::CornerRadius::same(10))
                             .inner_margin(egui::Margin::symmetric(14, 12))
                             .show(ui, |ui| {
-                                ui.set_min_width(full_card_w);
-                                ui.set_max_width(full_card_w);
                                 ui.vertical(|ui| {
                                     let gap = 12.0;
                                     let win_w = (ui.available_width() - gap) / 2.0;
@@ -412,7 +405,7 @@ impl SettingsApp {
                                                                     .size(11.5)
                                                                     .strong()
                                                                     .color(theme::COLOR_TEXT_PRIMARY),
-                                                                );
+                                                            );
                                                             ui.label(
                                                                 egui::RichText::new(if w2_active {
                                                                     "Active Window"
@@ -479,8 +472,6 @@ impl SettingsApp {
                             .corner_radius(egui::CornerRadius::same(10))
                             .inner_margin(egui::Margin::symmetric(16, 12))
                             .show(ui, |ui| {
-                                ui.set_min_width(full_card_w);
-                                ui.set_max_width(full_card_w);
                                 ui.vertical(|ui| {
                                     ui.horizontal(|ui| {
                                         ui.label(egui::RichText::new("🚀").size(20.0));
@@ -530,7 +521,7 @@ impl SettingsApp {
                     }
                 }
 
-                // 5. 100% MATHEMATICALLY PINNED FOOTER BUTTONS AT TRUE BOTTOM MARGIN
+                // 5. 100% MATHEMATICALLY PINNED FOOTER BUTTONS AT EXACT COORDINATE
                 let btn_height = 34.0;
                 let footer_y = ui.max_rect().bottom() - btn_height;
 
