@@ -43,10 +43,10 @@ Follows Windows 11 dialog spacing with a structured 5-pane vertical sidebar with
 - **Save Bar**: Sticky footer (`48 px`) with Revert and Save Changes buttons, validation error summary, and instantaneous IPC status reflection.
 
 ### 3. First-Run Onboarding Modal Dialog
-- **Modal Tutorial Shell**: Frameless interactive practice arena (`520 × 400 px`) invoked with `--onboarding`.
-- **Progress Bar**: 3-step indicator displaying *Welcome*, *Try Switching*, and *Done*.
-- **Simulated Windows**: Responsive dummy window widgets that alternate visual focus states when the user presses `Win + \``.
-- **Skip Action**: Explicit "Skip Tutorial" button for experienced power users (also bound to `Escape`).
+- **Modal Tutorial Shell**: Frameless interactive practice arena (`580 × 380 px`, `with_decorations(false)`, `.with_transparent(true)`) with top 48 px drag area and symmetric 28 px padding.
+- **Progress Bar**: 3-segment balanced indicator displaying *Welcome*, *Try Switching*, and *Done*.
+- **Simulated Windows**: Dual responsive dummy window cards (50% split with 12 px gap) that alternate visual focus states when the user presses `Win + \``.
+- **Navigation Flow**: Step 1 (Skip / Next), Step 2 (Back / Next), Step 3 (Back / Start Using Wira Desk), with buttons pinned at exact bottom margin 24 px.
 
 ## Do's and Don'ts
 
