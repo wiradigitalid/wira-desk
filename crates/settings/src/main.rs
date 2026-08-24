@@ -17,7 +17,7 @@ fn main() -> eframe::Result {
     let saved = Config::load_or_default(&config_path());
 
     let (width, height) = if intent == LaunchIntent::Onboarding {
-        (580.0, 410.0)
+        (600.0, 440.0)
     } else {
         (660.0, 580.0)
     };
@@ -25,9 +25,10 @@ fn main() -> eframe::Result {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_inner_size([width, height])
-            .with_min_inner_size([480.0, 340.0])
+            .with_min_inner_size([500.0, 360.0])
             .with_title("Wira Desk")
-            .with_decorations(false),
+            .with_decorations(false)
+            .with_transparent(true),
         ..Default::default()
     };
 
@@ -102,18 +103,18 @@ impl SettingsApp {
             return;
         }
 
-        // Full window surface with single crisp Fluent 2 border (Edge-to-edge)
+        // Full modal surface with single crisp Fluent 2 border and smooth anti-aliased corners
         egui::Frame::new()
             .fill(theme::COLOR_BG_CARD)
             .stroke(egui::Stroke::new(1.0, theme::COLOR_STROKE_CARD))
             .corner_radius(egui::CornerRadius::same(12))
-            .inner_margin(egui::Margin::symmetric(28, 22))
+            .inner_margin(egui::Margin::symmetric(32, 26))
             .show(ui, |ui| {
                 ui.set_min_size(ui.available_size());
 
-                // Top drag region
+                // Top drag region (draggable header)
                 let (drag_rect, _) = ui.allocate_exact_size(
-                    egui::vec2(ui.available_width(), 10.0),
+                    egui::vec2(ui.available_width(), 12.0),
                     egui::Sense::hover(),
                 );
                 let drag_response = ui.interact(
@@ -125,7 +126,7 @@ impl SettingsApp {
                     ui.ctx().send_viewport_cmd(egui::ViewportCommand::StartDrag);
                 }
 
-                // Step Progress Indicator Bar (3 horizontal segments)
+                // Step Progress Indicator Bar (3 horizontal segments with exact spacing)
                 ui.horizontal(|ui| {
                     let total_steps = 3;
                     let current_step_num = match step {
@@ -135,9 +136,10 @@ impl SettingsApp {
                     };
 
                     let total_w = ui.available_width();
-                    let gap = 8.0;
+                    let gap = 10.0;
                     let seg_w = (total_w - ((total_steps - 1) as f32 * gap)) / total_steps as f32;
 
+                    ui.spacing_mut().item_spacing.x = gap;
                     for s in 1..=total_steps {
                         let is_current = s <= current_step_num;
                         let stroke_color = if is_current {
@@ -150,13 +152,10 @@ impl SettingsApp {
                             egui::Sense::hover(),
                         );
                         ui.painter().rect_filled(rect, 2.0, stroke_color);
-                        if s < total_steps {
-                            ui.add_space(gap);
-                        }
                     }
                 });
 
-                ui.add_space(20.0);
+                ui.add_space(22.0);
 
                 // Step Heading (Left-aligned, Bold 20pt)
                 ui.label(
@@ -174,12 +173,12 @@ impl SettingsApp {
                         .color(theme::COLOR_TEXT_SECONDARY),
                 );
 
-                ui.add_space(16.0);
+                ui.add_space(18.0);
 
                 // Step-specific Interactive Content
                 match step {
                     app::OnboardingStep::Welcome => {
-                        ui.add_space(32.0);
+                        ui.add_space(40.0);
                     }
                     app::OnboardingStep::TrySwitching => {
                         let simulated_key_triggered = ui.input(|i| {
@@ -198,12 +197,13 @@ impl SettingsApp {
                             .show(ui, |ui| {
                                 ui.set_width(ui.available_width());
                                 ui.vertical(|ui| {
-                                    // 2 dummy window mockups
-                                    let available_w = ui.available_width();
+                                    // 2 dummy window mockups in balanced horizontal row
                                     let gap = 12.0;
-                                    let win_w = (available_w - gap) / 2.0;
+                                    let win_w = (ui.available_width() - gap) / 2.0;
 
                                     ui.horizontal(|ui| {
+                                        ui.spacing_mut().item_spacing.x = gap;
+
                                         // Dummy Window 1
                                         let w1_active = self.model.onboarding_focus_index == 0;
                                         let w1_border = if w1_active {
@@ -227,18 +227,18 @@ impl SettingsApp {
                                             .inner_margin(egui::Margin::ZERO)
                                             .show(ui, |ui| {
                                                 ui.set_width(win_w);
-                                                ui.set_height(76.0);
+                                                ui.set_height(82.0);
                                                 ui.vertical(|ui| {
                                                     // Mini titlebar
                                                     egui::Frame::new()
                                                         .fill(theme::COLOR_BG_KEYCAP)
-                                                        .inner_margin(egui::Margin::symmetric(8, 4))
+                                                        .inner_margin(egui::Margin::symmetric(10, 5))
                                                         .show(ui, |ui| {
                                                             ui.set_width(ui.available_width());
                                                             ui.horizontal(|ui| {
                                                                 ui.label(
                                                                     egui::RichText::new("Document 1")
-                                                                        .size(11.0)
+                                                                        .size(11.5)
                                                                         .strong()
                                                                         .color(if w1_active {
                                                                             theme::COLOR_ACCENT_PRIMARY
@@ -260,9 +260,9 @@ impl SettingsApp {
                                                         });
 
                                                     // Content body
-                                                    ui.add_space(4.0);
+                                                    ui.add_space(6.0);
                                                     ui.horizontal(|ui| {
-                                                        ui.add_space(8.0);
+                                                        ui.add_space(10.0);
                                                         ui.vertical(|ui| {
                                                             ui.label(
                                                                 egui::RichText::new("Project Brief.docx")
@@ -276,7 +276,7 @@ impl SettingsApp {
                                                                 } else {
                                                                     "Background"
                                                                 })
-                                                                .size(10.5)
+                                                                .size(11.0)
                                                                 .color(theme::COLOR_TEXT_SECONDARY),
                                                             );
                                                         });
@@ -290,8 +290,6 @@ impl SettingsApp {
                                                 theme::ONBOARDING_DUMMY_WIN_1.name,
                                             )
                                         });
-
-                                        ui.add_space(gap);
 
                                         // Dummy Window 2
                                         let w2_active = self.model.onboarding_focus_index == 1;
@@ -316,18 +314,18 @@ impl SettingsApp {
                                             .inner_margin(egui::Margin::ZERO)
                                             .show(ui, |ui| {
                                                 ui.set_width(win_w);
-                                                ui.set_height(76.0);
+                                                ui.set_height(82.0);
                                                 ui.vertical(|ui| {
                                                     // Mini titlebar
                                                     egui::Frame::new()
                                                         .fill(theme::COLOR_BG_KEYCAP)
-                                                        .inner_margin(egui::Margin::symmetric(8, 4))
+                                                        .inner_margin(egui::Margin::symmetric(10, 5))
                                                         .show(ui, |ui| {
                                                             ui.set_width(ui.available_width());
                                                             ui.horizontal(|ui| {
                                                                 ui.label(
                                                                     egui::RichText::new("Document 2")
-                                                                        .size(11.0)
+                                                                        .size(11.5)
                                                                         .strong()
                                                                         .color(if w2_active {
                                                                             theme::COLOR_ACCENT_PRIMARY
@@ -349,9 +347,9 @@ impl SettingsApp {
                                                         });
 
                                                     // Content body
-                                                    ui.add_space(4.0);
+                                                    ui.add_space(6.0);
                                                     ui.horizontal(|ui| {
-                                                        ui.add_space(8.0);
+                                                        ui.add_space(10.0);
                                                         ui.vertical(|ui| {
                                                             ui.label(
                                                                 egui::RichText::new("Design System.docx")
@@ -365,7 +363,7 @@ impl SettingsApp {
                                                                 } else {
                                                                     "Background"
                                                                 })
-                                                                .size(10.5)
+                                                                .size(11.0)
                                                                 .color(theme::COLOR_TEXT_SECONDARY),
                                                             );
                                                         });
@@ -381,7 +379,7 @@ impl SettingsApp {
                                         });
                                     });
 
-                                    ui.add_space(10.0);
+                                    ui.add_space(12.0);
 
                                     // Direct trigger instruction & feedback pill
                                     ui.horizontal(|ui| {
@@ -390,7 +388,7 @@ impl SettingsApp {
                                                 egui::RichText::new("Win + ` (Click to simulate)")
                                                     .monospace()
                                                     .strong()
-                                                    .size(11.5)
+                                                    .size(12.0)
                                                     .color(theme::COLOR_TEXT_PRIMARY),
                                             )
                                             .fill(theme::COLOR_BG_KEYCAP)
@@ -408,7 +406,7 @@ impl SettingsApp {
                                         }
 
                                         if self.model.onboarding_focus_index == 1 {
-                                            ui.add_space(6.0);
+                                            ui.add_space(8.0);
                                             ui.colored_label(
                                                 theme::COLOR_SUCCESS,
                                                 "✔ Focus shifted to Document 2",
@@ -423,24 +421,24 @@ impl SettingsApp {
                             .fill(theme::COLOR_BG_SUBTLE)
                             .stroke(egui::Stroke::new(1.0, theme::COLOR_STROKE_CARD))
                             .corner_radius(egui::CornerRadius::same(10))
-                            .inner_margin(egui::Margin::symmetric(16, 14))
+                            .inner_margin(egui::Margin::symmetric(18, 16))
                             .show(ui, |ui| {
                                 ui.set_width(ui.available_width());
                                 ui.horizontal(|ui| {
-                                    ui.label(egui::RichText::new("🚀").size(22.0));
-                                    ui.add_space(6.0);
+                                    ui.label(egui::RichText::new("🚀").size(24.0));
+                                    ui.add_space(8.0);
                                     ui.vertical(|ui| {
                                         ui.label(
                                             egui::RichText::new("System Tray Resident")
                                                 .strong()
-                                                .size(13.5)
+                                                .size(14.0)
                                                 .color(theme::COLOR_TEXT_PRIMARY),
                                         );
                                         ui.label(
                                             egui::RichText::new(
                                                 "Wira Desk runs quietly in the background. Right-click the tray icon anytime for Settings.",
                                             )
-                                            .size(12.0)
+                                            .size(12.5)
                                             .color(theme::COLOR_TEXT_SECONDARY),
                                         );
                                     });
@@ -449,11 +447,26 @@ impl SettingsApp {
                     }
                 }
 
-                ui.add_space(20.0);
+                ui.add_space(24.0);
 
-                // Navigation Footer Buttons
+                // Navigation Footer Buttons (Balanced row layout)
                 ui.horizontal(|ui| {
                     if step == app::OnboardingStep::Done {
+                        let back_resp = ui.add(
+                            egui::Button::new(
+                                egui::RichText::new("← Back")
+                                    .size(12.5)
+                                    .color(theme::COLOR_TEXT_PRIMARY),
+                            )
+                            .fill(theme::COLOR_BG_CARD_HOVER)
+                            .stroke(egui::Stroke::NONE)
+                            .corner_radius(egui::CornerRadius::same(6))
+                            .min_size(egui::vec2(90.0, 32.0)),
+                        );
+                        if back_resp.clicked() {
+                            self.model.onboarding = Some(app::OnboardingStep::TrySwitching);
+                        }
+
                         ui.with_layout(
                             egui::Layout::right_to_left(egui::Align::Center),
                             |ui| {
@@ -519,7 +532,7 @@ impl SettingsApp {
                                     )
                                     .fill(theme::COLOR_ACCENT_PRIMARY)
                                     .corner_radius(egui::CornerRadius::same(6))
-                                    .min_size(egui::vec2(80.0, 32.0)),
+                                    .min_size(egui::vec2(84.0, 32.0)),
                                 );
                                 next_resp.widget_info(|| {
                                     egui::WidgetInfo::labeled(
