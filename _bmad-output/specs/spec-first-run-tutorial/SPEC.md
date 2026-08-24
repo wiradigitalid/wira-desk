@@ -42,27 +42,27 @@ The First-Run Tutorial (`wiradesk-settings.exe --onboarding`) provides an intera
 ### CAP-OB-2: Step 1 — Welcome & Conceptual Grounding
 * **Intent:** Explain the fundamental difference between Wira Desk (same-app, per-monitor) and Windows `Alt+Tab` (all apps, all monitors) in a balanced frameless modal dialog shell.
 * **Success Criteria:**
-  1. Displays frameless modal window (560 × 400 px, `with_decorations(false)`) centered on screen with Fluent 2 Mica material and single crisp border.
-  2. Integrated custom drag header with seamless close affordance.
+  1. Displays frameless modal window (580 × 380 px, `with_decorations(false)`, `.with_transparent(true)`) centered on screen with Fluent 2 Mica material and single crisp border.
+  2. Integrated custom top drag region covering the upper 48 px.
   3. Top 3-segment progress indicator spans balanced across inner width.
   4. Header reads: `Welcome to Wira Desk` (Left-aligned, Bold 20pt).
-  5. Actions: `Skip Tutorial` (dismisses wizard and persists baseline config) and `Next` (advances to Step 2).
+  5. Actions: `Skip Tutorial` (left) and `Next` (right).
 
 ### CAP-OB-3: Step 2 — Interactive Same-App Cycling Simulation
 * **Intent:** Provide a live interactive simulation within the onboarding UI that shifts focus between simulated dummy windows when `Win + \`` is pressed.
 * **Success Criteria:**
   1. Displays 2 simulated dummy window widgets: *"Document 1"* (initially focused with blue stroke) and *"Document 2"*.
   2. Captures the physical `Win + \`` keypress while the onboarding window is active.
-  3. On keypress, visual focus shifts smoothly from Document 1 to Document 2, displaying a confirmation message (*"Great! Focus shifted instantaneously"*).
-  4. The `Next →` button activates to proceed to Step 3.
-  5. An explicit `Skip Tutorial` action remains available and functional.
+  3. On keypress, visual focus shifts smoothly from Document 1 to Document 2, displaying a confirmation message (*"✔ Focus shifted to Document 2"*).
+  4. Actions: `← Back` (left) to return to Step 1 and `Next` (right) to advance to Step 3.
 
 ### CAP-OB-4: Step 3 — Completion & Persistence
 * **Intent:** Confirm successful setup and atomically write baseline configuration so onboarding does not recur.
 * **Success Criteria:**
-  1. Step 3 displays confirmation that Wira Desk is running in the background System Tray.
-  2. Clicking `Finish & Start Using Wira Desk` (or `Skip Tutorial` at any stage) writes `config.toml` atomically to disk.
-  3. The onboarding process terminates cleanly and releases all GUI memory.
+  1. Step 3 displays confirmation that Wira Desk is running in the background System Tray with Settings customization hints.
+  2. Actions: `← Back` (left) to return to Step 2 and `Start Using Wira Desk` (right) to finish onboarding.
+  3. Clicking `Start Using Wira Desk` (or `Skip Tutorial` at any stage) writes `config.toml` atomically to disk.
+  4. The onboarding process terminates cleanly and releases all GUI memory.
 
 ---
 

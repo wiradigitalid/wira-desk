@@ -124,13 +124,24 @@ Wira Desk adheres to native Windows 11 Fluent 2 Design and Mica Material design 
   - `Save Changes`: Background `#4CC2FF`, text `#101216`, dimensions `110 × 30 px`.
 
 ### F. Onboarding Wizard Modal
-* **Dialog Dimensions**: Width `560 px`, Height `400 px` (Min `480 × 340 px`).
+* **Dialog Dimensions**: Width `580 px`, Height `380 px` (Min `500 × 340 px`), with `.with_transparent(true)` on `ViewportBuilder` for crisp anti-aliased corner rendering.
 * **Corner Radius**: `CornerRadius::same(12)`.
 * **Background**: Single clean surface `#20242B` with stroke `1.0 px`, `rgba(255, 255, 255, 0.08)`.
-* **Progress Bar (3-Segment)**: Width spans full inner width, thickness `4.0 px`, color `#4CC2FF` (Active) / `#2B303A` (Inactive).
-* **Interactive Sandbox Area**: Background `#171A1F`, radius `10 px`, padding `16 × 14 px`.
-* **Dummy Window Cards**: Width `50%` split, height `76 px`, radius `8 px`, mini titlebar (`#2B303A`) with document title & close glyph, active stroke `#4CC2FF` (`1.5 px`).
-* **Navigation Action Buttons**: Skip Tutorial (`#272C35`, radius `6 px`, `100 × 32 px`), Next (`#4CC2FF`, text `#101216`, radius `6 px`, `80 × 32 px`).
+* **Internal Margins**: Horizontal `28 px` (symmetric left and right), Top `18–20 px`, Bottom `24 px`.
+* **Top Drag Region**: Covers the top `48 px` of the window canvas, triggered via `drag_started()` for fluid native Win32 window dragging.
+* **Progress Bar (3-Segment)**: Width spans full inner width (`gap: 10 px`), thickness `4.0 px`, radius `2.0 px`, color `#4CC2FF` (Active) / `#2B303A` (Inactive).
+* **Typography Hierarchy**:
+  - Title: Left-aligned, Bold `20 pt`, `#F3F5F8` (`text_primary`).
+  - Description: Regular `13.0 pt`, `#A0A6B4` (`text_secondary`).
+* **Interactive Sandbox (Step 2)**:
+  - Container Background: `#171A1F`, corner radius `10 px`, padding `14 × 12 px`.
+  - Dual Dummy Windows: Split `50%` with `gap: 12 px`, height `72 px`, radius `8 px`. Each card features a mini-titlebar (`#2B303A`) with document title & close glyph, and body status (`Active Window` / `Background`). Active card highlighted with blue stroke `#4CC2FF` (`1.5 px`).
+  - Practice Trigger: Monospace keycap button (`#2B303A`, radius `6 px`) with green success feedback pill (`#6CCB5F`).
+* **Fixed Navigation Footer (Pinned at Bottom Margin 24 px)**:
+  - Placed via absolute coordinates (`footer_y = max_rect.bottom() - 34 px`) so buttons remain 100% stationary across all steps.
+  - Step 1: `Skip Tutorial` (Left, `#272C35`, `105 × 34 px`, radius `6 px`, borderless) | `Next` (Right, `#4CC2FF`, `90 × 34 px`, radius `6 px`).
+  - Step 2: `← Back` (Left, `#272C35`, `90 × 34 px`, radius `6 px`) | `Next` (Right, `#4CC2FF`, `90 × 34 px`, radius `6 px`).
+  - Step 3: `← Back` (Left, `#272C35`, `90 × 34 px`, radius `6 px`) | `Start Using Wira Desk` (Right, `#4CC2FF`, `170 × 34 px`, radius `6 px`).
 
 ## Global Design Rules & Invariants
 
