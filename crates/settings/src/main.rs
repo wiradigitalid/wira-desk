@@ -104,7 +104,18 @@ impl SettingsApp {
         }
 
         ui.vertical_centered(|ui| {
-            ui.add_space(16.0);
+            // Window Dragging & Integrated Caption Area
+            let drag_rect = ui.available_rect_before_wrap();
+            let drag_response = ui.interact(
+                egui::Rect::from_min_size(drag_rect.min, egui::vec2(drag_rect.width(), 32.0)),
+                ui.id().with("onboarding_drag"),
+                egui::Sense::drag(),
+            );
+            if drag_response.dragged() {
+                ui.ctx().send_viewport_cmd(egui::ViewportCommand::StartDrag);
+            }
+
+            ui.add_space(8.0);
 
             // Centered Modal Window Shell (Matching prototype.html)
             egui::Frame::new()
@@ -115,7 +126,7 @@ impl SettingsApp {
                 .show(ui, |ui| {
                     ui.set_width(480.0);
 
-                    // Modal Titlebar
+                    // Modal Titlebar with Close button
                     ui.horizontal(|ui| {
                         ui.label(
                             egui::RichText::new("Wira Desk — Setup Wizard")
@@ -124,6 +135,22 @@ impl SettingsApp {
                                 .color(theme::COLOR_TEXT_SECONDARY),
                         );
                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                            let close_btn = ui.add(
+                                egui::Button::new(
+                                    egui::RichText::new("✕")
+                                        .size(12.0)
+                                        .color(theme::COLOR_TEXT_SECONDARY),
+                                )
+                                .fill(egui::Color32::TRANSPARENT)
+                                .stroke(egui::Stroke::NONE)
+                                .min_size(egui::vec2(24.0, 20.0)),
+                            );
+                            if close_btn.clicked() {
+                                self.model.skip_onboarding();
+                                self.finish_onboarding();
+                                ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
+                            }
+
                             ui.label(
                                 egui::RichText::new("Escape to skip")
                                     .small()
@@ -515,7 +542,7 @@ impl SettingsApp {
 
         ui.vertical(|ui| {
             // 1. Fluent 2 Modern Header Bar (Custom Frameless Window Titlebar)
-            egui::Frame::new()
+            let header_response = egui::Frame::new()
                 .fill(theme::COLOR_BG_MICA)
                 .inner_margin(egui::Margin::symmetric(16, 10))
                 .show(ui, |ui| {
@@ -559,6 +586,14 @@ impl SettingsApp {
                         });
                     });
                 });
+
+            if header_response
+                .response
+                .interact(egui::Sense::drag())
+                .dragged()
+            {
+                ui.ctx().send_viewport_cmd(egui::ViewportCommand::StartDrag);
+            }
 
             // 2. Middle Body: Left Sidebar + Right Content Area
             let footer_height = 54.0;
