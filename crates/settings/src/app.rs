@@ -170,16 +170,18 @@ impl OnboardingStep {
     pub fn body(self) -> &'static str {
         match self {
             OnboardingStep::Welcome => {
-                "Wira Desk switches between windows of the application you are already using, \
-                 instead of every window on the system like Alt+Tab does. Cycling also stays \
-                 on the current monitor and virtual desktop, rather than reaching across all \
-                 of them."
+                "Wira Desk switches instantly between windows of the application you are currently using, \
+                 instead of cycling through every open window like Alt+Tab. Window focus stays strictly \
+                 on your active physical monitor and virtual desktop, eliminating multi-monitor distractions."
             }
             OnboardingStep::TrySwitching => {
-                "Open a second window of this application, then press the switch shortcut. \
-                 Focus moves to the next window of the same application, on the same monitor."
+                "Practice switching focus between two windows of the same app. Press Win + ` (backtick) \
+                 on your keyboard or click the practice button below to watch focus shift with zero HUD delay."
             }
-            OnboardingStep::Done => "You can change any shortcut later from the Shortcuts pane.",
+            OnboardingStep::Done => {
+                "Wira Desk is now resident and active in your System Tray. You can customize shortcuts, \
+                 snapping parameters, and VM passthrough rules anytime from Settings."
+            }
         }
     }
 }

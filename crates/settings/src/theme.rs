@@ -303,8 +303,13 @@ pub const SHORTCUT_SWITCHER: ControlSemantics = ControlSemantics {
     description: "Press the button, then press the key combination you want to use.",
 };
 
+pub const ONBOARDING_BACK_BUTTON: ControlSemantics = ControlSemantics {
+    name: "Back to previous step",
+    description: "Navigate back to the previous onboarding tutorial step.",
+};
+
 pub const ONBOARDING_FINISH_BUTTON: ControlSemantics = ControlSemantics {
-    name: "Finish & Start Using Wira Desk",
+    name: "Start Using Wira Desk",
     description: "Finish onboarding and start running Wira Desk in the background.",
 };
 
