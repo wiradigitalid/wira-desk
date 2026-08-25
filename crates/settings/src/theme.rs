@@ -348,6 +348,14 @@ pub const VM_BYPASS_CLASS_LIST: ControlSemantics = ControlSemantics {
     description: "List of window class names that receive raw keystroke passthrough.",
 };
 
+pub const COLOR_WARNING: egui::Color32 = egui::Color32::from_rgb(0xFF, 0xB9, 0x00);
+
+/// Accessible name and description for shortcut conflict resolution affordance.
+pub const SHORTCUT_CONFLICT_SWAP: ControlSemantics = ControlSemantics {
+    name: "Swap conflicting shortcuts",
+    description: "Swaps shortcut keys between the two conflicting actions.",
+};
+
 /// Text announced while a shortcut capturer is listening.
 /// The accessibility contract forbids communicating Listening mode through
 /// visual text alone, so this string is attached to the control's accessible
@@ -453,6 +461,7 @@ mod tests {
             ONBOARDING_SIMULATE_BUTTON,
             VM_BYPASS_PROCESS_LIST,
             VM_BYPASS_CLASS_LIST,
+            SHORTCUT_CONFLICT_SWAP,
         ] {
             assert!(!c.name.trim().is_empty(), "control has no accessible name");
             assert!(

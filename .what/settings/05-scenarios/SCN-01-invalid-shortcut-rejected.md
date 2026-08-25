@@ -45,3 +45,5 @@ Keeps the rejection grammar and the listening-state rules out of the success pat
 ## Notes
 
 Save is not gated on validity: the button is always live (`crates/settings/src/main.rs`), and an invalid draft is refused at save time by `validate_config`, surfacing as `SaveFeedback::Error`. A design that disabled Save would have to explain which field disabled it, which is why rejection is reported per field instead.
+
+A legal chord already held by another action is not this scenario's condition — it enters the draft rather than being held back, and is refused only at submission. That case is **SCN-03**.

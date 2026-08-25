@@ -4,7 +4,9 @@
 
 Decisions are no longer looked up through the memlog — the memlog goes back to being just a pass log.
 
-**0 decisions** — no decisions yet.
+**2 decisions** — applied: 2.
 
 | id | Title | Status | Type | Touches | File |
 | --- | --- | --- | --- | --- | --- |
+| `DEC-001` | A shortcut conflict is reported on the fields that conflict, and Save stays enabled | `applied` | — | `.what/settings/05-scenarios/SCN-03-shortcut-collision-refused-at-save.md`, `.what/settings/04-usecases/UC-4-change-shortcut.md`, `.what/settings/02-rules/rules-settings.md`, `.how/settings/SDD-settings.md` | `decisions/DEC-001-shortcut-conflict-reported-per-field.md` |
+| `DEC-002` | Whether another application already holds a chord is never predicted by probing the operating system | `applied` | — | `.how/settings/SDD-settings.md` | `decisions/DEC-002-external-hotkey-availability-is-not-probed.md` |

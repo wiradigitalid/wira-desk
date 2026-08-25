@@ -1079,7 +1079,16 @@ impl SettingsApp {
 
                             let (status_text, text_color) = match &self.model.feedback {
                                 SaveFeedback::None => {
-                                    ("Wira Desk is Active", theme::COLOR_TEXT_PRIMARY)
+                                    if self.model.has_any_conflict() {
+                                        let msg = if self.model.any_swappable_conflict() {
+                                            "⚠️ Shortcut conflict detected. Resolve with Swap ⇄ or a different key."
+                                        } else {
+                                            "⚠️ Shortcut conflict detected. Give one action a different key."
+                                        };
+                                        (msg, theme::COLOR_WARNING)
+                                    } else {
+                                        ("Wira Desk is Active", theme::COLOR_TEXT_PRIMARY)
+                                    }
                                 }
                                 SaveFeedback::Saved { reload_signalled } => {
                                     let msg = if *reload_signalled {
@@ -1107,6 +1116,13 @@ impl SettingsApp {
                             drawn.push("Save");
                             drawn.push("Revert");
 
+                            // Save is never gated on a standing conflict (DEC-001 /
+                            // LBR-ST-8): a disabled button would have to explain
+                            // which of six fields disabled it, which the pane
+                            // cannot do without the user already having found
+                            // the conflicting pair. An unusable draft is refused
+                            // here instead, by `save()`, with a message naming
+                            // both sides.
                             let save_btn = ui.add(
                                 egui::Button::new(
                                     egui::RichText::new("Save Changes")
@@ -1355,11 +1371,23 @@ impl SettingsApp {
                     drawn.push(field.label());
                     let current = field.get(&self.model.draft).to_string();
                     let listening = self.model.capture.is_listening_for(field);
+                    let conflict = self.model.find_conflict(field);
 
                     ui.horizontal(|ui| {
                         ui.allocate_ui(egui::vec2(text_slot_w, 0.0), |ui| {
                             ui.vertical(|ui| {
-                                ui.label(egui::RichText::new(field.label()).strong().size(13.5));
+                                ui.horizontal(|ui| {
+                                    ui.label(egui::RichText::new(field.label()).strong().size(13.5));
+                                    if let Some(conf_field) = conflict {
+                                        ui.add_space(4.0);
+                                        ui.label(
+                                            egui::RichText::new(format!("⚠️ Conflicts with {}", conf_field.label()))
+                                                .size(11.5)
+                                                .color(theme::COLOR_WARNING)
+                                                .strong(),
+                                        );
+                                    }
+                                });
                                 let subtext = match field {
                                     ShortcutField::Switcher => {
                                         "Switches between windows of your active app on this monitor."
@@ -1397,8 +1425,16 @@ impl SettingsApp {
 
                             let btn_color = if listening {
                                 ui.visuals().selection.stroke.color
+                            } else if conflict.is_some() {
+                                egui::Color32::from_rgb(0x38, 0x2A, 0x14) // Dark amber background for conflict
                             } else {
                                 theme::COLOR_BG_KEYCAP
+                            };
+
+                            let stroke_color = if conflict.is_some() {
+                                theme::COLOR_WARNING
+                            } else {
+                                theme::COLOR_STROKE_CARD
                             };
 
                             let response = ui
@@ -1407,13 +1443,15 @@ impl SettingsApp {
                                         egui::RichText::new(text).strong().size(12.5).color(
                                             if listening {
                                                 egui::Color32::WHITE
+                                            } else if conflict.is_some() {
+                                                theme::COLOR_WARNING
                                             } else {
                                                 theme::COLOR_TEXT_PRIMARY
                                             },
                                         ),
                                     )
                                     .fill(btn_color)
-                                    .stroke(egui::Stroke::new(1.0, theme::COLOR_STROKE_CARD))
+                                    .stroke(egui::Stroke::new(1.0, stroke_color))
                                     .corner_radius(egui::CornerRadius::same(6))
                                     .min_size(egui::vec2(135.0, 30.0)),
                                 )
@@ -1432,6 +1470,40 @@ impl SettingsApp {
                                     self.model.cancel_capture();
                                 } else {
                                     self.model.begin_capture(field);
+                                }
+                            }
+
+                            // Offer Swap only on the row whose capture actually
+                            // caused the conflict — that is the only field with
+                            // a displaced chord on record for `swap_shortcuts`
+                            // to give back to its partner (`can_swap`). The
+                            // partner's own row shows the ⚠️ label but no
+                            // button: swapping from there has nothing to swap.
+                            if let Some(conf_field) = conflict {
+                                if self.model.can_swap(field) {
+                                    ui.add_space(4.0);
+                                    let swap_btn = ui.add(
+                                        egui::Button::new(
+                                            egui::RichText::new("Swap ⇄")
+                                                .size(11.5)
+                                                .strong()
+                                                .color(theme::COLOR_TEXT_PRIMARY),
+                                        )
+                                        .fill(theme::COLOR_BG_CARD_HOVER)
+                                        .stroke(egui::Stroke::new(1.0, theme::COLOR_STROKE_CARD))
+                                        .corner_radius(egui::CornerRadius::same(4))
+                                        .min_size(egui::vec2(54.0, 26.0)),
+                                    );
+                                    swap_btn.widget_info(|| {
+                                        egui::WidgetInfo::labeled(
+                                            egui::WidgetType::Button,
+                                            true,
+                                            theme::SHORTCUT_CONFLICT_SWAP.name,
+                                        )
+                                    });
+                                    if swap_btn.clicked() {
+                                        self.model.swap_shortcuts(field, conf_field);
+                                    }
                                 }
                             }
                         });
@@ -1608,7 +1680,7 @@ impl SettingsApp {
 
     fn about_pane(&mut self, ui: &mut egui::Ui) {
         ui.label(
-            egui::RichText::new("Wira Desk (WiraDex)")
+            egui::RichText::new("Wira Desk")
                 .strong()
                 .size(18.5)
                 .color(theme::COLOR_TEXT_PRIMARY),

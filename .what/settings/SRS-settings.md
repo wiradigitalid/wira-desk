@@ -3,7 +3,7 @@ type: srs
 component: settings
 status: reviewed
 created: 2026-08-21
-updated: 2026-08-21
+updated: 2026-08-25
 satisfies: [FR-7, FR-13, FR-16, FR-17, FR-18, FR-19, FR-20, FR-21]
 reviewed:
   date: '2026-08-21'
@@ -88,7 +88,7 @@ Paired SDD: `.how/settings/SDD-settings.md`. UX Design: `.how/settings/01-ux/DES
 
 ## Slots
 
-- `02-rules/rules-settings.md`: Local component rules (LBR-ST-1..7).
+- `02-rules/rules-settings.md`: Local component rules (LBR-ST-1..9).
 - `03-domain/domain-model.md`: Conceptual domain entities (`user-shortcut-preference`, `onboarding-completion`, `auto-start-preference`).
 - `03-domain/state-machines.md`: First-run tutorial progression and shortcut capture listening state machine.
 - `04-usecases/`: Detailed step-by-step flows (`UC-4-change-shortcut.md`, `UC-5-first-run-tutorial.md`, `UC-6-toggle-auto-start.md`).

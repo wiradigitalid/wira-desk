@@ -114,6 +114,29 @@ impl ShortcutField {
             ShortcutField::Stack => cfg.layout.stack_shortcut = value,
         }
     }
+
+    /// The dotted TOML path this field corresponds to in `Config`.
+    /// `persistence::validate_config` names a rejected field by this exact
+    /// path — literal strings, kept separate on purpose so persistence has no
+    /// dependency on this UI-facing enum. `from_key` is the one place that
+    /// reads a save-time rejection back into a field, so the two tables must
+    /// stay in sync; a field added to one and not the other breaks the round
+    /// trip silently rather than at compile time.
+    pub fn key(self) -> &'static str {
+        match self {
+            ShortcutField::Switcher => "switcher.shortcut",
+            ShortcutField::Fallback => "switcher.fallback_shortcut",
+            ShortcutField::SnapLeft => "snapping.snap_half_left",
+            ShortcutField::SnapRight => "snapping.snap_half_right",
+            ShortcutField::SnapMaximize => "snapping.snap_maximize",
+            ShortcutField::Stack => "layout.stack_shortcut",
+        }
+    }
+
+    /// Reverse lookup of [`ShortcutField::key`].
+    pub fn from_key(key: &str) -> Option<ShortcutField> {
+        ShortcutField::ALL.into_iter().find(|f| f.key() == key)
+    }
 }
 
 /// Shortcut capturer state.
@@ -195,15 +218,41 @@ pub enum SaveFeedback {
 }
 
 /// Human-readable message for a validation failure.
+/// `field` arrives two ways: a dotted config key, from `SaveOutcome::Rejected`
+/// on the save path, or an already-resolved label, from the inline capture
+/// path. `ShortcutField::from_key` resolves the former to a label and leaves
+/// the latter untouched, so this message never surfaces a TOML path to the
+/// user — the confusion `DEC-001` and `LBR-ST-8` require it not to (a user
+/// should not have to know `switcher.fallback_shortcut` is what they see
+/// labelled "Fallback switch shortcut").
 pub fn describe(field: &str, err: ShortcutError) -> String {
-    let reason = match err {
-        ShortcutError::UnsupportedToken => "contains a key name Wira Desk does not recognize",
-        ShortcutError::NoMainKey => "needs a main key in addition to modifiers",
-        ShortcutError::MultipleMainKeys => "may only contain one main key",
-        ShortcutError::NoModifier => "needs at least one modifier (ctrl, win, alt, or shift)",
-        ShortcutError::Unrepresentable => "cannot be saved in a supported form",
-    };
-    format!("{field} {reason}.")
+    let label = ShortcutField::from_key(field)
+        .map(ShortcutField::label)
+        .unwrap_or(field);
+    match err {
+        ShortcutError::UnsupportedToken => {
+            format!("{label} contains a key name Wira Desk does not recognize.")
+        }
+        ShortcutError::NoMainKey => format!("{label} needs a main key in addition to modifiers."),
+        ShortcutError::MultipleMainKeys => format!("{label} may only contain one main key."),
+        ShortcutError::NoModifier => {
+            format!("{label} needs at least one modifier (ctrl, win, alt, or shift).")
+        }
+        ShortcutError::Unrepresentable => {
+            format!("{label} cannot be saved in a supported form.")
+        }
+        ShortcutError::ReservedSystemShortcut => {
+            format!("{label} is reserved by Windows system hotkeys (e.g. Win+L, Alt+Tab).")
+        }
+        ShortcutError::DuplicateShortcut(other) => {
+            let other_label = ShortcutField::from_key(other)
+                .map(ShortcutField::label)
+                .unwrap_or(other);
+            format!(
+                "{label} conflicts with {other_label}. Each action must have a unique shortcut."
+            )
+        }
+    }
 }
 
 /// The Settings model. Rendering is a thin layer over this; every decision that
@@ -220,6 +269,13 @@ pub struct SettingsModel {
     pub onboarding_focus_index: usize,
     /// Whether simulated cycling has been triggered at least once in Step 2.
     pub onboarding_simulated_success: bool,
+    /// The field the most recent successful capture overwrote, and the chord
+    /// it held immediately before that. This is the only record of a
+    /// displaced chord that exists, and it is what lets `swap_shortcuts` hand
+    /// it back to whichever action lost it — without it, "swap" would have
+    /// nothing to swap the new chord's collision partner *back to*, since the
+    /// two fields already hold the same value the instant a collision exists.
+    pub last_capture: Option<(ShortcutField, String)>,
 }
 
 impl SettingsModel {
@@ -234,6 +290,7 @@ impl SettingsModel {
             onboarding: onboarding.then_some(OnboardingStep::Welcome),
             onboarding_focus_index: 0,
             onboarding_simulated_success: false,
+            last_capture: None,
         }
     }
 
@@ -265,15 +322,80 @@ impl SettingsModel {
 
     /// Accept a captured combination.
     /// Validation happens here, before the draft changes, so an unusable
-    /// combination never becomes the displayed value.
+    /// combination never becomes the displayed value. The chord `field` held
+    /// before this overwrite is recorded as `last_capture` — a collision this
+    /// capture creates is only resolvable through `swap_shortcuts` while that
+    /// record still names this same field.
     pub fn accept_capture(&mut self, combination: &str) -> Result<(), ShortcutError> {
         let CaptureState::Listening(field) = self.capture else {
             return Ok(());
         };
         let canonical = validate_shortcut(combination)?;
+        let previous = field.get(&self.draft).to_string();
         field.set(&mut self.draft, canonical);
+        self.last_capture = Some((field, previous));
         self.capture = CaptureState::Idle;
+        // A capture can create or resolve a collision; either way the status
+        // bar's last word on the draft (a stale "Settings saved" banner, or a
+        // stale error) is no longer the truth about it.
+        self.feedback = SaveFeedback::None;
         Ok(())
+    }
+
+    /// Check if a field currently conflicts with any other field in the draft.
+    /// Returns the conflicting field if any.
+    pub fn find_conflict(&self, field: ShortcutField) -> Option<ShortcutField> {
+        let val = field.get(&self.draft);
+        ShortcutField::ALL
+            .into_iter()
+            .find(|&other| other != field && other.get(&self.draft) == val)
+    }
+
+    /// Check if any shortcut conflict exists across the draft.
+    pub fn has_any_conflict(&self) -> bool {
+        ShortcutField::ALL
+            .into_iter()
+            .any(|field| self.find_conflict(field).is_some())
+    }
+
+    /// Whether at least one standing conflict can be resolved with
+    /// `swap_shortcuts` right now. The status bar uses this to decide whether
+    /// it may tell the user Swap is an option — a conflict from a hand-edited
+    /// `config.toml`, or one whose triggering capture has since been
+    /// superseded, has no displaced chord on record and cannot be swapped.
+    pub fn any_swappable_conflict(&self) -> bool {
+        ShortcutField::ALL
+            .into_iter()
+            .any(|field| self.find_conflict(field).is_some() && self.can_swap(field))
+    }
+
+    /// Whether `field` is the field the most recent capture wrote into.
+    /// This is what the pane checks before offering `swap_shortcuts` on a
+    /// conflicted row: the *other* party in the collision never lost
+    /// anything, so there is nothing on record to give it back, and
+    /// exchanging its current value with `field`'s would exchange two now
+    /// identical strings.
+    pub fn can_swap(&self, field: ShortcutField) -> bool {
+        matches!(&self.last_capture, Some((last_field, _)) if *last_field == field)
+    }
+
+    /// Resolve a collision by giving `conf_field` the chord `field`'s last
+    /// capture displaced, restoring what the two actions held before that
+    /// capture collided them. Requires `field` to be the field `can_swap`
+    /// reports true for; called with any other field this is a no-op, since
+    /// no displaced chord is on record for it and there is nothing to give
+    /// back. Does not check whether the returned chord collides with a third
+    /// field — the pane re-evaluates conflicts on the next frame regardless.
+    pub fn swap_shortcuts(&mut self, field: ShortcutField, conf_field: ShortcutField) {
+        let Some((last_field, previous)) = self.last_capture.take() else {
+            return;
+        };
+        if last_field != field {
+            self.last_capture = Some((last_field, previous));
+            return;
+        }
+        conf_field.set(&mut self.draft, previous);
+        self.feedback = SaveFeedback::None;
     }
 
     /// Discard edits.
@@ -281,6 +403,9 @@ impl SettingsModel {
         self.draft = self.saved.clone();
         self.capture = CaptureState::Idle;
         self.feedback = SaveFeedback::None;
+        // The reverted draft no longer carries whatever this capture wrote,
+        // so the chord it once displaced is no longer displaced by anything.
+        self.last_capture = None;
     }
 
     /// Validate, persist, and signal reload.
@@ -389,6 +514,13 @@ pub fn focus_order_mismatch(pane: Pane, drawn: &[&str]) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::path::PathBuf;
+
+    fn temp_dir() -> PathBuf {
+        let mut p = std::env::temp_dir();
+        p.push(format!("wiradesk-app-test-{}", std::process::id()));
+        p
+    }
 
     fn model() -> SettingsModel {
         SettingsModel::new(Config::default(), false)
@@ -667,9 +799,136 @@ mod tests {
     }
 
     #[test]
+    fn shortcut_conflict_detection_finds_both_directions() {
+        let mut m = model();
+        assert!(!m.has_any_conflict());
+        assert_eq!(m.find_conflict(ShortcutField::Switcher), None);
+
+        // Assign same shortcut to SnapLeft as Switcher ("win+backtick")
+        m.draft.snapping.snap_half_left = "win+backtick".to_string();
+        assert!(m.has_any_conflict());
+        assert_eq!(
+            m.find_conflict(ShortcutField::Switcher),
+            Some(ShortcutField::SnapLeft)
+        );
+        assert_eq!(
+            m.find_conflict(ShortcutField::SnapLeft),
+            Some(ShortcutField::Switcher)
+        );
+    }
+
+    #[test]
+    fn a_hand_edited_conflict_has_nothing_swap_can_undo() {
+        // A collision that did not arise from a capture in this session (a
+        // hand-edited config.toml, or one loaded from disk) has no recorded
+        // "previous" chord for either field, so neither should be offered as
+        // the swappable side.
+        let mut m = model();
+        m.draft.snapping.snap_half_left = "win+backtick".to_string();
+        assert!(m.has_any_conflict());
+        assert!(!m.can_swap(ShortcutField::Switcher));
+        assert!(!m.can_swap(ShortcutField::SnapLeft));
+        assert!(!m.any_swappable_conflict());
+    }
+
+    #[test]
+    fn swap_gives_the_conflict_partner_back_the_chord_the_capture_displaced() {
+        let mut m = model();
+        let snap_left_before = m.draft.snapping.snap_half_left.clone();
+        let switcher_before = m.draft.switcher.shortcut.clone();
+        assert_ne!(
+            snap_left_before, switcher_before,
+            "test setup requires these to start distinct"
+        );
+
+        // Capture Switcher's existing chord for SnapLeft. This is the only
+        // way a collision can enter the draft: a legal chord that happens to
+        // already belong to another action (DEC-001 / SCN-03).
+        m.begin_capture(ShortcutField::SnapLeft);
+        m.accept_capture(&switcher_before).unwrap();
+
+        assert!(m.has_any_conflict());
+        assert_eq!(m.draft.snapping.snap_half_left, switcher_before);
+        assert_eq!(m.draft.switcher.shortcut, switcher_before);
+
+        // Only the field the capture actually wrote into can be swapped —
+        // the field it collided with lost nothing and has nothing on record.
+        assert!(m.can_swap(ShortcutField::SnapLeft));
+        assert!(!m.can_swap(ShortcutField::Switcher));
+        assert!(m.any_swappable_conflict());
+
+        let conf_field = m
+            .find_conflict(ShortcutField::SnapLeft)
+            .expect("SnapLeft must still read as conflicted before the swap");
+        m.swap_shortcuts(ShortcutField::SnapLeft, conf_field);
+
+        // SnapLeft keeps the chord the user just captured; Switcher gets back
+        // the chord SnapLeft displaced. Two distinct values again — not the
+        // identity swap the old implementation performed on equal strings.
+        assert_eq!(m.draft.snapping.snap_half_left, switcher_before);
+        assert_eq!(m.draft.switcher.shortcut, snap_left_before);
+        assert!(!m.has_any_conflict());
+    }
+
+    #[test]
+    fn swap_is_a_no_op_when_called_for_the_field_that_did_not_just_capture() {
+        let mut m = model();
+        let switcher_before = m.draft.switcher.shortcut.clone();
+        m.begin_capture(ShortcutField::SnapLeft);
+        m.accept_capture(&switcher_before).unwrap();
+        let before = m.draft.clone();
+
+        // Calling with the roles reversed must not corrupt the draft — there
+        // is no displaced chord on record for Switcher to give back.
+        m.swap_shortcuts(ShortcutField::Switcher, ShortcutField::SnapLeft);
+        assert_eq!(m.draft, before, "an inert swap must not touch the draft");
+        assert!(m.has_any_conflict(), "the collision must still stand");
+    }
+
+    #[test]
+    fn reverting_forgets_the_displaced_chord() {
+        let mut m = model();
+        let switcher_before = m.draft.switcher.shortcut.clone();
+        m.begin_capture(ShortcutField::SnapLeft);
+        m.accept_capture(&switcher_before).unwrap();
+        assert!(m.can_swap(ShortcutField::SnapLeft));
+
+        m.revert();
+        assert!(!m.can_swap(ShortcutField::SnapLeft));
+    }
+
+    #[test]
+    fn a_successful_capture_clears_stale_feedback() {
+        let mut m = model();
+        m.feedback = SaveFeedback::Saved {
+            reload_signalled: true,
+        };
+        m.begin_capture(ShortcutField::SnapRight);
+        m.accept_capture("ctrl+alt+f7").unwrap();
+        assert_eq!(m.feedback, SaveFeedback::None);
+    }
+
+    #[test]
+    fn reserved_windows_system_shortcut_is_rejected() {
+        let mut m = model();
+        m.begin_capture(ShortcutField::Switcher);
+        // Win + L is reserved for Lock Workstation
+        let res = m.accept_capture("win+l");
+        assert_eq!(res, Err(ShortcutError::ReservedSystemShortcut));
+    }
+
+    #[test]
+    fn duplicate_shortcut_is_rejected_on_save() {
+        let mut m = model();
+        m.draft.snapping.snap_half_left = "win+backtick".to_string(); // Duplicate of Switcher
+        let dir = temp_dir();
+        let path = dir.join("config.toml");
+        m.save(&path);
+        assert!(matches!(m.feedback, SaveFeedback::Error(_)));
+    }
+
+    #[test]
     fn onboarding_teaches_the_spatial_philosophy() {
-        // Onboarding must explain how this differs from Alt+Tab; without it the
-        // feature reads as a broken Alt+Tab.
         let body = OnboardingStep::Welcome.body();
         assert!(body.contains("Alt+Tab"), "the contrast must be explicit");
         assert!(body.contains("application"));
@@ -695,9 +954,44 @@ mod tests {
 
     #[test]
     fn validation_messages_name_the_field_and_the_reason() {
+        // A raw config key, as the save path passes it, must be resolved to
+        // the field's human label — a user was never shown `config.toml` and
+        // should never be asked to recognize `switcher.shortcut` in it.
         let msg = describe("switcher.shortcut", ShortcutError::MultipleMainKeys);
-        assert!(msg.contains("switcher.shortcut"));
+        assert!(msg.contains(ShortcutField::Switcher.label()));
+        assert!(
+            !msg.contains("switcher.shortcut"),
+            "message must not leak the config key: {msg:?}"
+        );
         assert!(msg.contains("one main key"));
+    }
+
+    #[test]
+    fn validation_messages_pass_through_an_already_resolved_label() {
+        // The inline capture path already resolves to a label before calling
+        // describe(); from_key must not mangle a string that is not a key.
+        let msg = describe(ShortcutField::Switcher.label(), ShortcutError::NoModifier);
+        assert!(msg.contains(ShortcutField::Switcher.label()));
+    }
+
+    #[test]
+    fn duplicate_conflict_message_names_both_actions_not_config_keys() {
+        let msg = describe(
+            ShortcutField::Fallback.key(),
+            ShortcutError::DuplicateShortcut(ShortcutField::Switcher.key()),
+        );
+        assert!(msg.contains(ShortcutField::Fallback.label()));
+        assert!(msg.contains(ShortcutField::Switcher.label()));
+        assert!(!msg.contains("switcher.fallback_shortcut"));
+        assert!(!msg.contains("switcher.shortcut"));
+    }
+
+    #[test]
+    fn shortcut_field_key_round_trips_with_from_key() {
+        for field in ShortcutField::ALL {
+            assert_eq!(ShortcutField::from_key(field.key()), Some(field));
+        }
+        assert_eq!(ShortcutField::from_key("not.a.real.key"), None);
     }
 
     #[test]

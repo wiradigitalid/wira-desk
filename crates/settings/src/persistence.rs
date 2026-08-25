@@ -25,6 +25,28 @@ pub enum ShortcutError {
     NoModifier,
     /// Parses, but cannot be written back in canonical form.
     Unrepresentable,
+    /// Shortcut is reserved by the Windows operating system (e.g. Win+L, Alt+Tab).
+    ReservedSystemShortcut,
+    /// Shortcut is already assigned to another action in the configuration.
+    DuplicateShortcut(&'static str),
+}
+
+/// Check if a parsed shortcut is hardcoded/reserved by the Windows operating system.
+pub fn is_reserved_system_shortcut(sc: &Shortcut) -> bool {
+    // Win + L (Lock), Win + D (Desktop), Win + Tab (Task View), Win + X (Quick Link Menu)
+    if sc.win && !sc.ctrl && !sc.alt && !sc.shift {
+        if let Some(name) = shared::shortcut::name_from_vk(sc.vk) {
+            match name.as_str() {
+                "l" | "d" | "tab" | "x" => return true,
+                _ => {}
+            }
+        }
+    }
+    // Alt + Tab (Windows Task Switcher)
+    if sc.alt && !sc.win && !sc.ctrl && !sc.shift && sc.vk == 0x09 {
+        return true;
+    }
+    false
 }
 
 /// Validate a submitted shortcut **before** any active configuration is
@@ -47,6 +69,9 @@ pub fn validate_shortcut(input: &str) -> Result<String, ShortcutError> {
             // shortcut — reject it here rather than letting it round-trip.
             if !sc.has_modifier() {
                 return Err(ShortcutError::NoModifier);
+            }
+            if is_reserved_system_shortcut(&sc) {
+                return Err(ShortcutError::ReservedSystemShortcut);
             }
             sc.to_canonical_string()
                 .ok_or(ShortcutError::Unrepresentable)
@@ -85,10 +110,15 @@ fn classify_parse_failure(input: &str) -> ShortcutError {
     }
 }
 
-/// Validate every shortcut field in a candidate configuration.
+/// Validate every shortcut field in a candidate configuration, ensuring both validity
+/// and uniqueness across actions.
 /// Returns the offending field name and reason on the first failure, leaving
 /// the caller's active configuration untouched.
 pub fn validate_config(cfg: &Config) -> Result<(), (&'static str, ShortcutError)> {
+    // These six paths must match `app::ShortcutField::key()` exactly —
+    // `describe()` maps a rejection reported here back to a human label
+    // through that table, and the two are kept as separate literals so this
+    // module has no dependency on the UI-facing field enum.
     let fields: [(&'static str, &str); 6] = [
         ("switcher.shortcut", &cfg.switcher.shortcut),
         (
@@ -100,8 +130,14 @@ pub fn validate_config(cfg: &Config) -> Result<(), (&'static str, ShortcutError)
         ("snapping.snap_maximize", &cfg.snapping.snap_maximize),
         ("layout.stack_shortcut", &cfg.layout.stack_shortcut),
     ];
+    let mut seen: Vec<(&'static str, String)> = Vec::with_capacity(6);
+
     for (name, value) in fields {
-        validate_shortcut(value).map_err(|e| (name, e))?;
+        let canonical = validate_shortcut(value).map_err(|e| (name, e))?;
+        if let Some((first_name, _)) = seen.iter().find(|(_, s)| *s == canonical) {
+            return Err((name, ShortcutError::DuplicateShortcut(first_name)));
+        }
+        seen.push((name, canonical));
     }
     Ok(())
 }

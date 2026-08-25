@@ -3,4 +3,22 @@
 # Numbering is GLOBAL. `status`: draft | accepted | applied | superseded | rejected.
 # A decision FREEZES at `applied`, not at `accepted`.
 
-decisions: []
+decisions:
+  - id: DEC-001
+    title: A shortcut conflict is reported on the fields that conflict, and Save stays enabled
+    status: applied
+    file: decisions/DEC-001-shortcut-conflict-reported-per-field.md
+    created: '2026-08-25'
+    touches:
+      - .what/settings/05-scenarios/SCN-03-shortcut-collision-refused-at-save.md
+      - .what/settings/04-usecases/UC-4-change-shortcut.md
+      - .what/settings/02-rules/rules-settings.md
+      - .how/settings/SDD-settings.md
+
+  - id: DEC-002
+    title: Whether another application already holds a chord is never predicted by probing the operating system
+    status: applied
+    file: decisions/DEC-002-external-hotkey-availability-is-not-probed.md
+    created: '2026-08-25'
+    touches:
+      - .how/settings/SDD-settings.md

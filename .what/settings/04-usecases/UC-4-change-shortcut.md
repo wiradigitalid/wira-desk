@@ -43,6 +43,7 @@ User selects a shortcut field in Settings to customize its key combination.
 | --- | --- | --- | --- |
 | Step 3 | User presses a bare key without modifier keys | System rejects the combination, retains listening mode, and displays an inline validation message (SCN-01) | Field remains in listening mode with previous valid shortcut intact in draft |
 | Step 3 | User presses an unrecognized or unsupported key token | System rejects the input with an unsupported token notice and continues listening | Draft and disk configuration remain unchanged; user can re-strike a valid chord |
+| Step 4 | The captured chord is already held by another configurable action | System keeps the chord in the draft, marks both actions — each naming the other — and refuses the draft on submission (SCN-03) | Both offending actions are identified and the submit action stays available; nothing is written until the collision is resolved |
 | Step 6 | Atomic file write fails due to filesystem permission error | System displays save failure error message and skips IPC reload | Draft remains in memory for correction; existing configuration on disk remains intact |
 
 ## Outcome
@@ -57,3 +58,5 @@ The new shortcut binding is persisted atomically to disk and immediately active 
 - `LBR-ST-2`
 - `LBR-ST-5`
 - `LBR-ST-6`
+- `LBR-ST-8`
+- `LBR-ST-9`
