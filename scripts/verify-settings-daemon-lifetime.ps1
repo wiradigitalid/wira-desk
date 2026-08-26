@@ -274,7 +274,9 @@ if (-not (Wait-For { Test-DaemonWindow } 25000)) {
 
         Write-Step 'Killing the daemon (an unexpected death, as from Task Manager) ...'
         $clock = [System.Diagnostics.Stopwatch]::StartNew()
-        try { $harnessDaemon.Kill(); $harnessDaemon.WaitForExit(5000) } catch {}
+        # `WaitForExit(int)` returns a bool, which would otherwise land in the
+        # transcript as a bare `True` between two report lines.
+        try { $harnessDaemon.Kill(); [void]$harnessDaemon.WaitForExit(5000) } catch {}
         $closed = Wait-For { $s3.Refresh(); $s3.HasExited } $CloseTimeoutMs 100
         $clock.Stop()
         Record 'closes-on-exit' $closed "$($clock.ElapsedMilliseconds)ms after the daemon died (allowance ${CloseTimeoutMs}ms)"
