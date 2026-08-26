@@ -131,6 +131,8 @@ pub fn validate(text: &str) -> Result<(Config, HookSnapshot, WorkerSnapshot), Re
     let snap_maximize =
         Shortcut::parse(&cfg.snapping.snap_maximize).ok_or(RejectReason::InvalidShortcut)?;
     let stack = Shortcut::parse(&cfg.layout.stack_shortcut).ok_or(RejectReason::InvalidShortcut)?;
+    let move_next_monitor = Shortcut::parse(&cfg.layout.move_next_monitor_shortcut)
+        .ok_or(RejectReason::InvalidShortcut)?;
 
     let chords = crate::hook::Chords {
         primary: Some(primary),
@@ -140,6 +142,7 @@ pub fn validate(text: &str) -> Result<(Config, HookSnapshot, WorkerSnapshot), Re
         snap_top: Some(snap_top),
         snap_bottom: Some(snap_bottom),
         snap_maximize: Some(snap_maximize),
+        move_next_monitor: Some(move_next_monitor),
         stack: Some(stack),
     };
 

@@ -6,8 +6,8 @@
 use shared::{Command, Config};
 
 use crate::arrangement::win32::{apply_plan, resolve_context, Win32WindowMover};
-use crate::arrangement::{snap, stack, PlacementPlan, PlanError};
-use crate::context::spatial::Win32Monitors;
+use crate::arrangement::{monitor, snap, stack, PlacementPlan, PlanError};
+use crate::context::spatial::{enumerate_monitors, index_of_window_monitor, Win32Monitors};
 use crate::context::virtual_desktop::VirtualDesktopManager;
 use crate::context::{
     capture_spatial_context, collect_spatial_facts, evaluate_spatial, MonitorSource,
@@ -109,6 +109,7 @@ pub fn drain_commands() {
                 execute_snap(Command::from_u8(raw));
             }
             Command::OverlappingStack => execute_stack(),
+            Command::MoveToNextMonitor => execute_monitor_move(),
         }
     }
 }
@@ -292,6 +293,99 @@ fn execute_snap(command: Command) {
     };
 
     apply_or_report(plan, command);
+}
+
+/// Move the active window to the next monitor, keeping its share of the work area.
+///
+/// The display set is enumerated **here**, on the Worker, and never on the Hook thread: the
+/// hook callback is budgeted under 10 ms and must not allocate, and the monitor list is only
+/// needed once a command has already been accepted. The Hook answers *whose chord is this*;
+/// the Worker answers *what is a legal target and where does it go* — the same split
+/// `DEC-006` drew for target eligibility (`AD-2`, `NFR-2`, `NFR-3`).
+fn execute_monitor_move() {
+    // `resolve_context` first, because it is the one gate that refuses a Wira Desk window of
+    // our own (`LBR-WM-6`, `DEC-006`). Enumerating before that check would do work for a
+    // target that is about to be refused.
+    let Some(ctx) = resolve_context() else {
+        report_arrangement_failure("no platform context");
+        return;
+    };
+    let hwnd = ctx.target.0;
+
+    // Fresh every invocation, cached nowhere (`AD-14`).
+    let monitors = enumerate_monitors();
+    let Some(from) = index_of_window_monitor(hwnd, &monitors) else {
+        report_arrangement_failure("active window resolved to no enumerated monitor");
+        return;
+    };
+    let Some(to) = monitor::next_monitor_index(monitors.len(), from) else {
+        // A single attached monitor. This is a **successful no-op**, not a failure: nothing
+        // moves, nothing is shown, and nothing is logged beyond the debug trace. Warning here
+        // would train the user to ignore a log that is meant to carry real problems.
+        #[cfg(debug_assertions)]
+        crate::util::append_debug_trace(
+            "WORKER_ARRANGE: MoveToNextMonitor noop=1 reason=one_monitor",
+        );
+        return;
+    };
+
+    let Some(window_rect) = current_window_rect(hwnd) else {
+        report_arrangement_failure("could not read the active window rect");
+        return;
+    };
+
+    // Restore before placing. The maximized state is bound to the monitor the window was
+    // maximized on, so `SetWindowPos` on a still-maximized window is unreliable — the window
+    // springs back rather than landing where it was told. `UC-2` already restores before a
+    // half-screen snap; this inherits that rather than inventing a second answer.
+    restore_if_maximized(hwnd);
+
+    apply_or_report(
+        monitor::plan_move_to_monitor(
+            &monitors[from].work,
+            &monitors[to].work,
+            ctx.target,
+            window_rect,
+        ),
+        Command::MoveToNextMonitor,
+    );
+}
+
+/// The window's current outer rect, as the planner's proportional source.
+fn current_window_rect(hwnd: isize) -> Option<crate::arrangement::Rect> {
+    use windows_sys::Win32::Foundation::{FALSE, RECT};
+    let mut r: RECT = RECT {
+        left: 0,
+        top: 0,
+        right: 0,
+        bottom: 0,
+    };
+    // SAFETY: `hwnd` came from `resolve_context`, which validated it with `IsWindow`, and
+    // `&mut r` is a unique pointer to a live local of exactly the type the API writes. A
+    // failed call leaves `r` as initialised above, which is why the result is checked rather
+    // than trusted — a zeroed rect would otherwise read as a degenerate window.
+    if unsafe { windows_sys::Win32::UI::WindowsAndMessaging::GetWindowRect(hwnd, &mut r) } == FALSE
+    {
+        return None;
+    }
+    crate::arrangement::win32::rect_from_win32(r).ok()
+}
+
+/// Take a maximized window back to its normal state, so it can be positioned.
+///
+/// `SW_RESTORE` rather than `SW_SHOWNORMAL`: restore leaves a minimized window's activation
+/// alone, and the arrangement path is deliberately non-activating throughout.
+fn restore_if_maximized(hwnd: isize) {
+    use windows_sys::Win32::UI::WindowsAndMessaging::{IsZoomed, ShowWindowAsync, SW_RESTORE};
+    // SAFETY: both calls take only a handle validated by `resolve_context`, write nothing,
+    // and are documented to fail benignly on a stale one. `ShowWindowAsync` rather than
+    // `ShowWindow` keeps the Worker off a cross-process wait, the same reason `LBR-WM-3`
+    // bans blocking calls on this thread.
+    unsafe {
+        if IsZoomed(hwnd) != 0 {
+            ShowWindowAsync(hwnd, SW_RESTORE);
+        }
+    }
 }
 
 // The Worker's own configuration, replaced only by an accepted reload.

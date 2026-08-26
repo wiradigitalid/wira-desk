@@ -61,6 +61,11 @@ pub struct LayoutConfig {
     /// reviewable default `ctrl+win+down`; consumers may use it but must not
     /// renumber or reinterpret this field.
     pub stack_shortcut: String,
+    /// Move the active window to the next monitor. Lives in `[layout]` rather than
+    /// `[snapping]` because it arranges *across* screens rather than dividing one, which
+    /// keeps the three config sections mapping one-to-one onto the three groups the
+    /// Shortcuts pane draws.
+    pub move_next_monitor_shortcut: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -104,6 +109,7 @@ impl Default for LayoutConfig {
             enable_overlapping_stack: false,
             stack_width_percent: 50,
             stack_shortcut: "ctrl+win+down".to_string(),
+            move_next_monitor_shortcut: "ctrl+alt+shift+enter".to_string(),
         }
     }
 }
@@ -248,6 +254,10 @@ mod tests {
     #[test]
     fn frozen_stack_shortcut_default() {
         assert_eq!(LayoutConfig::default().stack_shortcut, "ctrl+win+down");
+        assert_eq!(
+            LayoutConfig::default().move_next_monitor_shortcut,
+            "ctrl+alt+shift+enter"
+        );
     }
 
     #[test]
@@ -297,6 +307,10 @@ mod tests {
         let cfg = Config::from_toml_str(toml).unwrap();
         assert_eq!(cfg.layout.stack_width_percent, 70);
         assert_eq!(cfg.layout.stack_shortcut, "ctrl+win+down");
+        assert_eq!(
+            cfg.layout.move_next_monitor_shortcut,
+            "ctrl+alt+shift+enter"
+        );
     }
 
     #[test]

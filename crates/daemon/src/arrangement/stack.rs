@@ -88,7 +88,7 @@ mod tests {
         LayoutConfig {
             enable_overlapping_stack: true,
             stack_width_percent: percent,
-            stack_shortcut: "ctrl+win+down".to_string(),
+            ..LayoutConfig::default()
         }
     }
 
@@ -106,7 +106,7 @@ mod tests {
         let layout = LayoutConfig {
             enable_overlapping_stack: false,
             stack_width_percent: 0,
-            stack_shortcut: "ctrl+win+down".to_string(),
+            ..LayoutConfig::default()
         };
         assert!(plan_stack(&layout, &primary_work_area(), &windows(2))
             .unwrap()

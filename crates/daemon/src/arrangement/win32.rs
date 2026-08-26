@@ -11,7 +11,7 @@ use windows_sys::Win32::Graphics::Dwm::{
     DwmGetWindowAttribute, DWMWA_CLOAKED, DWMWA_EXTENDED_FRAME_BOUNDS,
 };
 use windows_sys::Win32::Graphics::Gdi::{
-    GetMonitorInfoW, MonitorFromWindow, MONITORINFO, MONITOR_DEFAULTTONULL,
+    GetMonitorInfoW, MonitorFromRect, MonitorFromWindow, MONITORINFO, MONITOR_DEFAULTTONULL,
 };
 use windows_sys::Win32::System::Threading::{
     GetCurrentProcessId, OpenProcess, QueryFullProcessImageNameW, PROCESS_NAME_WIN32,
@@ -158,6 +158,35 @@ pub fn resolve_context_for(hwnd: HWND) -> Option<PlatformContext> {
         target: WindowId(hwnd),
         work_area,
     })
+}
+
+/// This monitor's effective DPI, falling back to the 96-DPI baseline.
+///
+/// The per-*monitor* counterpart of `GetDpiForWindow`, needed because a monitor move reads
+/// the destination's scaling before any window is on it. Carried for traceability only; no
+/// planner scales by it, and applying it would scale coordinates a second time.
+pub fn monitor_dpi(monitor: windows_sys::Win32::Graphics::Gdi::HMONITOR) -> u32 {
+    let mut x: u32 = 0;
+    let mut y: u32 = 0;
+    // SAFETY: `monitor` is a non-null `HMONITOR` from the caller, and both out-params are
+    // unique pointers to live locals. `MDT_EFFECTIVE_DPI` is the documented value for the
+    // scaling Windows actually applies. A failed call leaves the locals untouched, which is
+    // why they are pre-initialised and the result is checked rather than trusted.
+    let ok = unsafe {
+        windows_sys::Win32::UI::HiDpi::GetDpiForMonitor(
+            monitor,
+            windows_sys::Win32::UI::HiDpi::MDT_EFFECTIVE_DPI,
+            &mut x,
+            &mut y,
+        )
+    };
+    // Horizontal DPI only: Windows reports the two separately but sets them equal for every
+    // display mode this product supports, and the arrangement contract carries one number.
+    if ok == 0 && x != 0 {
+        x
+    } else {
+        DEFAULT_DPI
+    }
 }
 
 /// Ask the compositor whether it is drawing this window at all.
@@ -395,7 +424,7 @@ fn clamp_to_monitor(rect: Rect, monitor: RECT) -> Rect {
     Rect::new(left, top, right, bottom).unwrap_or(rect)
 }
 
-/// The target window's monitor, in full physical pixels (`rcMonitor`).
+/// The monitor containing `rect`, in full physical pixels (`rcMonitor`).
 /// Best-effort: `None` on any failure, which the caller treats as "no known
 /// bounds" — the placement still lands unclamped rather than failing the
 /// whole command over a diagnostic query.
@@ -405,8 +434,14 @@ fn clamp_to_monitor(rect: Rect, monitor: RECT) -> Rect {
 /// exact struct `GetMonitorInfoW` is told to write into, with `cbSize` set
 /// to that struct's size beforehand, which is how the call knows how much
 /// of it may write.
-unsafe fn monitor_rect(hwnd: HWND) -> Option<RECT> {
-    let monitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONULL);
+unsafe fn monitor_rect_for(rect: Rect) -> Option<RECT> {
+    let as_win32 = RECT {
+        left: rect.left,
+        top: rect.top,
+        right: rect.right,
+        bottom: rect.bottom,
+    };
+    let monitor = MonitorFromRect(&as_win32, MONITOR_DEFAULTTONULL);
     if monitor == 0 {
         return None;
     }
@@ -458,12 +493,20 @@ impl WindowMover for Win32WindowMover {
         // SAFETY: `hwnd` was revalidated live by `IsWindow` immediately above.
         let insets = unsafe { frame_insets(hwnd) }.unwrap_or_default();
         let rect = compensate_for_frame_insets(placement.rect, insets).unwrap_or(placement.rect);
-        // Widening outward for the border is only safe up to this monitor's
-        // actual pixels — clamped here so the outermost monitor's edge (no
-        // neighbour to bleed into) never sends part of the window into
-        // space no monitor occupies.
-        // SAFETY: `hwnd` was revalidated live by `IsWindow` immediately above.
-        let rect = match unsafe { monitor_rect(hwnd) } {
+        // Widening outward for the border is only safe up to the target monitor's actual
+        // pixels — clamped here so the outermost monitor's edge (no neighbour to bleed into)
+        // never sends part of the window into space no monitor occupies.
+        //
+        // The monitor is resolved from the **planned rect**, not from the window (`DEC-010`).
+        // For every command that divides the window's own work area the two are the same
+        // monitor. For a monitor move they are not: at this point the window is still on the
+        // monitor it is leaving, so resolving from the window would clamp a rect planned for
+        // the destination against the bounds of the source and collapse it. That is not a
+        // cosmetic difference — `25f52f0` measured what happens when a compensated rect
+        // touches a monitor at a different DPI: Windows decides the window moved there and
+        // forcibly rescales and repositions it, hundreds of pixels off.
+        // SAFETY: a pure query on a by-value rect; passes no borrowed memory and retains none.
+        let rect = match unsafe { monitor_rect_for(rect) } {
             Some(monitor) => clamp_to_monitor(rect, monitor),
             None => rect,
         };

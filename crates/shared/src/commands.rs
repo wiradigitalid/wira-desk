@@ -23,6 +23,9 @@ pub enum Command {
     SnapTop = 6,
     /// Snap the active window to the bottom half of the screen.
     SnapBottom = 7,
+    /// Move the active window to the next physical monitor, keeping its share
+    /// of the work area.
+    MoveToNextMonitor = 8,
 }
 
 impl Command {
@@ -37,6 +40,7 @@ impl Command {
             5 => Command::OverlappingStack,
             6 => Command::SnapTop,
             7 => Command::SnapBottom,
+            8 => Command::MoveToNextMonitor,
             _ => Command::Nop,
         }
     }
@@ -63,6 +67,7 @@ mod tests {
             Command::OverlappingStack,
             Command::SnapTop,
             Command::SnapBottom,
+            Command::MoveToNextMonitor,
         ] {
             assert_eq!(Command::from_u8(cmd.as_u8()), cmd);
         }
@@ -70,7 +75,7 @@ mod tests {
 
     #[test]
     fn unknown_values_map_to_nop() {
-        assert_eq!(Command::from_u8(8), Command::Nop);
+        assert_eq!(Command::from_u8(9), Command::Nop);
         assert_eq!(Command::from_u8(255), Command::Nop);
     }
 
@@ -88,5 +93,6 @@ mod tests {
         assert_eq!(Command::OverlappingStack.as_u8(), 5);
         assert_eq!(Command::SnapTop.as_u8(), 6);
         assert_eq!(Command::SnapBottom.as_u8(), 7);
+        assert_eq!(Command::MoveToNextMonitor.as_u8(), 8);
     }
 }
