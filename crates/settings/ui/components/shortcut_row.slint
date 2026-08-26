@@ -52,7 +52,17 @@ export component ShortcutRow inherits Rectangle {
             }
         }
 
-        // Right Actions: Swap ⇄ button + Keycap button
+        // Right Actions: Swap button + Keycap button
+        //
+        // Wrapped in a centring VerticalLayout because the buttons must sit on the row's
+        // vertical middle, and a row is as tall as its description — two lines on the longer
+        // ones. The previous attempt set `y: (parent.height - 30px) / 2` on each button, which
+        // could not work: a layout positions its own children, so `y` on a layout child is
+        // discarded. That is why the keycap sat high against a two-line row.
+        VerticalLayout {
+            alignment: center;
+            horizontal-stretch: 0;
+
         HorizontalLayout {
             spacing: 6px;
             alignment: end;
@@ -61,7 +71,6 @@ export component ShortcutRow inherits Rectangle {
             if root.has_conflict && root.can_swap : Rectangle {
                 width: 60px;
                 height: 30px;
-                y: (parent.height - 30px) / 2;
                 border-radius: 6px;
                 background: swap_touch.has_hover ? Palette.bg_card_hover : Palette.bg_subtle;
                 border-width: 1px;
@@ -83,29 +92,51 @@ export component ShortcutRow inherits Rectangle {
             }
 
             // Keycap Button
+            //
+            // Width is computed from the label rather than fixed. A fixed 135px could not hold
+            // `Ctrl + Alt + Shift + Enter`, and Slint's Text does not clip — the label simply
+            // drew past both rounded ends and the shape looked broken.
+            //
+            // Driven off `lbl.width` and not `min-width` on purpose: `lbl` is a free-positioned
+            // child, so its width is the natural width of its own text and nothing depends back
+            // on the Rectangle. Relying on preferred-size derivation through an inner layout
+            // would have been the same guess that produced the overflow.
             Rectangle {
-                width: 135px;
+                width: max(135px, lbl.width + 24px);
                 height: 30px;
-                y: (parent.height - 30px) / 2;
                 border-radius: 6px;
                 background: is_listening ? Palette.accent_primary : (has_conflict ? Palette.bg_conflict_keycap : Palette.bg_keycap);
                 border-width: 1px;
                 border-color: is_listening ? Palette.accent_primary : (has_conflict ? Palette.signal_warning : Palette.stroke_card);
 
-                Text {
-                    text: is_listening ? "🔴 Listening…" : root.current_shortcut;
+                // A drawn dot, not an emoji. Neither loaded font carries U+1F534, and this is
+                // the state a user reaches every time they rebind a chord — the worst possible
+                // place for a tofu box.
+                if root.is_listening : Rectangle {
+                    width: 7px;
+                    height: 7px;
+                    border-radius: 3.5px;
+                    background: #FFFFFF;
+                    x: lbl.x - 12px;
+                    y: (parent.height - 7px) / 2;
+                }
+
+                lbl := Text {
+                    text: root.is_listening ? "Listening…" : root.current_shortcut;
                     font-family: Typography.font_family;
                     font-size: 12.5px;
                     font-weight: 600;
                     color: is_listening ? #FFFFFF : (has_conflict ? Palette.signal_warning : Palette.text_primary);
-                    horizontal-alignment: center;
-                    vertical-alignment: center;
+                    x: (parent.width - self.width) / 2 + (root.is_listening ? 6px : 0px);
+                    y: (parent.height - self.height) / 2;
                 }
 
                 btn_touch := TouchArea {
                     clicked => { root.capture_clicked(); }
                 }
             }
+        }
+
         }
     }
 }

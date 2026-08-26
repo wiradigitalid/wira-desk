@@ -46,6 +46,9 @@ Follows Windows 11 dialog spacing with a structured 5-pane vertical sidebar with
 - **Pill Toggle Switch (`fluent_toggle_switch`)**: Interactive animated toggle switch widget (`40 × 20 px`) with smooth state transitions.
 - **Shortcut Capturer Control**: Dedicated interactive listening widget with clear auditory/screen-reader announcements and Escape key cancellation.
 - **Shortcut Row**: One row per editable action — title, one-line description, the current chord rendered as key names joined by `+`, and, when the chord collides with another action, an inline refusal naming the other action plus a Swap affordance. Nine rows exist; the row is the unit, and an action never appears as two rows.
+  - The keycap is `135 px` **minimum** and grows to its own label plus `12 px` either side. It is not a fixed width: `Ctrl + Alt + Shift + Enter` does not fit in 135 px, and the label does not clip, so a fixed keycap drew its text past both rounded ends.
+  - A row is as tall as its description, so the buttons are centred on the row's vertical middle rather than pinned to a fixed offset. Two-line descriptions are normal and must not push the keycap off centre.
+  - The listening state's dot is **drawn**, not an emoji, for the same reason the scroll chevron is: the fonts do not carry it, and this is the state a user reaches on every rebind.
 - **Save Bar**: Sticky footer (`48 px`) with Revert and Save Changes buttons, validation error summary, and instantaneous IPC status reflection.
 
 ### 3. First-Run Onboarding Modal Dialog

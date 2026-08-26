@@ -119,15 +119,13 @@ impl ShortcutField {
             ShortcutField::SnapRight => {
                 "Snaps the active window to the right half of this monitor."
             }
-            ShortcutField::SnapTop => {
-                "Snaps the active window to the top half — the useful division on a short screen."
-            }
+            ShortcutField::SnapTop => "Snaps the active window to the top half of this monitor.",
             ShortcutField::SnapBottom => {
                 "Snaps the active window to the bottom half of this monitor."
             }
             ShortcutField::SnapMaximize => "Expands the active window to fill this monitor.",
             ShortcutField::MoveNextMonitor => {
-                "Moves the active window to the next monitor, keeping the same share of the screen."
+                "Moves the active window to the next monitor, same share of the screen."
             }
             ShortcutField::Stack => "Arranges windows of this app in a clickable stack.",
         }
