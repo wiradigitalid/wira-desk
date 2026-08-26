@@ -14,8 +14,8 @@ use crate::persistence::{
     save_and_notify, signal_capture_lease, validate_shortcut, SaveOutcome, ShortcutError,
 };
 use crate::theme::{
-    self, ThemeMode, LISTENING_ANNOUNCEMENT, STACK_WIDTH_INPUT, STACK_WIDTH_SLIDER,
-    TOGGLE_AUTO_START, TOGGLE_OVERLAPPING_STACK,
+    self, ThemeMode, LISTENING_ANNOUNCEMENT, STACK_WIDTH_DECREASE, STACK_WIDTH_INCREASE,
+    STACK_WIDTH_INPUT, TOGGLE_AUTO_START, TOGGLE_OVERLAPPING_STACK,
 };
 
 /// Which pane the shell is showing.
@@ -111,22 +111,14 @@ impl ShortcutField {
     /// One line under the row title, in the user's terms.
     pub fn description(self) -> &'static str {
         match self {
-            ShortcutField::Switcher => {
-                "Switches between windows of your active app on this monitor."
-            }
-            ShortcutField::Fallback => "Alternative shortcut if Win key is used by another app.",
-            ShortcutField::SnapLeft => "Snaps the active window to the left half of this monitor.",
-            ShortcutField::SnapRight => {
-                "Snaps the active window to the right half of this monitor."
-            }
-            ShortcutField::SnapTop => "Snaps the active window to the top half of this monitor.",
-            ShortcutField::SnapBottom => {
-                "Snaps the active window to the bottom half of this monitor."
-            }
-            ShortcutField::SnapMaximize => "Expands the active window to fill this monitor.",
-            ShortcutField::MoveNextMonitor => {
-                "Moves the active window to the next monitor, same share of the screen."
-            }
+            ShortcutField::Switcher => "Cycles windows of the active app on this monitor.",
+            ShortcutField::Fallback => "Use when another app has taken the Win key.",
+            ShortcutField::SnapLeft => "Snaps the window to the left half of this monitor.",
+            ShortcutField::SnapRight => "Snaps the window to the right half of this monitor.",
+            ShortcutField::SnapTop => "Snaps the window to the top half of this monitor.",
+            ShortcutField::SnapBottom => "Snaps the window to the bottom half of this monitor.",
+            ShortcutField::SnapMaximize => "Expands the window to fill this monitor.",
+            ShortcutField::MoveNextMonitor => "Moves the window to the next monitor, same share.",
             ShortcutField::Stack => "Arranges windows of this app in a clickable stack.",
         }
     }
@@ -835,8 +827,10 @@ pub fn focus_order(pane: Pane) -> Vec<&'static str> {
         }
         Pane::Layout => {
             order.push(TOGGLE_OVERLAPPING_STACK.name);
-            order.push(STACK_WIDTH_SLIDER.name);
+            // Visual order: the field sits between the two buttons.
+            order.push(STACK_WIDTH_DECREASE.name);
             order.push(STACK_WIDTH_INPUT.name);
+            order.push(STACK_WIDTH_INCREASE.name);
         }
         Pane::VmExceptions => {
             order.push(theme::VM_BYPASS_PROCESS_LIST.name);

@@ -1,5 +1,12 @@
 import { Palette, Typography } from "../theme.slint";
 
+// One editable action.
+//
+// Every text in here is single-line and elides. That is not a style preference: this row's
+// height comes from a preferred height that Slint computes at the text's *unwrapped* width,
+// so a description that wrapped to two lines got a one-line row and its second line drew
+// over the divider into the next row. Keeping each text to one line makes the row height
+// deterministic instead of dependent on a measurement that is taken before wrapping.
 export component ShortcutRow inherits Rectangle {
     in property <string> title: "Shortcut";
     in property <string> description: "Description text";
@@ -39,7 +46,9 @@ export component ShortcutRow inherits Rectangle {
                 font-family: Typography.font_family;
                 font-size: Typography.size_caption;
                 color: Palette.text_secondary;
-                wrap: word-wrap;
+                // One line, always. See the note on this component's height above.
+                wrap: no-wrap;
+                overflow: elide;
             }
 
             if root.has_conflict : Text {
@@ -48,7 +57,8 @@ export component ShortcutRow inherits Rectangle {
                 font-size: 11.5px;
                 font-weight: 600;
                 color: Palette.signal_warning;
-                wrap: word-wrap;
+                wrap: no-wrap;
+                overflow: elide;
             }
         }
 
