@@ -22,31 +22,58 @@ yanked = "deny"
 unmaintained = "all"
 
 ignore = [
-    # `ttf-parser` is unmaintained, with no safe upgrade available. Accepted for now, and
-    # the reasoning is recorded because its reachability is easy to get wrong: the
-    # `[targets]` filter above does not remove it, and it is not a transitive inheritance
-    # from the GUI stack the way the Linux-only advisories are.
+    # All three entries below are unmaintained advisories inherited from Slint, and all
+    # three were first attacked with feature trimming rather than accepted on sight. That
+    # attempt is recorded here because its result is the reason these entries exist.
     #
-    # Verified with `cargo tree -i --target x86_64-pc-windows-msvc`: on Windows,
-    # `ab_glyph` and `owned_ttf_parser` are absent from the graph entirely — they enter
-    # only through `sctk-adwaita`, a Wayland decoration crate. So `ttf-parser` is in the
-    # Windows build for exactly one reason: `crates/settings` depends on it directly.
-    # The `[targets]` filter above does not and cannot remove this one.
+    # `crates/settings` now takes Slint with `default-features = false`. That removed
+    # `i-slint-renderer-femtovg`, `i-slint-renderer-software`, and `ksni` from the graph
+    # outright. It removed none of the crates below, and `cargo-deny` was re-run to
+    # confirm rather than assumed. What follows is therefore what could not be removed,
+    # not what nobody looked at.
     #
-    # Why it is accepted rather than fixed today:
-    #   - Unmaintained is not the same as vulnerable; no advisory reports a flaw in it.
-    #   - The single call site is `settings/src/theme.rs`, which parses a font file to
-    #     confirm it is well-formed before handing the bytes to egui. That guard exists
-    #     so a corrupt font degrades to the fallback chain instead of panicking the app.
-    #   - The input is a system font under `%SystemRoot%\Fonts`, a directory only
-    #     administrators can write. It is not attacker-supplied data.
+    # ── Ships in the binary ─────────────────────────────────────────────────────────
+    # `ttf-parser` (font-table parsing) and `rustybuzz` (text shaping) both reach
+    # `i-slint-core`, which is linked into `wiradesk-settings.exe`. They arrive through
+    # `resvg` → `usvg` → `fontdb`/`rustybuzz`, and `resvg` is switched on by
+    # `i-slint-core`'s own `std` feature:
     #
-    # Future work, deliberately not done unilaterally: `skrifa` is the maintained
-    # replacement the advisory names. Swapping a reviewed validation path for a new
-    # dependency is a change worth making on purpose, not as a side effect of silencing
-    # a warning. Removing the direct dependency and hand-rolling a magic-byte check
-    # would be worse than either option.
-    { id = "RUSTSEC-2026-0192", reason = "ttf-parser unmaintained; no known vulnerability, trusted input, single defensive call site. See notes above." },
+    #     std = [ ..., "image-decoders", "svg", "path", ... ]
+    #     svg = ["dep:resvg", "i-slint-common/svg-text"]
+    #
+    # `std` is required by both `backend-winit` and `renderer-skia`, so there is no
+    # feature combination that keeps a desktop window and drops these two. Slint's
+    # `no_std` path exists for microcontrollers, not for this.
+    #
+    # Why accepted: unmaintained is not vulnerable — neither advisory reports a flaw.
+    # The data they parse is a system font under `%SystemRoot%\Fonts`, writable only by
+    # administrators, and SVG content, of which this product ships none: there is not a
+    # single `@image-url` in `crates/settings/ui/`. So the parsers are linked but their
+    # attacker-facing input surface is empty.
+    #
+    # Note what changed. The previous version of this entry said `ttf-parser` was a
+    # direct dependency of `crates/settings` with one call site in `theme.rs` guarding a
+    # font handed to egui. That was true and is now false in every part: egui is gone,
+    # the direct dependency is gone, and the crate arrives transitively through Slint.
+    # Left uncorrected it would have been a justification defending a reachability that
+    # no longer exists.
+    { id = "RUSTSEC-2026-0192", reason = "ttf-parser unmaintained; linked via Slint's svg support, which its `std` feature forces. No known vulnerability; inputs are admin-writable system fonts, and this product ships no SVG." },
+    { id = "RUSTSEC-2026-0206", reason = "rustybuzz unmaintained; same chain and the same forced `std` feature as RUSTSEC-2026-0192. No known vulnerability." },
+
+    # ── Build-time only ─────────────────────────────────────────────────────────────
+    # `paste` is a proc-macro crate, and it enters solely through `i-slint-compiler` —
+    # which this workspace reaches as `slint-build` (a build-dependency) and
+    # `slint-macros` (a proc-macro). Its own path runs `pulp` → `exr` → `image`, because
+    # the Slint compiler asks `image` for its default formats and OpenEXR is among them.
+    #
+    # It is never linked into a shipped executable, and that holds by construction rather
+    # than by luck: the workspace sets `resolver = "2"`, which does not unify features
+    # across build-dependencies and normal dependencies. `i-slint-core` asks `image` for
+    # `png` and `jpeg` only, and resolver 2 keeps that build separate from the compiler's.
+    #
+    # `cargo-deny` reads the whole graph and has no switch to exclude build-dependencies,
+    # so this must be an accepted entry rather than a scoping fix.
+    { id = "RUSTSEC-2024-0436", reason = "paste unmaintained; proc-macro reached only through slint-build/slint-macros, so it runs at compile time and is never linked. Resolver 2 keeps the build-dependency feature set separate." },
 ]
 
 [licenses]
