@@ -19,8 +19,16 @@ Secondary interaction is accessed via right-clicking the System Tray icon to sum
 
 Structure of the Settings Window (`wiradesk-settings.exe`):
 - **General**: Auto-start on boot toggle (Task Scheduler integration), Spatial Lock, Virtual Desktop isolation, and UX Honesty controls.
-- **Shortcuts (Core Switcher)**: Primary same-app switching shortcut (`Win + \``), Alt-fallback shortcut, and precise modifier matching.
-- **Layout & Snapping**: Collision-free window snapping shortcuts (`Ctrl + Alt + Win` Left/Right/Maximize) and Overlapping Stack slider / shortcut.
+- **Shortcuts**: Every editable chord, and the only pane that holds any. Nine rows in three labelled groups, then the Key check diagnostic:
+
+  | Group | Rows | Reads as |
+  | --- | --- | --- |
+  | Switching | Switch windows of the same application · Fallback switch shortcut | Which window has focus |
+  | Snap & resize | Snap to left half · right half · top half · bottom half · Maximize | One window, one monitor, a fraction of it |
+  | Move & arrange | Move to next monitor · Overlapping stack | More than one window, or more than one screen |
+
+  The groups are the three configuration sections the product already keeps on disk, so what a user sees and what the product stores stop telling different stories. Inside *Snap & resize* the rows follow the arrow keys — left, right, top, bottom — with Maximize last as the "all of it" case; the order is the declared sequence, not the enum's numbering, and grouping never reorders it.
+- **Layout**: The overlapping stack toggle and its width slider. No chord lives here — the pane was called *Layout & Snapping* while holding no snapping control at all.
 - **VM & Exceptions**: Virtualization and Remote Desktop passthrough rules (`mstsc.exe`, `vmconnect.exe`, `VMwareUnityWindow`).
 - **About**: Version information, project links, active typeface loader status, and diagnostic build metadata.
 
@@ -49,10 +57,25 @@ The primary visual indicator is the System Tray icon, communicating runtime oper
 - **Warning / Logged (Tier 2)**: Icon with small red alert dot overlay (`#E81123`). Non-fatal errors or fallback events logged silently.
 - **Critical / Dead (Tier 3)**: Icon with red cross overlay (`#E81123`). Initialization failure or keyboard hook silently detached by OS timeout. **Accompanied by a Windows Toast Notification** (since Windows 11 hides tray icons in the overflow menu by default, ensuring immediate user awareness when the utility is halted).
 
+States a shortcut row can be in:
+
+| State | What the user sees | What they can do |
+| --- | --- | --- |
+| Resting | The current chord, rendered as key names — `Ctrl + Alt + ↓` | Activate the row to rebind it |
+| Listening | The row says it is listening instead of showing a chord, and announces that state to a screen reader rather than relying on the visual change | Press a chord, or Escape to cancel and keep the old one |
+| Refused — grammar | An inline message on **this** row saying what is wrong: a missing modifier, an unknown key, more than one main key | Press a different chord. Save stays available |
+| Refused — reserved | An inline message naming what Windows uses the chord for, and — where the chord is merely policy-refused rather than impossible — suggesting adding Ctrl | Press a different chord |
+| Collides | Inline messages on **both** rows, each naming the other action, plus a Swap affordance on the row that was just changed | Swap the two, change one, or submit and be refused with both names |
+| Empty | No shortcut row is ever empty. A chord field always holds a value; an action with no reachable chord is the **unbound** case below, which is a daemon-side condition and not something this pane can currently show | — |
+
+An **unbound** action — one the daemon has left unreachable because another action ahead of it holds the same chord (`BR-6`) — has no representation in this pane today. The user sees the tray Warning dot and, if they open the log, a line naming both fields. `DEC-009` records this silence as a cost and names showing it here as the route out; it is deliberately not designed in this pass.
+
 ## Interaction Primitives
 
 - **Same-App Window Cycling**: Pressing `Win + \`` instantly cycles focus to the next top-level window belonging exclusively to the active foreground application. Replicates native macOS behavior — zero animations, zero HUD overlays, zero visual transitions.
 - **Spatial Boundary Locking**: Cycling is strictly confined to the active physical monitor and current virtual desktop. Peripheral monitors remain completely undisturbed.
+- **Half-Screen Snapping**: `Ctrl + Alt` with an arrow key puts the active window in that half of the current monitor's work area — left, right, top, or bottom. Pressing the same chord twice changes nothing, because the division is recomputed from the work area rather than from where the window currently sits.
+- **Deliberate Monitor Movement**: `Ctrl + Alt + Shift + Enter` moves the active window to the next monitor and it keeps the same *share* of the screen, not the same pixel size. This is the one command that crosses the monitor boundary on purpose; the virtual desktop boundary is never crossed. With one monitor attached it does nothing at all — no movement, no message.
 
 ## Key Flows
 
@@ -88,3 +111,12 @@ The primary visual indicator is the System Tray icon, communicating runtime oper
 1. User (Budi) is actively working in Task Manager or an Administrator Command Prompt.
 2. Budi presses `Win + \``.
 3. Because the Wira Desk background daemon runs with Administrator privileges (`requireAdministrator`), it successfully captures the shortcut and transfers focus across UIPI privilege boundaries without operating system blocks.
+
+### Flow 6: Building a Two-Screen Review Layout (Sari's Docked Scenario — UJ-4)
+1. User (Sari) is on a 14-inch laptop with a larger external monitor to its right, the two running at different display scaling. A specification and a terminal are both on the laptop screen; a browser is on the external monitor.
+2. Sari presses `Ctrl + Alt + Up` on the specification. It takes the top half of the laptop's work area — the useful division on a screen too short for left and right halves to help.
+3. She focuses the terminal and presses `Ctrl + Alt + Down`. It takes the bottom half. The two halves meet exactly, with no gap and no overlap.
+4. She decides the specification belongs on the larger display and presses `Ctrl + Alt + Shift + Enter`.
+5. **Climax:** the specification arrives on the external monitor still occupying the top half — the same *share* of the work area, not the same pixel height — so the layout she just built survives the move. The browser and the terminal have not moved.
+6. Sari works across both screens with a layout assembled from the keyboard in seconds, and rebuilds it the same way each time she docks.
+7. Undocked, with only the laptop screen attached, step 4 does nothing at all: no window jump, no message, no error. The snap chords keep working.

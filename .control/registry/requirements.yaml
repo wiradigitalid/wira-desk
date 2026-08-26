@@ -48,6 +48,9 @@ capabilities:
   - id: CAP-11
     goal: BG-2
     text: Expose runtime diagnostic logs from the tray context menu.
+  - id: CAP-12
+    goal: BG-3
+    text: Move the active window to another physical monitor from the keyboard, keeping its share of the work area.
 
 functional:
   - id: FR-1
@@ -107,7 +110,7 @@ functional:
   - id: FR-14
     capability: CAP-2
     component: window-management
-    text: Snap the active window with Ctrl+Win+arrow and fullscreen shortcuts, DPI-aware.
+    text: Snap the active window to the left or right half and maximize it with Ctrl+Alt shortcuts, DPI-aware.
   - id: FR-15
     capability: CAP-2
     component: window-management
@@ -141,6 +144,14 @@ functional:
     component: settings
     no_uc: Cross-cutting accessibility requirement on all settings controls.
     text: Toggles and shortcut fields expose state clearly to screen readers via UI Automation.
+  - id: FR-22
+    capability: CAP-2
+    component: window-management
+    text: Snap the active window to the top or bottom half of the current monitor, DPI-aware.
+  - id: FR-23
+    capability: CAP-12
+    component: window-management
+    text: Move the active window to the next physical monitor at the same proportion of the work area, same virtual desktop.
 
 nonfunctional:
   - id: NFR-1
@@ -175,3 +186,5 @@ journeys:
     text: Designer encounters a hung Chrome window during cycling and sees the honest Not Responding state.
   - id: UJ-3
     text: Sysadmin cycles between normal and elevated CMD windows without OS refusal.
+  - id: UJ-4
+    text: Technical writer stacks two windows as top and bottom halves on a short laptop screen, then moves one to a larger external display and it keeps the same share of the screen.

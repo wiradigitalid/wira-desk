@@ -62,5 +62,5 @@ refused only on submission. Folding them into one scenario would have made SCN-0
 *rejected before save* — untrue of half its own content.
 
 The submit action is never disabled to express this collision. `DEC-001` governs, and states the
-reason: a disabled submit has to explain which field disabled it — something a user facing six
+reason: a disabled submit has to explain which field disabled it — something a user facing nine
 shortcut fields cannot work out.

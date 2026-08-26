@@ -4,7 +4,7 @@ component: window-management
 status: reviewed
 created: 2026-08-21
 updated: 2026-08-26
-satisfies: [FR-1, FR-2, FR-3, FR-4, FR-5, FR-6, FR-8, FR-9, FR-10, FR-11, FR-12, FR-14, FR-15]
+satisfies: [FR-1, FR-2, FR-3, FR-4, FR-5, FR-6, FR-8, FR-9, FR-10, FR-11, FR-12, FR-14, FR-15, FR-22, FR-23]
 reviewed:
   date: '2026-08-21'
   sha: '325b78d'
@@ -15,7 +15,7 @@ reviewed:
 
 ## Decision Summary
 
-The `window-management` component delivers instant, overlay-free same-application window cycling and DPI-aware window arrangement on Windows 10 and 11. Running as an elevated background system tray utility (`wiradesk.exe`), it intercepts global keyboard shortcuts, strictly enforces monitor and virtual desktop boundaries, brings unresponsive windows honestly to the foreground, and recovers the system tray icon automatically after shell restarts without cloud dependencies or background CPU bloat.
+The `window-management` component delivers instant, overlay-free same-application window cycling and DPI-aware window arrangement on Windows 10 and 11. Running as an elevated background system tray utility (`wiradesk.exe`), it intercepts global keyboard shortcuts, snaps a window to any of the four halves of its screen, moves it deliberately to the next monitor while keeping its share of the work area, strictly enforces monitor and virtual desktop boundaries, brings unresponsive windows honestly to the foreground, and recovers the system tray icon automatically after shell restarts without cloud dependencies or background CPU bloat.
 
 ## Why
 
@@ -25,7 +25,7 @@ Users manage multiple windows within the same application (multiple browser sess
 
 | Actor | Who they are | What they may do |
 | --- | --- | --- |
-| Power User | Desktop user managing multiple windows of the same application across multi-monitor or virtual desktop workspaces. | Trigger same-app cycling, snap active windows, access tray menu, open diagnostic logs. |
+| Power User | Desktop user managing multiple windows of the same application across multi-monitor or virtual desktop workspaces. | Trigger same-app cycling, snap active windows to any half or to full screen, move the active window to the next monitor, access tray menu, open diagnostic logs. |
 | New User | First-time user running Wira Desk on Windows. | Experience default cycling and snapping shortcuts without opening configuration. |
 | Sysadmin | System administrator operating standard and elevated command shells or administrative tools. | Cycle seamlessly between standard and elevated administrator windows without UIPI refusal. |
 
@@ -34,12 +34,13 @@ Users manage multiple windows within the same application (multiple browser sess
 | id | Use case | Actor | Satisfies | critical |
 | --- | --- | --- | --- | --- |
 | UC-1 | Cycle to the next window of the same app on this monitor | Power User | FR-1, FR-2, FR-3, FR-4, FR-5, FR-6 | no |
-| UC-2 | Snap the active window to the left or right half of the screen | Power User | FR-14 | no |
+| UC-2 | Snap the active window to half the screen | Power User | FR-14, FR-22 | no |
 | UC-3 | See the tray icon return after Windows Explorer restarts | Power User | FR-10, FR-11, FR-12 | no |
+| UC-7 | Move the active window to the next monitor | Power User | FR-23 | no |
 
 ## Constraints
 
-- Must adhere strictly to Architecture Spine invariants AD-1 through AD-10 and AD-12.
+- Must adhere strictly to Architecture Spine invariants AD-1 through AD-10, AD-12, and AD-14.
 - Must execute live, stateless Z-order window enumeration via `EnumWindows` on every keypress without caching Z-order (AD-3).
 - Must restrict window enumeration to the non-blocking kernel APIs named in the spine's sterilization convention (`IsWindowVisible`, `GetWindowLongPtrW`, `GetWindowThreadProcessId`, `QueryFullProcessImageNameW`, `GetClassNameW`) and never a blocking `SendMessage` or `GetWindowText`, executing off the hook thread on the worker thread (NFR-4, AD-2).
 - Must run with elevated Administrator privileges via application manifest (`requireAdministrator`) to guarantee UIPI focus control (FR-8).
@@ -47,6 +48,10 @@ Users manage multiple windows within the same application (multiple browser sess
 - Must not watch configuration files on disk; configuration reload occurs exclusively via explicit `WM_APP_RELOAD_CONFIG` IPC message (BR-1, AD-5).
 - Must bypass shortcut interception when foreground window is a known virtual machine or remote desktop client (FR-3, AD-6).
 - Must never resolve an arrangement target that belongs to Wira Desk itself; the chord is consumed and nothing moves, rather than being passed back to Windows or retargeted at another window (FR-14, LBR-WM-6, DEC-006).
+- Must enumerate the attached monitor set live on every command that needs it, caching no monitor list, work area, or `HMONITOR` between keypresses (FR-23, AD-14).
+- Must place a window moved between monitors by its share of the destination work area, never by copying its pixel width and height (FR-23, LBR-WM-7, DEC-007).
+- Must never change which virtual desktop shows a window as a side effect of moving it between monitors (FR-23, AD-9).
+- Must leave the later of two actions configured to one chord unbound at startup, and refuse the whole candidate configuration on an explicit reload, emitting exactly one Tier-2 warning in either case (BR-6, DEC-009).
 
 ## Non-Goals
 
@@ -76,28 +81,29 @@ Pressing `Win + \`` immediately shifts keyboard focus to the next visible, same-
 - Windows OS `LowLevelHooksTimeout` (~300 ms) unhooking the hook thread if blocked, mitigated by sub-10 ms hook execution and off-thread worker processing.
 
 ### To Be Confirmed
-- None; all architectural invariants and functional requirements are stated and traced. Ratification is the owner's act at G3, recorded in `gates_passed`.
+- `OQ-20` — whether `Ctrl + Alt + Arrow` stays reachable on machines whose graphics driver binds screen rotation to the same chords. Filed in `.control/questions/assumptions.md`; `DEC-002` forbids settling it by probing, so only a real keypress on affected hardware settles it.
+- `OQ-21` — whether the order `EnumDisplayMonitors` reports monitors matches how users physically arrange them. Filed in `.control/questions/assumptions.md`; recorded as a reversal trigger in `DEC-007`.
 
 ## Gate Checklist · [G3]
 
-- ★ Every functional requirement (FR-1..6, FR-8..12, FR-14..15) mapped to a usecase or carries explicit `no_uc:` justification? Yes.
+- ★ Every functional requirement (FR-1..6, FR-8..12, FR-14..15, FR-22, FR-23) mapped to a usecase or carries explicit `no_uc:` justification? Yes.
 - ★ All use case titles phrased as natural user sentences? Yes.
 - ★ Actor Register complete and aligned with PRD journeys? Yes.
-- ★ Invariants AD-1..10 and cross-component business rules BR-1..5 respected? Yes.
+- ★ Invariants AD-1..10, AD-14, and cross-component business rules BR-1..6 respected? Yes.
 
 ## Design Reference · [G3]
 
-Paired SDD: `.how/window-management/SDD-window-management.md`. Binds invariants AD-1 through AD-10 and AD-12.
+Paired SDD: `.how/window-management/SDD-window-management.md`. Binds invariants AD-1 through AD-10, AD-12, and AD-14.
 
 ---
 
 ## Slots
 
-- `02-rules/rules-window-management.md`: Local component rules (LBR-WM-1..5).
+- `02-rules/rules-window-management.md`: Local component rules (LBR-WM-1..8).
 - `03-domain/domain-model.md`: Conceptual domain entities (`hook-command`, `window-focus-state`, `tray-health-state`, `arrangement-command`).
 - `03-domain/state-machines.md`: Hook lifecycle and tray health state machine transitions.
-- `04-usecases/`: Detailed step-by-step flows (`UC-1-cycle-same-app-window.md`, `UC-2-snap-window-half.md`, `UC-3-tray-recovery-after-explorer.md`).
-- `05-scenarios/`: Edge-case branching scenarios (`SCN-01-vm-bypass-during-cycle.md`, `SCN-02-hook-death-recovery-attempt.md`).
+- `04-usecases/`: Detailed step-by-step flows (`UC-1-cycle-same-app-window.md`, `UC-2-snap-window-half.md`, `UC-3-tray-recovery-after-explorer.md`, `UC-7-move-window-next-monitor.md`).
+- `05-scenarios/`: Edge-case branching scenarios (`SCN-01-vm-bypass-during-cycle.md`, `SCN-02-hook-death-recovery-attempt.md`, `SCN-03-duplicate-chord-unbinds-later-action.md`).
 
 ## Open Items
 

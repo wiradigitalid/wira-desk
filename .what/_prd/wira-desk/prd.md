@@ -4,7 +4,7 @@ title: Wira Desk
 initiative: wira-desk
 status: reviewed
 created: 2026-07-06
-updated: 2026-08-21
+updated: 2026-08-26
 provenance: >-
   Harvested from _bmad-output/planning-artifacts/prds/prd-WinTick-2026-07-06/prd.md
   via wdi-product intent update (brownfield).
@@ -19,6 +19,7 @@ provenance: >-
 | 2026-07-06 | Initial PRD baseline created under WinTick working title | Initial product conception and requirements definition | v1.0.0 |
 | 2026-07-10 | Finalized core architecture constraints, snapping scope (P2), and UX honesty protocol | Elicitation review rounds (A1–A6) and performance budget locking | v1.0.0 |
 | 2026-08-21 | Rebranded to Wira Desk and structured into WDI Method corpus format with explicit proof-of-done criteria | Migration from BMAD planning output to WDI repository standard | v1.0.0 |
+| 2026-08-26 | Snapping now covers the top and bottom halves of a screen, not only the left and right; moving the active window to another monitor became something Wira Desk does itself instead of leaving to Windows; and every shipped arrangement shortcut moved to the Ctrl+Alt family | The owner asked for vertical halves and a deliberate monitor move. The shortcut family moved because the previous default, `Ctrl+Win+Left/Right`, silently took over Windows' own shortcut for switching virtual desktops — a promise this product had already made not to break. Monitor movement was previously delegated to Windows' `Win+Shift+Arrow`, which discards whatever arrangement the user had just applied, so the two features never composed | v0.4.0 |
 
 ## 0. Document Purpose
 
@@ -70,6 +71,14 @@ Operating as an ultra-lightweight, invisible background tray utility written in 
 - **Climax:** Focus transfers directly to the elevated console without being blocked or ignored by Windows User Interface Privilege Isolation (UIPI).
 - **Resolution:** Budi executes administrative commands and switches back and forth between terminal windows effortlessly using the same shortcut.
 - **Edge case:** If Wira Desk were launched without elevation, Windows UIPI would reject focus changes to the admin terminal; Wira Desk's elevated architecture guarantees uniform behavior.
+
+#### UJ-4. Sari lays out a review session across a laptop screen and an external display
+- **Persona + context:** Sari, a technical writer reviewing a specification against its implementation on a 14-inch laptop with a larger external monitor to its right. The two displays run at different scaling factors, which is the normal state of her desk rather than an unusual one.
+- **Entry state:** Wira Desk is running in the tray. The specification document and a terminal are both on the laptop screen; the external monitor holds a browser.
+- **Path:** Sari snaps the specification to the top half of the laptop screen and the terminal to the bottom half, so she can read and run at the same time on a screen too short to make left and right halves useful. She then decides the specification belongs on the larger display, and moves it there with a single shortcut.
+- **Climax:** The specification arrives on the external monitor still occupying the top half — the same share of the working area it held on the laptop, not the same number of pixels — so the arrangement she built survives the move. Her browser and terminal stay exactly where they were.
+- **Resolution:** Sari works across both screens with a layout she assembled from the keyboard in a few seconds, and rebuilds it the same way whenever she docks.
+- **Edge case:** With only the laptop screen attached, the move shortcut does nothing at all — no window jump, no message, no error. On a screen too short to divide, the snap declines rather than producing a window with no height.
 
 ## 3. Glossary
 
@@ -196,27 +205,38 @@ The system can execute with elevated Administrator privileges via an embedded ap
 
 **Capability:** CAP-2 — serves BG-3.
 
-**Description:** Provides optional keyboard-driven window arrangement shortcuts that snap, maximize, and position the active window with per-monitor DPI awareness, including an overlapping stack layout algorithm for compact displays.
+**Description:** Provides optional keyboard-driven window arrangement shortcuts that snap the active window to either half of the screen — left, right, top, or bottom — maximize it, and arrange several windows as an overlapping stack, all with per-monitor DPI awareness.
 
 **Functional Requirements:**
 
 #### FR-14: DPI-Aware Window Snapping Shortcuts
-The system can snap and resize the active window to half-screen left/right or maximized layouts using dedicated keyboard shortcuts (`Ctrl + Win + Left/Right`, `Ctrl + Win + Enter`), scaled to the target monitor's DPI.
+The system can snap and resize the active window to half-screen left/right or maximized layouts using dedicated keyboard shortcuts (`Ctrl + Alt + Left/Right`, `Ctrl + Alt + Enter`), scaled to the target monitor's DPI.
 
-**Proof of done:** Pressing `Ctrl + Win + Left` resizes and aligns the active window to exactly 50% of the working area of the current monitor, taking display scaling into account.
+**Proof of done:** Pressing `Ctrl + Alt + Left` resizes and aligns the active window to exactly 50% of the working area of the current monitor, taking display scaling into account.
 
 **Consequences (testable):**
 - Half-screen snap calculates bounds from `GetDpiForMonitor` and monitor work area (excluding taskbars).
 - Maximize shortcut restores or maximizes window state cleanly.
+- The shipped default shortcuts are the `Ctrl + Alt` family, and `Win + Ctrl + Left/Right` can no longer be configured for any action because Windows uses it to switch virtual desktops. Realizes DEC-008.
 
 #### FR-15: Overlapping Stack Layout for Compact Monitors
-The system can arrange up to three same-application windows in an overlapping 50%-width stack with offset horizontal edges on small screens.
+The system can arrange up to three same-application windows in an overlapping 50%-width stack with offset horizontal edges on small screens, triggered by `Ctrl + Alt + Shift + Down`.
 
 **Proof of done:** Triggering the stack layout command positions up to three windows at 50% screen width each with visible exposed borders allowing mouse selection.
 
 **Consequences (testable):**
 - Windows are positioned at Left, Center, and Right horizontal offsets.
 - Window geometry calculations adjust proportionally according to monitor DPI.
+
+#### FR-22: Top and Bottom Half Snapping
+The system can snap and resize the active window to the top or bottom half of the current monitor's working area using dedicated keyboard shortcuts (`Ctrl + Alt + Up`, `Ctrl + Alt + Down`), scaled to the target monitor's DPI. Realizes UJ-4.
+
+**Proof of done:** Pressing `Ctrl + Alt + Up` resizes and aligns the active window to the upper 50% of the working area of the current monitor, leaving the taskbar uncovered.
+
+**Consequences (testable):**
+- The top and bottom halves together cover the working area exactly, with no overlapping row and no uncovered row between them.
+- An odd number of pixels in height is divided the same way every time, so repeating the shortcut never shifts the window by a pixel.
+- Snapping is confined to the monitor hosting the active window; no other monitor is touched.
 
 ---
 
@@ -378,6 +398,30 @@ The system can expose state, roles, names, and shortcut values across all settin
 
 ---
 
+### 4.11 Deliberate Movement Between Monitors
+
+**Capability:** CAP-12 — serves BG-3.
+
+**Description:** Moves the active window to another physical monitor on purpose, from the keyboard, keeping the arrangement the user has already built rather than replacing it. Realizes UJ-4.
+
+Windows already moves windows between monitors with `Win + Shift + Arrow`, and Wira Desk deliberately left that job to Windows until now. It is taken back here because the Windows shortcut re-decides the window's state on arrival, discarding a snap the user applied a moment earlier — so the two features never combined into one layout. Realizes DEC-007.
+
+**Functional Requirements:**
+
+#### FR-23: Move the Active Window to the Next Monitor
+The system can move the active window to the next physical monitor using a dedicated keyboard shortcut (`Ctrl + Alt + Shift + Enter`), placing it on the same share of the destination monitor's working area that it occupied on the monitor it left, and leaving it on the same virtual desktop. Realizes UJ-4.
+
+**Proof of done:** A window occupying the left half of one monitor's working area, moved with the shortcut, occupies the left half of the next monitor's working area — including when the two monitors differ in resolution or display scaling.
+
+**Consequences (testable):**
+- Monitors are visited in one fixed order that wraps from the last back to the first, so repeating the shortcut returns the window to where it started.
+- With one monitor attached, the shortcut does nothing: no movement, no message, and no error.
+- The window remains on the virtual desktop it was on; moving it never changes which desktop shows it.
+- The destination placement is derived from proportion, never from copying the window's pixel width and height.
+- No other window on either monitor is moved or resized.
+
+---
+
 ## 5. Cross-Cutting NFRs
 
 | ID | Requirement | Target | Enforced by |
@@ -412,13 +456,14 @@ The system can expose state, roles, names, and shortcut values across all settin
 - UIPI bypass via elevated daemon execution.
 - UX honesty surfacing unresponsive ("Not Responding") windows.
 - Three-tier error handling protocol with tray recovery.
-- DPI-aware keyboard snapping (`Ctrl + Win + Arrows/Enter`) and overlapping stack layout.
+- DPI-aware keyboard snapping to any half of the screen (`Ctrl + Alt + Arrows`) and maximize (`Ctrl + Alt + Enter`), plus the overlapping stack layout.
+- Moving the active window to the next physical monitor from the keyboard, keeping its share of the working area.
 - Separate settings binary with first-run onboarding, physical key listening, and UI Automation accessibility.
 - Silent auto-start via Windows Task Scheduler.
 - Local TOML configuration parsing and logging.
 
 ### 8.2 Out of Scope for MVP
-- Multi-monitor window repositioning shortcuts (delegated to native Windows `Win + Shift + Arrows`).
+- Moving a window to a *named* monitor (primary, secondary) rather than the next one — the next-and-wrap shortcut needs no stable monitor identity, and Windows does not offer one cheaply. See DEC-007.
 - Per-virtual-desktop independent snap configuration layouts (deferred to future exploration).
 - Visual switcher preview overlays.
 - Cloud configuration sync or mobile companion apps.
@@ -441,9 +486,12 @@ The system can expose state, roles, names, and shortcut values across all settin
 
 1. Should future versions support customizable process exclusion lists in the settings UI for games and full-screen graphical applications? (Currently handled via manual TOML editing).
 2. Should independent snap layouts per virtual desktop be introduced in v2 following user feedback?
+3. Should moving a window to a named monitor (primary, secondary) be offered alongside next-and-wrap, once a monitor identity that survives unplug and sleep is available?
 
 ## 11. Assumptions Index
 
 - `[ASSUMPTION: §2.1]` Users are willing to grant initial Administrator elevation to allow seamless window switching across administrative consoles and Task Manager.
 - `[ASSUMPTION: §4.3]` Standard virtual machine and remote desktop clients expose predictable process and window class names (`mstsc.exe`, `vmconnect.exe`) suitable for passthrough filtering.
 - `[ASSUMPTION: §4.9]` Windows Task Scheduler `ONLOGON` tasks with highest privileges provide a reliable, silent auto-start mechanism across diverse Windows 10 and 11 configurations.
+- `[ASSUMPTION: §4.5]` The `Ctrl + Alt + Arrow` shortcuts remain reachable on most machines despite graphics-driver control panels binding screen rotation to the same combination, because Wira Desk's keyboard hook usually receives the keypress before the driver's does. Filed as `OQ-20` in `.control/questions/assumptions.md`; recorded as a cost in DEC-008.
+- `[ASSUMPTION: §4.11]` The order in which Windows reports attached monitors matches how users have physically arranged them closely enough that "next monitor" is not surprising. Filed as `OQ-21` in `.control/questions/assumptions.md`; recorded as a reversal trigger in DEC-007.

@@ -5,6 +5,7 @@ component: settings
 satisfies: [FR-7, FR-18]
 critical: false
 created: '2026-08-21'
+updated: '2026-08-26'
 ---
 
 # UC-4 — Change a keyboard shortcut in Settings
@@ -15,7 +16,7 @@ User selects a shortcut field in Settings to customize its key combination.
 
 ## Precondition
 
-- Settings application (`wiradesk-settings.exe`) is running and displaying the Shortcuts pane.
+- Settings application (`wiradesk-settings.exe`) is running and displaying the Shortcuts pane, which lists every editable action as exactly one row (LBR-ST-14).
 - Background daemon is active or configuration file exists in `%APPDATA%\WiraDesk\config.toml`.
 
 ## Main Flow
@@ -27,7 +28,7 @@ User selects a shortcut field in Settings to customize its key combination.
 5. User selects the Save action to commit changes.
 6. System writes the validated configuration atomically to disk and posts `WM_APP_RELOAD_CONFIG` to the daemon.
 7. System displays confirmation feedback and updates the saved baseline state.
-8. User closes Settings and immediately uses the new shortcut for window cycling.
+8. User closes Settings and immediately uses the new shortcut for the action whose row they edited.
 
 ## Alternate Flows
 
@@ -38,6 +39,7 @@ User selects a shortcut field in Settings to customize its key combination.
 | Step 6 | Daemon is not running | System saves configuration atomically to disk without IPC reload; daemon will load updated settings on next startup. |
 | Step 2 | The Shortcuts pane is visible and Settings holds the foreground window | The daemon withholds its own shortcut actions and reports each observed chord to Settings, so a chord pressed to test it neither switches windows nor is taken from Windows (LBR-ST-11). |
 | Step 3 | Field is listening and Settings holds the foreground window | The daemon additionally withholds the chord from Windows for the duration of the recording, so the shell cannot act on it and steal the foreground before the capture completes (LBR-ST-11). |
+| Step 3 | The captured chord is `Win + Ctrl + Left` or `Win + Ctrl + Right` | System refuses it and names what Windows uses it for — switching between virtual desktops. These two entered the reserved catalogue with `DEC-008`; before that they were accepted, and were the shipped snap defaults. |
 
 ## Failure Flows
 

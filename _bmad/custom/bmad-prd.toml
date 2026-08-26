@@ -18,7 +18,7 @@
 
 prd_template       = "{project-root}/.constitution/method/document/templates/prd.md"
 prd_output_path    = "{project-root}/.what/_prd"
-run_folder_pattern = "FILL-initiative-slug"
+run_folder_pattern = "wira-desk"
 
 doc_standards = ["file:{project-root}/.constitution/method/document/prd-guide.md"]
 
@@ -38,5 +38,5 @@ persistent_facts = [
 
   "A release MUST NOT be stated through the PRD's folder name or its title. It is carried by the target_release field in requirements.yaml and waves.yaml. Naming a release number inside the PRD's prose MAY be done as context, but the registry remains what binds.",
 
-  "Every memlog.py call — init, append, set, and the read on resume or intent Update — MUST use --path {project-root}/.control/memlog/prd-FILL-initiative-slug.md. The slug MUST match run_folder_pattern above, and both lines MUST change together when the initiative changes. --workspace MUST NOT be used.",
+  "Every memlog.py call — init, append, set, and the read on resume or intent Update — MUST use --path {project-root}/.control/memlog/prd-wira-desk.md. The slug MUST match run_folder_pattern above, and both lines MUST change together when the initiative changes. --workspace MUST NOT be used.",
 ]

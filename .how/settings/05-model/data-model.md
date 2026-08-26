@@ -20,8 +20,17 @@ erDiagram
 | cycling_fallback | string | yes | Optional `Alt+Oem3` fallback |
 | snap_left | string | no | Half-left snap binding |
 | snap_right | string | no | Half-right snap binding |
+| snap_top | string | no | Half-top snap binding. `[MISSING]` — planned by this pass (FR-22) |
+| snap_bottom | string | no | Half-bottom snap binding. `[MISSING]` — planned by this pass (FR-22) |
 | snap_maximize | string | no | Maximize binding |
+| move_next_monitor | string | no | Next-monitor move binding. `[MISSING]` — planned by this pass (FR-23) |
 | snap_stack | string | no | Overlapping stack binding |
+
+### Dictionary
+
+- The **row order above is the declared sequence** `LBR-ST-14` names: the Shortcuts pane is drawn from it, keyboard focus follows it, and a chord collision is resolved in favour of whichever row comes first. There is no second list.
+- Grouping the rows under headings in the pane is a presentation concern and belongs to `.how/settings/01-ux/DESIGN.md`. It must not reorder them relative to this sequence.
+- Every value is a **canonical** chord string. Two rows holding the same canonical string is the collision condition `BR-6` governs; this component refuses to save it at all.
 
 Schema source: `shared::Config` in `crates/shared/src/config.rs`.
 

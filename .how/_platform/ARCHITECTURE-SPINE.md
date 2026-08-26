@@ -11,7 +11,7 @@ reviewed:
 provenance: >-
   Harvested and updated from _bmad-output/planning-artifacts/architecture/architecture-WinTick-2026-07-06/ARCHITECTURE-SPINE.md
   for G3 Blueprint. Updated to Wira Desk product identity and workspace structure.
-binds: [CAP-1, CAP-2, CAP-3, CAP-4, CAP-5, CAP-6, CAP-7, CAP-8, CAP-9, CAP-10, CAP-11]
+binds: [CAP-1, CAP-2, CAP-3, CAP-4, CAP-5, CAP-6, CAP-7, CAP-8, CAP-9, CAP-10, CAP-11, CAP-12]
 sources:
   - .what/_prd/wira-desk/prd.md
   - .what/_product-brief/brief.md
@@ -41,9 +41,9 @@ The paradigm maps to the execution units:
 
 ### AD-2 — Inter-Thread Communication: Hook-Side Throttle + u8 Enum
 
-- **Binds:** CAP-1, CAP-2
-- **Prevents:** Ring buffer overflow from macro spam; worker thread wasting cycles on invalid/duplicate inputs.
-- **Rule:** The Hook Thread is solely responsible for anti-macro throttle (reject inputs <50ms apart). It translates valid keypresses into a `u8` command enum (e.g., `1`=Cycle, `2`=SnapLeft, `3`=SnapRight, `4`=SnapMaximize, `5`=OverlappingStack) before writing to the ring buffer. The Worker Thread never performs input validation — it only executes commands.
+- **Binds:** CAP-1, CAP-2, CAP-12
+- **Prevents:** Ring buffer overflow from macro spam; worker thread wasting cycles on invalid/duplicate inputs; a queued command changing meaning when the command set grows.
+- **Rule:** The Hook Thread is solely responsible for anti-macro throttle (reject inputs <50ms apart). It translates valid keypresses into a `u8` command enum (`1`=Cycle, `2`=SnapLeft, `3`=SnapRight, `4`=SnapMaximize, `5`=OverlappingStack, `6`=SnapTop, `7`=SnapBottom, `8`=MoveToNextMonitor) before writing to the ring buffer. The Worker Thread never performs input validation — it only executes commands. Wire values are **extended, never renumbered**: a value already assigned keeps its meaning permanently, because a command sitting in the ring buffer carries only the number. Any value outside the assigned set decodes to `Nop` rather than being treated as an error.
 
 ### AD-3 — Z-Order Traversal: Stateless Just-in-Time [ADOPTED]
 
@@ -125,6 +125,12 @@ The paradigm maps to the execution units:
 - **Prevents:** UAC prompt on every boot (a registry `Run`-key entry cannot launch an elevated process silently); `%APPDATA%` path mismatch if the task runs as SYSTEM; DLL Hijacking via the task's working directory.
 - **Rule:** Auto-start is registered as a Windows Scheduled Task (`schtasks`): trigger `ONLOGON`, run level `/RL HIGHEST`, run-as user `/RU "%USERNAME%"` (the specific active user, never SYSTEM — keeping `%APPDATA%` aligned between daemon and settings GUI). The task action (`/TR`) must use the absolute executable path and the `Start in` parameter must be left empty or point to the secure install directory, mitigating DLL Hijacking. The registry `Run`-key mechanism (`HKCU\...\CurrentVersion\Run`) is prohibited. Toggle (create/delete task) is exposed via the tray context menu and settings UI.
 
+### AD-14 — Monitor Enumeration: Stateless Just-in-Time
+
+- **Binds:** CAP-2, CAP-7, CAP-12
+- **Prevents:** A cached monitor list outliving the display configuration it described — placing a window onto a monitor that has been unplugged, or refusing to reach one that has just been attached. Also prevents an `HMONITOR` being treated as a durable identity, which it is not.
+- **Rule:** On every command that needs to know what monitors exist, the Worker Thread enumerates them live via `EnumDisplayMonitors` and reads each one's work area and DPI at that moment. No monitor list, work area, or `HMONITOR` may be cached, memoized, or held in a `static` between keypresses. Display-change notifications are not subscribed to, because nothing is stored for them to invalidate. This is `AD-3`'s rule applied to the display set rather than to the Z-order, and it is stated separately because the two are enumerated by different APIs and it would otherwise be read as covered by implication.
+
 ## Dependency Direction
 
 ```mermaid
@@ -193,16 +199,17 @@ graph LR
 | Capability | Lives in | Governed by |
 | --- | --- | --- |
 | CAP-1 Window Cycling | `daemon/hook.rs`, `daemon/worker.rs`, `daemon/cycling/*` | AD-1, AD-2, AD-3, AD-4 |
-| CAP-2 Window Snapping | `daemon/hook.rs`, `daemon/worker.rs`, `daemon/arrangement/*` | AD-1, AD-2 |
+| CAP-2 Window Snapping | `daemon/hook.rs`, `daemon/worker.rs`, `daemon/arrangement/*` | AD-1, AD-2, AD-14 |
 | CAP-3 TOML Config | `shared/config.rs`, `daemon/config.rs`, `settings/persistence.rs` | AD-5, AD-12 |
 | CAP-4 Admin/UIPI | `daemon/main.rs` (manifest), `daemon/build.rs` | AD-1 |
 | CAP-5 Settings Binary | `settings/*` | AD-11, AD-11a, AD-12 |
 | CAP-6 Silent Failure Alert | `daemon/health.rs`, `daemon/tray.rs` | AD-7, AD-8 |
-| CAP-7 Spatial Isolation | `daemon/worker.rs`, `daemon/context/*` | AD-3, AD-9 |
+| CAP-7 Spatial Isolation | `daemon/worker.rs`, `daemon/context/*` | AD-3, AD-9, AD-14 |
 | CAP-8 VM/RDP Bypass | `daemon/hook.rs`, `daemon/context/vm_bypass.rs` | AD-6 |
 | CAP-9 Explorer Recovery | `daemon/tray.rs`, `daemon/main.rs` | AD-10 |
 | CAP-10 Auto-Start | `daemon/autostart.rs`, `settings/app.rs` | AD-13 (Task Scheduler: ONLOGON, RL HIGHEST, RU %USERNAME%) |
 | CAP-11 View Logs | `daemon/tray.rs`, `daemon/log.rs` | AD-7 |
+| CAP-12 Monitor Movement | `daemon/hook.rs`, `daemon/worker.rs`, `daemon/arrangement/monitor.rs`, `daemon/context/spatial.rs` | AD-1, AD-2, AD-9, AD-14 |
 
 ## RAM Budget
 

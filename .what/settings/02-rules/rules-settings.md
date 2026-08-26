@@ -28,6 +28,15 @@ Local component business rules binding the `settings` Product Component. Global 
 | LBR-ST-11 | The daemon may withhold a chord from Windows on the settings process's behalf only while a shortcut field is recording. While the Shortcuts pane is merely visible, the daemon must report the chord and withhold only its own action, never the keystroke. | `settings`, `window-management` | FR-18, DEC-004, AD-1 | active |
 | LBR-ST-12 | The key check must state only what was observed, correlating the daemon's report against what the settings window received, and must never predict whether a chord nobody has pressed is available. With no daemon report available it must say so and stop diagnosing. | `settings` | FR-18, DEC-002, DEC-005 | active |
 | LBR-ST-13 | The settings window’s painted size is its Win32 size: a size change imposed from outside the process must be clamped at the window’s own message boundary before the toolkit sees it, while position changes pass through untouched. A size the window itself currently declares legal — the onboarding modal growing into the settings shell — must still be honoured. | `settings` | DEC-006 | active |
+| LBR-ST-14 | Every action whose chord a user may edit appears as exactly **one** row in the Shortcuts pane, and one declared sequence is the single source of the pane's draw order, its keyboard focus order, and the precedence order that resolves a chord collision. A second, independently maintained list of the same actions must not exist. Grouping the rows under headings must not reorder them relative to that sequence. | `settings`, `window-management` | FR-18, LBR-ST-5, BR-6, DEC-009 | active |
+
+## Rationale — LBR-ST-14
+
+The list of editable actions grew from six to nine in one pass, and it will grow again. The failure this rule prevents is not hypothetical in this codebase: the source already carries comments explaining that the draw order and the declared order must not become two lists, because they had been, and that a field added to the field-to-key table but not to its reverse lookup breaks the round trip silently rather than at compile time.
+
+The rule also makes the collision precedence order (`BR-6`, `DEC-009`) inspectable. Precedence is arbitrary by nature; what makes it defensible is that a reader can verify it against one declared sequence in a few seconds, and that the pane they are looking at is drawn from that same sequence.
+
+Grouping is explicitly permitted and explicitly constrained. Nine undifferentiated rows are hard to scan, so headings earn their place — but a heading that reorders rows relative to the declared sequence would put the visible order and the precedence order back into disagreement, which is the whole thing this rule exists to stop.
 
 ## Retired
 

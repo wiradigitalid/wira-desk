@@ -69,3 +69,63 @@ decisions:
       - .how/window-management/04-components/LC-arrangement-engine.md
       - .what/settings/02-rules/rules-settings.md
       - .how/settings/04-components/LC-settings-shell.md
+
+  # W4 (0.4.0) — vertical snapping, inter-monitor movement, chord-family move.
+  # All three ratified by the Product Owner in session on 2026-08-26 and applied
+  # the same day. Ordering deviation, recorded rather than hidden: the documents
+  # were written while all three stood at `draft`, because the owner commissioned
+  # the whole batch in one instruction. DEC-006's precedent is the opposite —
+  # hold at `draft` until ratified — and it remains the better order.
+  - id: DEC-007
+    title: Moving the active window between monitors is Wira Desk's own command, no longer delegated to Windows
+    status: applied
+    file: decisions/DEC-007-inter-monitor-movement-becomes-a-product-command.md
+    created: '2026-08-26'
+    touches:
+      - .what/_prd/wira-desk/prd.md
+      - .control/registry/requirements.yaml
+      - .control/registry/usecases.yaml
+      - .control/product-glossary.md
+      - .how/_platform/ARCHITECTURE-SPINE.md
+      - .what/window-management/02-rules/rules-window-management.md
+      - .what/window-management/03-domain/domain-model.md
+      - .what/window-management/04-usecases/UC-7-move-window-next-monitor.md
+      - .what/window-management/SRS-window-management.md
+      - .how/window-management/SDD-window-management.md
+      - .how/window-management/04-components/LC-arrangement-engine.md
+      - .how/window-management/05-model/data-model.md
+      - .how/window-management/06-flows/flow-monitor-move.md
+      - .what/settings/04-usecases/EXPERIENCE.md
+      - .how/settings/01-ux/DESIGN.md
+
+  - id: DEC-008
+    title: The shipped arrangement chords are the Ctrl+Alt family, and Ctrl+Win+Arrow is returned to Windows
+    status: applied
+    file: decisions/DEC-008-arrangement-chords-move-to-the-ctrl-alt-family.md
+    created: '2026-08-26'
+    touches:
+      - .what/_prd/wira-desk/prd.md
+      - .control/registry/requirements.yaml
+      - .what/window-management/04-usecases/UC-2-snap-window-half.md
+      - .what/window-management/SRS-window-management.md
+      - .what/settings/04-usecases/UC-4-change-shortcut.md
+      - .what/settings/04-usecases/EXPERIENCE.md
+      - .how/settings/01-ux/DESIGN.md
+      - .how/settings/05-model/data-model.md
+
+  - id: DEC-009
+    title: A duplicate chord unbinds the later action at startup, and refuses the whole reload
+    status: applied
+    file: decisions/DEC-009-a-duplicate-chord-unbinds-the-later-action.md
+    created: '2026-08-26'
+    touches:
+      - .what/business-rules.md
+      - .control/product-glossary.md
+      - .what/window-management/03-domain/domain-model.md
+      - .what/window-management/05-scenarios/SCN-03-duplicate-chord-unbinds-later-action.md
+      - .what/window-management/SRS-window-management.md
+      - .how/window-management/SDD-window-management.md
+      - .what/settings/02-rules/rules-settings.md
+      - .what/settings/SRS-settings.md
+      - .what/settings/04-usecases/EXPERIENCE.md
+      - .how/settings/05-model/data-model.md

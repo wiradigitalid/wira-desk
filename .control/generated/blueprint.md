@@ -8,16 +8,17 @@ This is what the owner reads at **G3 Blueprint**, instead of seven files. Its co
 
 ## Use case catalogue
 
-**6 use cases**, 0 marked `critical`.
+**7 use cases**, 0 marked `critical`.
 
 | id | Use case | Component | Satisfies | critical |
 | --- | --- | --- | --- | --- |
 | `UC-1` | Cycle to the next window of the same app on this monitor | `window-management` | `FR-1`, `FR-2`, `FR-3`, `FR-4`, `FR-5`, `FR-6` | no |
-| `UC-2` | Snap the active window to the left or right half of the screen | `window-management` | `FR-14` | no |
+| `UC-2` | Snap the active window to half the screen | `window-management` | `FR-14`, `FR-22` | no |
 | `UC-3` | See the tray icon return after Windows Explorer restarts | `window-management` | `FR-10`, `FR-11`, `FR-12` | no |
 | `UC-4` | Change a keyboard shortcut in Settings | `settings` | `FR-7`, `FR-18` | no |
 | `UC-5` | Complete or skip the first-run tutorial | `settings` | `FR-17` | no |
 | `UC-6` | Turn auto-start on boot on or off | `settings` | `FR-13` | no |
+| `UC-7` | Move the active window to the next monitor | `window-management` | `FR-23` | no |
 
 ## Actor list
 
@@ -33,7 +34,7 @@ This is what the owner reads at **G3 Blueprint**, instead of seven files. Its co
 
 | Actor | Who they are | What they may do |
 | --- | --- | --- |
-| Power User | Desktop user managing multiple windows of the same application across multi-monitor or virtual desktop workspaces. | Trigger same-app cycling, snap active windows, access tray menu, open diagnostic logs. |
+| Power User | Desktop user managing multiple windows of the same application across multi-monitor or virtual desktop workspaces. | Trigger same-app cycling, snap active windows to any half or to full screen, move the active window to the next monitor, access tray menu, open diagnostic logs. |
 | New User | First-time user running Wira Desk on Windows. | Experience default cycling and snapping shortcuts without opening configuration. |
 | Sysadmin | System administrator operating standard and elevated command shells or administrative tools. | Cycle seamlessly between standard and elevated administrator windows without UIPI refusal. |
 
@@ -101,7 +102,7 @@ Conceptual domain model for the `window-management` component. Represents domain
 | `hook-command` | An intercepted, validated, and throttled user intent command dispatched from the keyboard hook to the background worker. | Command action code and dispatch timestamp |
 | `window-focus-state` | The live snapshot of active window focus, monitor boundaries, virtual desktop context, and application identity on the current desktop. | Foreground window handle (`HWND`), monitor identity, and virtual desktop GUID |
 | `tray-health-state` | The operational status of the background daemon, tracking hook attachment vitality, error severity level, and user notification state. | Error tier level (`Normal`, `Warning`, `Critical`) and hook vitality status |
-| `arrangement-command` | A planned window repositioning and sizing action targeting specific desktop regions (half-screen snap, maximized state, or overlapping stack slot). | Target screen region geometry and monitor DPI scaling context |
+| `arrangement-command` | A planned window repositioning and sizing action targeting specific desktop regions (a half-screen snap to any of the four halves, maximized state, an overlapping stack slot, or a move to the next monitor). | Target screen region geometry, the destination monitor, and monitor DPI scaling context |
 
 #### Relationships
 
@@ -109,6 +110,7 @@ Conceptual domain model for the `window-management` component. Represents domain
 - One `window-focus-state` **determines** the candidate set of same-application windows on the active monitor.
 - One `tray-health-state` **reflects** the runtime health of the hook thread and error reporting protocol.
 - One `arrangement-command` **modifies** the geometry of the active window within the bounds of `window-focus-state`.
+- One `arrangement-command` of the monitor-move kind **reads** the live monitor set to choose a destination, and is the only kind whose target work area is not the one `window-focus-state` reports.
 
 #### State Lifecycle
 
@@ -132,7 +134,10 @@ Conceptual domain model for the `window-management` component. Represents domain
 #### Invariants
 
 - **Live Traversal Invariant:** Window focus state and Z-order stacking must never be cached between shortcut keypresses; each cycle command must traverse live desktop state (AD-3).
-- **Spatial Preservation Invariant:** Target candidate windows for cycling or snapping must reside on the exact same physical monitor and virtual desktop as the foreground window (FR-2, CAP-7).
+- **Spatial Preservation Invariant:** Target candidate windows for cycling or snapping must reside on the exact same physical monitor and virtual desktop as the foreground window (FR-2, CAP-7). A monitor-move command is the one deliberate crossing of the monitor half of this boundary; it still must not cross the virtual desktop half, and moving a window never changes which desktop shows it (FR-23, AD-9).
+- **Proportional Placement Invariant:** A window moved between monitors must be placed by the share of the destination work area it occupied on the source, never by copying its pixel width and height — otherwise an arrangement dissolves the moment the two monitors differ in size or display scaling (FR-23, DEC-007).
+- **Live Monitor Set Invariant:** The set of attached monitors must be enumerated fresh on every monitor-move command and must never be cached between keypresses. An `HMONITOR` is a handle rather than an identity, and a cached list survives an unplug that the handle does not (AD-14).
+- **One Chord, One Action Invariant:** No two actions may be reachable by the same chord. When configuration says otherwise, the chord belongs to the first action in the fixed precedence order and the later action is unbound rather than ambiguous (BR-6, DEC-009).
 - **UX Honesty Invariant:** Unresponsive ("Not Responding") windows must receive focus when reached in the cycling sequence and must never be filtered out (FR-4).
 - **Hook Callback Speed Invariant:** The low-level keyboard hook callback must complete within 10 ms without executing heap allocations or blocking synchronous APIs (NFR-2, NFR-3).
 - **Single Instance Invariant:** Exactly one background daemon instance may run per user logon session (NFR-6).

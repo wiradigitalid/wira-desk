@@ -10,9 +10,9 @@ usecases:
 
   - id: UC-2
     component: window-management
-    title: Snap the active window to the left or right half of the screen
+    title: Snap the active window to half the screen
     actor: Power User
-    satisfies: [FR-14]
+    satisfies: [FR-14, FR-22]
     critical: false
 
   - id: UC-3
@@ -41,4 +41,11 @@ usecases:
     title: Turn auto-start on boot on or off
     actor: Power User
     satisfies: [FR-13]
+    critical: false
+
+  - id: UC-7
+    component: window-management
+    title: Move the active window to the next monitor
+    actor: Power User
+    satisfies: [FR-23]
     critical: false

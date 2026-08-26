@@ -366,6 +366,48 @@ rtm:
   green: false
   exempt: true
   broken_at: no_uc
+- BG: BG-3
+  CAP: CAP-2
+  FR: FR-22
+  DEC: []
+  UC: UC-2
+  story: S2
+  wave: W1
+  release: 0.1.0
+  test:
+  - arrangement::snap::tests::snap_left_returns_left_half
+  - arrangement::snap::tests::snap_right_returns_complementary_half
+  - arrangement::snap::tests::halves_tile_the_work_area_without_gap_or_overlap
+  - arrangement::snap::tests::halves_stay_inside_the_work_area
+  - arrangement::snap::tests::maximize_never_exceeds_the_work_area
+  - arrangement::snap::tests::maximize_returns_the_whole_work_area
+  - arrangement::snap::tests::identical_geometry_yields_identical_plans_at_every_dpi
+  - arrangement::snap::tests::odd_width_is_split_deterministically
+  - arrangement::snap::tests::halves_work_at_negative_origin
+  - arrangement::snap::tests::inverted_work_area_fails_without_placement
+  - arrangement::snap::tests::empty_work_area_fails_without_placement
+  - arrangement::snap::tests::one_pixel_wide_work_area_still_splits_safely
+  - arrangement::tests::arrangement_shortcut_defaults_are_frozen
+  - arrangement::tests::command_set_contains_no_inter_monitor_arrangement
+  - arrangement::win32::tests::an_invalid_target_is_skipped_and_the_rest_continue
+  - arrangement::win32::tests::negative_monitor_coordinates_survive_conversion
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
+- BG: BG-3
+  CAP: CAP-12
+  FR: FR-23
+  DEC: []
+  UC: UC-7
+  story: ''
+  wave: ''
+  release: ''
+  test: []
+  status: ''
+  green: false
+  exempt: false
+  broken_at: story
 - BG: BG-1
   CAP: CAP-8
   FR: FR-3

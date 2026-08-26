@@ -2,16 +2,17 @@
 type: uc
 id: UC-2
 component: window-management
-satisfies: [FR-14]
+satisfies: [FR-14, FR-22]
 critical: false
 created: '2026-08-21'
+updated: '2026-08-26'
 ---
 
-# UC-2 — Snap the active window to the left or right half of the screen
+# UC-2 — Snap the active window to half the screen
 
 ## Trigger
 
-User presses a configured window snapping keyboard shortcut (e.g. `Ctrl + Win + Left` or `Ctrl + Win + Right`).
+User presses a configured window snapping keyboard shortcut for one of the four halves — left, right, top, or bottom (shipped defaults `Ctrl + Alt + Left`, `Ctrl + Alt + Right`, `Ctrl + Alt + Up`, `Ctrl + Alt + Down`).
 
 ## Precondition
 
@@ -24,7 +25,7 @@ User presses a configured window snapping keyboard shortcut (e.g. `Ctrl + Win + 
 2. System intercepts keystroke on dedicated hook thread, validates shortcut chord, and enqueues snap command to lock-free ring buffer.
 3. System posts command notification to worker thread and returns immediately without blocking input.
 4. System worker thread retrieves snap command and identifies active monitor bounds and DPI scale factor.
-5. System computes target half-screen coordinates subtracting taskbar and docking work area margins.
+5. System computes target half-screen coordinates inside the work area, dividing along the axis the chord names — vertically for left and right, horizontally for top and bottom.
 6. System executes atomic DPI-aware repositioning and resizing via non-blocking Win32 APIs.
 7. User sees active window aligned flush to the targeted screen half at correct pixel dimensions.
 
@@ -36,6 +37,7 @@ User presses a configured window snapping keyboard shortcut (e.g. `Ctrl + Win + 
 | Step 2 | Keystroke has unconfigured modifier combinations | System passes keystroke through via `CallNextHookEx` without executing snapping action. |
 | Step 4 | Foreground window belongs to Wira Desk itself — the Settings window or its onboarding modal | System resolves no target and arranges nothing. The chord stays consumed rather than passed back to Windows, and the refusal is recorded as a Tier-2 diagnostic with no popup. |
 | Step 4 | Window spans multi-monitor boundary | System determines primary containing monitor via center-point calculation and applies snap to that monitor's work area. |
+| Step 5 | Work area is too small to divide along the requested axis — a single-pixel height for a top or bottom snap | System plans nothing and reports a planning failure rather than emitting a zero-height placement. Nothing moves. |
 | Step 6 | Window enforces custom minimum size constraints larger than half-screen | System positions window flush to screen edge while respecting application's enforced minimum boundaries. |
 
 ## Failure Flows
@@ -47,7 +49,7 @@ User presses a configured window snapping keyboard shortcut (e.g. `Ctrl + Win + 
 
 ## Outcome
 
-The active window is cleanly resized and positioned to exactly half of the active monitor's available working area with proper per-monitor DPI scaling and work area boundary adherence.
+The active window is cleanly resized and positioned to exactly half of the active monitor's available work area — the half the chord named — with proper per-monitor DPI scaling and work area boundary adherence. The two halves of either axis cover the work area exactly, with no gap and no overlap between them, and an odd number of pixels is divided the same way on every press.
 
 ## Business Rules
 
@@ -57,3 +59,4 @@ The active window is cleanly resized and positioned to exactly half of the activ
 - `LBR-WM-3` (Non-blocking kernel API sterilization)
 - `LBR-WM-4` (Lock-free drop-on-saturation policy)
 - `LBR-WM-6` (Arrangement target eligibility)
+- `LBR-WM-8` (Deterministic half division)

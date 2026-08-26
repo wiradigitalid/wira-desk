@@ -23,11 +23,14 @@ Settings dialogs and onboarding surfaces utilize the documented Windows UI typef
 Follows Windows 11 dialog spacing with a structured 5-pane vertical sidebar within the decoupled executable (`wiradesk-settings.exe`):
 - **Panes (5)**: 
   1. `General`: Startup integration (Task Scheduler), Spatial Lock, Virtual Desktop isolation, and UX Honesty controls.
-  2. `Shortcuts`: Core same-app window switcher (`Win + \``), Alt-fallback switcher, and precise modifier matching.
-  3. `Layout & Snapping`: Collision-free `Ctrl + Alt + Win` snapping combinations (Left 50%, Right 50%, Maximize) and Overlapping Stack slider / shortcut.
+  2. `Shortcuts`: **Every** editable chord, and the only pane that holds one. Nine rows in three labelled card groups — *Switching* (2), *Snap & resize* (5), *Move & arrange* (2) — followed by the Key check diagnostic card.
+  3. `Layout`: The overlapping stack toggle and its width slider. No chord lives here.
   4. `VM & Exceptions`: Passthrough rules for virtualization guests (`mstsc.exe`, `vmconnect.exe`, `VMwareUnityWindow`).
   5. `About`: Diagnostic build metadata, version info, active font rendering details, and memory footprint.
 - **Modular Grouping**: Each configuration group is rendered within a rounded Card Container (`#20242B`, radius 8px) with fine divider lines.
+- **Group Heading**: Inside the Shortcuts pane, each card carries a heading above it in the caption size, uppercase, letter-spaced, in the secondary text colour — the same treatment the About pane already uses for its metadata labels. A heading names a group; it is never itself interactive and never carries a chord.
+
+**Why every chord sits in one pane.** An earlier draft of this document put the snapping chords under a `Layout & Snapping` pane and the switcher chords under `Shortcuts`, and the shipped build never did that — it has always drawn all of them in `Shortcuts`. The build is right and this document was wrong, for a reason outside taste: the daemon's capture lease is armed from *which pane is showing* (`DEC-004`), so shortcut fields living in two panes means two panes have to arm the observe lease. `DEC-004` and `DEC-005` are both built on the lease having one owning place, and splitting it is a regression in the key check rather than a tidier menu. The pane's third name also stops being a lie: `Layout` holds layout settings, and it holds no chords.
 
 ## UI Components
 
@@ -40,6 +43,7 @@ Follows Windows 11 dialog spacing with a structured 5-pane vertical sidebar with
 - **Vertical Sidebar**: Fixed-width navigation column (`175 px`) with active blue indicator pill (`#4CC2FF`, `3.5 × 20 px`).
 - **Pill Toggle Switch (`fluent_toggle_switch`)**: Interactive animated toggle switch widget (`40 × 20 px`) with smooth state transitions.
 - **Shortcut Capturer Control**: Dedicated interactive listening widget with clear auditory/screen-reader announcements and Escape key cancellation.
+- **Shortcut Row**: One row per editable action — title, one-line description, the current chord rendered as key names joined by `+`, and, when the chord collides with another action, an inline refusal naming the other action plus a Swap affordance. Nine rows exist; the row is the unit, and an action never appears as two rows.
 - **Save Bar**: Sticky footer (`48 px`) with Revert and Save Changes buttons, validation error summary, and instantaneous IPC status reflection.
 
 ### 3. First-Run Onboarding Modal Dialog
@@ -54,3 +58,6 @@ Follows Windows 11 dialog spacing with a structured 5-pane vertical sidebar with
 - **Don't** embed heavyweight GUI runtimes (Electron, WPF, CEF) into the core background daemon. The UI must remain decoupled in `wiradesk-settings.exe` to enforce minimal daemon memory usage.
 - **Do** respect UX Honesty: surface "Not Responding" windows during cycling rather than hiding them.
 - **Do** provide high-contrast 2.0 pt keyboard focus rings across both Light and Dark themes for accessibility compliance.
+- **Do** render every chord through the single display formatter, so `down` shows as `↓` in every readout including the Key check. Building a second display path is what once made the Key check print the word `down` while every row above it showed the glyph.
+- **Don't** reorder rows to suit a group heading. The row order is one declared sequence that also decides which action wins a chord collision (`LBR-ST-14`); a heading may gather rows, never move them.
+- **Don't** put a chord field in any pane other than `Shortcuts`. See the note under Layout & Navigation Hierarchy.
