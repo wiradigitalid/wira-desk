@@ -353,12 +353,10 @@ unsafe fn wndproc_impl(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> 
             // opening Settings or checking Task Manager to find out. Placed
             // after `add_icon` so the toast has an icon to anchor to rather
             // than racing a tray icon that is not there yet.
-            show_toast(
-                data,
-                "Wira Desk",
-                "Wira Desk is now running and listening for shortcuts.",
-                NIIF_INFO,
-            );
+            // The toast's own header already names the app (from the tray
+            // icon's tip text), so the title/body here must not repeat "Wira
+            // Desk" a second and third time.
+            show_toast(data, "Now running", "Listening for shortcuts.", NIIF_INFO);
             // First run. Launched here rather than in `main` so the
             // tray icon already exists — otherwise a user who closes the
             // tutorial would be left with no visible sign Wira Desk is running.
