@@ -51,7 +51,12 @@ export component KeyCheck inherits Card {
     in property <bool> beat: false;
     callback beat_done();
 
-    property <bool> has_note: root.verdict >= 2;
+    // Excludes verdict 4 (daemon not running) on purpose: that state already
+    // has its own honest caption above ("Wira Desk isn't running — only this
+    // window is being checked"), and showing this zone's "another app is
+    // taking it first" copy underneath it as well would blame a guessed
+    // cause for a keystroke DEC-005 has no hook signal to diagnose at all.
+    property <bool> has_note: root.verdict == 2 || root.verdict == 3;
 
     VerticalLayout {
         padding-left: 16px;

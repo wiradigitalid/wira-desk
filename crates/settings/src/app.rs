@@ -223,6 +223,53 @@ pub enum SaveFeedback {
     Error(String),
 }
 
+/// Render a raw `+`-joined shortcut string (`"ctrl+alt+down"`) the way every
+/// shortcut display in this UI must look (`"Ctrl + Alt + ↓"`). The single
+/// source of that mapping — a display built any other way (as
+/// `KeyCheckState::tick` once did, working straight from
+/// `shared::shortcut::name_from_vk`) drifts from this one silently, which is
+/// exactly the bug where the Key check readout showed the word `"down"`
+/// while every other row in the pane showed `↓`.
+pub fn format_shortcut_display(raw: &str) -> String {
+    if raw.is_empty() {
+        return "None".to_string();
+    }
+    raw.split('+')
+        .map(|token| {
+            let lower = token.to_lowercase();
+            match lower.trim() {
+                "win" => "Win".to_string(),
+                "ctrl" => "Ctrl".to_string(),
+                "alt" => "Alt".to_string(),
+                "shift" => "Shift".to_string(),
+                "backtick" => "`".to_string(),
+                "enter" => "Enter".to_string(),
+                "tab" => "Tab".to_string(),
+                "space" => "Space".to_string(),
+                "escape" => "Esc".to_string(),
+                "left" => "←".to_string(),
+                "right" => "→".to_string(),
+                "up" => "↑".to_string(),
+                "down" => "↓".to_string(),
+                "f1" => "F1".to_string(),
+                "f2" => "F2".to_string(),
+                "f3" => "F3".to_string(),
+                "f4" => "F4".to_string(),
+                "f5" => "F5".to_string(),
+                "f6" => "F6".to_string(),
+                "f7" => "F7".to_string(),
+                "f8" => "F8".to_string(),
+                "f9" => "F9".to_string(),
+                "f10" => "F10".to_string(),
+                "f11" => "F11".to_string(),
+                "f12" => "F12".to_string(),
+                _ => token.trim().to_uppercase(),
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(" + ")
+}
+
 /// Human-readable message for a validation failure.
 /// `field` arrives two ways: a dotted config key, from `SaveOutcome::Rejected`
 /// on the save path, or an already-resolved label, from the inline capture
@@ -367,10 +414,32 @@ impl KeyCheckState {
         };
         pending.ticks_left = pending.ticks_left.saturating_sub(1);
         if pending.ticks_left == 0 {
-            let mods = format_mods(pending.ctrl, pending.win, pending.alt, pending.shift);
+            let mut parts = Vec::new();
+            if pending.ctrl {
+                parts.push("ctrl");
+            }
+            if pending.win {
+                parts.push("win");
+            }
+            if pending.alt {
+                parts.push("alt");
+            }
+            if pending.shift {
+                parts.push("shift");
+            }
+            // Routed through the same `format_shortcut_display` every other
+            // shortcut readout in this UI uses, so `down`/`backtick`/etc.
+            // render as `↓`/`` ` ``/etc. here too, never as the raw
+            // `shared::shortcut::name_from_vk` token.
             self.last_display = match shared::shortcut::name_from_vk(pending.vk) {
-                Some(name) => format!("{mods}{name}"),
-                None => format!("{mods}(vk 0x{:02X})", pending.vk),
+                Some(name) => {
+                    parts.push(name.as_str());
+                    format_shortcut_display(&parts.join("+"))
+                }
+                None => {
+                    let mods = format_shortcut_display(&parts.join("+"));
+                    format!("{mods} + (code 0x{:02X})", pending.vk)
+                }
             };
             self.last_canonical.clear();
             self.verdict = KeyCheckVerdict::ClaimedByOtherApp;
@@ -422,23 +491,6 @@ impl KeyCheckState {
     pub fn clear_beat(&mut self) {
         self.beat = false;
     }
-}
-
-fn format_mods(ctrl: bool, win: bool, alt: bool, shift: bool) -> String {
-    let mut s = String::new();
-    if ctrl {
-        s.push_str("Ctrl + ");
-    }
-    if win {
-        s.push_str("Win + ");
-    }
-    if alt {
-        s.push_str("Alt + ");
-    }
-    if shift {
-        s.push_str("Shift + ");
-    }
-    s
 }
 
 /// The Settings model. Rendering is a thin layer over this; every decision that
@@ -1359,6 +1411,32 @@ mod tests {
             kc.tick();
         }
         assert_eq!(kc.verdict, KeyCheckVerdict::ClaimedByOtherApp);
+    }
+
+    #[test]
+    fn a_claimed_by_other_app_display_uses_the_same_symbols_as_everywhere_else() {
+        // Regression: this readout used to build its display text straight
+        // from `shared::shortcut::name_from_vk` (e.g. the word "down"),
+        // while every other shortcut readout in the UI goes through
+        // `format_shortcut_display` and shows the arrow/backtick glyph
+        // instead — so the Key check pane alone showed "Ctrl + Alt + down"
+        // next to a row that showed "Ctrl + Alt + ↓" for the same key.
+        let mut kc = KeyCheckState::default();
+        kc.record_hook_report(0x28, true, false, true, false); // Ctrl+Alt+Down
+        for _ in 0..HOOK_REPORT_GRACE_TICKS {
+            kc.tick();
+        }
+        assert_eq!(kc.last_display, "Ctrl + Alt + ↓");
+    }
+
+    #[test]
+    fn a_claimed_by_other_app_display_marks_an_unrepresentable_key_explicitly() {
+        let mut kc = KeyCheckState::default();
+        kc.record_hook_report(0xBA, false, true, false, false); // Win+Semicolon
+        for _ in 0..HOOK_REPORT_GRACE_TICKS {
+            kc.tick();
+        }
+        assert_eq!(kc.last_display, "Win + (code 0xBA)");
     }
 
     #[test]
