@@ -15,7 +15,7 @@ use windows_sys::Win32::Foundation::{HWND, LPARAM, LRESULT, WPARAM};
 use windows_sys::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows_sys::Win32::UI::Shell::{
     Shell_NotifyIconW, NIF_ICON, NIF_INFO, NIF_MESSAGE, NIF_SHOWTIP, NIF_TIP, NIIF_ERROR,
-    NIIF_INFO, NIM_ADD, NIM_DELETE, NIM_MODIFY, NIM_SETVERSION, NOTIFYICONDATAW,
+    NIIF_LARGE_ICON, NIIF_USER, NIM_ADD, NIM_DELETE, NIM_MODIFY, NIM_SETVERSION, NOTIFYICONDATAW,
     NOTIFYICON_VERSION_4,
 };
 use windows_sys::Win32::UI::WindowsAndMessaging::{
@@ -236,20 +236,28 @@ fn set_state(data: &mut TrayData, state: TrayState) {
 /// base instead of building a fresh `NOTIFYICONDATAW`
 /// from scratch; `notify_data` itself is not modified and remains used as-is
 /// by `add_icon`/`modify_icon`/`delete_icon`. `icon_flag` is one of the
-/// `NIIF_*` constants (`NIIF_INFO`, `NIIF_ERROR`, ...) so the shell renders
-/// the icon that matches what the message actually says — an informational
-/// "now running" toast must not wear the same red error glyph as a Tier 3
-/// hook-dead toast.
+/// `NIIF_*` constants so the shell renders the icon that matches what the
+/// message actually says — a Tier 3 hook-dead toast passes `NIIF_ERROR` for
+/// the standard red error glyph. `hBalloonIcon` is always set to Wira Desk's
+/// own tray icon, so a caller that passes `NIIF_USER | NIIF_LARGE_ICON`
+/// gets that instead of Windows' generic stock "information" icon — the one
+/// every other unbranded balloon on the system also uses, and the reason an
+/// informational toast otherwise looks like a system dialog rather than
+/// something from this product.
 fn show_toast(data: &TrayData, title: &str, msg: &str, icon_flag: u32) {
     // SAFETY: same contract as `modify_icon`. The two extra fields are fixed-size arrays
     // inside `nid`, and `fill_wide_buf` is bounded by their `N` and always NUL-terminates,
     // so neither write can run past the struct nor hand the shell an unterminated string.
+    // `hBalloonIcon` is set to `data.icon_normal`, a handle owned by `TrayData` for the
+    // process lifetime — Shell_NotifyIconW borrows it for the toast and does not take
+    // ownership, so nothing here transfers or frees it.
     unsafe {
         let mut nid = notify_data(data);
         nid.uFlags |= NIF_INFO;
         fill_wide_buf(&mut nid.szInfoTitle, title);
         fill_wide_buf(&mut nid.szInfo, msg);
         nid.dwInfoFlags = icon_flag;
+        nid.hBalloonIcon = data.icon_normal;
         Shell_NotifyIconW(NIM_MODIFY, &nid);
     }
 }
@@ -349,7 +357,7 @@ unsafe fn wndproc_impl(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> 
                 data,
                 "Wira Desk",
                 "Wira Desk is now running and listening for shortcuts.",
-                NIIF_INFO,
+                NIIF_USER | NIIF_LARGE_ICON,
             );
             // First run. Launched here rather than in `main` so the
             // tray icon already exists — otherwise a user who closes the
