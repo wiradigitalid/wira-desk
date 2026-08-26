@@ -112,14 +112,19 @@ pub const TOGGLE_OVERLAPPING_STACK: ControlSemantics = ControlSemantics {
     description: "Arranges up to three windows of the active application in a clickable stack.",
 };
 
-pub const STACK_WIDTH_SLIDER: ControlSemantics = ControlSemantics {
-    name: "Stack width slider",
-    description: "Adjust the width percentage of stacked windows using a slider.",
+pub const STACK_WIDTH_DECREASE: ControlSemantics = ControlSemantics {
+    name: "Decrease stack width",
+    description: "Lowers the width percentage of stacked windows by one point.",
 };
 
 pub const STACK_WIDTH_INPUT: ControlSemantics = ControlSemantics {
     name: "Stack width input",
-    description: "Enter or spin the exact width percentage of stacked windows.",
+    description: "Enter the exact width percentage of stacked windows.",
+};
+
+pub const STACK_WIDTH_INCREASE: ControlSemantics = ControlSemantics {
+    name: "Increase stack width",
+    description: "Raises the width percentage of stacked windows by one point.",
 };
 
 pub const SHORTCUT_SWITCHER: ControlSemantics = ControlSemantics {
@@ -237,8 +242,9 @@ mod tests {
         for c in [
             TOGGLE_AUTO_START,
             TOGGLE_OVERLAPPING_STACK,
-            STACK_WIDTH_SLIDER,
+            STACK_WIDTH_DECREASE,
             STACK_WIDTH_INPUT,
+            STACK_WIDTH_INCREASE,
             SHORTCUT_SWITCHER,
             ONBOARDING_FINISH_BUTTON,
             ONBOARDING_NEXT_BUTTON,
@@ -273,8 +279,9 @@ mod tests {
         let names = [
             TOGGLE_AUTO_START.name,
             TOGGLE_OVERLAPPING_STACK.name,
-            STACK_WIDTH_SLIDER.name,
+            STACK_WIDTH_DECREASE.name,
             STACK_WIDTH_INPUT.name,
+            STACK_WIDTH_INCREASE.name,
             SHORTCUT_SWITCHER.name,
             ONBOARDING_FINISH_BUTTON.name,
             ONBOARDING_NEXT_BUTTON.name,

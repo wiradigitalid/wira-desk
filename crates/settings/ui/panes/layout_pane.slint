@@ -6,8 +6,41 @@ export component LayoutPane inherits VerticalLayout {
     in-out property <bool> enable_stack: false;
     in-out property <int> stack_width_percent: 50;
 
+    // The daemon accepts any percentage in this range.
+    property <int> min_percent: 10;
+    property <int> max_percent: 100;
+    property <int> step: 1;
+
     callback stack_toggled(bool);
     callback width_changed(int);
+
+    // The one place the value changes. Clamping here is what keeps the
+    // buttons from walking past the range one step at a time.
+    function commit(value: int) {
+        root.stack_width_percent = Math.clamp(value, root.min_percent, root.max_percent);
+        // Re-stated even when the clamp changed nothing, because `changed`
+        // does not fire on an unchanged value and the field would keep
+        // showing what was typed.
+        input.text = "\{root.stack_width_percent}";
+        root.width_changed(root.stack_width_percent);
+    }
+
+    // Garbage in the field reverts to the value in force rather than
+    // committing a zero.
+    function commit_typed() {
+        if input.text.is-float() {
+            root.commit(Math.round(input.text.to-float()));
+        } else {
+            input.text = "\{root.stack_width_percent}";
+        }
+    }
+
+    // Typing into a TextInput breaks its `text` binding, so the field is
+    // pushed back explicitly whenever the value moves under it: the buttons,
+    // Revert, or a reload from disk.
+    changed stack_width_percent => {
+        input.text = "\{root.stack_width_percent}";
+    }
 
     spacing: 12px;
     alignment: start;
@@ -99,6 +132,13 @@ export component LayoutPane inherits VerticalLayout {
                         background: minus_touch.has_hover ? Palette.bg_card_hover : Palette.bg_keycap;
                         border-width: 1px;
                         border-color: Palette.stroke_card;
+
+                        accessible-role: button;
+                        accessible-label: "Decrease stack width";
+                        accessible-action-default => {
+                            root.commit(root.stack_width_percent - root.step);
+                        }
+
                         Text {
                             text: "−";
                             font-size: 14px;
@@ -109,30 +149,68 @@ export component LayoutPane inherits VerticalLayout {
                         }
                         minus_touch := TouchArea {
                             clicked => {
-                                if root.stack_width_percent > 10 {
-                                    root.stack_width_percent = root.stack_width_percent - 5;
-                                    root.width_changed(root.stack_width_percent);
-                                }
+                                root.commit(root.stack_width_percent - root.step);
                             }
                         }
                     }
 
-                    // Value Display
+                    // Value field: typed as well as stepped.
                     Rectangle {
-                        width: 50px;
+                        width: 62px;
                         height: 28px;
                         border-radius: 4px;
                         background: Palette.bg_subtle;
                         border-width: 1px;
-                        border-color: Palette.stroke_card;
-                        Text {
-                            text: root.stack_width_percent + "%";
-                            font-family: Typography.font_mono;
-                            font-size: 12.5px;
-                            font-weight: 600;
-                            color: Palette.text_primary;
-                            horizontal-alignment: center;
-                            vertical-alignment: center;
+                        border-color: input.has-focus ? Palette.accent_primary : Palette.stroke_card;
+
+                        // The whole box is the click target, not just the glyphs.
+                        field_touch := TouchArea {
+                            clicked => {
+                                input.focus();
+                                input.select-all();
+                            }
+                        }
+
+                        HorizontalLayout {
+                            alignment: center;
+                            spacing: 1px;
+
+                            input := TextInput {
+                                width: 26px;
+                                text: "\{root.stack_width_percent}";
+                                input-type: number;
+                                single-line: true;
+                                font-family: Typography.font_mono;
+                                font-size: 12.5px;
+                                font-weight: 600;
+                                color: Palette.text_primary;
+                                horizontal-alignment: right;
+                                vertical-alignment: center;
+
+                                accessible-role: text;
+                                accessible-label: "Stack width input";
+
+                                accepted => {
+                                    root.commit_typed();
+                                    self.clear-focus();
+                                }
+                                // Leaving the field commits it too, so a typed
+                                // value is never silently dropped.
+                                changed has-focus => {
+                                    if !self.has-focus {
+                                        root.commit_typed();
+                                    }
+                                }
+                            }
+
+                            Text {
+                                text: "%";
+                                font-family: Typography.font_mono;
+                                font-size: 12.5px;
+                                font-weight: 600;
+                                color: Palette.text_secondary;
+                                vertical-alignment: center;
+                            }
                         }
                     }
 
@@ -144,6 +222,13 @@ export component LayoutPane inherits VerticalLayout {
                         background: plus_touch.has_hover ? Palette.bg_card_hover : Palette.bg_keycap;
                         border-width: 1px;
                         border-color: Palette.stroke_card;
+
+                        accessible-role: button;
+                        accessible-label: "Increase stack width";
+                        accessible-action-default => {
+                            root.commit(root.stack_width_percent + root.step);
+                        }
+
                         Text {
                             text: "+";
                             font-size: 14px;
@@ -154,10 +239,7 @@ export component LayoutPane inherits VerticalLayout {
                         }
                         plus_touch := TouchArea {
                             clicked => {
-                                if root.stack_width_percent < 100 {
-                                    root.stack_width_percent = root.stack_width_percent + 5;
-                                    root.width_changed(root.stack_width_percent);
-                                }
+                                root.commit(root.stack_width_percent + root.step);
                             }
                         }
                     }
