@@ -222,6 +222,16 @@ $checkLanguage = @{
         if ($file -like '_bmad/*') { return $true }
         if ($file -like '.claude/skills/*' -or $file -like '.agents/skills/*') { return $true }
         if ($file -like '.control/memlog/*') { return $true }
+        # `.work/` is scratch by definition -- `CLAUDE.md` says it empties when the task
+        # closes -- so nothing in it is user-facing, which is what this rule is named after.
+        # The owner set this scope deliberately on 2026-08-26: a worklog or a dispatch brief
+        # is thinking written down, and forcing it into English costs the thinking in order to
+        # save a document nobody outside the task will read.
+        #
+        # This exempts `.work/` from the LANGUAGE rule only. The other four checks still run
+        # over it, and that split is the point: a local machine path or an internal identifier
+        # in scratch is exactly as publishable as one in `crates/`.
+        if ($file -like '.work/*') { return $true }
         return $false
     }
 }
