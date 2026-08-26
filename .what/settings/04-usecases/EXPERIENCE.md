@@ -19,7 +19,7 @@ Secondary interaction is accessed via right-clicking the System Tray icon to sum
 
 Structure of the Settings Window (`wiradesk-settings.exe`):
 - **General**: Auto-start on boot toggle (Task Scheduler integration), Spatial Lock, Virtual Desktop isolation, and UX Honesty controls.
-- **Shortcuts**: Every editable chord, and the only pane that holds any. Nine rows in three labelled groups, then the Key check diagnostic:
+- **Shortcuts**: Every editable chord, and the only pane that holds any. Nine rows in three labelled groups that scroll, above a Key check readout pinned in place:
 
   | Group | Rows | Reads as |
   | --- | --- | --- |
@@ -27,7 +27,7 @@ Structure of the Settings Window (`wiradesk-settings.exe`):
   | Snap & resize | Snap to left half · right half · top half · bottom half · Maximize | One window, one monitor, a fraction of it |
   | Move & arrange | Move to next monitor · Overlapping stack | More than one window, or more than one screen |
 
-  The groups are the three configuration sections the product already keeps on disk, so what a user sees and what the product stores stop telling different stories. Inside *Snap & resize* the rows follow the arrow keys — left, right, top, bottom — with Maximize last as the "all of it" case; the order is the declared sequence, not the enum's numbering, and grouping never reorders it.
+  The groups are the three configuration sections the product already keeps on disk, so what a user sees and what the product stores stop telling different stories. The Key check readout stays put while they scroll: it reports what the keyboard just did, so it has to be readable at the moment a chord is pressed rather than wherever the list happens to end. Inside *Snap & resize* the rows follow the arrow keys — left, right, top, bottom — with Maximize last as the "all of it" case; the order is the declared sequence, not the enum's numbering, and grouping never reorders it.
 - **Layout**: The overlapping stack toggle and its width slider. No chord lives here — the pane was called *Layout & Snapping* while holding no snapping control at all.
 - **VM & Exceptions**: Virtualization and Remote Desktop passthrough rules (`mstsc.exe`, `vmconnect.exe`, `VMwareUnityWindow`).
 - **About**: Version information, project links, active typeface loader status, and diagnostic build metadata.

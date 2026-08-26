@@ -8,6 +8,7 @@ import { ShortcutsPane, ShortcutRowData } from "panes/shortcuts_pane.slint";
 import { LayoutPane } from "panes/layout_pane.slint";
 import { VmExceptionsPane } from "panes/vm_exceptions_pane.slint";
 import { AboutPane } from "panes/about_pane.slint";
+import { KeyCheck } from "components/key_check.slint";
 import { OnboardingModal } from "onboarding.slint";
 
 export component MainWindow inherits Window {
@@ -197,7 +198,12 @@ export component MainWindow inherits Window {
                     background: Palette.bg_mica;
                     horizontal-stretch: 1;
 
+                    VerticalLayout {
+
                     ScrollView {
+                        // Takes every pixel the pinned band below does not, so the band keeps
+                        // its full height and the rows give up space instead of it.
+                        vertical-stretch: 1;
                         viewport-x: 0px;
 
                         VerticalLayout {
@@ -219,18 +225,8 @@ export component MainWindow inherits Window {
                                 rows_move: root.rows_move;
                                 listening_field: root.listening_field;
 
-                                kc_mod_ctrl: root.kc_mod_ctrl;
-                                kc_mod_win: root.kc_mod_win;
-                                kc_mod_alt: root.kc_mod_alt;
-                                kc_mod_shift: root.kc_mod_shift;
-                                kc_last_display: root.kc_last_display;
-                                kc_last_canonical: root.kc_last_canonical;
-                                kc_verdict: root.kc_verdict;
-                                kc_beat: root.kc_beat;
-
                                 start_capture(idx) => { root.start_capture(idx); }
                                 swap_shortcuts(idx) => { root.swap_shortcuts(idx); }
-                                key_check_beat_done => { root.key_check_beat_done(); }
                             }
 
                             if root.current_pane == 2 : LayoutPane {
@@ -250,6 +246,49 @@ export component MainWindow inherits Window {
                                 typeface: root.app_typeface;
                             }
                         }
+                    }
+
+                    // Pinned Key check band, Shortcuts pane only.
+                    //
+                    // Outside the ScrollView on purpose. The nine shortcut rows are taller
+                    // than the window, so while it sat at the end of the pane it was below
+                    // the fold exactly when a user was pressing chords to test them — a live
+                    // instrument nobody could see. Pinning it inverts that: the rows scroll,
+                    // the readout does not.
+                    //
+                    // Only on this pane, because the daemon arms its observe lease from which
+                    // pane is showing, so a reading is only meaningful here.
+                    if root.current_pane == 1 : Rectangle {
+                        height: 1px;
+                        background: Palette.stroke_card;
+                    }
+
+                    if root.current_pane == 1 : Rectangle {
+                        background: Palette.bg_mica;
+                        vertical-stretch: 0;
+
+                        VerticalLayout {
+                            padding-left: 20px;
+                            padding-right: 20px;
+                            padding-top: 12px;
+                            padding-bottom: 12px;
+
+                            KeyCheck {
+                                mod_ctrl: root.kc_mod_ctrl;
+                                mod_win: root.kc_mod_win;
+                                mod_alt: root.kc_mod_alt;
+                                mod_shift: root.kc_mod_shift;
+                                last_display: root.kc_last_display;
+                                last_canonical: root.kc_last_canonical;
+                                verdict: root.kc_verdict;
+                                beat: root.kc_beat;
+                                beat_done => {
+                                    root.key_check_beat_done();
+                                }
+                            }
+                        }
+                    }
+
                     }
                 }
             }

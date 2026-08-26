@@ -1,7 +1,6 @@
 import { Palette, Typography } from "../theme.slint";
 import { Card, CardDivider } from "../components/card.slint";
 import { ShortcutRow } from "../components/shortcut_row.slint";
-import { KeyCheck } from "../components/key_check.slint";
 
 // One editable action, as the pane needs it.
 //
@@ -73,19 +72,13 @@ export component ShortcutsPane inherits VerticalLayout {
 
     in property <int> listening_field: -1; // -1 = idle, otherwise the action's index
 
-    // KeyCheck Diagnostic Card Properties
-    in property <bool> kc_mod_ctrl: false;
-    in property <bool> kc_mod_win: false;
-    in property <bool> kc_mod_alt: false;
-    in property <bool> kc_mod_shift: false;
-    in property <string> kc_last_display: "";
-    in property <string> kc_last_canonical: "";
-    in property <int> kc_verdict: 0;
-    in property <bool> kc_beat: false;
+    // The Key check diagnostic is deliberately NOT here. It is a live instrument — you press
+    // a chord and read what it observed — so it has to stay visible while you are editing the
+    // rows. Nine rows scroll it off the screen at exactly the moment it is useful, so the
+    // shell pins it in a band of its own above the save footer. See `main_window.slint`.
 
     callback start_capture(int);
     callback swap_shortcuts(int);
-    callback key_check_beat_done();
 
     spacing: 14px;
     alignment: start;
@@ -143,21 +136,6 @@ export component ShortcutsPane inherits VerticalLayout {
         }
         swap(i) => {
             root.swap_shortcuts(i);
-        }
-    }
-
-    // KeyCheck Live Keyboard Diagnostic & Responsiveness Card
-    KeyCheck {
-        mod_ctrl: root.kc_mod_ctrl;
-        mod_win: root.kc_mod_win;
-        mod_alt: root.kc_mod_alt;
-        mod_shift: root.kc_mod_shift;
-        last_display: root.kc_last_display;
-        last_canonical: root.kc_last_canonical;
-        verdict: root.kc_verdict;
-        beat: root.kc_beat;
-        beat_done => {
-            root.key_check_beat_done();
         }
     }
 }
