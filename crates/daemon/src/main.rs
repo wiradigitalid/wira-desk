@@ -1,5 +1,6 @@
 #![windows_subsystem = "windows"]
 
+mod acl;
 mod arrangement;
 mod autostart;
 mod config;
@@ -120,6 +121,14 @@ fn main() {
     };
 
     legacy::stop_legacy_daemon();
+
+    // Before the migration, not after, and the ordering is the whole reason this line
+    // is here rather than below: `migrate_scheduled_task` returns early when a
+    // `WiraDesk` task already exists, and creates one from the current executable when
+    // it does not. So a refresh first covers the case it cannot (a task that exists
+    // with a drifted path) and stays a no-op in the case it does — the task is created
+    // once, by whichever of the two applies, never rewritten twice.
+    autostart::refresh_registered_path();
     legacy::migrate_scheduled_task();
 
     let exit_code = tray::run_message_loop();

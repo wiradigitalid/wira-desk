@@ -685,6 +685,13 @@ pub fn run_message_loop() -> i32 {
             );
         }
 
+        // Tier-2 check for an auto-start task pointing at a file a non-administrator
+        // could replace. It runs here, and not in `main`, for one reason: `log::warn`
+        // needs the window to post `WM_APP_LOG_WARNING` to, and the window does not
+        // exist until the lines above. Posting before the pump starts is fine — the
+        // message queues and the loop below picks it up on its first turn.
+        crate::autostart::warn_if_location_replaceable(hwnd);
+
         // Message loop. Distinguish `0` (WM_QUIT, normal cleanup via WM_DESTROY)
         // from `-1` (GetMessageW error) so cleanup still runs when the pump breaks.
         let mut msg: MSG = zeroed();

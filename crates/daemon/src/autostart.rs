@@ -7,6 +7,12 @@
 //! "Start in" flag; the real mitigation is an absolute path with no working dir).
 //! The authoritative source for the Auto-Start menu checkmark is `schtasks /Query`
 //! (`is_registered`), **not** `config.auto_start` — avoid two sources of truth.
+//! Two things follow from that stored absolute path, and both are handled here
+//! rather than left to the reader of `SECURITY.md`: the path can go **stale** when
+//! the executable moves (`refresh_registered_path`), and the path can point
+//! somewhere a non-administrator is able to overwrite, which turns an unprompted
+//! elevated logon task into a privilege-escalation route
+//! (`warn_if_location_replaceable`).
 //! Pure `std` implementation (`std::process::Command` + `creation_flags`), no
 //! FFI: `CREATE_NO_WINDOW` prevents console window flicker because the daemon
 //! uses `#![windows_subsystem = "windows"]`.
@@ -14,6 +20,7 @@
 use std::os::windows::process::CommandExt;
 use std::process::{Command, Stdio};
 
+use windows_sys::Win32::Foundation::HWND;
 use windows_sys::Win32::System::Threading::CREATE_NO_WINDOW;
 
 use shared::constants::TASK_NAME;
@@ -107,6 +114,87 @@ pub fn enable() -> bool {
         debug_log("Wira Desk: autostart::enable — schtasks /Create failed");
     }
     ok
+}
+
+/// Re-point the registered task at the executable that is running now.
+///
+/// `is_registered` answers *does the task exist*, and deliberately keeps answering
+/// only that — it is the source of truth for the menu checkmark, and a checkmark
+/// that went blank because a path had drifted would report the wrong thing. So the
+/// path is not validated there; it is enforced here.
+///
+/// **Why it rewrites unconditionally instead of comparing first.** Reading the
+/// stored path back means parsing `schtasks` output, and both of its formats are
+/// traps: the `/FO LIST` labels are localised, so `Task To Run:` is a different
+/// string on a Windows installed in Indonesian or German, and `/XML` emits UTF-16
+/// through a pipe. A guard whose failure mode is "silently stops matching on a
+/// translated Windows" is a guard that is not there. `create_args` already carries
+/// `/F`, so re-creating is idempotent, costs one `schtasks` call at startup, and
+/// cannot fail open.
+///
+/// The running executable wins because it is the one that just proved it is
+/// elevated. An attacker able to run a *different* copy elevated already holds
+/// administrator rights, which `SECURITY.md` puts out of scope; the case this
+/// closes is the honest one, where the file moved and the task did not follow.
+///
+/// Does nothing when no task is registered — enabling auto-start is the user's
+/// decision, and this must never make it for them.
+pub fn refresh_registered_path() -> bool {
+    if !is_registered() {
+        return false;
+    }
+    if !enable() {
+        debug_log("Wira Desk: autostart::refresh_registered_path — schtasks /Create failed");
+        return false;
+    }
+    true
+}
+
+/// Raise a Tier-2 warning when auto-start would launch this executable from a
+/// place a non-administrator could overwrite.
+///
+/// The task runs with `/RL HIGHEST` at every logon and shows no UAC prompt, so the
+/// file's permissions are the only thing standing between a non-administrator and
+/// unprompted elevated execution. `SECURITY.md` asks the reader to install
+/// somewhere only administrators can write; this is that request, checked.
+///
+/// **Warn, never refuse.** Registration still succeeds and the toggle still turns
+/// on. Refusing would be the stronger guard and it is a deliberate non-goal here:
+/// running from `target\release` is exactly what building this project looks like,
+/// and a guard that blocks the maintainer's own workflow gets switched off rather
+/// than heeded. The judgement stays with the owner; the product's job is to make
+/// sure they are not making it unknowingly.
+///
+/// Silent when the location is fine, and silent when `acl` could not read the DACL —
+/// an unreadable permission is logged for a developer, not escalated to the user,
+/// because a warning that might be about nothing teaches people to ignore warnings.
+pub fn warn_if_location_replaceable(hwnd: HWND) {
+    if !is_registered() {
+        return;
+    }
+    let exe = match std::env::current_exe() {
+        Ok(p) => p,
+        Err(_) => {
+            debug_log("Wira Desk: autostart::warn_if_location_replaceable — current_exe() failed");
+            return;
+        }
+    };
+    match crate::acl::replaceable_by_non_admin(&exe) {
+        crate::acl::Verdict::NonAdminWritable => crate::log::warn(
+            hwnd,
+            &format!(
+                "Auto-Start is registered from a location a non-administrator can overwrite: {}. \
+                 Windows runs that file elevated at every logon with no prompt, so anyone able to \
+                 replace it gains administrator access. Move Wira Desk to a folder only \
+                 administrators can write, such as %ProgramFiles%, or turn Auto-Start off.",
+                exe.display()
+            ),
+        ),
+        crate::acl::Verdict::Unknown => {
+            debug_log("Wira Desk: autostart::warn_if_location_replaceable — DACL unreadable")
+        }
+        crate::acl::Verdict::AdminOnly => {}
+    }
 }
 
 /// Remove the auto-start task. Returns `true` when `schtasks /Delete` succeeds.

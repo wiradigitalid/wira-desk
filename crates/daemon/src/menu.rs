@@ -116,7 +116,7 @@ pub fn show(hwnd: HWND, x: i32, y: i32) {
         match cmd as u32 {
             CMD_SETTINGS => launch_settings(),
             CMD_VIEW_LOGS => view_logs(),
-            CMD_AUTOSTART => toggle_autostart(),
+            CMD_AUTOSTART => toggle_autostart(hwnd),
             CMD_ABOUT => show_about(hwnd),
             CMD_EXIT => request_exit(hwnd),
             _ => {}
@@ -222,11 +222,16 @@ fn view_logs() {
 
 /// Toggle auto-start task registration. The checkmark when the menu opens
 /// reflects `is_registered`, so selecting the item flips the state.
-fn toggle_autostart() {
+///
+/// Turning it **on** is the moment the user takes on the risk of an unprompted
+/// elevated logon task, so that is where the location is checked — at the decision,
+/// rather than only at the next start. The check runs after registration and does
+/// not gate it: the warning reports what was done, it does not veto it.
+fn toggle_autostart(hwnd: HWND) {
     if autostart::is_registered() {
         autostart::disable();
-    } else {
-        autostart::enable();
+    } else if autostart::enable() {
+        autostart::warn_if_location_replaceable(hwnd);
     }
 }
 
