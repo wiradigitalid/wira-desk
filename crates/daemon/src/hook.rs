@@ -663,6 +663,42 @@ impl Chords {
     }
 }
 
+/// One resolved collision: the field that kept the chord, and the field that lost it.
+///
+/// Indices into the declared sequence rather than names, so this stays pure — the caller
+/// owns the field-name table and therefore owns the wording of the diagnostic.
+pub type Collision = (usize, usize);
+
+/// Unbind every chord already held by an **earlier** field in the declared sequence.
+///
+/// First-wins, because that is what the match already does: `match_shortcut` walks the same
+/// sequence and returns the first hit, so a later field carrying a duplicate was already
+/// unreachable. This makes that state explicit instead of leaving two fields claiming one
+/// chord and the resolution buried in a traversal order.
+///
+/// Unbinding rather than refusing the whole configuration is deliberate and `DEC-009` states
+/// why: at startup there is no last-known-good configuration to fall back to, so refusing
+/// means either no daemon at all or a daemon on full defaults — spending every unrelated
+/// setting the user owns (their switcher chord, their bypass list, their auto-start) to
+/// resolve one ambiguous pair. Losing exactly the ambiguous action is proportionate.
+///
+/// A chord held by three or more fields yields one collision per loser rather than one for
+/// the group. `OQ-4` already records multi-way collisions as an accepted limitation, and one
+/// diagnostic per unreachable action is more useful than one naming a set.
+pub fn unbind_duplicates(resolved: &mut [Option<Shortcut>]) -> Vec<Collision> {
+    let mut collisions = Vec::new();
+    for i in 1..resolved.len() {
+        let Some(chord) = resolved[i] else {
+            continue;
+        };
+        if let Some(keeper) = resolved[..i].iter().position(|c| *c == Some(chord)) {
+            collisions.push((keeper, i));
+            resolved[i] = None;
+        }
+    }
+    collisions
+}
+
 /// Pure shortcut equality match → command byte.
 ///
 /// Resolves against the declared sequence and returns the **first** match, which is the
@@ -913,6 +949,23 @@ fn load_shortcuts(worker_hwnd: HWND) -> Chords {
         resolved[i] = Some(resolve_one(worker_hwnd, field, configured, default));
     }
 
+    // Two actions on one chord. The earlier field keeps it; the later one is unbound and its
+    // action becomes unreachable until the user changes one of the two (`BR-6`, `DEC-009`).
+    // Exactly one warning per unreachable action, naming *both* fields and the chord —
+    // silence here is the failure that decision exists to stop, and it was on the default
+    // upgrade path: `snapping.snap_half_bottom` ships as `ctrl+alt+down`, which collides with
+    // any pre-existing `layout.stack_shortcut = "ctrl+alt+down"`.
+    for (keeper, loser) in unbind_duplicates(&mut resolved) {
+        let chord = resolved_display(&rows, keeper);
+        crate::log::warn(
+            worker_hwnd,
+            &format!(
+                "{} and {} are both set to {chord}; {} keeps it and {} is unbound until one of them changes",
+                rows[keeper].0, rows[loser].0, rows[keeper].0, rows[loser].0
+            ),
+        );
+    }
+
     Chords {
         primary: resolved[0],
         fallback: resolved[1],
@@ -923,6 +976,20 @@ fn load_shortcuts(worker_hwnd: HWND) -> Chords {
         snap_maximize: resolved[6],
         move_next_monitor: resolved[7],
         stack: resolved[8],
+    }
+}
+
+/// The chord text to name in a collision diagnostic.
+///
+/// Read back from the row's configured string rather than from the parsed `Shortcut`, so the
+/// message quotes what the user actually wrote in `config.toml` and they can find it. Falls
+/// back to the canonical form when the configured text did not parse and a default was
+/// substituted, because in that case what they wrote is not what took effect.
+fn resolved_display(rows: &[(&str, &str, &str)], index: usize) -> String {
+    let (_, configured, default) = rows[index];
+    match Shortcut::parse(configured) {
+        Some(_) => configured.to_string(),
+        None => default.to_string(),
     }
 }
 
@@ -1334,6 +1401,106 @@ mod tests {
             ..Default::default()
         };
         assert!(match_shortcut(&shipped_chords(), mods, 0xC0).is_none());
+    }
+
+    #[test]
+    fn a_duplicate_chord_unbinds_the_later_field() {
+        let clash = Shortcut::parse("ctrl+alt+down");
+        // Position 5 is `snap_half_bottom`, position 8 is `stack_shortcut` — the exact
+        // collision the shipped defaults create against a pre-existing config.
+        let mut resolved: [Option<Shortcut>; 9] = [
+            Shortcut::parse("win+backtick"),
+            Shortcut::parse("alt+backtick"),
+            Shortcut::parse("ctrl+alt+left"),
+            Shortcut::parse("ctrl+alt+right"),
+            Shortcut::parse("ctrl+alt+up"),
+            clash,
+            Shortcut::parse("ctrl+alt+enter"),
+            Shortcut::parse("ctrl+alt+shift+enter"),
+            clash,
+        ];
+        let collisions = unbind_duplicates(&mut resolved);
+        assert_eq!(collisions, vec![(5, 8)], "one collision, keeper then loser");
+        assert_eq!(resolved[5], clash, "the earlier field keeps the chord");
+        assert_eq!(resolved[8], None, "the later field is unbound");
+        // Every unrelated field is untouched: that is the whole reason for unbinding rather
+        // than refusing the configuration.
+        assert_eq!(resolved[0], Shortcut::parse("win+backtick"));
+        assert_eq!(resolved[2], Shortcut::parse("ctrl+alt+left"));
+        assert_eq!(resolved[6], Shortcut::parse("ctrl+alt+enter"));
+    }
+
+    #[test]
+    fn a_distinct_configuration_yields_no_collision() {
+        let mut resolved: [Option<Shortcut>; 4] = [
+            Shortcut::parse("win+backtick"),
+            Shortcut::parse("alt+backtick"),
+            Shortcut::parse("ctrl+alt+left"),
+            Shortcut::parse("ctrl+alt+right"),
+        ];
+        let before = resolved;
+        assert!(unbind_duplicates(&mut resolved).is_empty());
+        assert_eq!(resolved, before, "nothing may move when nothing collides");
+    }
+
+    #[test]
+    fn a_three_way_collision_unbinds_both_losers() {
+        let clash = Shortcut::parse("ctrl+alt+down");
+        let mut resolved: [Option<Shortcut>; 3] = [clash, clash, clash];
+        let collisions = unbind_duplicates(&mut resolved);
+        assert_eq!(collisions, vec![(0, 1), (0, 2)], "both losers name slot 0");
+        assert_eq!(resolved, [clash, None, None]);
+    }
+
+    #[test]
+    fn an_already_unbound_field_is_not_reported_as_a_collision() {
+        let mut resolved: [Option<Shortcut>; 3] = [
+            Shortcut::parse("ctrl+alt+left"),
+            None,
+            Shortcut::parse("ctrl+alt+right"),
+        ];
+        assert!(unbind_duplicates(&mut resolved).is_empty());
+        assert_eq!(
+            resolved[1], None,
+            "None is not a chord two fields can share"
+        );
+    }
+
+    #[test]
+    fn unbinding_makes_the_loser_unreachable_end_to_end() {
+        // The property the rule exists for, asserted through the matcher rather than only
+        // through the resolver: after unbinding, pressing the chord reaches the keeper's
+        // action and never the loser's.
+        let clash = Shortcut::parse("ctrl+win+down").expect("parses");
+        let mut chords = Chords {
+            snap_right: Some(clash),
+            stack: Some(clash),
+            ..shipped_chords()
+        };
+        let mut resolved = [
+            chords.primary,
+            chords.fallback,
+            chords.snap_left,
+            chords.snap_right,
+            chords.snap_top,
+            chords.snap_bottom,
+            chords.snap_maximize,
+            chords.move_next_monitor,
+            chords.stack,
+        ];
+        assert_eq!(unbind_duplicates(&mut resolved), vec![(3, 8)]);
+        chords.stack = resolved[8];
+        assert_eq!(chords.stack, None);
+        let mods = ModifierState {
+            win: true,
+            ctrl: true,
+            ..Default::default()
+        };
+        assert_eq!(
+            match_shortcut(&chords, mods, 0x28), // VK_DOWN
+            Some(Command::SnapRight.as_u8()),
+            "the keeper's action fires"
+        );
     }
 
     #[test]

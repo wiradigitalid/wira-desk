@@ -53,6 +53,12 @@ pub enum RejectReason {
     InvalidShortcut,
     /// A shortcut is reserved by the Windows operating system.
     ReservedShortcut,
+    /// Two actions carry the same chord. Refused wholesale here, unlike at startup, and
+    /// `DEC-009` states why: a reload has a last-known-good configuration to keep and a
+    /// human who just acted, and the settings process cannot produce a duplicate — so one
+    /// arriving here means the file was hand-edited, which deserves a straight answer
+    /// rather than a quiet repair.
+    DuplicateShortcut,
 }
 
 impl RejectReason {
@@ -69,6 +75,9 @@ impl RejectReason {
             }
             RejectReason::ReservedShortcut => {
                 "Config reload skipped: contains reserved system shortcuts; keeping current settings"
+            }
+            RejectReason::DuplicateShortcut => {
+                "Config reload skipped: two actions share one shortcut; keeping current settings"
             }
         }
     }
@@ -155,6 +164,19 @@ pub fn validate(text: &str) -> Result<(Config, HookSnapshot, WorkerSnapshot), Re
             if shared::shortcut::reservation(&sc).is_some() {
                 return Err(RejectReason::ReservedShortcut);
             }
+        }
+    }
+
+    // Two actions on one chord. Refused wholesale rather than unbound, which is the
+    // opposite of what startup does — deliberately, per `DEC-009` and `BR-6`. Walked over
+    // the declared sequence so a chord added to `Chords` is covered without a second list.
+    let slots = chords.in_declared_order();
+    for i in 1..slots.len() {
+        let Some(chord) = slots[i].chord else {
+            continue;
+        };
+        if slots[..i].iter().any(|s| s.chord == Some(chord)) {
+            return Err(RejectReason::DuplicateShortcut);
         }
     }
 
@@ -470,6 +492,65 @@ fallback_shortcut = "alt+backtick"
         assert_eq!(sink.hook.borrow().len(), 1);
         assert_eq!(sink.worker.borrow().len(), 1);
         assert!(warn.0.is_empty());
+    }
+
+    #[test]
+    fn a_duplicate_chord_rejects_the_whole_reload() {
+        // A hand-edited file binding two actions to one chord. The settings process refuses
+        // to save such a pair, so a duplicate arriving on this path means the file was
+        // edited by hand — and `DEC-009` says that deserves a straight answer.
+        let text = format!(
+            "{VALID}
+[snapping]
+snap_half_left = \"ctrl+alt+left\"
+snap_half_right = \"ctrl+alt+left\"
+"
+        );
+        let (outcome, sink, _, warn) = run(FakeSource(Ok(text)));
+        assert_eq!(
+            outcome,
+            ReloadOutcome::Rejected(RejectReason::DuplicateShortcut)
+        );
+        assert!(
+            sink.hook.borrow().is_empty(),
+            "no actor may receive a partial update"
+        );
+        assert!(sink.worker.borrow().is_empty());
+        assert_eq!(warn.0.len(), 1, "exactly one Tier-2 warning per rejection");
+    }
+
+    #[test]
+    fn a_rejected_reload_leaves_every_actor_on_last_known_good() {
+        // The property the all-or-nothing contract exists for, asserted for the new reason
+        // rather than only for the ones that already had it: a half-applied reload leaves the
+        // user unable to tell which half took effect.
+        let text = format!(
+            "{VALID}
+[snapping]
+snap_half_top = \"ctrl+alt+up\"
+snap_half_bottom = \"ctrl+alt+up\"
+"
+        );
+        let (outcome, sink, auto, _) = run(FakeSource(Ok(text)));
+        assert!(matches!(outcome, ReloadOutcome::Rejected(_)));
+        assert!(sink.hook.borrow().is_empty());
+        assert!(sink.worker.borrow().is_empty());
+        assert_eq!(
+            (auto.enable_calls, auto.disable_calls),
+            (0, 0),
+            "a refused reload must not converge auto-start either"
+        );
+    }
+
+    #[test]
+    fn the_shipped_defaults_do_not_collide_with_each_other() {
+        // The guard that would have caught the collision `DEC-008` created if the default
+        // for a new field were ever chosen carelessly.
+        let (outcome, _, _, _) = run(FakeSource(Ok(String::new())));
+        assert!(
+            matches!(outcome, ReloadOutcome::Applied { .. }),
+            "an empty file is all defaults, and they must be mutually distinct"
+        );
     }
 
     #[test]
