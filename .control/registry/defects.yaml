@@ -102,7 +102,7 @@ defects:
 
   - id: DEF-3
     title: The shortcut capture lease can never arm — Settings sends a PID where the daemon reads an HWND
-    status: open
+    status: fixed
     severity: high
     component: settings
     root_cause: architecture
@@ -160,3 +160,29 @@ defects:
       identity instead of the desktop -- an untestable branch is what let this ship as far
       as it did.
     owner: repo owner
+    fixed_in: unreleased
+    fixed_by: >-
+      `crates/shared/src/constants.rs` corrected first: `WM_APP_CAPTURE_LEASE` /
+      `WM_APP_HOOK_LEASE` now document `wParam` as the lease level
+      (`CAPTURE_LEASE_NONE`/`_OBSERVE`/`_RECORD`) and `lParam` as the Settings
+      process id -- never an HWND. `crates/daemon/src/tray.rs` forwards the pid
+      unchanged and deletes the `GetWindowThreadProcessId` conversion entirely.
+      `crates/daemon/src/hook.rs` stores level and pid together
+      (`HookRuntime::capture_lease_level`/`capture_lease_pid`), decides the
+      lease through a new pure `lease_action` seam that takes the foreground
+      lookup as a lazy closure (the same shape `DEF-1` established one branch
+      lower), and the comparison now runs before `match_shortcut` so an
+      unconfigured chord such as `Win+1` reaches it -- the fix for the actual
+      reported symptom. A dead lease holder is reaped on the existing
+      heartbeat (`OQ-17`), never inside the callback.
+      Verified: `hook::tests::record_lease_swallows_an_unconfigured_chord_before_match_shortcut`
+      seen failing -- reverted the reordering, watched it fail with
+      `left: PassToNext, right: Swallow`, restored the fix, watched it pass.
+      `cargo test --workspace` (`WIRADESK_SKIP_MANIFEST=1`) exits 0, 366
+      passing across `daemon`/`settings`/`shared`; `cargo clippy --workspace
+      --all-targets -- -D warnings` clean; `cargo fmt --all -- --check` clean.
+    residual: >-
+      Addressing by pid still carries `OQ-17`'s pid-reuse window between an
+      exit and the next heartbeat tick; disarm-on-every-exit-path plus
+      heartbeat reaping narrows it, and it is carried as a known residual
+      rather than described as closed.

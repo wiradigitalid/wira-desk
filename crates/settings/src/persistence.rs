@@ -153,8 +153,15 @@ pub fn save_and_notify(cfg: &Config, path: &Path) -> SaveOutcome {
     }
 }
 
-/// Signal a temporary shortcut capture lease to the daemon (arm=true) or release it (arm=false).
-pub fn signal_capture_lease(arm: bool) -> bool {
+/// Signal the daemon to arm the shortcut-capture lease at `level`
+/// (`shared::constants::CAPTURE_LEASE_NONE` / `_OBSERVE` / `_RECORD`), or
+/// disarm it with `CAPTURE_LEASE_NONE`.
+///
+/// `lParam` carries this process's own id (`std::process::id()`), never a
+/// window handle — the daemon's comparison is against a process id it reads
+/// itself from `GetForegroundWindow`, and sending anything else here is
+/// exactly the shape of `DEF-3`.
+pub fn signal_capture_lease(level: usize) -> bool {
     let class: Vec<u16> = DAEMON_WINDOW_CLASS
         .encode_utf16()
         .chain(std::iter::once(0))
@@ -172,14 +179,8 @@ pub fn signal_capture_lease(arm: bool) -> bool {
         if hwnd == 0 {
             return false;
         }
-        let wparam = if arm { 1 } else { 0 };
         let lparam = std::process::id() as isize;
-        PostMessageW(
-            hwnd,
-            shared::constants::WM_APP_CAPTURE_LEASE,
-            wparam,
-            lparam,
-        ) != 0
+        PostMessageW(hwnd, shared::constants::WM_APP_CAPTURE_LEASE, level, lparam) != 0
     }
 }
 

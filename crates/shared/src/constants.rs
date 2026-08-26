@@ -137,17 +137,58 @@ pub const WM_APP_DEBUG_TOGGLE_ACCEPT_INJECTED: u32 = WM_APP + 29;
 /// `Box` so nothing leaks.
 pub const WM_APP_CONFIG_SNAPSHOT: u32 = WM_APP + 30;
 
-/// Settings process requests a temporary shortcut capture lease on the daemon.
-/// `wParam` = 1 (arm) or 0 (disarm); `lParam` = Settings window HWND (`isize`).
+/// Lease level carried in `WM_APP_CAPTURE_LEASE` / `WM_APP_HOOK_LEASE`'s `wParam`.
+/// A single ordered level rather than two independent booleans, per `DEC-004`:
+/// one value that is last-write-wins cannot contradict itself the way two
+/// separately-armed flags could.
+pub const CAPTURE_LEASE_NONE: usize = 0;
+/// Settings reports what the hook observes and suppresses its own action, but
+/// never swallows — the Shortcuts pane is visible and Settings holds the
+/// foreground window.
+pub const CAPTURE_LEASE_OBSERVE: usize = 1;
+/// Everything `CAPTURE_LEASE_OBSERVE` does, plus swallowing the chord from
+/// Windows — a shortcut field is actually listening and Settings holds the
+/// foreground window.
+pub const CAPTURE_LEASE_RECORD: usize = 2;
+
+/// Settings process requests a temporary shortcut capture lease on the daemon,
+/// or releases it.
+/// `wParam` = lease level (`CAPTURE_LEASE_NONE` / `_OBSERVE` / `_RECORD`);
+/// `lParam` = Settings process id (`std::process::id()`, as `isize`).
+///
+/// `lParam` carries a **process id**, never a window handle. The daemon's
+/// comparison (`hook.rs`'s `capture_lease_pid` guard) is against a process id
+/// it reads from `GetForegroundWindow`, so a process id is the value that
+/// comparison actually needs — a window handle would have to be converted to
+/// one on the daemon side, and `DEF-3` is exactly that conversion failing
+/// silently. `std::process::id()` cannot fail the way a cross-process handle
+/// conversion can.
 pub const WM_APP_CAPTURE_LEASE: u32 = WM_APP + 31;
 
-/// Internal daemon message: host window notifies Hook Thread of updated capture lease settings.
-/// `wParam` = 1 (arm) or 0 (disarm); `lParam` = Settings window HWND (`isize`).
+/// Internal daemon message: host window notifies Hook Thread of updated capture
+/// lease settings. Same shape as `WM_APP_CAPTURE_LEASE`, forwarded unchanged —
+/// `wParam` = lease level; `lParam` = Settings process id.
 pub const WM_APP_HOOK_LEASE: u32 = WM_APP + 32;
 
-/// Daemon sends recorded physical chord back to Settings window.
-/// `wParam` = Win32 Virtual Key code (`vkCode` as `u32`); `lParam` = packed modifier bits (1=Ctrl, 2=Win, 4=Alt, 8=Shift).
+/// Daemon sends a chord its hook actually observed back to Settings, while the
+/// observe or record lease is armed (`DEC-004`).
+/// `wParam` = Win32 Virtual Key code (`vkCode` as `u32`); `lParam` = packed
+/// modifier bits (1=Ctrl, 2=Win, 4=Alt, 8=Shift). Posted to the Settings
+/// process's dedicated receiver window (`SETTINGS_HOOK_WINDOW_CLASS` /
+/// `_TITLE`), which the daemon locates with a plain `FindWindowW` the same way
+/// Settings already locates the daemon's own hidden window — never through a
+/// handle carried across the process boundary.
 pub const WM_APP_RECORDED_CHORD: u32 = WM_APP + 33;
+
+/// Window class for the Settings process's hidden receiver window, which exists
+/// only to receive `WM_APP_RECORDED_CHORD` from the daemon on the observe/record
+/// lease (`DEC-004`). Kept separate from the visible Slint-owned window so the
+/// daemon can find it with `FindWindowW` without touching winit's window handle.
+pub const SETTINGS_HOOK_WINDOW_CLASS: &str = "WiraDeskSettingsHookWindow";
+
+/// Title of the Settings process's hidden receiver window. See
+/// [`SETTINGS_HOOK_WINDOW_CLASS`].
+pub const SETTINGS_HOOK_WINDOW_TITLE: &str = "WiraDeskSettingsHookReceiver";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Timing and sizing constants.

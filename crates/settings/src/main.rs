@@ -1,6 +1,7 @@
 #![windows_subsystem = "windows"]
 
 mod app;
+mod hookbridge;
 mod persistence;
 mod theme;
 
@@ -422,10 +423,8 @@ fn main() -> Result<(), slint::PlatformError> {
             };
             if m.capture.is_listening_for(field) {
                 m.cancel_capture();
-                persistence::signal_capture_lease(false);
             } else {
                 m.begin_capture(field);
-                persistence::signal_capture_lease(true);
             }
             if let Some(w) = window_weak.upgrade() {
                 sync_model_to_ui(&w, &m);
@@ -611,15 +610,20 @@ fn main() -> Result<(), slint::PlatformError> {
                 // `FindWindowW` returns a HWND or 0 if daemon is not running, handled cleanly.
                 let daemon_running = unsafe { FindWindowW(class.as_ptr(), title.as_ptr()) != 0 };
 
-                m.key_check
-                    .record_key(&formatted, &canonical, daemon_running);
+                let vk = shared::shortcut::vk_from_name(&display_key);
+                m.key_check.record_key(
+                    &formatted,
+                    &canonical,
+                    daemon_running,
+                    (ctrl, win_active, alt, shift),
+                    vk,
+                );
             }
 
             // 2. Escape key cancels capture or closes onboarding
             if text == "\u{1b}" || text == "Escape" {
                 if matches!(m.capture, app::CaptureState::Listening(_)) {
                     m.cancel_capture();
-                    persistence::signal_capture_lease(false);
                 } else if m.onboarding.is_some() {
                     m.skip_onboarding();
                     m.save(&config_path());
@@ -673,8 +677,6 @@ fn main() -> Result<(), slint::PlatformError> {
                 let combo_str = combo_parts.join("+");
                 if let Err(err) = m.accept_capture(&combo_str) {
                     m.feedback = SaveFeedback::Error(app::describe(field.label(), err));
-                } else {
-                    persistence::signal_capture_lease(false);
                 }
 
                 if let Some(w) = window_weak.upgrade() {
@@ -722,6 +724,89 @@ fn main() -> Result<(), slint::PlatformError> {
                 sync_model_to_ui(&w, &m);
             }
         });
+    }
+
+    // Callbacks / background bridge: daemon hook reports (`DEC-004` / `DEC-005`).
+    //
+    // The receiver window runs its own message loop on a dedicated thread —
+    // it must, since it blocks on `GetMessageW` — and only ever forwards raw,
+    // `Send`-safe chord data through a channel. Every model mutation still
+    // happens here, on the UI thread, drained by a Slint timer rather than by
+    // reaching into the model from the background thread.
+    let chord_rx = hookbridge::spawn();
+    let chord_timer = slint::Timer::default();
+    {
+        let model_rc = Rc::clone(&model);
+        let window_weak = main_window.as_weak();
+        chord_timer.start(
+            slint::TimerMode::Repeated,
+            std::time::Duration::from_millis(20),
+            move || {
+                let mut m = model_rc.borrow_mut();
+                let mut dirty = false;
+                while let Ok(chord) = chord_rx.try_recv() {
+                    dirty = true;
+                    m.key_check.record_hook_report(
+                        chord.vk,
+                        chord.ctrl,
+                        chord.win,
+                        chord.alt,
+                        chord.shift,
+                    );
+
+                    // DEC-004: while a field is actually listening, the
+                    // daemon's report is the source of truth for what to
+                    // accept — Slint's key-pressed text never arrives at all
+                    // for a chord the Windows shell owns (Win+E, Win+1, or
+                    // any of the six shortcuts already configured), which is
+                    // DEF-3's reported symptom. Idempotent alongside the
+                    // text-derived path below: whichever arrives first wins,
+                    // and the second call is a no-op because capture is no
+                    // longer `Listening`.
+                    if let app::CaptureState::Listening(field) = m.capture {
+                        match shared::shortcut::name_from_vk(chord.vk) {
+                            None => {
+                                m.feedback = SaveFeedback::Error(format!(
+                                    "Wira Desk does not recognize this key (code 0x{:02X}). \
+                                     Try a different key.",
+                                    chord.vk
+                                ));
+                            }
+                            Some(key_name) => {
+                                let mut parts = Vec::new();
+                                if chord.ctrl {
+                                    parts.push("ctrl");
+                                }
+                                if chord.win {
+                                    parts.push("win");
+                                }
+                                if chord.alt {
+                                    parts.push("alt");
+                                }
+                                if chord.shift {
+                                    parts.push("shift");
+                                }
+                                parts.push(key_name.as_str());
+                                let combo = parts.join("+");
+                                if let Err(err) = m.accept_capture(&combo) {
+                                    m.feedback =
+                                        SaveFeedback::Error(app::describe(field.label(), err));
+                                }
+                            }
+                        }
+                    }
+                }
+                // Drive the grace-period correlation regardless of whether a
+                // report arrived this tick — a pending report's timeout must
+                // still expire even on a tick with nothing new.
+                m.key_check.tick();
+                if dirty || m.key_check.beat {
+                    if let Some(w) = window_weak.upgrade() {
+                        sync_model_to_ui(&w, &m);
+                    }
+                }
+            },
+        );
     }
 
     main_window.run()?;

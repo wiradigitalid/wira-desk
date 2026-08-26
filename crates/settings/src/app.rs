@@ -6,10 +6,13 @@
 //! Save validates it. A rejected save leaves both the draft and the on-disk
 //! file untouched, so an invalid entry can be corrected instead of losing work.
 
+use shared::constants::{CAPTURE_LEASE_NONE, CAPTURE_LEASE_OBSERVE, CAPTURE_LEASE_RECORD};
 use shared::shortcut::Reservation;
 use shared::Config;
 
-use crate::persistence::{save_and_notify, validate_shortcut, SaveOutcome, ShortcutError};
+use crate::persistence::{
+    save_and_notify, signal_capture_lease, validate_shortcut, SaveOutcome, ShortcutError,
+};
 use crate::theme::{
     self, ThemeMode, LISTENING_ANNOUNCEMENT, STACK_WIDTH_INPUT, STACK_WIDTH_SLIDER,
     TOGGLE_AUTO_START, TOGGLE_OVERLAPPING_STACK,
@@ -286,6 +289,31 @@ pub enum KeyCheckVerdict {
     DaemonNotRunning = 4,
 }
 
+/// A chord the daemon's hook reported observing (`WM_APP_RECORDED_CHORD`),
+/// still waiting on a matching window key event so the correlation `DEC-005`
+/// is built on can be drawn. Cleared either by a matching `record_key`
+/// (row 1: hook yes, window yes) or by `tick` running out the grace period
+/// with no match (row 2: hook yes, window no — another application claimed
+/// the chord ahead of the window, but the hook still saw it first).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct PendingHookReport {
+    vk: u16,
+    ctrl: bool,
+    win: bool,
+    alt: bool,
+    shift: bool,
+    ticks_left: u8,
+}
+
+/// How long a hook report waits for a matching window event before the
+/// correlation gives up and reports it as claimed by another application.
+/// Correlation is deterministic — the hook always precedes window delivery —
+/// so this is a grace period for cross-process message delivery, not a race
+/// window: `DEC-005` explicitly rules out timing or debouncing to decide
+/// which row applies, only to bound how long row 1 gets to arrive before row
+/// 2 is reported instead.
+const HOOK_REPORT_GRACE_TICKS: u8 = 4;
+
 /// Pure observer state for the KeyCheck live diagnostic instrument.
 /// DEC-005: purely observes what reaches the window without interfering
 /// with draft edits, dirty state, or Save validation.
@@ -299,6 +327,7 @@ pub struct KeyCheckState {
     pub last_canonical: String,
     pub verdict: KeyCheckVerdict,
     pub beat: bool,
+    pending_hook: Option<PendingHookReport>,
 }
 
 impl KeyCheckState {
@@ -310,13 +339,80 @@ impl KeyCheckState {
         self.mod_shift = shift;
     }
 
-    /// Record a keystroke event that arrived at the window.
-    pub fn record_key(&mut self, display: &str, canonical: &str, daemon_running: bool) {
+    /// The daemon's hook reported observing this chord (`DEC-004`'s observe
+    /// or record lease). Starts the grace period a matching window event may
+    /// still arrive within; does not by itself produce a verdict, since
+    /// `DEC-005` reports observations correlated against the window, never a
+    /// single signal alone.
+    pub fn record_hook_report(&mut self, vk: u16, ctrl: bool, win: bool, alt: bool, shift: bool) {
+        self.pending_hook = Some(PendingHookReport {
+            vk,
+            ctrl,
+            win,
+            alt,
+            shift,
+            ticks_left: HOOK_REPORT_GRACE_TICKS,
+        });
+    }
+
+    /// One diagnostic tick (driven by a UI timer, not real time), independent
+    /// of whether a hook report is pending. When a pending report's grace
+    /// period runs out with no matching window event, that is row 2 of
+    /// `DEC-005`'s table: the hook saw the chord, the window never did —
+    /// another application claimed it through `RegisterHotKey`, ahead of the
+    /// window but behind Wira Desk's hook.
+    pub fn tick(&mut self) {
+        let Some(pending) = &mut self.pending_hook else {
+            return;
+        };
+        pending.ticks_left = pending.ticks_left.saturating_sub(1);
+        if pending.ticks_left == 0 {
+            let mods = format_mods(pending.ctrl, pending.win, pending.alt, pending.shift);
+            self.last_display = match shared::shortcut::name_from_vk(pending.vk) {
+                Some(name) => format!("{mods}{name}"),
+                None => format!("{mods}(vk 0x{:02X})", pending.vk),
+            };
+            self.last_canonical.clear();
+            self.verdict = KeyCheckVerdict::ClaimedByOtherApp;
+            self.beat = true;
+            self.pending_hook = None;
+        }
+    }
+
+    /// Record a keystroke event that arrived at the window. `vk` is the raw
+    /// key the same physical press would report as, when it can be resolved
+    /// (`shared::shortcut::vk_from_name`) — used only to correlate against a
+    /// pending hook report, never stored.
+    pub fn record_key(
+        &mut self,
+        display: &str,
+        canonical: &str,
+        daemon_running: bool,
+        mods: (bool, bool, bool, bool),
+        vk: Option<u16>,
+    ) {
         self.last_display = display.to_string();
         self.last_canonical = canonical.to_string();
-        self.verdict = if daemon_running {
+
+        let matched = matches!(
+            (self.pending_hook, vk),
+            (Some(p), Some(v)) if p.vk == v && (p.ctrl, p.win, p.alt, p.shift) == mods
+        );
+        if matched {
+            self.pending_hook = None;
+        }
+
+        self.verdict = if matched {
+            // Row 1: hook yes, window yes — nothing intercepts this chord.
             KeyCheckVerdict::Received
+        } else if !daemon_running {
+            // Row 4: the daemon is not running.
+            KeyCheckVerdict::DaemonNotRunning
         } else {
+            // Row 4's other half: the daemon is running but no hook report
+            // correlates with this window event (the hook is dead, or this
+            // specific chord's report has not arrived within the same
+            // observation). DEC-005's table gives both halves one verdict.
             KeyCheckVerdict::DaemonNotRunning
         };
         self.beat = true;
@@ -326,6 +422,23 @@ impl KeyCheckState {
     pub fn clear_beat(&mut self) {
         self.beat = false;
     }
+}
+
+fn format_mods(ctrl: bool, win: bool, alt: bool, shift: bool) -> String {
+    let mut s = String::new();
+    if ctrl {
+        s.push_str("Ctrl + ");
+    }
+    if win {
+        s.push_str("Win + ");
+    }
+    if alt {
+        s.push_str("Alt + ");
+    }
+    if shift {
+        s.push_str("Shift + ");
+    }
+    s
 }
 
 /// The Settings model. Rendering is a thin layer over this; every decision that
@@ -351,6 +464,11 @@ pub struct SettingsModel {
     /// nothing to swap the new chord's collision partner *back to*, since the
     /// two fields already hold the same value the instant a collision exists.
     pub last_capture: Option<(ShortcutField, String)>,
+    /// The lease level last actually signalled to the daemon, so
+    /// `sync_capture_lease` posts only on a change (DEC-004's "one owning
+    /// place per lease" — never one ad hoc `signal_capture_lease` call per
+    /// call site).
+    sent_lease_level: usize,
 }
 
 impl SettingsModel {
@@ -367,6 +485,7 @@ impl SettingsModel {
             onboarding_simulated_success: false,
             key_check: KeyCheckState::default(),
             last_capture: None,
+            sent_lease_level: CAPTURE_LEASE_NONE,
         }
     }
 
@@ -374,8 +493,40 @@ impl SettingsModel {
         self.draft != self.saved
     }
 
+    /// What the capture lease should be right now, purely from `(pane,
+    /// capture)`. Record implies observe; observe never implies record —
+    /// `DEC-004`'s table, expressed as one derivation rather than four
+    /// separately-armed call sites that could drift out of sync with each
+    /// other.
+    fn desired_lease_level(&self) -> usize {
+        match &self.capture {
+            CaptureState::Listening(_) => CAPTURE_LEASE_RECORD,
+            CaptureState::Idle if self.pane == Pane::Shortcuts => CAPTURE_LEASE_OBSERVE,
+            CaptureState::Idle => CAPTURE_LEASE_NONE,
+        }
+    }
+
+    /// The one owning place that arms or disarms the capture lease. Called
+    /// after every state change that can affect `(pane, capture)`, so a lease
+    /// is never left mismatched with what the UI is actually doing — the
+    /// live defect this replaces was `set_pane` cancelling a capture without
+    /// disarming anything. Posts to the daemon only when the desired level
+    /// actually changes, which is also what makes leaving the Shortcuts pane
+    /// or losing foreground fail closed rather than leaving a stale lease
+    /// armed forever: the daemon's own foreground check and heartbeat reaping
+    /// cover the case this call is never reached at all (a crash, a killed
+    /// process).
+    pub fn sync_capture_lease(&mut self) {
+        let desired = self.desired_lease_level();
+        if desired != self.sent_lease_level {
+            signal_capture_lease(desired);
+            self.sent_lease_level = desired;
+        }
+    }
+
     pub fn begin_capture(&mut self, field: ShortcutField) {
         self.capture = CaptureState::Listening(field);
+        self.sync_capture_lease();
     }
 
     /// Switch the active pane, cancelling an in-progress capture if it is
@@ -389,11 +540,13 @@ impl SettingsModel {
             self.cancel_capture();
         }
         self.pane = pane;
+        self.sync_capture_lease();
     }
 
     /// Cancel capture without changing anything — the Escape affordance.
     pub fn cancel_capture(&mut self) {
         self.capture = CaptureState::Idle;
+        self.sync_capture_lease();
     }
 
     /// Accept a captured combination.
@@ -411,6 +564,7 @@ impl SettingsModel {
         field.set(&mut self.draft, canonical);
         self.last_capture = Some((field, previous));
         self.capture = CaptureState::Idle;
+        self.sync_capture_lease();
         // A capture can create or resolve a collision; either way the status
         // bar's last word on the draft (a stale "Settings saved" banner, or a
         // stale error) is no longer the truth about it.
@@ -478,6 +632,7 @@ impl SettingsModel {
     pub fn revert(&mut self) {
         self.draft = self.saved.clone();
         self.capture = CaptureState::Idle;
+        self.sync_capture_lease();
         self.feedback = SaveFeedback::None;
         // The reverted draft no longer carries whatever this capture wrote,
         // so the chord it once displaced is no longer displaced by anything.
@@ -1121,15 +1276,123 @@ mod tests {
         }
     }
 
+    // ── DEC-004 capture lease: one owning place ───────────────────────────
+
+    #[test]
+    fn idle_on_a_non_shortcuts_pane_desires_no_lease() {
+        let m = model();
+        assert_eq!(m.desired_lease_level(), CAPTURE_LEASE_NONE);
+    }
+
+    #[test]
+    fn opening_the_shortcuts_pane_desires_the_observe_lease() {
+        let mut m = model();
+        m.set_pane(Pane::Shortcuts);
+        assert_eq!(m.desired_lease_level(), CAPTURE_LEASE_OBSERVE);
+    }
+
+    #[test]
+    fn listening_for_a_field_desires_the_record_lease_even_off_the_shortcuts_pane() {
+        // Cannot happen in practice (capture only starts from the Shortcuts
+        // pane), but the derivation must not depend on pane at all once a
+        // field is listening — record implies observe, never the reverse.
+        let mut m = model();
+        m.begin_capture(ShortcutField::Switcher);
+        m.pane = Pane::General;
+        assert_eq!(m.desired_lease_level(), CAPTURE_LEASE_RECORD);
+    }
+
+    #[test]
+    fn leaving_the_shortcuts_pane_mid_capture_disarms_down_to_none_not_observe() {
+        // The live defect this replaces: `set_pane` used to cancel the
+        // capture without disarming anything, leaving whatever lease was
+        // last sent standing. Leaving the pane entirely must fall all the
+        // way to `none`, not merely down to `observe`.
+        let mut m = model();
+        m.set_pane(Pane::Shortcuts);
+        m.begin_capture(ShortcutField::Switcher);
+        assert_eq!(m.sent_lease_level, CAPTURE_LEASE_RECORD);
+
+        m.set_pane(Pane::General);
+        assert_eq!(m.capture, CaptureState::Idle);
+        assert_eq!(m.desired_lease_level(), CAPTURE_LEASE_NONE);
+        assert_eq!(m.sent_lease_level, CAPTURE_LEASE_NONE);
+    }
+
+    #[test]
+    fn accepting_a_capture_drops_the_lease_back_to_observe() {
+        let mut m = model();
+        m.set_pane(Pane::Shortcuts);
+        m.begin_capture(ShortcutField::SnapRight);
+        assert_eq!(m.sent_lease_level, CAPTURE_LEASE_RECORD);
+
+        m.accept_capture("ctrl+alt+f7").unwrap();
+        assert_eq!(m.sent_lease_level, CAPTURE_LEASE_OBSERVE);
+    }
+
+    // ── DEC-005 correlation ───────────────────────────────────────────────
+
+    #[test]
+    fn a_hook_report_matched_by_the_window_reports_received() {
+        let mut kc = KeyCheckState::default();
+        kc.record_hook_report(0x31, false, true, false, false); // Win+1
+        kc.record_key(
+            "Win + 1",
+            "win+1",
+            true,
+            (false, true, false, false),
+            Some(0x31),
+        );
+        assert_eq!(kc.verdict, KeyCheckVerdict::Received);
+    }
+
+    #[test]
+    fn a_hook_report_never_matched_by_the_window_reports_claimed_by_another_app() {
+        let mut kc = KeyCheckState::default();
+        kc.record_hook_report(0x31, false, true, false, false);
+        for _ in 0..HOOK_REPORT_GRACE_TICKS {
+            assert_eq!(
+                kc.verdict,
+                KeyCheckVerdict::Idle,
+                "must not guess before the grace period ends"
+            );
+            kc.tick();
+        }
+        assert_eq!(kc.verdict, KeyCheckVerdict::ClaimedByOtherApp);
+    }
+
+    #[test]
+    fn a_window_event_with_no_hook_report_reports_daemon_not_running() {
+        let mut kc = KeyCheckState::default();
+        kc.record_key(
+            "Alt + 1",
+            "alt+1",
+            true,
+            (false, false, true, false),
+            Some(0x31),
+        );
+        assert_eq!(kc.verdict, KeyCheckVerdict::DaemonNotRunning);
+    }
+
     #[test]
     fn key_check_state_pure_observer_does_not_mutate_draft() {
         let mut m = model();
         let initial_draft = m.draft.clone();
         assert!(!m.is_dirty());
 
-        // Update modifiers and record key
+        // Update modifiers and record key. A matching hook report must have
+        // arrived first for this to correlate as `Received` — DEC-005 never
+        // reports a verdict from the window signal alone.
         m.key_check.update_modifiers(true, false, true, false);
-        m.key_check.record_key("Alt + 1", "alt+1", true);
+        m.key_check
+            .record_hook_report(0x31, false, false, true, false);
+        m.key_check.record_key(
+            "Alt + 1",
+            "alt+1",
+            true,
+            (false, false, true, false),
+            Some(0x31),
+        );
 
         assert!(m.key_check.mod_ctrl);
         assert!(m.key_check.mod_alt);

@@ -205,6 +205,23 @@ pub fn reservation(sc: &Shortcut) -> Option<ReservedInfo> {
         });
     }
 
+    // Ctrl + Shift + Escape (Task Manager). Unmeasured on this product's target
+    // Windows builds (`OQ-16`), so it defaults to the kind Windows keeps
+    // regardless rather than the kind Wira Desk merely declines to take.
+    if sc.ctrl && sc.shift && !sc.win && !sc.alt && sc.vk == 0x1B {
+        return Some(ReservedInfo {
+            kind: Reservation::Immutable,
+            owner: "Task Manager",
+        });
+    }
+
+    // Ctrl + Win + Enter is deliberately absent from this catalogue, even
+    // though `OQ-16` lists it as an unmeasured candidate that would otherwise
+    // default to `Immutable`: it launches Narrator on stock Windows, but it is
+    // also this product's own shipped `snap_maximize` default. Adding it here
+    // would make the shipped default fail its own validation — the exact
+    // carve-out `DEC-003` already makes for `Alt+Backtick`.
+
     // 3. Shell-Owned Shortcuts (Win + Key)
     if sc.win && !sc.ctrl && !sc.alt && !sc.shift {
         match sc.vk {
@@ -526,6 +543,24 @@ mod tests {
             let vk = vk_from_name(name).unwrap();
             assert_eq!(name_from_vk(vk).as_deref(), Some(name), "vk {vk:#x}");
         }
+    }
+
+    #[test]
+    fn ctrl_shift_escape_is_reserved_for_task_manager() {
+        let sc = Shortcut::parse("ctrl+shift+escape").unwrap();
+        let info = reservation(&sc).expect("Ctrl+Shift+Esc must be reserved");
+        assert_eq!(info.kind, Reservation::Immutable);
+    }
+
+    #[test]
+    fn shipped_snap_maximize_default_is_never_reserved() {
+        // Ctrl+Win+Enter launches Narrator on stock Windows and would
+        // otherwise default to Immutable per OQ-16, but it is also this
+        // product's own shipped `snap_maximize` default — reserving it would
+        // make the shipped default fail its own validation, exactly the
+        // carve-out DEC-003 already makes for Alt+Backtick.
+        let sc = Shortcut::parse("ctrl+win+enter").unwrap();
+        assert_eq!(reservation(&sc), None);
     }
 
     #[test]

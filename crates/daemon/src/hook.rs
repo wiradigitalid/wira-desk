@@ -3,17 +3,18 @@
 
 #[cfg(debug_assertions)]
 use std::sync::atomic::AtomicU64;
-use std::sync::atomic::{AtomicBool, AtomicPtr, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicIsize, AtomicPtr, Ordering};
 use std::sync::Arc;
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
 
 use shared::config_path;
 use shared::constants::{
-    ANTI_MACRO_THROTTLE_MS, HOOK_CHECK_FAIL_THRESHOLD, HOOK_RETRY_DELAY_SECS, HOOK_RETRY_MAX,
-    WM_APP_COMMAND_READY, WM_APP_CONFIG_SNAPSHOT, WM_APP_HOOK_CHECK, WM_APP_HOOK_DEAD,
-    WM_APP_HOOK_INIT_FAILED, WM_APP_HOOK_LEASE, WM_APP_HOOK_READY, WM_APP_HOOK_REFRESH_OK,
-    WM_APP_HOOK_SHUTDOWN,
+    ANTI_MACRO_THROTTLE_MS, CAPTURE_LEASE_NONE, CAPTURE_LEASE_OBSERVE, CAPTURE_LEASE_RECORD,
+    HOOK_CHECK_FAIL_THRESHOLD, HOOK_RETRY_DELAY_SECS, HOOK_RETRY_MAX, WM_APP_COMMAND_READY,
+    WM_APP_CONFIG_SNAPSHOT, WM_APP_HOOK_CHECK, WM_APP_HOOK_DEAD, WM_APP_HOOK_INIT_FAILED,
+    WM_APP_HOOK_LEASE, WM_APP_HOOK_READY, WM_APP_HOOK_REFRESH_OK, WM_APP_HOOK_SHUTDOWN,
+    WM_APP_RECORDED_CHORD,
 };
 #[cfg(debug_assertions)]
 use shared::constants::{
@@ -21,10 +22,16 @@ use shared::constants::{
 };
 use shared::{Command, Config, Shortcut, SwitcherConfig};
 
-use windows_sys::Win32::Foundation::{HINSTANCE, HWND, LPARAM, LRESULT, WPARAM};
+use windows_sys::Win32::Foundation::{CloseHandle, HINSTANCE, HWND, LPARAM, LRESULT, WPARAM};
 use windows_sys::Win32::System::Threading::{
-    GetCurrentThread, GetCurrentThreadId, SetThreadPriority, THREAD_PRIORITY_TIME_CRITICAL,
+    GetCurrentThread, GetCurrentThreadId, GetExitCodeProcess, OpenProcess, SetThreadPriority,
+    PROCESS_QUERY_LIMITED_INFORMATION, THREAD_PRIORITY_TIME_CRITICAL,
 };
+
+/// `STILL_ACTIVE` (`winbase.h`) — not re-exported by `windows-sys` 0.52 under
+/// `Win32::System::Threading`, so it is named here rather than left as a bare
+/// magic number at the call site.
+const STILL_ACTIVE: u32 = 259;
 use windows_sys::Win32::UI::WindowsAndMessaging::{
     CallNextHookEx, DispatchMessageW, GetMessageW, PeekMessageW, PostMessageW, PostQuitMessage,
     SetWindowsHookExW, TranslateMessage, UnhookWindowsHookEx, HC_ACTION, HHOOK, KBDLLHOOKSTRUCT,
@@ -181,6 +188,116 @@ const VK_RSHIFT: u32 = 0xA1;
 #[cfg(any(debug_assertions, test))]
 const VK_BACKTICK: u32 = 0xC0;
 
+/// Settings' hidden receiver window (`SETTINGS_HOOK_WINDOW_CLASS` /
+/// `_TITLE`), resolved once by `tray.rs` when a lease arms — never per
+/// keystroke. Read directly from the Hook thread's callback via a relaxed
+/// atomic load, which is what keeps reporting a chord as cheap as the
+/// existing `PostMessageW` wake-up to the Worker: no `FindWindowW`, no
+/// allocation, no lock, on the callback path.
+static REPORT_TARGET_HWND: AtomicIsize = AtomicIsize::new(0);
+
+/// Set by `tray.rs` off the callback path: once when a lease arms (the
+/// resolved Settings receiver window), and back to 0 on every disarm path.
+pub fn set_report_target(hwnd: HWND) {
+    REPORT_TARGET_HWND.store(hwnd, Ordering::Relaxed);
+}
+
+/// Post the chord the hook just observed back to Settings, while the observe
+/// or record lease is armed. A no-op if no target has been resolved (lease is
+/// `none`, or armed but the receiver window was never found).
+fn report_recorded_chord(vk: u32, mods: ModifierState) {
+    let target = REPORT_TARGET_HWND.load(Ordering::Relaxed) as HWND;
+    if target == 0 {
+        return;
+    }
+    let packed: u32 = u32::from(mods.ctrl)
+        | (u32::from(mods.win) << 1)
+        | (u32::from(mods.alt) << 2)
+        | (u32::from(mods.shift) << 3);
+    // SAFETY: `target` is read from `REPORT_TARGET_HWND`, which only ever
+    // holds a value `tray.rs` obtained from a live `FindWindowW` or 0.
+    // `PostMessageW` compares the handle rather than dereferencing it, so a
+    // target that has since become stale (Settings closed) makes the call
+    // fail harmlessly instead of faulting; `let _ =` matches that. `wParam`
+    // and `lParam` carry only plain integers — no pointer crosses the
+    // process boundary.
+    unsafe {
+        let _ = PostMessageW(target, WM_APP_RECORDED_CHORD, vk as usize, packed as isize);
+    }
+}
+
+/// What the observe/record lease decides for the current keystroke, or `None`
+/// when the lease does not apply (level `none`, or Settings does not hold the
+/// foreground — fail closed).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum LeaseAction {
+    /// Report and suppress, but let the chord reach Windows.
+    Observe,
+    /// Report, suppress, and swallow.
+    Record,
+}
+
+/// Pure decision, given the runtime's stored lease and a supplied foreground
+/// process id. Takes the foreground lookup as a lazy closure — exactly the
+/// shape `DEF-1` established for the VM/RDP bypass check — so a unit test can
+/// supply a fixed pid instead of asking the live desktop, which is what makes
+/// this branch reachable from a test at all. `DEF-3` is this branch never
+/// having been reachable, one level above where `DEF-1` fixed the same shape.
+fn lease_action<G>(rt: &mut HookRuntime, foreground_pid: G) -> Option<LeaseAction>
+where
+    G: FnOnce(&mut HookRuntime) -> u32,
+{
+    // Copied out before the closure runs, so nothing here holds a borrow of
+    // `rt` while `foreground_pid` needs its own `&mut` — the same shape as
+    // `eval_bypass` below, one level up.
+    let level = rt.capture_lease_level;
+    let pid = rt.capture_lease_pid;
+    if level == CAPTURE_LEASE_NONE || pid == 0 {
+        return None;
+    }
+    // Fail closed: a lease that is armed but Settings does not currently hold
+    // the foreground window does nothing, on every keystroke this check
+    // reaches — never only on the keystroke that happens to matter.
+    if foreground_pid(rt) != pid {
+        return None;
+    }
+    if level >= CAPTURE_LEASE_RECORD {
+        Some(LeaseAction::Record)
+    } else if level >= CAPTURE_LEASE_OBSERVE {
+        Some(LeaseAction::Observe)
+    } else {
+        None
+    }
+}
+
+/// Whether the process a lease is addressed to is still alive. `OQ-17` records
+/// that a pid can be recycled; this narrows the window rather than closing it.
+/// Called only from the heartbeat, never from the callback.
+///
+/// SAFETY: `OpenProcess` takes a plain `u32` pid and returns a handle or null;
+/// null is checked before use. `GetExitCodeProcess` writes through `&mut
+/// code`, a live local of the exact width it expects. The handle is closed on
+/// every path once queried.
+fn lease_holder_alive(pid: u32) -> bool {
+    if pid == 0 {
+        return false;
+    }
+    // SAFETY: `OpenProcess` takes a plain `u32` pid and returns a handle or
+    // null; null is checked before use. `GetExitCodeProcess` writes through
+    // `&mut code`, a live local of the exact width it expects, and the
+    // handle is closed on every path once queried.
+    unsafe {
+        let handle = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid);
+        if handle == 0 {
+            return false;
+        }
+        let mut code: u32 = 0;
+        let ok = GetExitCodeProcess(handle, &mut code) != 0;
+        CloseHandle(handle);
+        ok && code == STILL_ACTIVE
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum KeyHandleResult {
     PassToNext,
@@ -199,20 +316,28 @@ fn is_win_vk(vk: u32) -> bool {
 }
 
 fn handle_key_event(rt: &mut HookRuntime, vk: u32, key_down: bool) -> KeyHandleOutcome {
-    handle_key_event_with_bypass(rt, vk, key_down, |rt| {
-        crate::context::vm_bypass::evaluate_foreground(&rt.bypass_policy, &mut rt.identity)
-            .is_passthrough()
-    })
+    handle_key_event_with_bypass(
+        rt,
+        vk,
+        key_down,
+        |rt| {
+            crate::context::vm_bypass::evaluate_foreground(&rt.bypass_policy, &mut rt.identity)
+                .is_passthrough()
+        },
+        |rt| rt.identity.foreground_pid(),
+    )
 }
 
-fn handle_key_event_with_bypass<F>(
+fn handle_key_event_with_bypass<F, G>(
     rt: &mut HookRuntime,
     vk: u32,
     key_down: bool,
     eval_bypass: F,
+    lease_foreground_pid: G,
 ) -> KeyHandleOutcome
 where
     F: FnOnce(&mut HookRuntime) -> bool,
+    G: FnOnce(&mut HookRuntime) -> u32,
 {
     rt.mods.apply_vk(vk, key_down);
 
@@ -253,6 +378,27 @@ where
         };
     }
 
+    // DEC-004's observe/record lease, checked *before* `match_shortcut` so an
+    // unconfigured chord (e.g. `Win+1`) reaches it too — `DEF-3`'s reported
+    // symptom is exactly a chord that is already one of the six configured
+    // shortcuts never reaching this far under the old ordering. Bounded to a
+    // non-modifier key-down carrying at least one modifier, which is already
+    // guaranteed by this point in the function (modifier-only presses and key
+    // releases both returned above).
+    if rt.mods.any() {
+        if let Some(action) = lease_action(rt, lease_foreground_pid) {
+            report_recorded_chord(vk, rt.mods);
+            rt.bypass_latched = action == LeaseAction::Observe;
+            return KeyHandleOutcome {
+                disposition: match action {
+                    LeaseAction::Observe => KeyHandleResult::PassToNext,
+                    LeaseAction::Record => KeyHandleResult::Swallow,
+                },
+                enqueued: false,
+            };
+        }
+    }
+
     let Some(cmd) = match_shortcut(
         rt.primary,
         rt.fallback,
@@ -268,16 +414,6 @@ where
             enqueued: false,
         };
     };
-
-    // Check capture lease: if Settings armed a lease and currently holds the foreground window,
-    // passthrough the entire chord without swallowing so Settings can record it.
-    if rt.capture_lease_pid != 0 && rt.identity.foreground_pid() == rt.capture_lease_pid {
-        rt.bypass_latched = true;
-        return KeyHandleOutcome {
-            disposition: KeyHandleResult::PassToNext,
-            enqueued: false,
-        };
-    }
 
     // The shortcut matched. Before claiming it, ask whether the foreground
     // belongs to a VM or Remote Desktop guest. This runs only on a
@@ -515,7 +651,11 @@ struct HookRuntime {
     /// through while the matching key-up got swallowed, leaving the guest
     /// session with a stuck modifier.
     bypass_latched: bool,
-    /// PID of Settings process holding a temporary shortcut capture lease (0 = none).
+    /// Level of the temporary shortcut capture lease: `CAPTURE_LEASE_NONE`,
+    /// `_OBSERVE`, or `_RECORD`. See [`lease_action`].
+    capture_lease_level: usize,
+    /// PID of the Settings process holding the lease (0 when the level is
+    /// `CAPTURE_LEASE_NONE`).
     capture_lease_pid: u32,
 }
 
@@ -805,6 +945,21 @@ unsafe fn install_hook(h_mod: HINSTANCE) -> HHOOK {
 }
 
 unsafe fn refresh_hook_on_hook_thread(rt: &mut HookRuntime) {
+    // Reap a lease left armed against a process that has since exited — on
+    // the heartbeat, never inside the callback (`DEC-004`'s bound). This
+    // narrows the `OQ-17` pid-reuse window rather than closing it: between an
+    // exit and the next heartbeat tick, a recycled pid could still match.
+    if rt.capture_lease_level != CAPTURE_LEASE_NONE && !lease_holder_alive(rt.capture_lease_pid) {
+        #[cfg(debug_assertions)]
+        crate::util::append_debug_trace(&format!(
+            "HOOK_LEASE: reaped dead holder pid={}",
+            rt.capture_lease_pid
+        ));
+        rt.capture_lease_level = CAPTURE_LEASE_NONE;
+        rt.capture_lease_pid = 0;
+        set_report_target(0);
+    }
+
     let new_hook = install_hook(rt.h_mod);
 
     #[cfg(debug_assertions)]
@@ -879,12 +1034,16 @@ unsafe fn handle_thread_message(rt: &mut HookRuntime, msg: &MSG) -> bool {
             true
         }
         m if m == WM_APP_HOOK_LEASE => {
-            let arm = msg.wParam != 0;
-            rt.capture_lease_pid = if arm { msg.lParam as u32 } else { 0 };
+            rt.capture_lease_level = msg.wParam;
+            rt.capture_lease_pid = if rt.capture_lease_level != CAPTURE_LEASE_NONE {
+                msg.lParam as u32
+            } else {
+                0
+            };
             #[cfg(debug_assertions)]
             crate::util::append_debug_trace(&format!(
-                "HOOK_LEASE: arm={arm} pid={}",
-                rt.capture_lease_pid
+                "HOOK_LEASE: level={} pid={}",
+                rt.capture_lease_level, rt.capture_lease_pid
             ));
             true
         }
@@ -1002,6 +1161,7 @@ fn hook_thread_main(worker_hwnd: HWND, h_mod: HINSTANCE) {
             bypass_policy,
             identity: HookIdentityCollector::new(),
             bypass_latched: false,
+            capture_lease_level: CAPTURE_LEASE_NONE,
             capture_lease_pid: 0,
         };
 
@@ -1165,6 +1325,7 @@ mod tests {
             bypass_policy: BypassPolicy::default(),
             identity: HookIdentityCollector::new(),
             bypass_latched: false,
+            capture_lease_level: CAPTURE_LEASE_NONE,
             capture_lease_pid: 0,
         }
     }
@@ -1182,22 +1343,22 @@ mod tests {
         // Explicitly supply `|_| false` for the bypass check so this unit test
         // does not depend on the live foreground window state of the desktop.
         assert_eq!(
-            handle_key_event_with_bypass(&mut rt, VK_LWIN, true, |_| false).disposition,
+            handle_key_event_with_bypass(&mut rt, VK_LWIN, true, |_| false, |_| 0).disposition,
             KeyHandleResult::PassToNext
         );
         assert_eq!(
-            handle_key_event_with_bypass(&mut rt, VK_BACKTICK, true, |_| false).disposition,
+            handle_key_event_with_bypass(&mut rt, VK_BACKTICK, true, |_| false, |_| 0).disposition,
             KeyHandleResult::Swallow
         );
         // The main key-up is still swallowed: the application never saw the
         // key-down, so delivering only its release would be incoherent.
         assert_eq!(
-            handle_key_event_with_bypass(&mut rt, VK_BACKTICK, false, |_| false).disposition,
+            handle_key_event_with_bypass(&mut rt, VK_BACKTICK, false, |_| false, |_| 0).disposition,
             KeyHandleResult::Swallow
         );
         // The modifier release, however, must always get through.
         assert_eq!(
-            handle_key_event_with_bypass(&mut rt, VK_LWIN, false, |_| false).disposition,
+            handle_key_event_with_bypass(&mut rt, VK_LWIN, false, |_| false, |_| 0).disposition,
             KeyHandleResult::PassToNext
         );
     }
@@ -1209,11 +1370,12 @@ mod tests {
         let fallback = Shortcut::parse("alt+backtick").unwrap();
         for modifier in [VK_LWIN, VK_RWIN, VK_LCONTROL, VK_LMENU, VK_LSHIFT] {
             let mut rt = test_runtime(primary, fallback);
-            let _ = handle_key_event_with_bypass(&mut rt, VK_LWIN, true, |_| false);
-            let _ = handle_key_event_with_bypass(&mut rt, VK_BACKTICK, true, |_| false);
-            let _ = handle_key_event_with_bypass(&mut rt, VK_BACKTICK, false, |_| false);
+            let _ = handle_key_event_with_bypass(&mut rt, VK_LWIN, true, |_| false, |_| 0);
+            let _ = handle_key_event_with_bypass(&mut rt, VK_BACKTICK, true, |_| false, |_| 0);
+            let _ = handle_key_event_with_bypass(&mut rt, VK_BACKTICK, false, |_| false, |_| 0);
             assert_eq!(
-                handle_key_event_with_bypass(&mut rt, modifier, false, |_| false).disposition,
+                handle_key_event_with_bypass(&mut rt, modifier, false, |_| false, |_| 0)
+                    .disposition,
                 KeyHandleResult::PassToNext,
                 "modifier {modifier:#x} release was swallowed - it would stick"
             );
@@ -1229,17 +1391,155 @@ mod tests {
         // Explicitly supply `|_| false` for the bypass check so this unit test
         // does not depend on the live foreground window state of the desktop.
         assert_eq!(
-            handle_key_event_with_bypass(&mut rt, VK_LMENU, true, |_| false).disposition,
+            handle_key_event_with_bypass(&mut rt, VK_LMENU, true, |_| false, |_| 0).disposition,
             KeyHandleResult::PassToNext
         );
         assert_eq!(
-            handle_key_event_with_bypass(&mut rt, VK_BACKTICK, true, |_| false).disposition,
+            handle_key_event_with_bypass(&mut rt, VK_BACKTICK, true, |_| false, |_| 0).disposition,
             KeyHandleResult::Swallow
         );
         assert_eq!(
-            handle_key_event_with_bypass(&mut rt, VK_LWIN, false, |_| false).disposition,
+            handle_key_event_with_bypass(&mut rt, VK_LWIN, false, |_| false, |_| 0).disposition,
             KeyHandleResult::PassToNext
         );
+    }
+
+    // ── DEC-004 capture lease: pure decision seam ─────────────────────────
+
+    #[test]
+    fn lease_none_takes_no_action() {
+        let mut rt = test_runtime(
+            Shortcut::parse("win+backtick").unwrap(),
+            Shortcut::parse("alt+backtick").unwrap(),
+        );
+        rt.capture_lease_level = CAPTURE_LEASE_NONE;
+        rt.capture_lease_pid = 4321;
+        assert_eq!(lease_action(&mut rt, |_| 4321), None);
+    }
+
+    #[test]
+    fn lease_fails_closed_when_settings_is_not_foreground() {
+        let mut rt = test_runtime(
+            Shortcut::parse("win+backtick").unwrap(),
+            Shortcut::parse("alt+backtick").unwrap(),
+        );
+        rt.capture_lease_level = CAPTURE_LEASE_RECORD;
+        rt.capture_lease_pid = 4321;
+        assert_eq!(
+            lease_action(&mut rt, |_| 999),
+            None,
+            "a lease armed against a different foreground process must do nothing"
+        );
+    }
+
+    #[test]
+    fn lease_observe_action_is_reported_without_a_record_action() {
+        let mut rt = test_runtime(
+            Shortcut::parse("win+backtick").unwrap(),
+            Shortcut::parse("alt+backtick").unwrap(),
+        );
+        rt.capture_lease_level = CAPTURE_LEASE_OBSERVE;
+        rt.capture_lease_pid = 4321;
+        assert_eq!(lease_action(&mut rt, |_| 4321), Some(LeaseAction::Observe));
+    }
+
+    #[test]
+    fn lease_record_action() {
+        let mut rt = test_runtime(
+            Shortcut::parse("win+backtick").unwrap(),
+            Shortcut::parse("alt+backtick").unwrap(),
+        );
+        rt.capture_lease_level = CAPTURE_LEASE_RECORD;
+        rt.capture_lease_pid = 4321;
+        assert_eq!(lease_action(&mut rt, |_| 4321), Some(LeaseAction::Record));
+    }
+
+    // ── DEC-004 / DEF-3 regression: the lease must be reachable by a chord
+    // that is not one of the six configured shortcuts, and must be checked
+    // before `match_shortcut` — this is the guard that never armed. ────────
+
+    const VK_1: u32 = 0x31;
+
+    #[test]
+    fn record_lease_swallows_an_unconfigured_chord_before_match_shortcut() {
+        let mut rt = test_runtime(
+            Shortcut::parse("win+backtick").unwrap(),
+            Shortcut::parse("alt+backtick").unwrap(),
+        );
+        rt.capture_lease_level = CAPTURE_LEASE_RECORD;
+        rt.capture_lease_pid = 777;
+
+        let _ = handle_key_event_with_bypass(&mut rt, VK_LWIN, true, |_| false, |_| 777);
+        let outcome = handle_key_event_with_bypass(&mut rt, VK_1, true, |_| false, |_| 777);
+        assert_eq!(
+            outcome.disposition,
+            KeyHandleResult::Swallow,
+            "Win+1 must be swallowed while the record lease is armed, even though it \
+             matches none of the six configured shortcuts"
+        );
+        assert!(
+            !outcome.enqueued,
+            "a recorded chord must never also be enqueued as a Wira Desk command"
+        );
+    }
+
+    #[test]
+    fn observe_lease_passes_an_unconfigured_chord_through_without_swallowing() {
+        let mut rt = test_runtime(
+            Shortcut::parse("win+backtick").unwrap(),
+            Shortcut::parse("alt+backtick").unwrap(),
+        );
+        rt.capture_lease_level = CAPTURE_LEASE_OBSERVE;
+        rt.capture_lease_pid = 777;
+
+        let _ = handle_key_event_with_bypass(&mut rt, VK_LWIN, true, |_| false, |_| 777);
+        let outcome = handle_key_event_with_bypass(&mut rt, VK_1, true, |_| false, |_| 777);
+        assert_eq!(outcome.disposition, KeyHandleResult::PassToNext);
+        assert!(!outcome.enqueued);
+    }
+
+    #[test]
+    fn lease_never_fires_without_a_modifier_held() {
+        // Bound from DEC-004: report/suppress/swallow apply only to a
+        // non-modifier key-down carrying at least one modifier. A bare `1`
+        // with no modifier held passes through as if no lease existed.
+        let mut rt = test_runtime(
+            Shortcut::parse("win+backtick").unwrap(),
+            Shortcut::parse("alt+backtick").unwrap(),
+        );
+        rt.capture_lease_level = CAPTURE_LEASE_RECORD;
+        rt.capture_lease_pid = 777;
+
+        let outcome = handle_key_event_with_bypass(&mut rt, VK_1, true, |_| false, |_| 777);
+        assert_eq!(outcome.disposition, KeyHandleResult::PassToNext);
+    }
+
+    #[test]
+    fn hook_lease_message_stores_level_and_pid_verbatim() {
+        // DEF-3: three places used to disagree about what `lParam` carried.
+        // The Hook thread's own message handler must store exactly what
+        // arrived — a process id, never a converted window handle.
+        let mut rt = test_runtime(
+            Shortcut::parse("win+backtick").unwrap(),
+            Shortcut::parse("alt+backtick").unwrap(),
+        );
+        let msg = MSG {
+            hwnd: 0,
+            message: WM_APP_HOOK_LEASE,
+            wParam: CAPTURE_LEASE_RECORD,
+            lParam: 4242,
+            time: 0,
+            pt: windows_sys::Win32::Foundation::POINT { x: 0, y: 0 },
+        };
+        // SAFETY: `handle_thread_message` only touches `rt` (a valid unique
+        // borrow) and reads plain integer fields off `msg`; it does not
+        // require the caller to be on the Hook thread for the
+        // `WM_APP_HOOK_LEASE` arm exercised here, which does no Win32 I/O.
+        unsafe {
+            handle_thread_message(&mut rt, &msg);
+        }
+        assert_eq!(rt.capture_lease_level, CAPTURE_LEASE_RECORD);
+        assert_eq!(rt.capture_lease_pid, 4242);
     }
 
     // ── Configuration staging slot ───────────────────────────────────────────────

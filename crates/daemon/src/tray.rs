@@ -19,14 +19,15 @@ use windows_sys::Win32::UI::Shell::{
 };
 use windows_sys::Win32::UI::WindowsAndMessaging::{
     ChangeWindowMessageFilterEx, CreateWindowExW, DefWindowProcW, DestroyIcon, DispatchMessageW,
-    GetMessageW, GetWindowLongPtrW, GetWindowThreadProcessId, PostQuitMessage, PostThreadMessageW,
+    FindWindowW, GetMessageW, GetWindowLongPtrW, PostQuitMessage, PostThreadMessageW,
     RegisterClassW, RegisterWindowMessageW, SetWindowLongPtrW, TranslateMessage, CREATESTRUCTW,
     GWLP_USERDATA, HICON, MSG, MSGFLT_ALLOW, WM_CONTEXTMENU, WM_CREATE, WM_DESTROY, WM_RBUTTONUP,
     WNDCLASSW, WS_EX_TOOLWINDOW, WS_OVERLAPPED,
 };
 
 use shared::constants::{
-    DAEMON_WINDOW_CLASS, DAEMON_WINDOW_TITLE, HOOK_RETRY_MAX, WM_APP_CAPTURE_LEASE,
+    CAPTURE_LEASE_NONE, DAEMON_WINDOW_CLASS, DAEMON_WINDOW_TITLE, HOOK_RETRY_MAX,
+    SETTINGS_HOOK_WINDOW_CLASS, SETTINGS_HOOK_WINDOW_TITLE, WM_APP_CAPTURE_LEASE,
     WM_APP_COMMAND_READY, WM_APP_HOOK_DEAD, WM_APP_HOOK_INIT_FAILED, WM_APP_HOOK_LEASE,
     WM_APP_HOOK_READY, WM_APP_HOOK_REFRESH_OK, WM_APP_HOOK_SHUTDOWN, WM_APP_LOG_WARNING,
     WM_APP_RELOAD_CONFIG,
@@ -392,25 +393,33 @@ unsafe fn wndproc_impl(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> 
             let _ = outcome;
             0
         }
-        // Settings requests a capture lease (or disarms it). Forwarded to the Hook Thread.
-        // `lParam` carries the Settings window HWND; daemon derives the PID off the callback path.
+        // Settings requests a capture lease (or disarms it). Forwarded to the
+        // Hook Thread unchanged: `wParam` is the lease level, `lParam` is
+        // Settings' own process id — never a window handle. `DEF-3` was this
+        // message being read as an HWND on this side while Settings sent a
+        // PID; the fix is to stop converting it, not to convert it correctly.
         m if m == WM_APP_CAPTURE_LEASE => {
             if data.hook_thread_id != 0 {
-                let hwnd_settings = lparam as HWND;
-                let mut pid: u32 = 0;
-                if hwnd_settings != 0 {
-                    // SAFETY: `&mut pid` is a live local out-param. `hwnd_settings` is a handle
-                    // passed by Settings via IPC; `GetWindowThreadProcessId` safely verifies it.
-                    unsafe {
-                        GetWindowThreadProcessId(hwnd_settings, &mut pid);
-                    }
+                let level = wparam;
+                if level != CAPTURE_LEASE_NONE {
+                    // Resolve Settings' hidden receiver window once, here,
+                    // off the Hook thread's callback path — never per
+                    // keystroke — so the Hook thread can post
+                    // `WM_APP_RECORDED_CHORD` back with a cheap
+                    // `PostMessageW` against an already-known handle.
+                    let class = wide(SETTINGS_HOOK_WINDOW_CLASS);
+                    let title = wide(SETTINGS_HOOK_WINDOW_TITLE);
+                    // SAFETY: `class` and `title` are NUL-terminated wide
+                    // string locals that outlive this call. `FindWindowW`
+                    // returns 0 if Settings' receiver window does not exist
+                    // (not running, or not yet created), handled as "no
+                    // report target" rather than an error.
+                    let report_hwnd = unsafe { FindWindowW(class.as_ptr(), title.as_ptr()) };
+                    crate::hook::set_report_target(report_hwnd);
+                } else {
+                    crate::hook::set_report_target(0);
                 }
-                let _ = PostThreadMessageW(
-                    data.hook_thread_id,
-                    WM_APP_HOOK_LEASE,
-                    wparam,
-                    pid as isize,
-                );
+                let _ = PostThreadMessageW(data.hook_thread_id, WM_APP_HOOK_LEASE, wparam, lparam);
             }
             0
         }
