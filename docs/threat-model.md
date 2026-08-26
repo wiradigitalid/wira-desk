@@ -118,12 +118,37 @@ anyone who can overwrite the executable at the registered path gains a program t
 elevated at logon without the user seeing anything.
 
 The task stores an absolute path and sets no working directory, so the path itself cannot be
-hijacked. The exposure is filesystem permissions on the install location, and that is the
-user's to get right:
+hijacked. The exposure is filesystem permissions on the install location, and the decision
+about where to install remains the user's:
 
 > Install Wira Desk in a directory only administrators can write — `%ProgramFiles%` or
 > similar. Do not enable auto-start from a build sitting in `Downloads`, `Desktop`, or any
 > other user-writable folder.
+
+Two things about that absolute path were left to the reader longer than they should have
+been, and both are now handled in code.
+
+**The frozen path could go stale, and it failed in the direction that hurts.** `/TR` is
+captured when auto-start is switched on, and nothing compared it against reality afterwards —
+the existence check that drives the tray checkmark reads an exit code, not a path. A user who
+first ran the daemon from `Downloads`, enabled auto-start, and then did the right thing by
+installing into `%ProgramFiles%` was left with a logon task still aimed at the download. The
+protected copy was the one they used; the user-writable copy was the one Windows launched
+elevated at every logon. `autostart::refresh_registered_path` now re-registers the task from
+`current_exe()` on every start, so the action follows the binary.
+
+**The install location's permissions are now read, not assumed.** `acl` reads the DACL of the
+executable and of its directory and reports whether a non-administrative principal holds a
+right that would let it replace either — with three outcomes, because a DACL that could not be
+read is deliberately not folded into "safe". When the answer is that it could be replaced, the
+daemon raises a Tier-2 warning naming the path.
+
+This **warns and does not refuse**, and that is a decision rather than an omission. Building
+this project puts a binary in `target\release`, which is exactly the shape the check
+condemns; a guard standing between a maintainer and their own build output gets switched off,
+and a switched-off guard protects nobody. So the check informs the person who owns the
+decision and leaves it with them. The residual risk below is unchanged in kind — it is now
+visible rather than silent.
 
 ### Window-message IPC
 
@@ -214,7 +239,12 @@ on — not to restate what the function does.
 Stated because a threat model that lists only what it solved is not usable.
 
 1. **Auto-start plus a user-writable install directory is an unprompted elevation path.**
-   Not fixable in code; it depends on where the user installs the binary.
+   Still not *fixable* in code — it depends on where the user installs the binary — but no
+   longer invisible: the daemon reads the location's permissions and raises a Tier-2 warning
+   when a non-administrator could replace the executable, and it re-points a stale task at
+   the running binary. The warning does not block, so a user who proceeds anyway keeps the
+   exposure. What changed is that they proceed knowing. See
+   [Auto-start is an elevation path](#auto-start-is-an-elevation-path).
 2. **A hostile `config.toml` write influences elevated behaviour.** Bounded to typed fields
    with no path or command among them, but not nil.
 3. **Releases are unsigned.** See `SECURITY.md` for what can be verified today.

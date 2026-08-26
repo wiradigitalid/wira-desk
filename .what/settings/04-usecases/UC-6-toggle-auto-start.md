@@ -34,6 +34,9 @@ User toggles the Auto-Start setting in Settings or selects Auto-Start from the s
 | From step | Condition | What happens |
 | --- | --- | --- |
 | Step 1 | User toggles Auto-Start directly from the tray context menu | System creates or deletes the scheduled task immediately and persists the new setting to `config.toml`. |
+| Step 2 | The executable sits where a non-administrator could replace it — a build output folder, `Downloads`, or any directory granting a write right to a non-administrative principal | System registers the task anyway, then raises a Tier-2 warning naming the path and what to do about it: one line in `wiradesk.log` plus the latched tray dot, no modal. Registration is never refused and the toggle never reverts (BR-7) |
+| Step 2 | The location's permissions cannot be read | System registers the task and stays silent to the user, recording the failure only on the developer diagnostic path. An unreadable permission is not reported as either safe or unsafe |
+| Step 6 | The executable has moved since the task was registered — typically because the user installed it properly after first running it from a download | On its next start the daemon re-registers the task from its own path, so the logon action follows the binary instead of continuing to launch whatever is at the old location (BR-7) |
 
 ## Failure Flows
 
@@ -50,4 +53,5 @@ Windows Task Scheduler is configured to launch Wira Desk silently at user logon 
 
 - `BR-1`
 - `BR-4`
+- `BR-7`
 - `LBR-ST-4`

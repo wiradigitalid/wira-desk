@@ -67,6 +67,24 @@ Both of these matter more than anything else on this page:
 - **Do not enable auto-start from a build in `Downloads`, `Desktop`, or any other
   user-writable folder**, for the same reason.
 
+Both points are now **checked rather than only asked for**, and it is worth being precise
+about what that does and does not mean:
+
+- The daemon reads the permissions of its own executable and of the directory holding it. If
+  a principal that is not an administrator holds a right that would let it replace either,
+  and auto-start is registered, you get a Tier-2 warning â€” a line in `wiradesk.log` and the
+  warning dot on the tray icon. **It warns; it does not refuse.** Auto-start still turns on,
+  because a check that blocked running from a build directory would be switched off rather
+  than heeded, and the choice is yours to make knowingly. Silence here is not a clean bill of
+  health for anything but this one question.
+- The stored path no longer goes stale. Because the task's action is an absolute path frozen
+  when auto-start was switched on, moving the executable used to leave the logon task aimed
+  at the old location â€” so installing properly *after* first running from `Downloads` left
+  the download as the thing Windows launched elevated. The daemon now re-points the task at
+  itself on every start.
+
+Neither is a substitute for installing in the right place. They tell you when you have not.
+
 ## Design notes
 
 - Elevation exists for one purpose: activating and moving windows owned by higher-integrity
