@@ -19,16 +19,17 @@ use windows_sys::Win32::UI::Shell::{
 };
 use windows_sys::Win32::UI::WindowsAndMessaging::{
     ChangeWindowMessageFilterEx, CreateWindowExW, DefWindowProcW, DestroyIcon, DispatchMessageW,
-    GetMessageW, GetWindowLongPtrW, PostQuitMessage, PostThreadMessageW, RegisterClassW,
-    RegisterWindowMessageW, SetWindowLongPtrW, TranslateMessage, CREATESTRUCTW, GWLP_USERDATA,
-    HICON, MSG, MSGFLT_ALLOW, WM_CONTEXTMENU, WM_CREATE, WM_DESTROY, WM_RBUTTONUP, WNDCLASSW,
-    WS_EX_TOOLWINDOW, WS_OVERLAPPED,
+    GetMessageW, GetWindowLongPtrW, GetWindowThreadProcessId, PostQuitMessage, PostThreadMessageW,
+    RegisterClassW, RegisterWindowMessageW, SetWindowLongPtrW, TranslateMessage, CREATESTRUCTW,
+    GWLP_USERDATA, HICON, MSG, MSGFLT_ALLOW, WM_CONTEXTMENU, WM_CREATE, WM_DESTROY, WM_RBUTTONUP,
+    WNDCLASSW, WS_EX_TOOLWINDOW, WS_OVERLAPPED,
 };
 
 use shared::constants::{
-    DAEMON_WINDOW_CLASS, DAEMON_WINDOW_TITLE, HOOK_RETRY_MAX, WM_APP_COMMAND_READY,
-    WM_APP_HOOK_DEAD, WM_APP_HOOK_INIT_FAILED, WM_APP_HOOK_READY, WM_APP_HOOK_REFRESH_OK,
-    WM_APP_HOOK_SHUTDOWN, WM_APP_LOG_WARNING, WM_APP_RELOAD_CONFIG,
+    DAEMON_WINDOW_CLASS, DAEMON_WINDOW_TITLE, HOOK_RETRY_MAX, WM_APP_CAPTURE_LEASE,
+    WM_APP_COMMAND_READY, WM_APP_HOOK_DEAD, WM_APP_HOOK_INIT_FAILED, WM_APP_HOOK_LEASE,
+    WM_APP_HOOK_READY, WM_APP_HOOK_REFRESH_OK, WM_APP_HOOK_SHUTDOWN, WM_APP_LOG_WARNING,
+    WM_APP_RELOAD_CONFIG,
 };
 
 // Debug verification seams exist only in debug builds; gating the import keeps
@@ -389,6 +390,28 @@ unsafe fn wndproc_impl(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> 
             #[cfg(debug_assertions)]
             debug_trace(&format!("RELOAD_CONFIG: {outcome:?}"));
             let _ = outcome;
+            0
+        }
+        // Settings requests a capture lease (or disarms it). Forwarded to the Hook Thread.
+        // `lParam` carries the Settings window HWND; daemon derives the PID off the callback path.
+        m if m == WM_APP_CAPTURE_LEASE => {
+            if data.hook_thread_id != 0 {
+                let hwnd_settings = lparam as HWND;
+                let mut pid: u32 = 0;
+                if hwnd_settings != 0 {
+                    // SAFETY: `&mut pid` is a live local out-param. `hwnd_settings` is a handle
+                    // passed by Settings via IPC; `GetWindowThreadProcessId` safely verifies it.
+                    unsafe {
+                        GetWindowThreadProcessId(hwnd_settings, &mut pid);
+                    }
+                }
+                let _ = PostThreadMessageW(
+                    data.hook_thread_id,
+                    WM_APP_HOOK_LEASE,
+                    wparam,
+                    pid as isize,
+                );
+            }
             0
         }
         // Debug-only (Task 0): posted externally during runtime verification.

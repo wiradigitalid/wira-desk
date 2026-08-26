@@ -115,6 +115,25 @@ impl HookIdentityCollector {
         }
     }
 
+    /// Read the foreground window's process ID directly, without reading process path or class.
+    pub fn foreground_pid(&self) -> u32 {
+        // SAFETY: `GetForegroundWindow` takes no arguments and touches no memory we own.
+        // It reads window-manager state without messaging any other thread.
+        let hwnd = unsafe { GetForegroundWindow() };
+        if hwnd == 0 {
+            return 0;
+        }
+        let mut pid: u32 = 0;
+        // SAFETY: `&mut pid` is a live out-parameter of valid u32 size. An unusable hwnd
+        // returns 0 and leaves pid at 0.
+        let thread = unsafe { GetWindowThreadProcessId(hwnd, &mut pid) };
+        if thread == 0 {
+            0
+        } else {
+            pid
+        }
+    }
+
     fn fill_class(&mut self, hwnd: HWND) {
         // SAFETY: the third argument is the buffer's true capacity in UTF-16 units — `self.class`
         // is declared `[u16; CLASS_CAPACITY]`, so the two cannot drift — and that count is the

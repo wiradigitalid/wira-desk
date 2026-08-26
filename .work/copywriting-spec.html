@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Wira Desk Copywriting Specification</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-page: #121418;
+      --bg-surface: #191D23;
+      --bg-card: #20242B;
+      --bg-card-hover: #272C35;
+      --bg-subtle: #15181E;
+      --stroke-card: rgba(255, 255, 255, 0.08);
+      --stroke-divider: rgba(255, 255, 255, 0.06);
+      --accent: #4CC2FF;
+      --accent-subtle: rgba(76, 194, 255, 0.12);
+      --text-primary: #F3F5F8;
+      --text-secondary: #A0A6B4;
+      --text-tertiary: #6B7280;
+      --success: #6CCB5F;
+      --code-bg: #101216;
+    }
+
+    @media (prefers-color-scheme: light) {
+      :root:not([data-theme="dark"]) {
+        --bg-page: #F0F3F8;
+        --bg-surface: #F8FAFC;
+        --bg-card: #FFFFFF;
+        --bg-card-hover: #F1F5F9;
+        --bg-subtle: #E2E8F0;
+        --stroke-card: rgba(0, 0, 0, 0.08);
+        --stroke-divider: rgba(0, 0, 0, 0.06);
+        --accent: #0067C0;
+        --accent-subtle: rgba(0, 103, 192, 0.10);
+        --text-primary: #0F172A;
+        --text-secondary: #475569;
+        --text-tertiary: #64748B;
+        --success: #16A34A;
+        --code-bg: #F8FAFC;
+      }
+    }
+
+    :root[data-theme="light"] {
+      --bg-page: #F0F3F8;
+      --bg-surface: #F8FAFC;
+      --bg-card: #FFFFFF;
+      --bg-card-hover: #F1F5F9;
+      --bg-subtle: #E2E8F0;
+      --stroke-card: rgba(0, 0, 0, 0.08);
+      --stroke-divider: rgba(0, 0, 0, 0.06);
+      --accent: #0067C0;
+      --accent-subtle: rgba(0, 103, 192, 0.10);
+      --text-primary: #0F172A;
+      --text-secondary: #475569;
+      --text-tertiary: #64748B;
+      --success: #16A34A;
+      --code-bg: #F8FAFC;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', sans-serif;
+      background-color: var(--bg-page);
+      color: var(--text-primary);
+      line-height: 1.6;
+      padding: 40px 24px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .container {
+      max-width: 880px;
+      width: 100%;
+    }
+
+    header {
+      margin-bottom: 36px;
+      border-bottom: 1px solid var(--stroke-divider);
+      padding-bottom: 24px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--accent);
+      background: var(--accent-subtle);
+      padding: 4px 10px;
+      border-radius: 999px;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background-color: var(--success);
+    }
+
+    h1 {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 8px;
+      color: var(--text-primary);
+      text-wrap: balance;
+    }
+
+    .subtitle {
+      font-size: 15px;
+      color: var(--text-secondary);
+      max-width: 650px;
+    }
+
+    .grid {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .section-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--stroke-card);
+      border-radius: 12px;
+      padding: 24px;
+      position: relative;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 16px;
+    }
+
+    .card-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .card-tag {
+      font-size: 11px;
+      font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-tertiary);
+      background: var(--bg-subtle);
+      padding: 3px 8px;
+      border-radius: 4px;
+    }
+
+    .dialog-preview {
+      background: var(--bg-surface);
+      border: 1px solid var(--stroke-card);
+      border-radius: 8px;
+      padding: 20px;
+      margin: 14px 0;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    }
+
+    .dialog-titlebar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 14px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--stroke-divider);
+    }
+
+    .dialog-content {
+      font-size: 14px;
+      color: var(--text-primary);
+      line-height: 1.6;
+    }
+
+    .dialog-content strong {
+      font-size: 16px;
+      display: block;
+      margin-bottom: 8px;
+    }
+
+    .code-block {
+      background: var(--code-bg);
+      border: 1px solid var(--stroke-card);
+      border-radius: 6px;
+      padding: 14px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12.5px;
+      color: var(--text-secondary);
+      overflow-x: auto;
+      margin-top: 12px;
+    }
+
+    .highlight {
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .meta-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 14px;
+      font-size: 13px;
+    }
+
+    .meta-table th, .meta-table td {
+      padding: 10px 12px;
+      text-align: left;
+      border-bottom: 1px solid var(--stroke-divider);
+    }
+
+    .meta-table th {
+      color: var(--text-tertiary);
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 11px;
+      letter-spacing: 0.05em;
+    }
+
+    .meta-table td {
+      color: var(--text-secondary);
+    }
+
+    .meta-table td.primary {
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="badge">
+        <span class="status-dot"></span>
+        Verified & Synchronized
+      </div>
+      <h1>Wira Desk Copywriting Specification</h1>
+      <p class="subtitle">Detailed breakdown of the updated copy in the Tray About Dialog and Settings About Pane following the Fluent 2 design language ratification.</p>
+    </header>
+
+    <div class="grid">
+      <!-- Section 1: Win32 Native Tray Dialog -->
+      <section>
+        <div class="section-title">
+          <span>1. Win32 Tray "About" Dialog</span>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Native System MessageBox</div>
+              <p style="font-size: 12.5px; color: var(--text-secondary); margin-top: 2px;">Triggered via System Tray Context Menu &rarr; <code>A&bout</code></p>
+            </div>
+            <span class="card-tag">crates/daemon/src/menu.rs:234</span>
+          </div>
+
+          <div class="dialog-preview">
+            <div class="dialog-titlebar">
+              <span>ℹ About Wira Desk</span>
+            </div>
+            <div class="dialog-content">
+              <strong>Wira Desk v0.1.0</strong>
+              <p>Same-application window switcher and window arrangement for Windows 10/11.</p>
+              <p style="margin-top: 8px; color: var(--text-secondary);">Runs quietly in the background as an elevated system tray service.</p>
+            </div>
+          </div>
+
+          <div class="code-block">
+<span style="color: var(--text-tertiary);">// Implementation source in menu.rs</span>
+<span class="highlight">let</span> text = format!(
+    <span style="color: #6CCB5F;">"Wira Desk v{}\n\nSame-application window switcher and window arrangement for Windows 10/11.\n\nRuns quietly in the background as an elevated system tray service."</span>,
+    env!(<span style="color: #6CCB5F;">"CARGO_PKG_VERSION"</span>)
+);
+message_box(hwnd, &text, <span style="color: #6CCB5F;">"About Wira Desk"</span>, MB_OK | MB_ICONINFORMATION);
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 2: Settings UI 5th Pane -->
+      <section>
+        <div class="section-title">
+          <span>2. Settings Window "About" Pane</span>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Fluent 2 Mica Shell — 5th Navigation Pane</div>
+              <p style="font-size: 12.5px; color: var(--text-secondary); margin-top: 2px;">Rendered inside <code>wiradesk-settings.exe</code> (Accessible & High-DPI optimized)</p>
+            </div>
+            <span class="card-tag">crates/settings/src/main.rs:1609</span>
+          </div>
+
+          <div class="dialog-preview">
+            <div class="dialog-content">
+              <strong>Wira Desk (WiraDex)</strong>
+              <div style="font-size: 13px; color: var(--accent); font-weight: 600; margin-bottom: 4px;">Version 0.1.0</div>
+              <div style="font-size: 12px; color: var(--text-tertiary); margin-bottom: 12px;">Typeface: Segoe UI Variable Text (System Loaded)</div>
+
+              <div style="background: var(--bg-card); border: 1px solid var(--stroke-card); border-radius: 8px; padding: 14px;">
+                <p style="font-size: 13px; color: var(--text-secondary);">Wira Desk switches smoothly between windows of the active application on your current monitor.</p>
+                <p style="font-size: 12px; color: var(--text-tertiary); margin-top: 6px;">Designed to be invisible, fast, and resource-efficient for all-day multitasking.</p>
+              </div>
+            </div>
+          </div>
+
+          <table class="meta-table">
+            <thead>
+              <tr>
+                <th>Element</th>
+                <th>Copy / Value</th>
+                <th>Target Intent</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="primary">Identity</td>
+                <td>Wira Desk (WiraDex)</td>
+                <td>Official product & package branding</td>
+              </tr>
+              <tr>
+                <td class="primary">Core Value</td>
+                <td>Same-application window switcher</td>
+                <td>Clear, non-technical explanation of macOS-like Cmd+`</td>
+              </tr>
+              <tr>
+                <td class="primary">Daemon Footprint</td>
+                <td>Invisible, fast, and resource-efficient</td>
+                <td>Reinforces minimal static RAM footprint (&lt;2MB)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </div>
+</body>
+</html>

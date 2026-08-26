@@ -151,6 +151,274 @@ pub fn vk_from_name(name: &str) -> Option<u16> {
     Some(vk)
 }
 
+/// Category of Windows OS hotkey reservation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Reservation {
+    /// Immutable kernel / secure desktop chords (e.g. Win+L, Ctrl+Alt+Del).
+    Immutable,
+    /// Windows Shell / Explorer chords (e.g. Win+1..9, Win+D, Win+E).
+    ShellOwned,
+}
+
+/// Information about a reserved Windows system hotkey.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ReservedInfo {
+    pub kind: Reservation,
+    pub owner: &'static str,
+}
+
+/// Check if a parsed shortcut is a reserved Windows system hotkey.
+/// Reservation is evaluated per-chord, never per-key.
+pub fn reservation(sc: &Shortcut) -> Option<ReservedInfo> {
+    // 1. Immutable System Shortcuts
+    if sc.win && !sc.ctrl && !sc.alt && !sc.shift && sc.vk == 0x4C {
+        // Win + L
+        return Some(ReservedInfo {
+            kind: Reservation::Immutable,
+            owner: "lock your PC",
+        });
+    }
+
+    // 2. Escape Hatches (Product Invariant: never take the user's escape hatch)
+    if sc.alt && !sc.win && !sc.ctrl && !sc.shift {
+        if sc.vk == 0x09 {
+            // Alt + Tab
+            return Some(ReservedInfo {
+                kind: Reservation::Immutable,
+                owner: "the Windows window switcher",
+            });
+        }
+        if sc.vk == 0x73 {
+            // Alt + F4
+            return Some(ReservedInfo {
+                kind: Reservation::Immutable,
+                owner: "close the active window",
+            });
+        }
+    }
+
+    if sc.alt && sc.shift && !sc.win && !sc.ctrl && sc.vk == 0x09 {
+        // Alt + Shift + Tab
+        return Some(ReservedInfo {
+            kind: Reservation::Immutable,
+            owner: "the Windows reverse window switcher",
+        });
+    }
+
+    // 3. Shell-Owned Shortcuts (Win + Key)
+    if sc.win && !sc.ctrl && !sc.alt && !sc.shift {
+        match sc.vk {
+            0x31 => {
+                return Some(ReservedInfo {
+                    kind: Reservation::ShellOwned,
+                    owner: "the first app pinned to your taskbar",
+                })
+            }
+            0x32 => {
+                return Some(ReservedInfo {
+                    kind: Reservation::ShellOwned,
+                    owner: "the second app pinned to your taskbar",
+                })
+            }
+            0x33 => {
+                return Some(ReservedInfo {
+                    kind: Reservation::ShellOwned,
+                    owner: "the third app pinned to your taskbar",
+                })
+            }
+            0x34 => {
+                return Some(ReservedInfo {
+                    kind: Reservation::ShellOwned,
+                    owner: "the fourth app pinned to your taskbar",
+                })
+            }
+            0x35 => {
+                return Some(ReservedInfo {
+                    kind: Reservation::ShellOwned,
+                    owner: "the fifth app pinned to your taskbar",
+                })
+            }
+            0x36 => {
+                return Some(ReservedInfo {
+                    kind: Reservation::ShellOwned,
+                    owner: "the sixth app pinned to your taskbar",
+                })
+            }
+            0x37 => {
+                return Some(ReservedInfo {
+                    kind: Reservation::ShellOwned,
+                    owner: "the seventh app pinned to your taskbar",
+                })
+            }
+            0x38 => {
+                return Some(ReservedInfo {
+                    kind: Reservation::ShellOwned,
+                    owner: "the eighth app pinned to your taskbar",
+                })
+            }
+            0x39 => {
+                return Some(ReservedInfo {
+                    kind: Reservation::ShellOwned,
+                    owner: "the ninth app pinned to your taskbar",
+                })
+            }
+            0x30 => {
+                return Some(ReservedInfo {
+                    kind: Reservation::ShellOwned,
+                    owner: "the tenth app pinned to your taskbar",
+                })
+            }
+            0x44 => {
+                // Win + D
+                return Some(ReservedInfo {
+                    kind: Reservation::ShellOwned,
+                    owner: "show and hide your desktop",
+                });
+            }
+            0x45 => {
+                // Win + E
+                return Some(ReservedInfo {
+                    kind: Reservation::ShellOwned,
+                    owner: "File Explorer",
+                });
+            }
+            0x52 => {
+                // Win + R
+                return Some(ReservedInfo {
+                    kind: Reservation::ShellOwned,
+                    owner: "the Run dialog",
+                });
+            }
+            0x56 => {
+                // Win + V
+                return Some(ReservedInfo {
+                    kind: Reservation::ShellOwned,
+                    owner: "clipboard history",
+                });
+            }
+            0x5A => {
+                // Win + Z
+                return Some(ReservedInfo {
+                    kind: Reservation::ShellOwned,
+                    owner: "Snap Layouts",
+                });
+            }
+            0x09 => {
+                // Win + Tab
+                return Some(ReservedInfo {
+                    kind: Reservation::ShellOwned,
+                    owner: "Task View",
+                });
+            }
+            0x41 => {
+                // Win + A
+                return Some(ReservedInfo {
+                    kind: Reservation::ShellOwned,
+                    owner: "Quick Settings",
+                });
+            }
+            0x4E => {
+                // Win + N
+                return Some(ReservedInfo {
+                    kind: Reservation::ShellOwned,
+                    owner: "the notification center",
+                });
+            }
+            0x53 | 0x51 => {
+                // Win + S / Win + Q
+                return Some(ReservedInfo {
+                    kind: Reservation::ShellOwned,
+                    owner: "Windows Search",
+                });
+            }
+            0x49 => {
+                // Win + I
+                return Some(ReservedInfo {
+                    kind: Reservation::ShellOwned,
+                    owner: "Windows Settings",
+                });
+            }
+            0x58 => {
+                // Win + X
+                return Some(ReservedInfo {
+                    kind: Reservation::ShellOwned,
+                    owner: "the Quick Link menu",
+                });
+            }
+            0x25..=0x28 => {
+                // Win + Arrows
+                return Some(ReservedInfo {
+                    kind: Reservation::ShellOwned,
+                    owner: "Windows window snapping",
+                });
+            }
+            _ => {}
+        }
+    }
+
+    // Win + Shift + S (Snipping tool)
+    if sc.win && sc.shift && !sc.ctrl && !sc.alt && sc.vk == 0x53 {
+        return Some(ReservedInfo {
+            kind: Reservation::ShellOwned,
+            owner: "the Snipping Tool screenshot capture",
+        });
+    }
+
+    // Win + Ctrl + (D / F4) -> Virtual desktops creation and deletion
+    if sc.win && sc.ctrl && !sc.alt && !sc.shift && matches!(sc.vk, 0x44 | 0x73) {
+        return Some(ReservedInfo {
+            kind: Reservation::ShellOwned,
+            owner: "Windows virtual desktops",
+        });
+    }
+
+    None
+}
+
+/// Check if a parsed shortcut is hardcoded/reserved by the Windows operating system.
+pub fn is_reserved_system_shortcut(sc: &Shortcut) -> bool {
+    reservation(sc).is_some()
+}
+
+/// Suggest an available alternative modifier combination for a rejected chord.
+/// Tests candidate modifier layers deterministically against the reserved catalog
+/// and current draft fields.
+pub fn suggest_alternative<F>(sc: &Shortcut, is_field_conflict: F) -> Option<String>
+where
+    F: Fn(&str) -> bool,
+{
+    // Try deterministic modifier ladder
+    let ladder: [(bool, bool, bool, bool); 5] = [
+        (true, sc.win, sc.alt, sc.shift),  // + Ctrl
+        (sc.ctrl, sc.win, true, sc.shift), // + Alt
+        (true, sc.win, true, sc.shift),    // + Ctrl + Alt
+        (true, sc.win, sc.alt, true),      // + Ctrl + Shift
+        (true, sc.win, true, true),        // + Ctrl + Alt + Shift
+    ];
+
+    for (ctrl, win, alt, shift) in ladder {
+        let candidate = Shortcut {
+            win,
+            ctrl,
+            alt,
+            shift,
+            vk: sc.vk,
+        };
+        // 1. Must not be in the reserved catalog
+        if reservation(&candidate).is_some() {
+            continue;
+        }
+        // 2. Must produce a canonical string
+        if let Some(canonical) = candidate.to_canonical_string() {
+            // 3. Must not collide with another field in draft
+            if !is_field_conflict(&canonical) {
+                return Some(canonical);
+            }
+        }
+    }
+    None
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

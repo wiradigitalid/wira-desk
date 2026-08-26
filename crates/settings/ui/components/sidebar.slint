@@ -1,0 +1,157 @@
+import { Palette, Typography } from "../theme.slint";
+
+export component SidebarItem inherits Rectangle {
+    in property <string> text: "Pane";
+    in property <int> index: 0;
+    in property <bool> selected: false;
+
+    callback clicked();
+
+    height: 36px;
+    border-radius: 6px;
+    background: selected ? Palette.bg_card : (item_touch.has_hover ? Palette.bg_card_hover : Colors.transparent);
+
+    // Active Blue Vertical Indicator Pill
+    if selected : Rectangle {
+        width: 3.5px;
+        height: 20px;
+        x: 2px;
+        y: (parent.height - 20px) / 2;
+        border-radius: 2px;
+        background: Palette.accent_primary;
+    }
+
+    HorizontalLayout {
+        padding-left: 14px;
+        padding-right: 12px;
+        spacing: 10px;
+        alignment: start;
+
+        // Custom Vector Icon placeholder by index
+        Rectangle {
+            width: 14px;
+            height: 14px;
+            y: (parent.height - 14px) / 2;
+
+            if index == 0 : Path { // General (Gear / Sliders)
+                width: 14px; height: 14px;
+                stroke: selected ? Palette.accent_primary : Palette.text_secondary;
+                stroke-width: 1.2px;
+                MoveTo { x: 2; y: 4; } LineTo { x: 12; y: 4; }
+                MoveTo { x: 2; y: 7; } LineTo { x: 12; y: 7; }
+                MoveTo { x: 2; y: 10; } LineTo { x: 12; y: 10; }
+                MoveTo { x: 5; y: 2.5; } LineTo { x: 5; y: 5.5; }
+                MoveTo { x: 9; y: 5.5; } LineTo { x: 9; y: 8.5; }
+                MoveTo { x: 4; y: 8.5; } LineTo { x: 4; y: 11.5; }
+            }
+
+            if index == 1 : Path { // Shortcuts (Keyboard)
+                width: 14px; height: 14px;
+                stroke: selected ? Palette.accent_primary : Palette.text_secondary;
+                stroke-width: 1.2px;
+                MoveTo { x: 1; y: 3; } LineTo { x: 13; y: 3; }
+                LineTo { x: 13; y: 11; } LineTo { x: 1; y: 11; } LineTo { x: 1; y: 3; }
+                MoveTo { x: 3; y: 6; } LineTo { x: 5; y: 6; }
+                MoveTo { x: 7; y: 6; } LineTo { x: 7; y: 6; }
+                MoveTo { x: 9; y: 6; } LineTo { x: 11; y: 6; }
+                MoveTo { x: 4; y: 9; } LineTo { x: 10; y: 9; }
+            }
+
+            if index == 2 : Path { // Layout & Snapping (Split Windows)
+                width: 14px; height: 14px;
+                stroke: selected ? Palette.accent_primary : Palette.text_secondary;
+                stroke-width: 1.2px;
+                MoveTo { x: 1; y: 2; } LineTo { x: 13; y: 2; }
+                LineTo { x: 13; y: 12; } LineTo { x: 1; y: 12; } LineTo { x: 1; y: 2; }
+                MoveTo { x: 7; y: 2; } LineTo { x: 7; y: 12; }
+            }
+
+            if index == 3 : Path { // VM & Exceptions (Shield / Monitor)
+                width: 14px; height: 14px;
+                stroke: selected ? Palette.accent_primary : Palette.text_secondary;
+                stroke-width: 1.2px;
+                MoveTo { x: 2; y: 2; } LineTo { x: 12; y: 2; }
+                LineTo { x: 12; y: 9; } LineTo { x: 7; y: 12; }
+                LineTo { x: 2; y: 9; } LineTo { x: 2; y: 2; }
+            }
+
+            if index == 4 : Path { // About (Info circle)
+                width: 14px; height: 14px;
+                stroke: selected ? Palette.accent_primary : Palette.text_secondary;
+                stroke-width: 1.2px;
+                MoveTo { x: 7; y: 1; }
+                LineTo { x: 13; y: 7; } LineTo { x: 7; y: 13; }
+                LineTo { x: 1; y: 7; } LineTo { x: 7; y: 1; }
+                MoveTo { x: 7; y: 4; } LineTo { x: 7; y: 5; }
+                MoveTo { x: 7; y: 7; } LineTo { x: 7; y: 10; }
+            }
+        }
+
+        Text {
+            text: root.text;
+            font-family: Typography.font_family;
+            font-size: Typography.size_body;
+            font-weight: selected ? 600 : 400;
+            color: selected ? Palette.text_primary : Palette.text_secondary;
+            vertical-alignment: center;
+        }
+    }
+
+    item_touch := TouchArea {
+        clicked => {
+            root.clicked();
+        }
+    }
+}
+
+export component Sidebar inherits Rectangle {
+    in property <int> current_pane: 0;
+    callback pane_selected(int);
+
+    width: 175px;
+    background: Palette.bg_sidebar;
+
+    VerticalLayout {
+        padding-top: 12px;
+        padding-bottom: 12px;
+        padding-left: 8px;
+        padding-right: 8px;
+        spacing: 4px;
+        alignment: start;
+
+        SidebarItem {
+            text: "General";
+            index: 0;
+            selected: current_pane == 0;
+            clicked => { root.pane_selected(0); }
+        }
+
+        SidebarItem {
+            text: "Shortcuts";
+            index: 1;
+            selected: current_pane == 1;
+            clicked => { root.pane_selected(1); }
+        }
+
+        SidebarItem {
+            text: "Layout & Snapping";
+            index: 2;
+            selected: current_pane == 2;
+            clicked => { root.pane_selected(2); }
+        }
+
+        SidebarItem {
+            text: "VM & Exceptions";
+            index: 3;
+            selected: current_pane == 3;
+            clicked => { root.pane_selected(3); }
+        }
+
+        SidebarItem {
+            text: "About";
+            index: 4;
+            selected: current_pane == 4;
+            clicked => { root.pane_selected(4); }
+        }
+    }
+}

@@ -1,0 +1,39 @@
+import { Palette } from "../theme.slint";
+
+export component ToggleSwitch inherits Rectangle {
+    in-out property <bool> checked: false;
+    in property <bool> enabled: true;
+
+    callback toggled(bool);
+
+    width: 40px;
+    height: 20px;
+    border-radius: 10px;
+    background: checked ? (enabled ? Palette.accent_primary : Palette.text_tertiary) : Palette.bg_keycap;
+    border-width: 1px;
+    border-color: checked ? (enabled ? Palette.accent_primary : Palette.text_tertiary) : Palette.stroke_card;
+
+    animate background { duration: 120ms; easing: ease-out; }
+    animate border-color { duration: 120ms; easing: ease-out; }
+
+    // Sliding Pill Thumb (100% Mathematically Centered 4px padding in all directions)
+    Rectangle {
+        width: 12px;
+        height: 12px;
+        border-radius: 6px;
+        x: checked ? (parent.width - self.width - 4px) : 4px;
+        y: (parent.height - self.height) / 2;
+        background: checked ? (Palette.is_dark ? #101216 : #FFFFFF) : (Palette.is_dark ? #F3F5F8 : #1C1F24);
+
+        animate x { duration: 120ms; easing: ease-out; }
+    }
+
+    touch := TouchArea {
+        enabled: root.enabled;
+        clicked => {
+            root.checked = !root.checked;
+            root.toggled(root.checked);
+        }
+    }
+}
+

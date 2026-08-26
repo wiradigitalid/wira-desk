@@ -56,6 +56,8 @@ pub enum RejectReason {
     Malformed,
     /// Parses as a `Config`, but a shortcut string is not a shortcut.
     InvalidShortcut,
+    /// A shortcut is reserved by the Windows operating system.
+    ReservedShortcut,
 }
 
 impl RejectReason {
@@ -69,6 +71,9 @@ impl RejectReason {
             }
             RejectReason::InvalidShortcut => {
                 "Config reload skipped: shortcut is not parseable; keeping current settings"
+            }
+            RejectReason::ReservedShortcut => {
+                "Config reload skipped: contains reserved system shortcuts; keeping current settings"
             }
         }
     }
@@ -127,6 +132,20 @@ pub fn validate(text: &str) -> Result<(Config, HookSnapshot, WorkerSnapshot), Re
     let snap_maximize =
         Shortcut::parse(&cfg.snapping.snap_maximize).ok_or(RejectReason::InvalidShortcut)?;
     let stack = Shortcut::parse(&cfg.layout.stack_shortcut).ok_or(RejectReason::InvalidShortcut)?;
+
+    // Reject reserved shortcuts on reload
+    for sc in [
+        &primary,
+        &fallback,
+        &snap_left,
+        &snap_right,
+        &snap_maximize,
+        &stack,
+    ] {
+        if shared::shortcut::reservation(sc).is_some() {
+            return Err(RejectReason::ReservedShortcut);
+        }
+    }
 
     let hook = HookSnapshot {
         primary,

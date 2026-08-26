@@ -1,0 +1,347 @@
+import { Palette, Typography } from "theme.slint";
+import { Card, CardDivider } from "components/card.slint";
+
+export component OnboardingModal inherits Rectangle {
+    in property <int> current_step: 1; // 1 = Welcome, 2 = TrySwitching, 3 = Done
+    in property <int> focus_index: 0; // 0 = Window 1, 1 = Window 2
+    in property <bool> simulation_success: false;
+
+    callback next_clicked();
+    callback back_clicked();
+    callback skip_clicked();
+    callback finish_clicked();
+    callback simulate_clicked();
+
+    background: Palette.bg_card;
+    border-radius: 12px;
+    border-width: 1px;
+    border-color: Palette.stroke_card;
+
+    VerticalLayout {
+        padding-left: 28px;
+        padding-right: 28px;
+        padding-top: 18px;
+        padding-bottom: 24px;
+        alignment: space-between;
+
+        // 1. Top Section: Progress Bar + Heading + Description
+        VerticalLayout {
+            spacing: 12px;
+
+            // 3-Segment Progress Indicator Bar
+            HorizontalLayout {
+                spacing: 10px;
+                Rectangle {
+                    height: 4px;
+                    border-radius: 2px;
+                    background: root.current_step >= 1 ? Palette.accent_primary : Palette.bg_keycap;
+                }
+                Rectangle {
+                    height: 4px;
+                    border-radius: 2px;
+                    background: root.current_step >= 2 ? Palette.accent_primary : Palette.bg_keycap;
+                }
+                Rectangle {
+                    height: 4px;
+                    border-radius: 2px;
+                    background: root.current_step >= 3 ? Palette.accent_primary : Palette.bg_keycap;
+                }
+            }
+
+            // Headings
+            VerticalLayout {
+                spacing: 4px;
+                Text {
+                    text: root.current_step == 1 ? "Welcome to Wira Desk" :
+                          (root.current_step == 2 ? "Try switching windows" : "You are all set");
+                    font-family: Typography.font_family;
+                    font-size: 20px;
+                    font-weight: 700;
+                    color: Palette.text_primary;
+                }
+
+                Text {
+                    text: root.current_step == 1 ?
+                          "Wira Desk switches instantly between windows of the application you are currently using, instead of cycling through every open window like Alt+Tab. Window focus stays strictly on your active physical monitor and virtual desktop, eliminating multi-monitor distractions." :
+                          (root.current_step == 2 ?
+                          "Practice switching focus between two windows of the same app. Press Win + ` (backtick) on your keyboard or click the practice button below to watch focus shift with zero HUD delay." :
+                          "Wira Desk is now resident and active in your System Tray. You can customize shortcuts, snapping parameters, and VM passthrough rules anytime from Settings.");
+                    font-family: Typography.font_family;
+                    font-size: 13px;
+                    color: Palette.text_secondary;
+                    wrap: word-wrap;
+                }
+            }
+        }
+
+        // 2. Middle Content Area
+        VerticalLayout {
+            padding-top: 10px;
+            padding-bottom: 10px;
+
+            // Step 1: Feature Cards
+            if root.current_step == 1 : Rectangle {
+                background: Palette.bg_subtle;
+                border-radius: 10px;
+                border-width: 1px;
+                border-color: Palette.stroke_card;
+
+                VerticalLayout {
+                    padding: 12px;
+                    spacing: 8px;
+
+                    HorizontalLayout {
+                        spacing: 8px;
+                        Text { text: "⚡"; font-size: 18px; vertical-alignment: center; }
+                        VerticalLayout {
+                            Text { text: "Same-Application Spatial Cycling"; font-size: 13.5px; font-weight: 600; color: Palette.text_primary; }
+                            Text { text: "Press Win + ` to cycle focus between windows of the active app with zero visual delay."; font-size: 12px; color: Palette.text_secondary; }
+                        }
+                    }
+
+                    CardDivider {}
+
+                    HorizontalLayout {
+                        spacing: 8px;
+                        Text { text: "🔒"; font-size: 18px; vertical-alignment: center; }
+                        VerticalLayout {
+                            Text { text: "Spatial Preservation Lock"; font-size: 13.5px; font-weight: 600; color: Palette.text_primary; }
+                            Text { text: "Focus never jumps to another physical display or background virtual desktop unintentionally."; font-size: 12px; color: Palette.text_secondary; }
+                        }
+                    }
+                }
+            }
+
+            // Step 2: Interactive Sandbox Dummy Windows
+            if root.current_step == 2 : Rectangle {
+                background: Palette.bg_subtle;
+                border-radius: 10px;
+                border-width: 1px;
+                border-color: Palette.stroke_card;
+
+                VerticalLayout {
+                    padding: 12px;
+                    spacing: 10px;
+
+                    HorizontalLayout {
+                        spacing: 12px;
+
+                        // Dummy Window 1
+                        Rectangle {
+                            height: 72px;
+                            border-radius: 8px;
+                            background: root.focus_index == 0 ? Palette.bg_card_hover : Palette.bg_card;
+                            border-width: root.focus_index == 0 ? 1.5px : 1px;
+                            border-color: root.focus_index == 0 ? Palette.accent_primary : Palette.stroke_card;
+
+                            VerticalLayout {
+                                alignment: space-between;
+                                Rectangle {
+                                    height: 22px;
+                                    background: Palette.bg_keycap;
+                                    HorizontalLayout {
+                                        padding-left: 8px; padding-right: 8px; alignment: space-between;
+                                        Text { text: "Document 1"; font-size: 11px; font-weight: 600; color: root.focus_index == 0 ? Palette.accent_primary : Palette.text_secondary; vertical-alignment: center; }
+                                        Text { text: "✕"; font-size: 9.5px; color: Palette.text_tertiary; vertical-alignment: center; }
+                                    }
+                                }
+                                VerticalLayout {
+                                    padding-left: 8px; padding-bottom: 6px;
+                                    Text { text: "Project Brief.docx"; font-size: 11.5px; font-weight: 600; color: Palette.text_primary; }
+                                    Text { text: root.focus_index == 0 ? "Active Window" : "Background"; font-size: 10.5px; color: Palette.text_secondary; }
+                                }
+                            }
+                        }
+
+                        // Dummy Window 2
+                        Rectangle {
+                            height: 72px;
+                            border-radius: 8px;
+                            background: root.focus_index == 1 ? Palette.bg_card_hover : Palette.bg_card;
+                            border-width: root.focus_index == 1 ? 1.5px : 1px;
+                            border-color: root.focus_index == 1 ? Palette.accent_primary : Palette.stroke_card;
+
+                            VerticalLayout {
+                                alignment: space-between;
+                                Rectangle {
+                                    height: 22px;
+                                    background: Palette.bg_keycap;
+                                    HorizontalLayout {
+                                        padding-left: 8px; padding-right: 8px; alignment: space-between;
+                                        Text { text: "Document 2"; font-size: 11px; font-weight: 600; color: root.focus_index == 1 ? Palette.accent_primary : Palette.text_secondary; vertical-alignment: center; }
+                                        Text { text: "✕"; font-size: 9.5px; color: Palette.text_tertiary; vertical-alignment: center; }
+                                    }
+                                }
+                                VerticalLayout {
+                                    padding-left: 8px; padding-bottom: 6px;
+                                    Text { text: "Design System.docx"; font-size: 11.5px; font-weight: 600; color: Palette.text_primary; }
+                                    Text { text: root.focus_index == 1 ? "Active Window" : "Background"; font-size: 10.5px; color: Palette.text_secondary; }
+                                }
+                            }
+                        }
+                    }
+
+                    // Simulation Button + Live Feedback
+                    HorizontalLayout {
+                        spacing: 8px;
+                        alignment: start;
+
+                        Rectangle {
+                            width: 170px;
+                            height: 28px;
+                            border-radius: 6px;
+                            background: sim_touch.has_hover ? Palette.bg_card_hover : Palette.bg_keycap;
+                            border-width: 1px;
+                            border-color: Palette.stroke_card;
+
+                            Text {
+                                text: "Win + ` (Click to simulate)";
+                                font-family: Typography.font_mono;
+                                font-size: 11px;
+                                font-weight: 600;
+                                color: Palette.text_primary;
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
+                            }
+
+                            sim_touch := TouchArea {
+                                clicked => { root.simulate_clicked(); }
+                            }
+                        }
+
+                        if root.focus_index == 1 : Text {
+                            text: "✔ Focus shifted to Document 2";
+                            font-size: 12px;
+                            font-weight: 600;
+                            color: Palette.signal_success;
+                            vertical-alignment: center;
+                        }
+                    }
+                }
+            }
+
+            // Step 3: Resident Confirmation
+            if root.current_step == 3 : Rectangle {
+                background: Palette.bg_subtle;
+                border-radius: 10px;
+                border-width: 1px;
+                border-color: Palette.stroke_card;
+
+                VerticalLayout {
+                    padding: 12px;
+                    spacing: 8px;
+
+                    HorizontalLayout {
+                        spacing: 8px;
+                        Text { text: "🚀"; font-size: 18px; vertical-alignment: center; }
+                        VerticalLayout {
+                            Text { text: "System Tray Resident"; font-size: 13.5px; font-weight: 600; color: Palette.text_primary; }
+                            Text { text: "Wira Desk runs quietly in the background. Right-click the tray icon anytime for Settings."; font-size: 12px; color: Palette.text_secondary; }
+                        }
+                    }
+
+                    CardDivider {}
+
+                    HorizontalLayout {
+                        spacing: 8px;
+                        Text { text: "⌨"; font-size: 18px; vertical-alignment: center; }
+                        VerticalLayout {
+                            Text { text: "Fully Customizable"; font-size: 13.5px; font-weight: 600; color: Palette.text_primary; }
+                            Text { text: "Customize shortcuts, window snapping parameters, and VM passthrough rules anytime."; font-size: 12px; color: Palette.text_secondary; }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 3. Pinned Action Navigation Footer
+        HorizontalLayout {
+            alignment: space-between;
+            height: 34px;
+
+            if root.current_step == 1 : Rectangle {
+                width: 105px;
+                height: 34px;
+                border-radius: 6px;
+                background: skip_touch.has_hover ? Palette.bg_card_hover : Palette.bg_subtle;
+
+                Text {
+                    text: "Skip Tutorial";
+                    font-family: Typography.font_family;
+                    font-size: 12.5px;
+                    font-weight: 600;
+                    color: Palette.text_primary;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+
+                skip_touch := TouchArea {
+                    clicked => { root.skip_clicked(); }
+                }
+            }
+
+            if root.current_step > 1 : Rectangle {
+                width: 90px;
+                height: 34px;
+                border-radius: 6px;
+                background: back_touch.has_hover ? Palette.bg_card_hover : Palette.bg_subtle;
+
+                Text {
+                    text: "← Back";
+                    font-family: Typography.font_family;
+                    font-size: 12.5px;
+                    font-weight: 600;
+                    color: Palette.text_primary;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+
+                back_touch := TouchArea {
+                    clicked => { root.back_clicked(); }
+                }
+            }
+
+            if root.current_step < 3 : Rectangle {
+                width: 90px;
+                height: 34px;
+                border-radius: 6px;
+                background: next_touch.has_hover ? Palette.accent_hover : Palette.accent_primary;
+
+                Text {
+                    text: "Next";
+                    font-family: Typography.font_family;
+                    font-size: 13px;
+                    font-weight: 700;
+                    color: Palette.text_on_accent;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+
+                next_touch := TouchArea {
+                    clicked => { root.next_clicked(); }
+                }
+            }
+
+            if root.current_step == 3 : Rectangle {
+                width: 170px;
+                height: 34px;
+                border-radius: 6px;
+                background: finish_touch.has_hover ? Palette.accent_hover : Palette.accent_primary;
+
+                Text {
+                    text: "Start Using Wira Desk";
+                    font-family: Typography.font_family;
+                    font-size: 13px;
+                    font-weight: 700;
+                    color: Palette.text_on_accent;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+
+                finish_touch := TouchArea {
+                    clicked => { root.finish_clicked(); }
+                }
+            }
+        }
+    }
+}

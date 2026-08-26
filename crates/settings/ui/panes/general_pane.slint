@@ -1,0 +1,130 @@
+import { Palette, Typography } from "../theme.slint";
+import { Card, CardDivider } from "../components/card.slint";
+import { ToggleSwitch } from "../components/toggle_switch.slint";
+
+export component GeneralPane inherits VerticalLayout {
+    in-out property <bool> auto_start: false;
+    in property <bool> is_elevated: true;
+
+    callback auto_start_toggled(bool);
+
+    spacing: 12px;
+    alignment: start;
+
+    // Heading Section
+    VerticalLayout {
+        spacing: 2px;
+        Text {
+            text: "General Settings";
+            font-family: Typography.font_family;
+            font-size: Typography.size_heading;
+            font-weight: 700;
+            color: Palette.text_primary;
+        }
+        Text {
+            text: "Startup integration and multi-monitor spatial settings.";
+            font-family: Typography.font_family;
+            font-size: Typography.size_caption;
+            color: Palette.text_secondary;
+        }
+    }
+
+    // Card 1: Startup & System Integration
+    Card {
+        VerticalLayout {
+            padding: 16px;
+            spacing: 12px;
+
+            HorizontalLayout {
+                alignment: space-between;
+                VerticalLayout {
+                    spacing: 2px;
+                    horizontal-stretch: 1;
+                    Text {
+                        text: "Start Wira Desk with Windows";
+                        font-family: Typography.font_family;
+                        font-size: Typography.size_subheading;
+                        font-weight: 600;
+                        color: Palette.text_primary;
+                    }
+                    Text {
+                        text: "Runs quietly in the background as an elevated scheduled task.";
+                        font-family: Typography.font_family;
+                        font-size: Typography.size_caption;
+                        color: Palette.text_secondary;
+                        wrap: word-wrap;
+                    }
+                }
+
+                ToggleSwitch {
+                    checked <=> root.auto_start;
+                    toggled(val) => { root.auto_start_toggled(val); }
+                }
+            }
+        }
+    }
+
+    // Card 2: Spatial & Isolation Philosophy (Display only)
+    Card {
+        VerticalLayout {
+            padding: 16px;
+            spacing: 12px;
+
+            HorizontalLayout {
+                alignment: space-between;
+                VerticalLayout {
+                    spacing: 2px;
+                    horizontal-stretch: 1;
+                    Text {
+                        text: "Spatial Preservation Lock";
+                        font-family: Typography.font_family;
+                        font-size: Typography.size_subheading;
+                        font-weight: 600;
+                        color: Palette.text_primary;
+                    }
+                    Text {
+                        text: "Window focus cycles exclusively within the active physical monitor and virtual desktop.";
+                        font-family: Typography.font_family;
+                        font-size: Typography.size_caption;
+                        color: Palette.text_secondary;
+                        wrap: word-wrap;
+                    }
+                }
+
+                ToggleSwitch {
+                    checked: true;
+                    enabled: false;
+                }
+            }
+
+            CardDivider {}
+
+            HorizontalLayout {
+                alignment: space-between;
+                VerticalLayout {
+                    spacing: 2px;
+                    horizontal-stretch: 1;
+                    Text {
+                        text: "Show Unresponsive Windows (UX Honesty)";
+                        font-family: Typography.font_family;
+                        font-size: Typography.size_subheading;
+                        font-weight: 600;
+                        color: Palette.text_primary;
+                    }
+                    Text {
+                        text: "Ensures hanging windows are exposed cleanly to the user rather than hidden.";
+                        font-family: Typography.font_family;
+                        font-size: Typography.size_caption;
+                        color: Palette.text_secondary;
+                        wrap: word-wrap;
+                    }
+                }
+
+                ToggleSwitch {
+                    checked: true;
+                    enabled: false;
+                }
+            }
+        }
+    }
+}

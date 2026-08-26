@@ -35,7 +35,7 @@ undocumented_unsafe_blocks = "deny"
 missing_safety_doc = "deny"
 
 [profile.release]
-lto = true
+lto = "thin"
 opt-level = "z"
 strip = true
 panic = "abort"

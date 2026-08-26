@@ -1,0 +1,46 @@
+export global Palette {
+    in-out property <bool> is_dark: true;
+
+    // Background surfaces (Fluent 2 Mica Grounding)
+    out property <color> bg_page: is_dark ? #121418 : #F0F3F8;
+    out property <color> bg_mica: is_dark ? #191D23 : #F3F3F3;
+    out property <color> bg_sidebar: is_dark ? #15181E : #E8ECF2;
+    out property <color> bg_card: is_dark ? #20242B : #FFFFFF;
+    out property <color> bg_card_hover: is_dark ? #272C35 : #F1F5F9;
+    out property <color> bg_subtle: is_dark ? #1A1C21 : #E2E8F0;
+    out property <color> bg_keycap: is_dark ? #2B303A : #EAECEF;
+    out property <color> bg_conflict_keycap: is_dark ? #382A14 : #FFF4E5;
+
+    // Strokes & Dividers
+    out property <color> stroke_card: is_dark ? rgba(255, 255, 255, 0.08) : rgba(0, 0, 0, 0.08);
+    out property <color> stroke_divider: is_dark ? rgba(255, 255, 255, 0.06) : rgba(0, 0, 0, 0.06);
+
+    // Accent Colors
+    out property <color> accent_primary: is_dark ? #4CC2FF : #0067C0;
+    out property <color> accent_hover: is_dark ? #60CBFF : #1879CD;
+    out property <color> accent_subtle: is_dark ? rgba(76, 194, 255, 0.12) : rgba(0, 103, 192, 0.10);
+
+    // Text Colors
+    out property <color> text_primary: is_dark ? #F3F5F8 : #0F172A;
+    out property <color> text_secondary: is_dark ? #A0A6B4 : #475569;
+    out property <color> text_tertiary: is_dark ? #6B7280 : #64748B;
+    out property <color> text_on_accent: is_dark ? #101216 : #FFFFFF;
+
+    // Status Signals
+    out property <color> signal_success: is_dark ? #6CCB5F : #16A34A;
+    out property <color> signal_warning: is_dark ? #FFB900 : #D97706;
+    out property <color> signal_error: is_dark ? #FF5252 : #DC2626;
+    out property <color> close_hover: #E81123;
+}
+
+export global Typography {
+    out property <string> font_family: "Segoe UI Variable Text, Segoe UI, sans-serif";
+    out property <string> font_mono: "Cascadia Code, Consolas, monospace";
+
+    out property <length> size_title: 13.5px;
+    out property <length> size_heading: 18.5px;
+    out property <length> size_subheading: 13.5px;
+    out property <length> size_body: 13px;
+    out property <length> size_caption: 12px;
+    out property <length> size_small: 11px;
+}

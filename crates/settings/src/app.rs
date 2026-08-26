@@ -1,9 +1,12 @@
+#![allow(dead_code)]
+
 //! Settings shell, shortcut capturer, and first-run tutorial
 //! (Stories 5.3, 5.4, 5.5).
 //! Editing is *staged*: the user edits a draft, and nothing reaches disk until
 //! Save validates it. A rejected save leaves both the draft and the on-disk
 //! file untouched, so an invalid entry can be corrected instead of losing work.
 
+use shared::shortcut::Reservation;
 use shared::Config;
 
 use crate::persistence::{save_and_notify, validate_shortcut, SaveOutcome, ShortcutError};
@@ -241,9 +244,20 @@ pub fn describe(field: &str, err: ShortcutError) -> String {
         ShortcutError::Unrepresentable => {
             format!("{label} cannot be saved in a supported form.")
         }
-        ShortcutError::ReservedSystemShortcut => {
-            format!("{label} is reserved by Windows system hotkeys (e.g. Win+L, Alt+Tab).")
-        }
+        ShortcutError::Reserved(info) => match info.kind {
+            Reservation::Immutable => {
+                format!(
+                    "Windows uses this chord to {}. This one cannot be changed by any app.",
+                    info.owner
+                )
+            }
+            Reservation::ShellOwned => {
+                format!(
+                    "Windows uses this chord to {}. Try adding Ctrl (e.g. Ctrl + Win + key).",
+                    info.owner
+                )
+            }
+        },
         ShortcutError::DuplicateShortcut(other) => {
             let other_label = ShortcutField::from_key(other)
                 .map(ShortcutField::label)
@@ -252,6 +266,65 @@ pub fn describe(field: &str, err: ShortcutError) -> String {
                 "{label} conflicts with {other_label}. Each action must have a unique shortcut."
             )
         }
+    }
+}
+
+/// Verdict reported by KeyCheck diagnostic observer.
+/// Evaluates delivery reachability honestly without predicting or probing.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum KeyCheckVerdict {
+    /// Ready / idle
+    #[default]
+    Idle = 0,
+    /// Keystroke arrived and reached window
+    Received = 1,
+    /// Claimed by other app via RegisterHotKey, but Wira Desk hook receives it first
+    ClaimedByOtherApp = 2,
+    /// Intercepted by external LL hook / swallowed, chord dead
+    Intercepted = 3,
+    /// Daemon is not running (window-only checking)
+    DaemonNotRunning = 4,
+}
+
+/// Pure observer state for the KeyCheck live diagnostic instrument.
+/// DEC-005: purely observes what reaches the window without interfering
+/// with draft edits, dirty state, or Save validation.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct KeyCheckState {
+    pub mod_ctrl: bool,
+    pub mod_win: bool,
+    pub mod_alt: bool,
+    pub mod_shift: bool,
+    pub last_display: String,
+    pub last_canonical: String,
+    pub verdict: KeyCheckVerdict,
+    pub beat: bool,
+}
+
+impl KeyCheckState {
+    /// Update modifier state from physical keyboard events.
+    pub fn update_modifiers(&mut self, ctrl: bool, win: bool, alt: bool, shift: bool) {
+        self.mod_ctrl = ctrl;
+        self.mod_win = win;
+        self.mod_alt = alt;
+        self.mod_shift = shift;
+    }
+
+    /// Record a keystroke event that arrived at the window.
+    pub fn record_key(&mut self, display: &str, canonical: &str, daemon_running: bool) {
+        self.last_display = display.to_string();
+        self.last_canonical = canonical.to_string();
+        self.verdict = if daemon_running {
+            KeyCheckVerdict::Received
+        } else {
+            KeyCheckVerdict::DaemonNotRunning
+        };
+        self.beat = true;
+    }
+
+    /// Complete a beat pulse.
+    pub fn clear_beat(&mut self) {
+        self.beat = false;
     }
 }
 
@@ -269,6 +342,8 @@ pub struct SettingsModel {
     pub onboarding_focus_index: usize,
     /// Whether simulated cycling has been triggered at least once in Step 2.
     pub onboarding_simulated_success: bool,
+    /// Pure observer state for KeyCheck live keyboard responsiveness instrument.
+    pub key_check: KeyCheckState,
     /// The field the most recent successful capture overwrote, and the chord
     /// it held immediately before that. This is the only record of a
     /// displaced chord that exists, and it is what lets `swap_shortcuts` hand
@@ -290,6 +365,7 @@ impl SettingsModel {
             onboarding: onboarding.then_some(OnboardingStep::Welcome),
             onboarding_focus_index: 0,
             onboarding_simulated_success: false,
+            key_check: KeyCheckState::default(),
             last_capture: None,
         }
     }
@@ -914,7 +990,7 @@ mod tests {
         m.begin_capture(ShortcutField::Switcher);
         // Win + L is reserved for Lock Workstation
         let res = m.accept_capture("win+l");
-        assert_eq!(res, Err(ShortcutError::ReservedSystemShortcut));
+        assert!(matches!(res, Err(ShortcutError::Reserved(_))));
     }
 
     #[test]
@@ -1043,5 +1119,31 @@ mod tests {
                 assert_ne!(a, b);
             }
         }
+    }
+
+    #[test]
+    fn key_check_state_pure_observer_does_not_mutate_draft() {
+        let mut m = model();
+        let initial_draft = m.draft.clone();
+        assert!(!m.is_dirty());
+
+        // Update modifiers and record key
+        m.key_check.update_modifiers(true, false, true, false);
+        m.key_check.record_key("Alt + 1", "alt+1", true);
+
+        assert!(m.key_check.mod_ctrl);
+        assert!(m.key_check.mod_alt);
+        assert_eq!(m.key_check.last_display, "Alt + 1");
+        assert_eq!(m.key_check.last_canonical, "alt+1");
+        assert_eq!(m.key_check.verdict, KeyCheckVerdict::Received);
+        assert!(m.key_check.beat);
+
+        // Draft and is_dirty must remain 100% untouched
+        assert_eq!(m.draft, initial_draft);
+        assert!(!m.is_dirty());
+
+        // Clearing beat clears the heartbeat flag
+        m.key_check.clear_beat();
+        assert!(!m.key_check.beat);
     }
 }

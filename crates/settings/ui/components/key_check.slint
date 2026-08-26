@@ -1,0 +1,182 @@
+import { Palette, Typography } from "../theme.slint";
+import { Card } from "./card.slint";
+
+// Satu pill modifier. State aktif dibawa oleh background DAN border,
+// tidak hanya warna teks — state yang hanya diwakili warna gagal untuk
+// pengguna buta warna dan gagal di WCAG.
+component ModPill inherits Rectangle {
+    in property <string> label;
+    in property <bool> active;
+
+    width: 48px;
+    height: 20px;
+    border-radius: 4px;
+    background: root.active ? Palette.accent_subtle : Palette.bg_subtle;
+    border-width: 1px;
+    border-color: root.active ? Palette.accent_primary : Palette.stroke_card;
+
+    // Aksesibilitas: pill menyampaikan state lewat warna, jadi state itu
+    // harus juga ada sebagai teks — AccessKit tidak melihat warna.
+    accessible-role: text;
+    accessible-label: root.active ? root.label + " held" : root.label + " not held";
+
+    txt := Text {
+        text: root.label;
+        font-family: Typography.font_family;
+        font-size: 11px;
+        font-weight: root.active ? 700 : 600;
+        color: root.active ? Palette.accent_primary : Palette.text_tertiary;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+}
+
+export component KeyCheck inherits Card {
+    in property <bool> mod_ctrl: false;
+    in property <bool> mod_win: false;
+    in property <bool> mod_alt: false;
+    in property <bool> mod_shift: false;
+
+    in property <string> last_display: "";     // e.g. "Ctrl + Alt + Shift + Q"
+    in property <string> last_canonical: "";
+
+    // 0 = idle / default (ready)
+    // 1 = received & reached Wira Desk
+    // 2 = claimed by other app via RegisterHotKey, but Wira Desk LL hook catches it first
+    // 3 = intercepted by external LL hook / swallowed, chord dead
+    // 4 = daemon not running (window-only mode)
+    in property <int> verdict: 0;
+
+    // Diketuk oleh Rust pada setiap event yang diterima; dimatikan lagi oleh Timer.
+    in property <bool> beat: false;
+    callback beat_done();
+
+    property <bool> has_note: root.verdict >= 2;
+
+    VerticalLayout {
+        padding-left: 16px;
+        padding-right: 16px;
+        padding-top: 12px;
+        padding-bottom: 12px;
+        spacing: 10px;
+
+        HorizontalLayout {
+            spacing: 16px;
+            alignment: space-between;
+
+            // Zona 1 — identitas + liveness
+            HorizontalLayout {
+                spacing: 10px;
+                alignment: start;
+                horizontal-stretch: 1;
+
+                Rectangle {
+                    width: root.beat ? 11px : 8px;
+                    height: self.width;
+                    y: root.beat ? 3.5px : 5px;
+                    border-radius: self.width / 2;
+                    background: root.verdict == 4 ? Palette.text_tertiary : Palette.signal_success;
+                    opacity: root.beat ? 1.0 : 0.8;
+                    animate width, height, y, opacity { duration: 140ms; easing: ease-out; }
+                }
+
+                VerticalLayout {
+                    spacing: 2px;
+                    alignment: center;
+                    Text {
+                        text: "Key check";
+                        font-family: Typography.font_family;
+                        font-size: Typography.size_subheading;
+                        font-weight: 600;
+                        color: Palette.text_primary;
+                    }
+                    Text {
+                        text: root.verdict == 4
+                            ? "Wira Desk isn't running — only this window is being checked."
+                            : "Press any combination to verify what reaches Wira Desk.";
+                        font-family: Typography.font_family;
+                        font-size: Typography.size_caption;
+                        color: Palette.text_secondary;
+                        wrap: word-wrap;
+                    }
+                }
+            }
+
+            // Zona 2 — state modifier 2 kolom × 2 baris (hemat tempat)
+            VerticalLayout {
+                spacing: 4px;
+                alignment: center;
+
+                HorizontalLayout {
+                    spacing: 4px;
+                    alignment: center;
+                    ModPill { label: "Ctrl";  active: root.mod_ctrl;  }
+                    ModPill { label: "Win";   active: root.mod_win;   }
+                }
+
+                HorizontalLayout {
+                    spacing: 4px;
+                    alignment: center;
+                    ModPill { label: "Alt";   active: root.mod_alt;   }
+                    ModPill { label: "Shift"; active: root.mod_shift; }
+                }
+            }
+
+            // Zona 3 — readout chord (lebar lebih leluasa, single clean keycap)
+            VerticalLayout {
+                alignment: center;
+
+                Rectangle {
+                    width: 170px;
+                    height: 32px;
+                    border-radius: 6px;
+                    background: root.last_display == "" ? Palette.bg_subtle : Palette.bg_keycap;
+                    border-width: 1px;
+                    border-color: Palette.stroke_card;
+
+                    Text {
+                        text: root.last_display == "" ? "—" : root.last_display;
+                        font-family: Typography.font_family;
+                        font-size: 12px;
+                        font-weight: 600;
+                        color: root.last_display == "" ? Palette.text_tertiary : Palette.text_primary;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                        overflow: elide;
+                    }
+                }
+            }
+        }
+
+        // Zona 4 — Tip Windows Reservation & Diagnostic Note
+        VerticalLayout {
+            spacing: 4px;
+
+            if root.has_note : Text {
+                text: root.verdict == 2
+                    ? "Another app claimed " + root.last_display + " first, but Wira Desk still receives it before that app — this shortcut will work."
+                    : "" + root.last_display + " never reached Wira Desk. Another app running in the background is taking it first — often GPU software, Discord, or a game overlay. Try a different combination.";
+                font-family: Typography.font_family;
+                font-size: 11.5px;
+                font-weight: 600;
+                color: root.verdict == 2 ? Palette.signal_success : Palette.signal_warning;
+                wrap: word-wrap;
+            }
+
+            Text {
+                text: "💡 Tip: Windows reserves Win + 1..9, Win + E, Win + D. Use Ctrl + Win + ... for custom actions.";
+                font-family: Typography.font_family;
+                font-size: 11.5px;
+                color: Palette.accent_primary;
+                wrap: word-wrap;
+            }
+        }
+    }
+
+    // Inert saat diam: `running` false, tidak ada tick, tidak ada repaint.
+    Timer {
+        interval: 150ms;
+        running: root.beat;
+        triggered => { root.beat_done(); }
+    }
+}

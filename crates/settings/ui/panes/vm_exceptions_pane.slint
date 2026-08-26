@@ -1,0 +1,95 @@
+import { Palette, Typography } from "../theme.slint";
+import { Card, CardDivider } from "../components/card.slint";
+
+export component VmExceptionsPane inherits VerticalLayout {
+    in property <[string]> bypass_processes: [
+        "mstsc.exe",
+        "vmconnect.exe",
+        "vmware.exe",
+        "vmware-view.exe",
+        "VirtualBoxVM.exe",
+        "qemu-system-x86_64.exe",
+        "wfica32.exe",
+        "TeamViewer.exe",
+        "AnyDesk.exe",
+    ];
+
+    in property <[string]> bypass_classes: [
+        "VMwareUnityWindow",
+        "TscShellContainerClass",
+    ];
+
+    spacing: 12px;
+    alignment: start;
+
+    // Heading Section
+    VerticalLayout {
+        spacing: 2px;
+        Text {
+            text: "VM & Remote Desktop Exceptions";
+            font-family: Typography.font_family;
+            font-size: Typography.size_heading;
+            font-weight: 700;
+            color: Palette.text_primary;
+        }
+        Text {
+            text: "Applications that receive raw, unintercepted keystroke passthrough.";
+            font-family: Typography.font_family;
+            font-size: Typography.size_caption;
+            color: Palette.text_secondary;
+        }
+    }
+
+    // Card 1: Process Names
+    Card {
+        VerticalLayout {
+            padding: 16px;
+            spacing: 8px;
+
+            Text {
+                text: "Passthrough Executables";
+                font-family: Typography.font_family;
+                font-size: Typography.size_subheading;
+                font-weight: 600;
+                color: Palette.text_primary;
+            }
+
+            Text {
+                text: "Keystrokes are passed directly to these virtualization guests and remote sessions:";
+                font-family: Typography.font_family;
+                font-size: Typography.size_caption;
+                color: Palette.text_secondary;
+            }
+
+            for proc[i] in root.bypass_processes : Text {
+                text: "  •  " + proc;
+                font-family: Typography.font_mono;
+                font-size: 12px;
+                color: Palette.text_secondary;
+            }
+        }
+    }
+
+    // Card 2: Window Classes
+    Card {
+        VerticalLayout {
+            padding: 16px;
+            spacing: 8px;
+
+            Text {
+                text: "Passthrough Window Classes";
+                font-family: Typography.font_family;
+                font-size: Typography.size_subheading;
+                font-weight: 600;
+                color: Palette.text_primary;
+            }
+
+            for cls[i] in root.bypass_classes : Text {
+                text: "  •  " + cls;
+                font-family: Typography.font_mono;
+                font-size: 12px;
+                color: Palette.text_secondary;
+            }
+        }
+    }
+}

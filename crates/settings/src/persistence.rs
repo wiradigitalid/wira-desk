@@ -11,6 +11,8 @@ use shared::{config_path, Config, Shortcut};
 
 use windows_sys::Win32::UI::WindowsAndMessaging::{FindWindowW, PostMessageW};
 
+pub use shared::shortcut::{reservation, ReservedInfo};
+
 /// Why a submitted shortcut was rejected.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ShortcutError {
@@ -25,28 +27,10 @@ pub enum ShortcutError {
     NoModifier,
     /// Parses, but cannot be written back in canonical form.
     Unrepresentable,
-    /// Shortcut is reserved by the Windows operating system (e.g. Win+L, Alt+Tab).
-    ReservedSystemShortcut,
+    /// Shortcut is reserved by the Windows operating system with owner details.
+    Reserved(ReservedInfo),
     /// Shortcut is already assigned to another action in the configuration.
     DuplicateShortcut(&'static str),
-}
-
-/// Check if a parsed shortcut is hardcoded/reserved by the Windows operating system.
-pub fn is_reserved_system_shortcut(sc: &Shortcut) -> bool {
-    // Win + L (Lock), Win + D (Desktop), Win + Tab (Task View), Win + X (Quick Link Menu)
-    if sc.win && !sc.ctrl && !sc.alt && !sc.shift {
-        if let Some(name) = shared::shortcut::name_from_vk(sc.vk) {
-            match name.as_str() {
-                "l" | "d" | "tab" | "x" => return true,
-                _ => {}
-            }
-        }
-    }
-    // Alt + Tab (Windows Task Switcher)
-    if sc.alt && !sc.win && !sc.ctrl && !sc.shift && sc.vk == 0x09 {
-        return true;
-    }
-    false
 }
 
 /// Validate a submitted shortcut **before** any active configuration is
@@ -70,8 +54,8 @@ pub fn validate_shortcut(input: &str) -> Result<String, ShortcutError> {
             if !sc.has_modifier() {
                 return Err(ShortcutError::NoModifier);
             }
-            if is_reserved_system_shortcut(&sc) {
-                return Err(ShortcutError::ReservedSystemShortcut);
+            if let Some(res) = reservation(&sc) {
+                return Err(ShortcutError::Reserved(res));
             }
             sc.to_canonical_string()
                 .ok_or(ShortcutError::Unrepresentable)
@@ -166,6 +150,36 @@ pub fn save_and_notify(cfg: &Config, path: &Path) -> SaveOutcome {
 
     SaveOutcome::Saved {
         reload_signalled: signal_reload(),
+    }
+}
+
+/// Signal a temporary shortcut capture lease to the daemon (arm=true) or release it (arm=false).
+pub fn signal_capture_lease(arm: bool) -> bool {
+    let class: Vec<u16> = DAEMON_WINDOW_CLASS
+        .encode_utf16()
+        .chain(std::iter::once(0))
+        .collect();
+    let title: Vec<u16> = DAEMON_WINDOW_TITLE
+        .encode_utf16()
+        .chain(std::iter::once(0))
+        .collect();
+
+    // SAFETY: `class` and `title` are NUL-terminated wide string locals that outlive the call.
+    // `FindWindowW` returns 0 if the daemon is not running (handled cleanly). `lParam` carries
+    // the current process ID as a plain integer (`isize`), crossing the process boundary safely.
+    unsafe {
+        let hwnd = FindWindowW(class.as_ptr(), title.as_ptr());
+        if hwnd == 0 {
+            return false;
+        }
+        let wparam = if arm { 1 } else { 0 };
+        let lparam = std::process::id() as isize;
+        PostMessageW(
+            hwnd,
+            shared::constants::WM_APP_CAPTURE_LEASE,
+            wparam,
+            lparam,
+        ) != 0
     }
 }
 

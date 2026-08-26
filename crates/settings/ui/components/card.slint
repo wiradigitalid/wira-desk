@@ -1,0 +1,13 @@
+import { Palette } from "../theme.slint";
+
+export component Card inherits Rectangle {
+    border-radius: 8px;
+    background: Palette.bg_card;
+    border-width: 1px;
+    border-color: Palette.stroke_card;
+}
+
+export component CardDivider inherits Rectangle {
+    height: 1px;
+    background: Palette.stroke_divider;
+}

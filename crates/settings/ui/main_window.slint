@@ -1,0 +1,380 @@
+export { Palette, Typography } from "theme.slint";
+import { Palette, Typography } from "theme.slint";
+import { ScrollView } from "std-widgets.slint";
+import { Titlebar } from "components/titlebar.slint";
+import { Sidebar } from "components/sidebar.slint";
+import { GeneralPane } from "panes/general_pane.slint";
+import { ShortcutsPane } from "panes/shortcuts_pane.slint";
+import { LayoutPane } from "panes/layout_pane.slint";
+import { VmExceptionsPane } from "panes/vm_exceptions_pane.slint";
+import { AboutPane } from "panes/about_pane.slint";
+import { OnboardingModal } from "onboarding.slint";
+
+export component MainWindow inherits Window {
+    title: "Wira Desk";
+    no-frame: true;
+    background: Colors.transparent;
+
+    // Operational mode
+    in property <bool> is_onboarding: false;
+    in property <int> onboarding_step: 1;
+    in property <int> onboarding_focus_index: 0;
+    in property <bool> onboarding_sim_success: false;
+
+    // Window size binding
+    width: is_onboarding ? 580px : 760px;
+    height: is_onboarding ? 380px : 610px;
+
+    // Navigation & Panes
+    in-out property <int> current_pane: 0;
+
+    // General Pane Properties
+    in-out property <bool> auto_start: false;
+
+    // Shortcuts Pane Properties
+    in property <string> sc_switcher: "Win + `";
+    in property <string> sc_fallback: "Alt + `";
+    in property <string> sc_snap_left: "Ctrl + Win + ←";
+    in property <string> sc_snap_right: "Ctrl + Win + →";
+    in property <string> sc_snap_max: "Ctrl + Win + Enter";
+    in property <string> sc_stack: "Ctrl + Win + ↓";
+    in property <int> listening_field: -1;
+
+    in property <string> conflict_switcher: "";
+    in property <string> conflict_fallback: "";
+    in property <string> conflict_snap_left: "";
+    in property <string> conflict_snap_right: "";
+    in property <string> conflict_snap_max: "";
+    in property <string> conflict_stack: "";
+
+    in property <bool> can_swap_switcher: false;
+    in property <bool> can_swap_fallback: false;
+    in property <bool> can_swap_snap_left: false;
+    in property <bool> can_swap_snap_right: false;
+    in property <bool> can_swap_snap_max: false;
+    in property <bool> can_swap_stack: false;
+
+    // KeyCheck Properties
+    in property <bool> kc_mod_ctrl: false;
+    in property <bool> kc_mod_win: false;
+    in property <bool> kc_mod_alt: false;
+    in property <bool> kc_mod_shift: false;
+    in property <string> kc_last_display: "";
+    in property <string> kc_last_canonical: "";
+    in property <int> kc_verdict: 0;
+    in property <bool> kc_beat: false;
+
+    // Layout Pane Properties
+    in-out property <bool> enable_stack: false;
+    in-out property <int> stack_width_percent: 50;
+
+    // VM Exceptions Pane Properties
+    in property <[string]> bypass_processes: [
+        "mstsc.exe",
+        "vmconnect.exe",
+        "vmware.exe",
+        "vmware-view.exe",
+        "VirtualBoxVM.exe",
+        "qemu-system-x86_64.exe",
+        "wfica32.exe",
+        "TeamViewer.exe",
+        "AnyDesk.exe",
+    ];
+    in property <[string]> bypass_classes: [
+        "VMwareUnityWindow",
+        "TscShellContainerClass",
+    ];
+
+    // About Pane Properties
+    in property <string> app_version: "0.1.0";
+    in property <string> app_typeface: "Segoe UI Variable Text (System Loaded)";
+
+    // Footer & Save State
+    in property <bool> is_dirty: false;
+    in property <bool> has_conflict: false;
+    in property <string> status_message: "Wira Desk is Active";
+    in property <bool> status_is_error: false;
+    in property <bool> status_is_warning: false;
+    in property <bool> status_is_success: false;
+
+    // Callbacks to Rust
+    callback window_drag_requested();
+    callback window_minimize_clicked();
+    callback window_close_clicked();
+
+    callback pane_selected(int);
+    callback auto_start_toggled(bool);
+
+    callback start_capture(int);
+    callback swap_shortcuts(int);
+
+    callback stack_toggled(bool);
+    callback width_changed(int);
+
+    callback save_clicked();
+    callback revert_clicked();
+
+    callback onboarding_next();
+    callback onboarding_back();
+    callback onboarding_skip();
+    callback onboarding_finish();
+    callback onboarding_simulate();
+
+    callback key_pressed_event(string, bool, bool, bool, bool);
+    callback key_released_event(string, bool, bool, bool, bool);
+    callback key_check_beat_done();
+
+    forward-focus: key_handler;
+
+    key_handler := FocusScope {
+        key-pressed(event) => {
+            root.key_pressed_event(
+                event.text,
+                event.modifiers.control,
+                event.modifiers.alt,
+                event.modifiers.shift,
+                event.modifiers.meta
+            );
+            accept
+        }
+        key-released(event) => {
+            root.key_released_event(
+                event.text,
+                event.modifiers.control,
+                event.modifiers.alt,
+                event.modifiers.shift,
+                event.modifiers.meta
+            );
+            accept
+        }
+    }
+
+    // Outer Container
+    Rectangle {
+        width: parent.width;
+        height: parent.height;
+        background: Palette.bg_page;
+        border-radius: is_onboarding ? 12px : 8px;
+        clip: true;
+
+        if is_onboarding : VerticalLayout {
+            padding: 0px;
+            spacing: 0px;
+
+            Titlebar {
+                title: "Wira Desk";
+                is_onboarding: true;
+                drag_requested => { root.window_drag_requested(); }
+                close_clicked => { root.onboarding_skip(); }
+            }
+
+            OnboardingModal {
+                current_step: root.onboarding_step;
+                focus_index: root.onboarding_focus_index;
+                simulation_success: root.onboarding_sim_success;
+                next_clicked => { root.onboarding_next(); }
+                back_clicked => { root.onboarding_back(); }
+                skip_clicked => { root.onboarding_skip(); }
+                finish_clicked => { root.onboarding_finish(); }
+                simulate_clicked => { root.onboarding_simulate(); }
+            }
+        }
+
+        if !is_onboarding : VerticalLayout {
+            padding: 0px;
+            spacing: 0px;
+
+            // 1. Top Custom Titlebar
+            Titlebar {
+                title: "Wira Desk";
+                is_onboarding: false;
+                drag_requested => { root.window_drag_requested(); }
+                minimize_clicked => { root.window_minimize_clicked(); }
+                close_clicked => { root.window_close_clicked(); }
+            }
+
+            // 2. Middle Body: Left Sidebar + Right Mica Content Area
+            HorizontalLayout {
+                padding: 0px;
+                spacing: 0px;
+
+                Sidebar {
+                    current_pane: root.current_pane;
+                    pane_selected(idx) => { root.pane_selected(idx); }
+                }
+
+                Rectangle {
+                    background: Palette.bg_mica;
+                    horizontal-stretch: 1;
+
+                    ScrollView {
+                        viewport-x: 0px;
+
+                        VerticalLayout {
+                            padding-left: 20px;
+                            padding-right: 20px;
+                            padding-top: 16px;
+                            padding-bottom: 16px;
+                            alignment: start;
+                            spacing: 12px;
+
+                            if root.current_pane == 0 : GeneralPane {
+                                auto_start <=> root.auto_start;
+                                auto_start_toggled(val) => { root.auto_start_toggled(val); }
+                            }
+
+                            if root.current_pane == 1 : ShortcutsPane {
+                                sc_switcher: root.sc_switcher;
+                                sc_fallback: root.sc_fallback;
+                                sc_snap_left: root.sc_snap_left;
+                                sc_snap_right: root.sc_snap_right;
+                                sc_snap_max: root.sc_snap_max;
+                                sc_stack: root.sc_stack;
+                                listening_field: root.listening_field;
+
+                                conflict_switcher: root.conflict_switcher;
+                                conflict_fallback: root.conflict_fallback;
+                                conflict_snap_left: root.conflict_snap_left;
+                                conflict_snap_right: root.conflict_snap_right;
+                                conflict_snap_max: root.conflict_snap_max;
+                                conflict_stack: root.conflict_stack;
+
+                                can_swap_switcher: root.can_swap_switcher;
+                                can_swap_fallback: root.can_swap_fallback;
+                                can_swap_snap_left: root.can_swap_snap_left;
+                                can_swap_snap_right: root.can_swap_snap_right;
+                                can_swap_snap_max: root.can_swap_snap_max;
+                                can_swap_stack: root.can_swap_stack;
+
+                                kc_mod_ctrl: root.kc_mod_ctrl;
+                                kc_mod_win: root.kc_mod_win;
+                                kc_mod_alt: root.kc_mod_alt;
+                                kc_mod_shift: root.kc_mod_shift;
+                                kc_last_display: root.kc_last_display;
+                                kc_last_canonical: root.kc_last_canonical;
+                                kc_verdict: root.kc_verdict;
+                                kc_beat: root.kc_beat;
+
+                                start_capture(idx) => { root.start_capture(idx); }
+                                swap_shortcuts(idx) => { root.swap_shortcuts(idx); }
+                                key_check_beat_done => { root.key_check_beat_done(); }
+                            }
+
+                            if root.current_pane == 2 : LayoutPane {
+                                enable_stack <=> root.enable_stack;
+                                stack_width_percent <=> root.stack_width_percent;
+                                stack_toggled(val) => { root.stack_toggled(val); }
+                                width_changed(val) => { root.width_changed(val); }
+                            }
+
+                            if root.current_pane == 3 : VmExceptionsPane {
+                                bypass_processes: root.bypass_processes;
+                                bypass_classes: root.bypass_classes;
+                            }
+
+                            if root.current_pane == 4 : AboutPane {
+                                version: root.app_version;
+                                typeface: root.app_typeface;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 3. Sticky Bottom Save / Revert Footer Bar
+            Rectangle {
+                height: 56px;
+                background: Palette.bg_card;
+                border-width: 1px;
+                border-color: Palette.stroke_card;
+
+                HorizontalLayout {
+                    padding-left: 16px;
+                    padding-right: 16px;
+                    alignment: space-between;
+
+                    // Status Indicator Dot + Message (Constrained to prevent pushing buttons)
+                    HorizontalLayout {
+                        spacing: 8px;
+                        alignment: start;
+                        horizontal-stretch: 1;
+
+                        Rectangle {
+                            width: 8px;
+                            height: 8px;
+                            y: (parent.height - 8px) / 2;
+                            border-radius: 4px;
+                            background: root.status_is_error ? Palette.signal_error :
+                                       (root.status_is_warning ? Palette.signal_warning : Palette.signal_success);
+                        }
+
+                        Text {
+                            text: root.status_message;
+                            font-family: Typography.font_family;
+                            font-size: 12px;
+                            font-weight: 600;
+                            color: root.status_is_error ? Palette.signal_error :
+                                  (root.status_is_warning ? Palette.signal_warning :
+                                  (root.status_is_success ? Palette.signal_success : Palette.text_primary));
+                            vertical-alignment: center;
+                            overflow: elide;
+                        }
+                    }
+
+                    // Action Buttons (Revert & Save)
+                    HorizontalLayout {
+                        spacing: 8px;
+                        alignment: end;
+
+                        Rectangle {
+                            width: 80px;
+                            height: 32px;
+                            y: (parent.height - 32px) / 2;
+                            border-radius: 6px;
+                            background: root.is_dirty ? (revert_touch.has_hover ? Palette.bg_card_hover : Palette.bg_keycap) : Palette.bg_subtle;
+                            border-width: 1px;
+                            border-color: Palette.stroke_card;
+
+                            Text {
+                                text: "Revert";
+                                font-family: Typography.font_family;
+                                font-size: 12.5px;
+                                font-weight: 600;
+                                color: root.is_dirty ? Palette.text_primary : Palette.text_tertiary;
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
+                            }
+
+                            revert_touch := TouchArea {
+                                enabled: root.is_dirty;
+                                clicked => { root.revert_clicked(); }
+                            }
+                        }
+
+                        Rectangle {
+                            width: 120px;
+                            height: 32px;
+                            y: (parent.height - 32px) / 2;
+                            border-radius: 6px;
+                            background: save_touch.has_hover ? Palette.accent_hover : Palette.accent_primary;
+
+                            Text {
+                                text: "Save Changes";
+                                font-family: Typography.font_family;
+                                font-size: 13px;
+                                font-weight: 700;
+                                color: Palette.text_on_accent;
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
+                            }
+
+                            save_touch := TouchArea {
+                                clicked => { root.save_clicked(); }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

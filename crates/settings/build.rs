@@ -45,5 +45,9 @@ fn main() {
              nothing at runtime would report the omission."
         );
     }
+
+    let slint_ui_path = std::path::Path::new(&manifest_dir).join("ui/main_window.slint");
+    slint_build::compile(slint_ui_path).expect("Slint build failed");
+
     report("embedded");
 }

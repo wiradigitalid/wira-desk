@@ -1,0 +1,161 @@
+import { Palette, Typography } from "../theme.slint";
+import { Card, CardDivider } from "../components/card.slint";
+import { ShortcutRow } from "../components/shortcut_row.slint";
+import { KeyCheck } from "../components/key_check.slint";
+
+export component ShortcutsPane inherits VerticalLayout {
+    // 6 Shortcut Fields Data
+    in property <string> sc_switcher: "Win + `";
+    in property <string> sc_fallback: "Alt + `";
+    in property <string> sc_snap_left: "Ctrl + Win + ←";
+    in property <string> sc_snap_right: "Ctrl + Win + →";
+    in property <string> sc_snap_max: "Ctrl + Win + Enter";
+    in property <string> sc_stack: "Ctrl + Win + ↓";
+
+    in property <int> listening_field: -1; // -1 = idle, 0..5 = listening
+
+    in property <string> conflict_switcher: "";
+    in property <string> conflict_fallback: "";
+    in property <string> conflict_snap_left: "";
+    in property <string> conflict_snap_right: "";
+    in property <string> conflict_snap_max: "";
+    in property <string> conflict_stack: "";
+
+    in property <bool> can_swap_switcher: false;
+    in property <bool> can_swap_fallback: false;
+    in property <bool> can_swap_snap_left: false;
+    in property <bool> can_swap_snap_right: false;
+    in property <bool> can_swap_snap_max: false;
+    in property <bool> can_swap_stack: false;
+
+    // KeyCheck Diagnostic Card Properties
+    in property <bool> kc_mod_ctrl: false;
+    in property <bool> kc_mod_win: false;
+    in property <bool> kc_mod_alt: false;
+    in property <bool> kc_mod_shift: false;
+    in property <string> kc_last_display: "";
+    in property <string> kc_last_canonical: "";
+    in property <int> kc_verdict: 0;
+    in property <bool> kc_beat: false;
+
+    callback start_capture(int);
+    callback swap_shortcuts(int);
+    callback key_check_beat_done();
+
+    spacing: 12px;
+    alignment: start;
+
+    // Heading Section
+    VerticalLayout {
+        spacing: 2px;
+        Text {
+            text: "Shortcuts Configuration";
+            font-family: Typography.font_family;
+            font-size: Typography.size_heading;
+            font-weight: 700;
+            color: Palette.text_primary;
+        }
+        Text {
+            text: "Click any shortcut button to record physical key combinations directly.";
+            font-family: Typography.font_family;
+            font-size: Typography.size_caption;
+            color: Palette.text_secondary;
+        }
+    }
+
+    // Main Card containing all 6 rows
+    Card {
+        VerticalLayout {
+            padding: 0px;
+
+            ShortcutRow {
+                title: "Switch windows of the same application";
+                description: "Switches between windows of your active app on this monitor.";
+                current_shortcut: root.sc_switcher;
+                is_listening: root.listening_field == 0;
+                conflict_name: root.conflict_switcher;
+                can_swap: root.can_swap_switcher;
+                capture_clicked => { root.start_capture(0); }
+                swap_clicked => { root.swap_shortcuts(0); }
+            }
+
+            CardDivider {}
+
+            ShortcutRow {
+                title: "Fallback switch shortcut";
+                description: "Alternative shortcut if Win key is used by another app.";
+                current_shortcut: root.sc_fallback;
+                is_listening: root.listening_field == 1;
+                conflict_name: root.conflict_fallback;
+                can_swap: root.can_swap_fallback;
+                capture_clicked => { root.start_capture(1); }
+                swap_clicked => { root.swap_shortcuts(1); }
+            }
+
+            CardDivider {}
+
+            ShortcutRow {
+                title: "Snap to left half";
+                description: "Snaps the active window to the left half of this monitor.";
+                current_shortcut: root.sc_snap_left;
+                is_listening: root.listening_field == 2;
+                conflict_name: root.conflict_snap_left;
+                can_swap: root.can_swap_snap_left;
+                capture_clicked => { root.start_capture(2); }
+                swap_clicked => { root.swap_shortcuts(2); }
+            }
+
+            CardDivider {}
+
+            ShortcutRow {
+                title: "Snap to right half";
+                description: "Snaps the active window to the right half of this monitor.";
+                current_shortcut: root.sc_snap_right;
+                is_listening: root.listening_field == 3;
+                conflict_name: root.conflict_snap_right;
+                can_swap: root.can_swap_snap_right;
+                capture_clicked => { root.start_capture(3); }
+                swap_clicked => { root.swap_shortcuts(3); }
+            }
+
+            CardDivider {}
+
+            ShortcutRow {
+                title: "Maximize";
+                description: "Expands the active window to fill this monitor.";
+                current_shortcut: root.sc_snap_max;
+                is_listening: root.listening_field == 4;
+                conflict_name: root.conflict_snap_max;
+                can_swap: root.can_swap_snap_max;
+                capture_clicked => { root.start_capture(4); }
+                swap_clicked => { root.swap_shortcuts(4); }
+            }
+
+            CardDivider {}
+
+            ShortcutRow {
+                title: "Overlapping stack";
+                description: "Arranges windows of this app in a clickable stack.";
+                current_shortcut: root.sc_stack;
+                is_listening: root.listening_field == 5;
+                conflict_name: root.conflict_stack;
+                can_swap: root.can_swap_stack;
+                capture_clicked => { root.start_capture(5); }
+                swap_clicked => { root.swap_shortcuts(5); }
+            }
+        }
+    }
+
+    // KeyCheck Live Keyboard Diagnostic & Responsiveness Card
+    KeyCheck {
+        mod_ctrl: root.kc_mod_ctrl;
+        mod_win: root.kc_mod_win;
+        mod_alt: root.kc_mod_alt;
+        mod_shift: root.kc_mod_shift;
+        last_display: root.kc_last_display;
+        last_canonical: root.kc_last_canonical;
+        verdict: root.kc_verdict;
+        beat: root.kc_beat;
+        beat_done => { root.key_check_beat_done(); }
+    }
+}

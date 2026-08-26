@@ -137,6 +137,18 @@ pub const WM_APP_DEBUG_TOGGLE_ACCEPT_INJECTED: u32 = WM_APP + 29;
 /// `Box` so nothing leaks.
 pub const WM_APP_CONFIG_SNAPSHOT: u32 = WM_APP + 30;
 
+/// Settings process requests a temporary shortcut capture lease on the daemon.
+/// `wParam` = 1 (arm) or 0 (disarm); `lParam` = Settings window HWND (`isize`).
+pub const WM_APP_CAPTURE_LEASE: u32 = WM_APP + 31;
+
+/// Internal daemon message: host window notifies Hook Thread of updated capture lease settings.
+/// `wParam` = 1 (arm) or 0 (disarm); `lParam` = Settings window HWND (`isize`).
+pub const WM_APP_HOOK_LEASE: u32 = WM_APP + 32;
+
+/// Daemon sends recorded physical chord back to Settings window.
+/// `wParam` = Win32 Virtual Key code (`vkCode` as `u32`); `lParam` = packed modifier bits (1=Ctrl, 2=Win, 4=Alt, 8=Shift).
+pub const WM_APP_RECORDED_CHORD: u32 = WM_APP + 33;
+
 // ─────────────────────────────────────────────────────────────────────────
 // Timing and sizing constants.
 // ─────────────────────────────────────────────────────────────────────────

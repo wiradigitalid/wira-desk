@@ -12,7 +12,8 @@ use shared::config_path;
 use shared::constants::{
     ANTI_MACRO_THROTTLE_MS, HOOK_CHECK_FAIL_THRESHOLD, HOOK_RETRY_DELAY_SECS, HOOK_RETRY_MAX,
     WM_APP_COMMAND_READY, WM_APP_CONFIG_SNAPSHOT, WM_APP_HOOK_CHECK, WM_APP_HOOK_DEAD,
-    WM_APP_HOOK_INIT_FAILED, WM_APP_HOOK_READY, WM_APP_HOOK_REFRESH_OK, WM_APP_HOOK_SHUTDOWN,
+    WM_APP_HOOK_INIT_FAILED, WM_APP_HOOK_LEASE, WM_APP_HOOK_READY, WM_APP_HOOK_REFRESH_OK,
+    WM_APP_HOOK_SHUTDOWN,
 };
 #[cfg(debug_assertions)]
 use shared::constants::{
@@ -268,6 +269,16 @@ where
         };
     };
 
+    // Check capture lease: if Settings armed a lease and currently holds the foreground window,
+    // passthrough the entire chord without swallowing so Settings can record it.
+    if rt.capture_lease_pid != 0 && rt.identity.foreground_pid() == rt.capture_lease_pid {
+        rt.bypass_latched = true;
+        return KeyHandleOutcome {
+            disposition: KeyHandleResult::PassToNext,
+            enqueued: false,
+        };
+    }
+
     // The shortcut matched. Before claiming it, ask whether the foreground
     // belongs to a VM or Remote Desktop guest. This runs only on a
     // matched chord — rare — and uses bounded non-blocking metadata queries
@@ -504,6 +515,8 @@ struct HookRuntime {
     /// through while the matching key-up got swallowed, leaving the guest
     /// session with a stuck modifier.
     bypass_latched: bool,
+    /// PID of Settings process holding a temporary shortcut capture lease (0 = none).
+    capture_lease_pid: u32,
 }
 
 /// Address of the Hook thread's [`HookRuntime`], which lives on that thread's
@@ -639,8 +652,21 @@ fn load_shortcuts(
     let defaults = SwitcherConfig::default();
     let snap_defaults = shared::config::SnappingConfig::default();
     let layout_defaults = shared::config::LayoutConfig::default();
+
+    let check_reserved = |s: Shortcut, default: &str, field: &str| -> Shortcut {
+        if shared::shortcut::reservation(&s).is_some() {
+            crate::log::warn(
+                worker_hwnd,
+                &format!("Reserved shortcut configured for {field}; falling back to default"),
+            );
+            resolve_shortcut(default, default)
+        } else {
+            s
+        }
+    };
+
     let primary = match Shortcut::parse(&cfg.switcher.shortcut) {
-        Some(s) => s,
+        Some(s) => check_reserved(s, "win+backtick", "primary switcher"),
         None => {
             crate::log::warn(
                 worker_hwnd,
@@ -650,7 +676,7 @@ fn load_shortcuts(
         }
     };
     let fallback = match Shortcut::parse(&cfg.switcher.fallback_shortcut) {
-        Some(s) => s,
+        Some(s) => check_reserved(s, "alt+backtick", "fallback switcher"),
         None => {
             crate::log::warn(
                 worker_hwnd,
@@ -660,7 +686,7 @@ fn load_shortcuts(
         }
     };
     let snap_left = match Shortcut::parse(&cfg.snapping.snap_half_left) {
-        Some(s) => s,
+        Some(s) => check_reserved(s, "ctrl+win+left", "snap_half_left"),
         None => {
             crate::log::warn(
                 worker_hwnd,
@@ -670,7 +696,7 @@ fn load_shortcuts(
         }
     };
     let snap_right = match Shortcut::parse(&cfg.snapping.snap_half_right) {
-        Some(s) => s,
+        Some(s) => check_reserved(s, "ctrl+win+right", "snap_half_right"),
         None => {
             crate::log::warn(
                 worker_hwnd,
@@ -680,7 +706,7 @@ fn load_shortcuts(
         }
     };
     let snap_maximize = match Shortcut::parse(&cfg.snapping.snap_maximize) {
-        Some(s) => s,
+        Some(s) => check_reserved(s, "ctrl+win+enter", "snap_maximize"),
         None => {
             crate::log::warn(
                 worker_hwnd,
@@ -690,7 +716,7 @@ fn load_shortcuts(
         }
     };
     let stack = match Shortcut::parse(&cfg.layout.stack_shortcut) {
-        Some(s) => s,
+        Some(s) => check_reserved(s, "ctrl+win+down", "stack_shortcut"),
         None => {
             crate::log::warn(
                 worker_hwnd,
@@ -852,6 +878,16 @@ unsafe fn handle_thread_message(rt: &mut HookRuntime, msg: &MSG) -> bool {
             PostQuitMessage(0);
             true
         }
+        m if m == WM_APP_HOOK_LEASE => {
+            let arm = msg.wParam != 0;
+            rt.capture_lease_pid = if arm { msg.lParam as u32 } else { 0 };
+            #[cfg(debug_assertions)]
+            crate::util::append_debug_trace(&format!(
+                "HOOK_LEASE: arm={arm} pid={}",
+                rt.capture_lease_pid
+            ));
+            true
+        }
         #[cfg(debug_assertions)]
         m if m == WM_APP_DEBUG_TOGGLE_HOOK_FAIL => {
             debug_toggle_hook_fail();
@@ -966,6 +1002,7 @@ fn hook_thread_main(worker_hwnd: HWND, h_mod: HINSTANCE) {
             bypass_policy,
             identity: HookIdentityCollector::new(),
             bypass_latched: false,
+            capture_lease_pid: 0,
         };
 
         // Publish the runtime by address. From here until the null store below,
@@ -1128,6 +1165,7 @@ mod tests {
             bypass_policy: BypassPolicy::default(),
             identity: HookIdentityCollector::new(),
             bypass_latched: false,
+            capture_lease_pid: 0,
         }
     }
 

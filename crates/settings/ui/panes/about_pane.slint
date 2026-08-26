@@ -1,0 +1,71 @@
+import { Palette, Typography } from "../theme.slint";
+import { Card, CardDivider } from "../components/card.slint";
+
+export component AboutPane inherits VerticalLayout {
+    in property <string> version: "0.1.0";
+    in property <string> typeface: "Segoe UI Variable Text (System Loaded)";
+
+    spacing: 12px;
+    alignment: start;
+
+    // Heading Section
+    VerticalLayout {
+        spacing: 2px;
+        Text {
+            text: "Wira Desk";
+            font-family: Typography.font_family;
+            font-size: Typography.size_heading;
+            font-weight: 700;
+            color: Palette.text_primary;
+        }
+
+        HorizontalLayout {
+            spacing: 8px;
+            alignment: start;
+
+            Text {
+                text: "Version " + root.version;
+                font-family: Typography.font_family;
+                font-size: Typography.size_caption;
+                font-weight: 700;
+                color: Palette.accent_primary;
+            }
+
+            Text {
+                text: "•";
+                font-size: Typography.size_caption;
+                color: Palette.text_tertiary;
+            }
+
+            Text {
+                text: "Typeface: " + root.typeface;
+                font-family: Typography.font_family;
+                font-size: Typography.size_caption;
+                color: Palette.text_secondary;
+            }
+        }
+    }
+
+    Card {
+        VerticalLayout {
+            padding: 16px;
+            spacing: 8px;
+
+            Text {
+                text: "Wira Desk switches smoothly between windows of the active application on your current monitor.";
+                font-family: Typography.font_family;
+                font-size: Typography.size_body;
+                color: Palette.text_secondary;
+                wrap: word-wrap;
+            }
+
+            Text {
+                text: "Designed to be invisible, fast, and resource-efficient for all-day multitasking.";
+                font-family: Typography.font_family;
+                font-size: Typography.size_caption;
+                color: Palette.text_tertiary;
+                wrap: word-wrap;
+            }
+        }
+    }
+}

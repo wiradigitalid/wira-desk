@@ -1,0 +1,168 @@
+import { Palette, Typography } from "../theme.slint";
+import { Card, CardDivider } from "../components/card.slint";
+import { ToggleSwitch } from "../components/toggle_switch.slint";
+
+export component LayoutPane inherits VerticalLayout {
+    in-out property <bool> enable_stack: false;
+    in-out property <int> stack_width_percent: 50;
+
+    callback stack_toggled(bool);
+    callback width_changed(int);
+
+    spacing: 12px;
+    alignment: start;
+
+    // Heading Section
+    VerticalLayout {
+        spacing: 2px;
+        Text {
+            text: "Layout & Snapping";
+            font-family: Typography.font_family;
+            font-size: Typography.size_heading;
+            font-weight: 700;
+            color: Palette.text_primary;
+        }
+        Text {
+            text: "DPI-aware window snapping and compact overlapping stack arrangement.";
+            font-family: Typography.font_family;
+            font-size: Typography.size_caption;
+            color: Palette.text_secondary;
+        }
+    }
+
+    Card {
+        VerticalLayout {
+            padding: 16px;
+            spacing: 12px;
+
+            // Row 1: Overlapping stack toggle
+            HorizontalLayout {
+                alignment: space-between;
+                VerticalLayout {
+                    spacing: 2px;
+                    horizontal-stretch: 1;
+                    Text {
+                        text: "Enable Overlapping Stack Layout";
+                        font-family: Typography.font_family;
+                        font-size: Typography.size_subheading;
+                        font-weight: 600;
+                        color: Palette.text_primary;
+                    }
+                    Text {
+                        text: "Arranges up to three windows of the active app in a clickable stack.";
+                        font-family: Typography.font_family;
+                        font-size: Typography.size_caption;
+                        color: Palette.text_secondary;
+                        wrap: word-wrap;
+                    }
+                }
+
+                ToggleSwitch {
+                    checked <=> root.enable_stack;
+                    toggled(val) => { root.stack_toggled(val); }
+                }
+            }
+
+            CardDivider {}
+
+            // Row 2: Stack Width Ratio
+            HorizontalLayout {
+                alignment: space-between;
+                VerticalLayout {
+                    spacing: 2px;
+                    horizontal-stretch: 1;
+                    Text {
+                        text: "Stack Width Ratio";
+                        font-family: Typography.font_family;
+                        font-size: Typography.size_subheading;
+                        font-weight: 600;
+                        color: Palette.text_primary;
+                    }
+                    Text {
+                        text: "Percentage of screen width allocated to stacked windows (" + root.stack_width_percent + "%).";
+                        font-family: Typography.font_family;
+                        font-size: Typography.size_caption;
+                        color: Palette.text_secondary;
+                        wrap: word-wrap;
+                    }
+                }
+
+                HorizontalLayout {
+                    spacing: 8px;
+                    alignment: end;
+
+                    // Minus button
+                    Rectangle {
+                        width: 28px;
+                        height: 28px;
+                        border-radius: 4px;
+                        background: minus_touch.has_hover ? Palette.bg_card_hover : Palette.bg_keycap;
+                        border-width: 1px;
+                        border-color: Palette.stroke_card;
+                        Text {
+                            text: "−";
+                            font-size: 14px;
+                            font-weight: 700;
+                            color: Palette.text_primary;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+                        minus_touch := TouchArea {
+                            clicked => {
+                                if root.stack_width_percent > 10 {
+                                    root.stack_width_percent = root.stack_width_percent - 5;
+                                    root.width_changed(root.stack_width_percent);
+                                }
+                            }
+                        }
+                    }
+
+                    // Value Display
+                    Rectangle {
+                        width: 50px;
+                        height: 28px;
+                        border-radius: 4px;
+                        background: Palette.bg_subtle;
+                        border-width: 1px;
+                        border-color: Palette.stroke_card;
+                        Text {
+                            text: root.stack_width_percent + "%";
+                            font-family: Typography.font_mono;
+                            font-size: 12.5px;
+                            font-weight: 600;
+                            color: Palette.text_primary;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+                    }
+
+                    // Plus button
+                    Rectangle {
+                        width: 28px;
+                        height: 28px;
+                        border-radius: 4px;
+                        background: plus_touch.has_hover ? Palette.bg_card_hover : Palette.bg_keycap;
+                        border-width: 1px;
+                        border-color: Palette.stroke_card;
+                        Text {
+                            text: "+";
+                            font-size: 14px;
+                            font-weight: 700;
+                            color: Palette.text_primary;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+                        plus_touch := TouchArea {
+                            clicked => {
+                                if root.stack_width_percent < 100 {
+                                    root.stack_width_percent = root.stack_width_percent + 5;
+                                    root.width_changed(root.stack_width_percent);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

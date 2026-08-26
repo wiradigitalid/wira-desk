@@ -1,0 +1,110 @@
+import { Palette, Typography } from "../theme.slint";
+
+export component Titlebar inherits Rectangle {
+    in property <string> title: "Wira Desk";
+    in property <image> icon_image;
+    in property <bool> is_onboarding: false;
+
+    callback drag_requested();
+    callback minimize_clicked();
+    callback close_clicked();
+
+    height: 36px;
+    background: is_onboarding ? Palette.bg_card : Palette.bg_sidebar;
+
+    // Draggable Surface Area
+    TouchArea {
+        width: parent.width - (is_onboarding ? 48px : 96px);
+        height: parent.height;
+        x: 0px;
+        y: 0px;
+        pointer-event(event) => {
+            if event.kind == PointerEventKind.down && event.button == PointerEventButton.left {
+                root.drag_requested();
+            }
+        }
+    }
+
+    HorizontalLayout {
+        padding-left: 12px;
+        padding-right: 0px;
+        spacing: 8px;
+        alignment: space-between;
+
+        // Title & Logo Group
+        HorizontalLayout {
+            spacing: 8px;
+            alignment: start;
+
+            if icon_image.width > 0 : Image {
+                source: icon_image;
+                width: 16px;
+                height: 16px;
+                y: (parent.height - 16px) / 2;
+            }
+
+            Text {
+                text: root.title;
+                font-family: Typography.font_family;
+                font-size: Typography.size_title;
+                font-weight: 700;
+                color: Palette.text_primary;
+                vertical-alignment: center;
+            }
+        }
+
+        // Window Caption Controls
+        HorizontalLayout {
+            spacing: 0px;
+            alignment: end;
+
+            if !root.is_onboarding : Rectangle {
+                width: 48px;
+                height: 36px;
+                background: min_touch.has_hover ? Palette.bg_card_hover : Colors.transparent;
+
+                Path {
+                    width: 10px;
+                    height: 1.2px;
+                    x: (parent.width - 10px) / 2;
+                    y: (parent.height - 1.2px) / 2;
+                    stroke: Palette.text_primary;
+                    stroke-width: 1.2px;
+                    MoveTo { x: 0; y: 0; }
+                    LineTo { x: 10; y: 0; }
+                }
+
+                min_touch := TouchArea {
+                    clicked => {
+                        root.minimize_clicked();
+                    }
+                }
+            }
+
+            Rectangle {
+                width: 48px;
+                height: 36px;
+                background: close_touch.has_hover ? Palette.close_hover : Colors.transparent;
+
+                Path {
+                    width: 10px;
+                    height: 10px;
+                    x: (parent.width - 10px) / 2;
+                    y: (parent.height - 10px) / 2;
+                    stroke: close_touch.has_hover ? #FFFFFF : Palette.text_primary;
+                    stroke-width: 1.2px;
+                    MoveTo { x: 0; y: 0; }
+                    LineTo { x: 10; y: 10; }
+                    MoveTo { x: 10; y: 0; }
+                    LineTo { x: 0; y: 10; }
+                }
+
+                close_touch := TouchArea {
+                    clicked => {
+                        root.close_clicked();
+                    }
+                }
+            }
+        }
+    }
+}
