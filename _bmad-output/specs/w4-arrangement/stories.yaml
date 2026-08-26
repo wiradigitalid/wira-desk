@@ -1,0 +1,141 @@
+- id: "1"
+  title: Chord configuration travels as one struct
+  description: >-
+    Replace load_shortcuts' six-tuple and decode_command's six positional
+    parameters with a single Chords struct. Pure refactor: no behaviour delta,
+    no new chord, and every existing hook test must still pass unchanged.
+  spec_checkpoint: false
+  done_checkpoint: true
+  invoke_dev_with: >-
+    This story exists so the five that follow stay readable. At nine chords a
+    six-tuple becomes a nine-tuple and clippy::too_many_arguments fires in a
+    build that runs -D warnings, so the refactor is a prerequisite rather than
+    a courtesy. Do NOT add any new chord, config field, or command value here —
+    those are stories 2 through 5. The single acceptance question is whether
+    `cargo test --workspace` passes with the same test names and the same
+    assertions as before the change. Run the suite with
+    `$env:WIRADESK_SKIP_MANIFEST = '1'` set: the daemon links an elevation
+    manifest that otherwise applies to the test harness, which then cannot
+    launch at all.
+
+- id: "2"
+  title: Snap the active window to the top or bottom half
+  description: >-
+    Add split_y, plan_snap_top, and plan_snap_bottom to arrangement/snap.rs,
+    the SnapTop and SnapBottom wire values, and the two config fields, with the
+    hook and worker arms that reach them. Realises FR-22 and widens UC-2.
+  spec_checkpoint: false
+  done_checkpoint: true
+  invoke_dev_with: >-
+    Mirror split_x exactly: compute one boundary once and derive both halves
+    from it, so the halves tile the work area with neither a one-pixel gap nor
+    a one-pixel overlap by construction rather than by convention (LBR-WM-8).
+    An odd height gives the floor to the top half and the remainder to the
+    bottom. A half that would be empty is a PlanError, never a zero-height
+    placement. Wire values are 6 for SnapTop and 7 for SnapBottom — extend,
+    never renumber, and keep from_u8's out-of-range arm decoding to Nop.
+    Defaults for the two new fields are ctrl+alt+up and ctrl+alt+down. Leave
+    the four existing snap defaults on Ctrl+Win in this story; moving them is
+    story 5, and mixing the two makes both diffs unreadable.
+
+- id: "3"
+  title: Move the active window to the next monitor
+  description: >-
+    Add live monitor enumeration to context/spatial.rs, a new
+    arrangement/monitor.rs planner that maps the window's share of its source
+    work area onto the destination, and the MoveToNextMonitor command.
+    Realises FR-23 and UC-7.
+  spec_checkpoint: true
+  done_checkpoint: true
+  invoke_dev_with: >-
+    Read .how/window-management/06-flows/flow-monitor-move.md before starting;
+    it is the contract for this story and it names what is read at each step
+    and what must not be. Four things are easy to get wrong and all four are
+    stated in the corpus: enumerate fresh per invocation and cache no monitor
+    list, work area, or HMONITOR anywhere (AD-14); select by enumeration order
+    wrapping last to first, never by coordinate; map by SHARE of the work area,
+    never by copying pixel width and height; and restore a maximized window to
+    normal before placing it, because the maximized state is bound to the
+    monitor it was maximized on and the window otherwise springs back. One
+    attached monitor returns an EMPTY plan — that is a success, and it must log
+    nothing at all. Enumeration runs on the worker thread, never in the hook
+    callback. Every new unsafe block needs a SAFETY: comment stating the
+    precondition it actually relies on; undocumented_unsafe_blocks is deny.
+    Replace command_set_contains_no_inter_monitor_arrangement with a test that
+    sweeps the whole new range and asserts the same completeness property —
+    do not delete it.
+
+- id: "4"
+  title: A duplicate chord unbinds the later action, and refuses the reload
+  description: >-
+    Add duplicate detection at both configuration entry points, with two
+    different answers by design. Realises BR-6 and SCN-03; no use case.
+  spec_checkpoint: false
+  done_checkpoint: true
+  invoke_dev_with: >-
+    The asymmetry is the point and DEC-009 states why: at startup there is no
+    last-known-good configuration to keep, at reload there is. At startup
+    (load_shortcuts) the earlier field in the declared sequence keeps the
+    chord, the later field is left UNBOUND so it matches nothing and no
+    substitute action fires, every unrelated setting still takes effect, and
+    EXACTLY ONE Tier-2 warning names both fields and the chord. On reload
+    (config::validate) add RejectReason::DuplicateShortcut and refuse the whole
+    candidate, inside the existing all-or-nothing contract — do not change that
+    contract's shape. The declared sequence is in
+    _bmad-output/specs/w4-arrangement/chord-table.md; it is the same order
+    decode_command's if/else chain already resolves to for the fields that
+    exist. Both call sites must carry a comment naming DEC-009, because the
+    justification for two behaviours lives there and nowhere near the code.
+    This story's core is a guard, so its test must be SEEN failing: break the
+    behaviour, watch it go red, restore it. Use --no-fail-fast so the whole
+    suite runs.
+
+- id: "5"
+  title: Shipped chords move to the Ctrl+Alt family, and Win+Ctrl+Arrow is refused
+  description: >-
+    Change every shipped arrangement default to the Ctrl+Alt family and add
+    Win+Ctrl+Left/Right to the reserved catalogue. Realises DEC-008.
+  spec_checkpoint: false
+  done_checkpoint: true
+  invoke_dev_with: >-
+    The exact before-and-after table is in
+    _bmad-output/specs/w4-arrangement/chord-table.md; use it rather than
+    inferring. Four frozen tests pin the old values and each must be UPDATED,
+    not deleted — they were pinned so this change would be loud, and they are
+    doing their job. Add Win+Ctrl+Left and Win+Ctrl+Right as
+    Reservation::ShellOwned with owner text naming virtual-desktop switching;
+    ShellOwned rather than Immutable because the refusal can honestly offer an
+    alternative. Do NOT write any migration for existing config.toml files:
+    every field carries serde(default), so an existing install keeps its chords
+    and only a fresh install meets the new family. That is deliberate
+    (DEC-008), not an omission. The switcher chords do not move. Verify that
+    the new defaults pass validate_config — a default that fails its own
+    validation is the exact carve-out problem this decision exists to avoid.
+
+- id: "6"
+  title: The Shortcuts pane lists nine actions in three labelled groups
+  description: >-
+    Grow ShortcutField from six to nine, split the Shortcuts pane's single card
+    into three labelled cards, and stop the Layout pane claiming snapping.
+    Realises UC-4 and the UX spines.
+  spec_checkpoint: true
+  done_checkpoint: true
+  invoke_dev_with: >-
+    Read .how/settings/01-ux/DESIGN.md and
+    .what/settings/04-usecases/EXPERIENCE.md; both were corrected for this wave
+    and they are the contract. ShortcutField grows in five places that must
+    stay in sync — ALL, label, get, set, key — and from_label and from_key are
+    the reverse lookups that break silently rather than at compile time if one
+    is missed. focus_order iterates ShortcutField::ALL, so tab order follows
+    for free; do not add a second list. Row order is the declared sequence in
+    chord-table.md and it is ALSO the collision precedence order (LBR-ST-14):
+    grouping under headings may gather rows, never reorder them, so the
+    listening_field indices will not be contiguous per group and that is
+    correct. Three cards: Switching (2), Snap and resize (5), Move and arrange
+    (2). Rename Pane::Layout's label from "Layout and Snapping" to "Layout" —
+    it holds only the overlapping-stack toggle and width slider. Do NOT add a
+    fourth pane and do NOT move any chord field out of Shortcuts: the capture
+    lease is armed from pane == Pane::Shortcuts, and splitting it regresses the
+    key check DEC-004 and DEC-005 are built on. Render every chord through the
+    existing format_shortcut_display; a second display path is what once made
+    the key check print "down" while every row above showed the glyph.
