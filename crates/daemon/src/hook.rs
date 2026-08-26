@@ -411,16 +411,7 @@ where
         }
     }
 
-    let Some(cmd) = match_shortcut(
-        rt.primary,
-        rt.fallback,
-        rt.snap_left,
-        rt.snap_right,
-        rt.snap_maximize,
-        rt.stack,
-        rt.mods,
-        vk as u16,
-    ) else {
+    let Some(cmd) = match_shortcut(&rt.chords, rt.mods, vk as u16) else {
         return KeyHandleOutcome {
             disposition: KeyHandleResult::PassToNext,
             enqueued: false,
@@ -592,18 +583,78 @@ impl ModifierState {
     }
 }
 
+/// Every chord the Hook matches against, as one value.
+///
+/// `None` means **unbound**: the action has no chord that reaches it, and no other action
+/// fires in its place. Representing that as an *absent* chord rather than as a sentinel
+/// `Shortcut` is what makes "matches nothing" true by construction — there is no value an
+/// unbound field could accidentally equal, so the guarantee cannot be lost to a later edit.
+///
+/// One struct rather than one parameter per chord, because the previous shape carried the
+/// same six values through a tuple return, six positional parameters, six runtime fields,
+/// and six assignment statements. Six parallel lists is five chances for a new action to be
+/// added to some of them and missed in the rest, and that mistake is silent: the chord
+/// simply never fires.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct Chords {
+    pub primary: Option<Shortcut>,
+    pub fallback: Option<Shortcut>,
+    pub snap_left: Option<Shortcut>,
+    pub snap_right: Option<Shortcut>,
+    pub snap_maximize: Option<Shortcut>,
+    pub stack: Option<Shortcut>,
+}
+
+/// One entry of the declared sequence: a chord and the command it resolves to.
+pub struct ChordSlot {
+    pub chord: Option<Shortcut>,
+    pub command: u8,
+}
+
+impl Chords {
+    /// The **declared sequence**: the one order that decides both which action a chord
+    /// resolves to and, when two actions carry the same chord, which of them keeps it.
+    ///
+    /// It exists exactly once on purpose. The order is also the Settings pane's draw order
+    /// and its keyboard focus order; three independently maintained copies of it is how the
+    /// visible order and the precedence order start disagreeing with nothing detecting it.
+    pub fn in_declared_order(&self) -> [ChordSlot; 6] {
+        [
+            ChordSlot {
+                chord: self.primary,
+                command: Command::Cycle.as_u8(),
+            },
+            ChordSlot {
+                chord: self.fallback,
+                command: Command::Cycle.as_u8(),
+            },
+            ChordSlot {
+                chord: self.snap_left,
+                command: Command::SnapLeft.as_u8(),
+            },
+            ChordSlot {
+                chord: self.snap_right,
+                command: Command::SnapRight.as_u8(),
+            },
+            ChordSlot {
+                chord: self.snap_maximize,
+                command: Command::SnapMaximize.as_u8(),
+            },
+            ChordSlot {
+                chord: self.stack,
+                command: Command::OverlappingStack.as_u8(),
+            },
+        ]
+    }
+}
+
 /// Pure shortcut equality match → command byte.
-#[allow(clippy::too_many_arguments)]
-pub fn match_shortcut(
-    primary: Shortcut,
-    fallback: Shortcut,
-    snap_left: Shortcut,
-    snap_right: Shortcut,
-    snap_maximize: Shortcut,
-    stack: Shortcut,
-    mods: ModifierState,
-    vk: u16,
-) -> Option<u8> {
+///
+/// Resolves against the declared sequence and returns the **first** match, which is the
+/// same first-wins behaviour the previous `if / else if` chain had. Stating it as a walk
+/// over the declared order rather than as a chain is what makes the precedence order and
+/// the match order literally the same code instead of two things that happen to agree.
+pub fn match_shortcut(chords: &Chords, mods: ModifierState, vk: u16) -> Option<u8> {
     let current = Shortcut {
         win: mods.win,
         ctrl: mods.ctrl,
@@ -611,19 +662,11 @@ pub fn match_shortcut(
         shift: mods.shift,
         vk,
     };
-    if current == primary || current == fallback {
-        Some(Command::Cycle.as_u8())
-    } else if current == snap_left {
-        Some(Command::SnapLeft.as_u8())
-    } else if current == snap_right {
-        Some(Command::SnapRight.as_u8())
-    } else if current == snap_maximize {
-        Some(Command::SnapMaximize.as_u8())
-    } else if current == stack {
-        Some(Command::OverlappingStack.as_u8())
-    } else {
-        None
-    }
+    chords
+        .in_declared_order()
+        .iter()
+        .find(|slot| slot.chord == Some(current))
+        .map(|slot| slot.command)
 }
 
 /// Returns `true` when `now_ms` may accept a new throttled shortcut.
@@ -643,12 +686,7 @@ pub fn next_hook_check_state(current_fail_count: u32, install_succeeded: bool) -
 struct HookRuntime {
     worker_hwnd: HWND,
     h_mod: HINSTANCE,
-    primary: Shortcut,
-    fallback: Shortcut,
-    snap_left: Shortcut,
-    snap_right: Shortcut,
-    snap_maximize: Shortcut,
-    stack: Shortcut,
+    chords: Chords,
     mods: ModifierState,
     last_throttle_ms: u64,
     swallow_release_vk: u16,
@@ -797,94 +835,92 @@ fn resolve_shortcut(configured: &str, default: &str) -> Shortcut {
         .unwrap_or_else(|| Shortcut::parse("win+backtick").expect("default shortcut"))
 }
 
-fn load_shortcuts(
-    worker_hwnd: HWND,
-) -> (Shortcut, Shortcut, Shortcut, Shortcut, Shortcut, Shortcut) {
+fn load_shortcuts(worker_hwnd: HWND) -> Chords {
     let cfg = Config::load_or_default(&config_path());
     let defaults = SwitcherConfig::default();
     let snap_defaults = shared::config::SnappingConfig::default();
     let layout_defaults = shared::config::LayoutConfig::default();
 
-    let check_reserved = |s: Shortcut, default: &str, field: &str| -> Shortcut {
-        if shared::shortcut::reservation(&s).is_some() {
+    // One row per chord, and the row is the only place a chord's config path, its
+    // shipped default, and its diagnostic name appear together. The six hand-written
+    // blocks this replaces each repeated that triple, and a new chord meant writing a
+    // seventh block correctly rather than adding a row.
+    let rows: [(&str, &str, &str); 6] = [
+        (
+            "switcher.shortcut",
+            &cfg.switcher.shortcut,
+            &defaults.shortcut,
+        ),
+        (
+            "switcher.fallback_shortcut",
+            &cfg.switcher.fallback_shortcut,
+            &defaults.fallback_shortcut,
+        ),
+        (
+            "snapping.snap_half_left",
+            &cfg.snapping.snap_half_left,
+            &snap_defaults.snap_half_left,
+        ),
+        (
+            "snapping.snap_half_right",
+            &cfg.snapping.snap_half_right,
+            &snap_defaults.snap_half_right,
+        ),
+        (
+            "snapping.snap_maximize",
+            &cfg.snapping.snap_maximize,
+            &snap_defaults.snap_maximize,
+        ),
+        (
+            "layout.stack_shortcut",
+            &cfg.layout.stack_shortcut,
+            &layout_defaults.stack_shortcut,
+        ),
+    ];
+
+    let mut resolved: [Option<Shortcut>; 6] = [None; 6];
+    for (i, (field, configured, default)) in rows.iter().enumerate() {
+        resolved[i] = Some(resolve_one(worker_hwnd, field, configured, default));
+    }
+
+    Chords {
+        primary: resolved[0],
+        fallback: resolved[1],
+        snap_left: resolved[2],
+        snap_right: resolved[3],
+        snap_maximize: resolved[4],
+        stack: resolved[5],
+    }
+}
+
+/// Resolve one configured chord, falling back to its shipped default on either failure and
+/// warning once about which. Startup must always produce a daemon, so neither an
+/// unparseable string nor a chord Windows owns is fatal here — both degrade to the default
+/// and say so. `config::validate` is where the same conditions are *refused*, because a
+/// reload has a last-known-good configuration to keep and startup does not.
+fn resolve_one(worker_hwnd: HWND, field: &str, configured: &str, default: &str) -> Shortcut {
+    match Shortcut::parse(configured) {
+        Some(parsed) => {
+            if shared::shortcut::reservation(&parsed).is_some() {
+                crate::log::warn(
+                    worker_hwnd,
+                    &format!(
+                        "Reserved shortcut configured for {field}; falling back to default {default}"
+                    ),
+                );
+                resolve_shortcut(default, default)
+            } else {
+                parsed
+            }
+        }
+        None => {
             crate::log::warn(
                 worker_hwnd,
-                &format!("Reserved shortcut configured for {field}; falling back to default"),
+                &format!("Invalid {field} shortcut; using default {default}"),
             );
             resolve_shortcut(default, default)
-        } else {
-            s
         }
-    };
-
-    let primary = match Shortcut::parse(&cfg.switcher.shortcut) {
-        Some(s) => check_reserved(s, "win+backtick", "primary switcher"),
-        None => {
-            crate::log::warn(
-                worker_hwnd,
-                "Invalid primary switcher shortcut; using default win+backtick",
-            );
-            resolve_shortcut(&defaults.shortcut, "win+backtick")
-        }
-    };
-    let fallback = match Shortcut::parse(&cfg.switcher.fallback_shortcut) {
-        Some(s) => check_reserved(s, "alt+backtick", "fallback switcher"),
-        None => {
-            crate::log::warn(
-                worker_hwnd,
-                "Invalid fallback switcher shortcut; using default alt+backtick",
-            );
-            resolve_shortcut(&defaults.fallback_shortcut, "alt+backtick")
-        }
-    };
-    let snap_left = match Shortcut::parse(&cfg.snapping.snap_half_left) {
-        Some(s) => check_reserved(s, "ctrl+win+left", "snap_half_left"),
-        None => {
-            crate::log::warn(
-                worker_hwnd,
-                "Invalid snap_half_left shortcut; using default ctrl+win+left",
-            );
-            resolve_shortcut(&snap_defaults.snap_half_left, "ctrl+win+left")
-        }
-    };
-    let snap_right = match Shortcut::parse(&cfg.snapping.snap_half_right) {
-        Some(s) => check_reserved(s, "ctrl+win+right", "snap_half_right"),
-        None => {
-            crate::log::warn(
-                worker_hwnd,
-                "Invalid snap_half_right shortcut; using default ctrl+win+right",
-            );
-            resolve_shortcut(&snap_defaults.snap_half_right, "ctrl+win+right")
-        }
-    };
-    let snap_maximize = match Shortcut::parse(&cfg.snapping.snap_maximize) {
-        Some(s) => check_reserved(s, "ctrl+win+enter", "snap_maximize"),
-        None => {
-            crate::log::warn(
-                worker_hwnd,
-                "Invalid snap_maximize shortcut; using default ctrl+win+enter",
-            );
-            resolve_shortcut(&snap_defaults.snap_maximize, "ctrl+win+enter")
-        }
-    };
-    let stack = match Shortcut::parse(&cfg.layout.stack_shortcut) {
-        Some(s) => check_reserved(s, "ctrl+win+down", "stack_shortcut"),
-        None => {
-            crate::log::warn(
-                worker_hwnd,
-                "Invalid stack_shortcut; using default ctrl+win+down",
-            );
-            resolve_shortcut(&layout_defaults.stack_shortcut, "ctrl+win+down")
-        }
-    };
-    (
-        primary,
-        fallback,
-        snap_left,
-        snap_right,
-        snap_maximize,
-        stack,
-    )
+    }
 }
 
 unsafe extern "system" fn low_level_keyboard_proc(
@@ -1025,12 +1061,7 @@ unsafe fn handle_thread_message(rt: &mut HookRuntime, msg: &MSG) -> bool {
         // spurious, and doing nothing is the right answer.
         m if m == WM_APP_CONFIG_SNAPSHOT => {
             if let Some(snapshot) = take_staged_snapshot() {
-                rt.primary = snapshot.primary;
-                rt.fallback = snapshot.fallback;
-                rt.snap_left = snapshot.snap_left;
-                rt.snap_right = snapshot.snap_right;
-                rt.snap_maximize = snapshot.snap_maximize;
-                rt.stack = snapshot.stack;
+                rt.chords = snapshot.chords;
                 rt.bypass_policy = snapshot.bypass;
                 #[cfg(debug_assertions)]
                 crate::util::append_debug_trace("CONFIG_SNAPSHOT: hook state replaced");
@@ -1129,8 +1160,7 @@ fn hook_thread_main(worker_hwnd: HWND, h_mod: HINSTANCE) {
             return;
         }
 
-        let (primary, fallback, snap_left, snap_right, snap_maximize, stack) =
-            load_shortcuts(worker_hwnd);
+        let chords = load_shortcuts(worker_hwnd);
 
         // Normalize the VM/RDP policy here — before the hook is installed and
         // therefore off the callback path entirely. It stays
@@ -1159,12 +1189,7 @@ fn hook_thread_main(worker_hwnd: HWND, h_mod: HINSTANCE) {
         let mut runtime = HookRuntime {
             worker_hwnd,
             h_mod,
-            primary,
-            fallback,
-            snap_left,
-            snap_right,
-            snap_maximize,
-            stack,
+            chords,
             mods: ModifierState::default(),
             last_throttle_ms: 0,
             swallow_release_vk: 0,
@@ -1227,85 +1252,100 @@ pub fn spawn(worker_hwnd: HWND, h_mod: HINSTANCE) -> (JoinHandle<()>, Arc<Atomic
 mod tests {
     use super::*;
 
+    /// The six shipped chords as they stood before `DEC-008` moved the family, so the
+    /// tests below keep exercising the same values this refactor must not change.
+    fn shipped_chords() -> Chords {
+        Chords {
+            primary: Shortcut::parse("win+backtick"),
+            fallback: Shortcut::parse("alt+backtick"),
+            snap_left: Shortcut::parse("ctrl+win+left"),
+            snap_right: Shortcut::parse("ctrl+win+right"),
+            snap_maximize: Shortcut::parse("ctrl+win+enter"),
+            stack: Shortcut::parse("ctrl+win+down"),
+        }
+    }
+
     #[test]
     fn exact_primary_match() {
-        let primary = Shortcut::parse("win+backtick").unwrap();
-        let fallback = Shortcut::parse("alt+backtick").unwrap();
-        let snap_left = Shortcut::parse("ctrl+win+left").unwrap();
-        let snap_right = Shortcut::parse("ctrl+win+right").unwrap();
-        let snap_maximize = Shortcut::parse("ctrl+win+enter").unwrap();
-        let stack = Shortcut::parse("ctrl+win+down").unwrap();
         let mods = ModifierState {
             win: true,
             ..Default::default()
         };
         assert_eq!(
-            match_shortcut(
-                primary,
-                fallback,
-                snap_left,
-                snap_right,
-                snap_maximize,
-                stack,
-                mods,
-                0xC0
-            ),
+            match_shortcut(&shipped_chords(), mods, 0xC0),
             Some(Command::Cycle.as_u8())
         );
     }
 
     #[test]
     fn exact_snap_left_match() {
-        let primary = Shortcut::parse("win+backtick").unwrap();
-        let fallback = Shortcut::parse("alt+backtick").unwrap();
-        let snap_left = Shortcut::parse("ctrl+win+left").unwrap();
-        let snap_right = Shortcut::parse("ctrl+win+right").unwrap();
-        let snap_maximize = Shortcut::parse("ctrl+win+enter").unwrap();
-        let stack = Shortcut::parse("ctrl+win+down").unwrap();
         let mods = ModifierState {
             win: true,
             ctrl: true,
             ..Default::default()
         };
         assert_eq!(
-            match_shortcut(
-                primary,
-                fallback,
-                snap_left,
-                snap_right,
-                snap_maximize,
-                stack,
-                mods,
-                0x25 // VK_LEFT
-            ),
+            match_shortcut(&shipped_chords(), mods, 0x25), // VK_LEFT
             Some(Command::SnapLeft.as_u8())
         );
     }
 
     #[test]
     fn extra_modifier_is_non_match() {
-        let primary = Shortcut::parse("win+backtick").unwrap();
-        let fallback = Shortcut::parse("alt+backtick").unwrap();
-        let snap_left = Shortcut::parse("ctrl+win+left").unwrap();
-        let snap_right = Shortcut::parse("ctrl+win+right").unwrap();
-        let snap_maximize = Shortcut::parse("ctrl+win+enter").unwrap();
-        let stack = Shortcut::parse("ctrl+win+down").unwrap();
         let mods = ModifierState {
             win: true,
             ctrl: true,
             ..Default::default()
         };
-        assert!(match_shortcut(
-            primary,
-            fallback,
-            snap_left,
-            snap_right,
-            snap_maximize,
-            stack,
-            mods,
-            0xC0
-        )
-        .is_none());
+        assert!(match_shortcut(&shipped_chords(), mods, 0xC0).is_none());
+    }
+
+    #[test]
+    fn an_unbound_chord_matches_nothing() {
+        // `None` is not "some chord nobody presses" — it must be unreachable. This is the
+        // property `DEC-009`'s unbinding rests on, asserted here rather than assumed.
+        let chords = Chords {
+            snap_left: None,
+            ..shipped_chords()
+        };
+        let mods = ModifierState {
+            win: true,
+            ctrl: true,
+            ..Default::default()
+        };
+        assert!(match_shortcut(&chords, mods, 0x25).is_none());
+        // Every other action still reaches its own chord.
+        assert_eq!(
+            match_shortcut(&chords, mods, 0x27), // VK_RIGHT
+            Some(Command::SnapRight.as_u8())
+        );
+    }
+
+    #[test]
+    fn the_declared_order_is_the_precedence_order() {
+        // Two actions on one chord: the earlier slot wins, and it wins because it is
+        // earlier in `in_declared_order`, not because of where an `if` happens to sit.
+        let clash = Shortcut::parse("ctrl+win+down").unwrap();
+        let chords = Chords {
+            snap_right: Some(clash),
+            stack: Some(clash),
+            ..shipped_chords()
+        };
+        let order = chords.in_declared_order();
+        let first = order
+            .iter()
+            .position(|s| s.chord == Some(clash))
+            .expect("the clashing chord is in the sequence");
+        assert_eq!(order[first].command, Command::SnapRight.as_u8());
+        let mods = ModifierState {
+            win: true,
+            ctrl: true,
+            ..Default::default()
+        };
+        assert_eq!(
+            match_shortcut(&chords, mods, 0x28), // VK_DOWN
+            Some(Command::SnapRight.as_u8())
+        );
     }
 
     #[test]
@@ -1316,19 +1356,14 @@ mod tests {
     }
 
     fn test_runtime(primary: Shortcut, fallback: Shortcut) -> HookRuntime {
-        let snap_left = Shortcut::parse("ctrl+win+left").unwrap();
-        let snap_right = Shortcut::parse("ctrl+win+right").unwrap();
-        let snap_maximize = Shortcut::parse("ctrl+win+enter").unwrap();
-        let stack = Shortcut::parse("ctrl+win+down").unwrap();
         HookRuntime {
             worker_hwnd: 0,
             h_mod: 0,
-            primary,
-            fallback,
-            snap_left,
-            snap_right,
-            snap_maximize,
-            stack,
+            chords: Chords {
+                primary: Some(primary),
+                fallback: Some(fallback),
+                ..shipped_chords()
+            },
             mods: ModifierState::default(),
             last_throttle_ms: 0,
             swallow_release_vk: 0,
@@ -1611,12 +1646,10 @@ mod tests {
 
     fn snapshot(primary: &str) -> crate::config::HookSnapshot {
         crate::config::HookSnapshot {
-            primary: Shortcut::parse(primary).unwrap(),
-            fallback: Shortcut::parse("alt+backtick").unwrap(),
-            snap_left: Shortcut::parse("ctrl+win+left").unwrap(),
-            snap_right: Shortcut::parse("ctrl+win+right").unwrap(),
-            snap_maximize: Shortcut::parse("ctrl+win+enter").unwrap(),
-            stack: Shortcut::parse("ctrl+win+down").unwrap(),
+            chords: Chords {
+                primary: Shortcut::parse(primary),
+                ..shipped_chords()
+            },
             bypass: BypassPolicy::default(),
         }
     }
@@ -1628,7 +1661,7 @@ mod tests {
 
         stage_snapshot(snapshot("win+backtick"));
         let taken = take_staged_snapshot().expect("a staged snapshot must be collectable");
-        assert_eq!(taken.primary, Shortcut::parse("win+backtick").unwrap());
+        assert_eq!(taken.chords.primary, Shortcut::parse("win+backtick"));
 
         // A second wake-up for the same stage must find nothing, which is what makes a
         // superseded or spurious message harmless.
@@ -1646,7 +1679,7 @@ mod tests {
         stage_snapshot(snapshot("ctrl+alt+tab"));
 
         let taken = take_staged_snapshot().expect("the newer snapshot must be present");
-        assert_eq!(taken.primary, Shortcut::parse("ctrl+alt+tab").unwrap());
+        assert_eq!(taken.chords.primary, Shortcut::parse("ctrl+alt+tab"));
         assert!(take_staged_snapshot().is_none(), "only one may be staged");
     }
 

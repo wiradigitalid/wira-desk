@@ -7,10 +7,13 @@
   spec_checkpoint: false
   done_checkpoint: true
   invoke_dev_with: >-
-    This story exists so the five that follow stay readable. At nine chords a
-    six-tuple becomes a nine-tuple and clippy::too_many_arguments fires in a
-    build that runs -D warnings, so the refactor is a prerequisite rather than
-    a courtesy. Do NOT add any new chord, config field, or command value here —
+    This story exists so the five that follow stay readable. Not because of
+    clippy: match_shortcut already carried an explicit
+    #[allow(clippy::too_many_arguments)], so nine parameters would have compiled
+    — that claim, in this file's first version, was wrong. The real reason is
+    that the six chords travelled through four parallel lists (a tuple return,
+    six positional parameters, six runtime fields, six assignment statements),
+    and an action missed in any one of them fails silently. Do NOT add any new chord, config field, or command value here —
     those are stories 2 through 5. The single acceptance question is whether
     `cargo test --workspace` passes with the same test names and the same
     assertions as before the change. Run the suite with

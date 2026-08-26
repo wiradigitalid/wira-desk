@@ -26,12 +26,7 @@ use crate::context::BypassPolicy;
 /// Owned, immutable configuration for the Hook actor.
 #[derive(Debug, Clone)]
 pub struct HookSnapshot {
-    pub primary: Shortcut,
-    pub fallback: Shortcut,
-    pub snap_left: Shortcut,
-    pub snap_right: Shortcut,
-    pub snap_maximize: Shortcut,
-    pub stack: Shortcut,
+    pub chords: crate::hook::Chords,
     pub bypass: BypassPolicy,
 }
 
@@ -133,27 +128,29 @@ pub fn validate(text: &str) -> Result<(Config, HookSnapshot, WorkerSnapshot), Re
         Shortcut::parse(&cfg.snapping.snap_maximize).ok_or(RejectReason::InvalidShortcut)?;
     let stack = Shortcut::parse(&cfg.layout.stack_shortcut).ok_or(RejectReason::InvalidShortcut)?;
 
-    // Reject reserved shortcuts on reload
-    for sc in [
-        &primary,
-        &fallback,
-        &snap_left,
-        &snap_right,
-        &snap_maximize,
-        &stack,
-    ] {
-        if shared::shortcut::reservation(sc).is_some() {
-            return Err(RejectReason::ReservedShortcut);
+    let chords = crate::hook::Chords {
+        primary: Some(primary),
+        fallback: Some(fallback),
+        snap_left: Some(snap_left),
+        snap_right: Some(snap_right),
+        snap_maximize: Some(snap_maximize),
+        stack: Some(stack),
+    };
+
+    // Reject reserved shortcuts on reload. Walked through the declared sequence rather than
+    // a hand-listed array, so a chord added to `Chords` cannot be missed here — the omission
+    // would be silent, and its effect would be a reserved chord accepted on reload but
+    // refused at startup.
+    for slot in chords.in_declared_order() {
+        if let Some(sc) = slot.chord {
+            if shared::shortcut::reservation(&sc).is_some() {
+                return Err(RejectReason::ReservedShortcut);
+            }
         }
     }
 
     let hook = HookSnapshot {
-        primary,
-        fallback,
-        snap_left,
-        snap_right,
-        snap_maximize,
-        stack,
+        chords,
         bypass: BypassPolicy::from_config(&cfg.vm_bypass),
     };
     let worker = WorkerSnapshot {
@@ -471,8 +468,8 @@ fallback_shortcut = "alt+backtick"
         let text = VALID.replace("alt+backtick", "ctrl+alt+tab");
         let (_, sink, _, _) = run(FakeSource(Ok(text)));
         let hook = &sink.hook.borrow()[0];
-        assert_eq!(hook.primary, Shortcut::parse("win+backtick").unwrap());
-        assert_eq!(hook.fallback, Shortcut::parse("ctrl+alt+tab").unwrap());
+        assert_eq!(hook.chords.primary, Shortcut::parse("win+backtick"));
+        assert_eq!(hook.chords.fallback, Shortcut::parse("ctrl+alt+tab"));
     }
 
     #[test]

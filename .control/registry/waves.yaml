@@ -240,10 +240,16 @@ waves:
             satisfies: []
             depends_on: []
             # No FR and no UC on purpose: a pure refactor with no behaviour delta.
-            # It exists because `load_shortcuts` returns a six-tuple and
-            # `decode_command` takes all six as separate parameters; at nine,
-            # `clippy::too_many_arguments` fires in a build that runs -D warnings.
-            # Landing it first keeps the five behaviour diffs readable.
+            # Correction to this row as first written: it claimed
+            # `clippy::too_many_arguments` would fire at nine chords in a build that
+            # runs -D warnings. Reading the source shows `match_shortcut` already
+            # carried an explicit `#[allow(clippy::too_many_arguments)]`, so the lint
+            # was already silenced and nine parameters would not have failed the
+            # build. The refactor still earns its place, on the reason that survives
+            # the correction: the six chords travelled through a tuple return, six
+            # positional parameters, six runtime fields and six assignment statements
+            # — four parallel lists, and a new action missed in any one of them fails
+            # silently, the chord simply never firing.
             tests:
               - hook::tests::exact_primary_match
               - hook::tests::exact_snap_left_match
