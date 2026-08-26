@@ -301,7 +301,7 @@ fn execute_snap(command: Command) {
 /// hook callback is budgeted under 10 ms and must not allocate, and the monitor list is only
 /// needed once a command has already been accepted. The Hook answers *whose chord is this*;
 /// the Worker answers *what is a legal target and where does it go* — the same split
-/// `DEC-006` drew for target eligibility (`AD-2`, `NFR-2`, `NFR-3`).
+/// `DEC-006` drew for target eligibility.
 fn execute_monitor_move() {
     // `resolve_context` first, because it is the one gate that refuses a Wira Desk window of
     // our own (`LBR-WM-6`, `DEC-006`). Enumerating before that check would do work for a
@@ -312,7 +312,8 @@ fn execute_monitor_move() {
     };
     let hwnd = ctx.target.0;
 
-    // Fresh every invocation, cached nowhere (`AD-14`).
+    // Fresh every invocation, cached nowhere: an `HMONITOR` is a handle rather than an
+    // identity, so a list kept between keypresses outlives the configuration it described.
     let monitors = enumerate_monitors();
     let Some(from) = index_of_window_monitor(hwnd, &monitors) else {
         report_arrangement_failure("active window resolved to no enumerated monitor");

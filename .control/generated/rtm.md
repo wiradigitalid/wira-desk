@@ -186,10 +186,10 @@ rtm:
   - arrangement::snap::tests::one_pixel_tall_work_area_still_splits_safely
   - commands::tests::frozen_command_wire_values
   - commands::tests::roundtrip_all_commands
-  status: unknown
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-3
   CAP: CAP-2
   FR: FR-15
@@ -333,10 +333,10 @@ rtm:
   - app::tests::every_field_has_a_distinct_key_and_label
   - app::tests::field_declaration_order_is_the_precedence_order
   - persistence::tests::a_collision_names_both_fields
-  status: unknown
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-5
   FR: FR-19
@@ -457,10 +457,10 @@ rtm:
   - arrangement::snap::tests::one_pixel_tall_work_area_still_splits_safely
   - commands::tests::frozen_command_wire_values
   - commands::tests::roundtrip_all_commands
-  status: unknown
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-3
   CAP: CAP-12
   FR: FR-23
@@ -476,10 +476,10 @@ rtm:
   - arrangement::monitor::tests::proportional_mapping_survives_a_resolution_difference
   - arrangement::monitor::tests::empty_destination_work_area_is_rejected
   - arrangement::mod::tests::command_set_is_complete_over_its_whole_range
-  status: unknown
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-8
   FR: FR-3
@@ -695,10 +695,10 @@ rtm:
   - app::tests::every_field_has_a_distinct_key_and_label
   - app::tests::field_declaration_order_is_the_precedence_order
   - persistence::tests::a_collision_names_both_fields
-  status: unknown
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-4
   FR: FR-8

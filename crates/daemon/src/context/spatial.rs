@@ -64,11 +64,11 @@ mod tests {
 
 // ── Live enumeration of the attached display set ────────────────────────────────
 //
-// `AD-14`: enumerated fresh on every command that needs it, and cached nowhere — not in a
-// `static`, not memoized, and with no display-change subscription, because nothing is stored
-// for such a notification to invalidate. An `HMONITOR` is a handle, not an identity: it does
-// not survive an unplug, so a list kept between keypresses would outlive the configuration
-// it described.
+// Enumerated fresh on every command that needs it, and cached nowhere — not in a `static`,
+// not memoized, and with no display-change subscription, because nothing is stored for such
+// a notification to invalidate. An `HMONITOR` is a handle, not an identity: it does not
+// survive an unplug, so a list kept between keypresses would outlive the configuration it
+// described.
 
 /// One attached monitor, as the arrangement planners need it.
 ///

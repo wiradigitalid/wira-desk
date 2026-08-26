@@ -219,7 +219,29 @@ waves:
     release: "0.4.0"
     prd: [wira-desk]
     size: M
-    status: open
+    status: closed
+    # Closed 2026-08-26. All six stories landed, each green on fmt + clippy -D warnings +
+    # the full suite; 391 tests at the start of the wave, 438 at the end.
+    #
+    # Two deviations from the delivery method, both the owner's explicit instruction and
+    # recorded rather than hidden:
+    #   - No isolated worktree. wdi-build's precondition requires one; the owner redirected
+    #     the wave to the main checkout on `main` after the first worker had been dispatched.
+    #     The worker was stopped before it produced anything and its worktree removed.
+    #   - No dispatched workers and no code-review panel. The orchestrator wrote the code
+    #     itself, so the five-step per-story pipeline (plan / build / panel / publish / CI)
+    #     did not run. Cross-model review independence was not obtained for this wave.
+    #
+    # A second session committed to `main` during the wave (d69cfd2, Settings window
+    # centring). No file overlapped; verified rather than assumed.
+    #
+    # Retrospective: size M, advisory under V19. Skipped, stated rather than silent.
+    #
+    # Inventories re-derived from code at close: 3 plan-versus-code findings, all
+    # pre-existing (WM_APP_CAPTURE_LEASE, WM_APP_HOOK_LEASE, WM_APP_RECORDED_CHORD absent
+    # from inventory-api.md since the DEC-004/005 work). Routed to wdi-blueprint, which owns
+    # that artefact; not patched from this side. Structure maps needed no refresh — the wave
+    # added one file inside an existing crate and no base folder.
     depends_on: [W3]
     spec_folder: _bmad-output/specs/w4-arrangement/
     fr: [FR-14, FR-15, FR-22, FR-23]

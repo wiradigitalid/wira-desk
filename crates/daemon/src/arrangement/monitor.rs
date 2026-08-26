@@ -5,9 +5,10 @@
 //! easy to reason about. This operation needs two work areas and an ordered list of them,
 //! so folding it in would have made `snap.rs`'s one clear property untrue (`DEC-007`).
 //!
-//! Nothing here holds a monitor handle. `AD-14` forbids caching one, and a planner that
-//! never receives one cannot cache one — the list arrives as work areas, per invocation,
-//! from whoever enumerated it.
+//! Nothing here holds a monitor handle. Caching one is forbidden — it is a handle rather
+//! than an identity and does not survive an unplug — and a planner that never receives one
+//! cannot cache one. The list arrives as work areas, per invocation, from whoever enumerated
+//! it.
 
 use crate::cycling::WindowId;
 
