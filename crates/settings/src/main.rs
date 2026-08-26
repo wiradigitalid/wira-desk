@@ -299,51 +299,33 @@ fn main() -> Result<(), slint::PlatformError> {
 
     main_window.show()?;
 
-    // Center on the current (or primary) monitor. Deferred to a single-shot
-    // timer rather than run inline right after `show()`: measured directly
-    // that `current_monitor()`/`primary_monitor()` both still answer `None`
-    // at that point, because winit has not yet associated the window with a
-    // monitor — that only happens once the event loop is actually pumping
-    // messages, which does not start until `run()` below. A timer's
-    // callback only fires once that loop is running, which is exactly the
-    // delay needed. Without this the window opens wherever winit's own
+    // Center on the current (or primary) monitor. `with_winit_window`
+    // (synchronous) measured as returning `None` even from inside a
+    // single-shot timer fired after `show()` — the winit window backing
+    // this component is not guaranteed to exist yet at that point.
+    // `winit_window()`'s own documented async form is the one built to
+    // wait for it: `slint::spawn_local`, awaited, resolves once the window
+    // genuinely exists, which a synchronous call racing its creation
+    // cannot promise. Without this the window opens wherever winit's own
     // default placement puts it — near the top-left corner, not the centre
     // a user expects a first-run or reopened window to land in.
-    let debug_path = shared::log_path()
-        .parent()
-        .unwrap()
-        .join("wiradesk-settings-center-debug.txt");
-    let _ = std::fs::write(&debug_path, "timer registered\n");
     let window_weak_for_center = main_window.as_weak();
-    slint::Timer::single_shot(std::time::Duration::from_millis(0), move || {
-        let _ = std::fs::write(&debug_path, "timer fired\n");
+    let _ = slint::spawn_local(async move {
         let Some(w) = window_weak_for_center.upgrade() else {
-            let _ = std::fs::write(&debug_path, "timer fired, window upgrade failed\n");
             return;
         };
-        w.window().with_winit_window(|win| {
-            let current = win.current_monitor();
-            let primary = win.primary_monitor();
-            let chosen = current.clone().or_else(|| primary.clone());
-            let window_size = win.outer_size();
-            let position_before = win.outer_position();
-            let _ = std::fs::write(
-                &debug_path,
-                format!(
-                    "current_monitor={:?}\nprimary_monitor={:?}\nwindow_size={window_size:?}\nposition_before={position_before:?}\n",
-                    current.map(|m| (m.position(), m.size())),
-                    primary.map(|m| (m.position(), m.size())),
-                ),
-            );
-            let Some(monitor) = chosen else {
-                return;
-            };
-            let monitor_pos = monitor.position();
-            let monitor_size = monitor.size();
-            let x = monitor_pos.x + (monitor_size.width as i32 - window_size.width as i32) / 2;
-            let y = monitor_pos.y + (monitor_size.height as i32 - window_size.height as i32) / 2;
-            win.set_outer_position(winit::dpi::PhysicalPosition::new(x, y));
-        });
+        let Ok(win) = w.window().winit_window().await else {
+            return;
+        };
+        let Some(monitor) = win.current_monitor().or_else(|| win.primary_monitor()) else {
+            return;
+        };
+        let monitor_pos = monitor.position();
+        let monitor_size = monitor.size();
+        let window_size = win.outer_size();
+        let x = monitor_pos.x + (monitor_size.width as i32 - window_size.width as i32) / 2;
+        let y = monitor_pos.y + (monitor_size.height as i32 - window_size.height as i32) / 2;
+        win.set_outer_position(winit::dpi::PhysicalPosition::new(x, y));
     });
 
     // Initial state sync

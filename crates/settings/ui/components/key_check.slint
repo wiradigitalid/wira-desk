@@ -1,5 +1,4 @@
 import { Palette, Typography } from "../theme.slint";
-import { Card } from "./card.slint";
 
 // Satu pill modifier. State aktif dibawa oleh background DAN border,
 // tidak hanya warna teks — state yang hanya diwakili warna gagal untuk
@@ -31,7 +30,7 @@ component ModPill inherits Rectangle {
     }
 }
 
-export component KeyCheck inherits Card {
+export component KeyCheck inherits Rectangle {
     in property <bool> mod_ctrl: false;
     in property <bool> mod_win: false;
     in property <bool> mod_alt: false;
@@ -59,10 +58,10 @@ export component KeyCheck inherits Card {
     property <bool> has_note: root.verdict == 2 || root.verdict == 3;
 
     VerticalLayout {
-        padding-left: 16px;
-        padding-right: 16px;
-        padding-top: 12px;
-        padding-bottom: 12px;
+        // No padding of its own: the band that hosts this owns the inset, so a second one
+        // here would double it. Kept as an explicit zero rather than omitted, because a
+        // layout with no padding line reads as "not thought about".
+        padding: 0px;
         spacing: 10px;
 
         HorizontalLayout {
