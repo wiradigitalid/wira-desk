@@ -3,7 +3,7 @@ type: srs
 component: window-management
 status: reviewed
 created: 2026-08-21
-updated: 2026-08-21
+updated: 2026-08-26
 satisfies: [FR-1, FR-2, FR-3, FR-4, FR-5, FR-6, FR-8, FR-9, FR-10, FR-11, FR-12, FR-14, FR-15]
 reviewed:
   date: '2026-08-21'
@@ -46,6 +46,7 @@ Users manage multiple windows within the same application (multiple browser sess
 - Must maintain a static RAM footprint under 2 MB idle (NFR-1) and release binary size under 500 KB (NFR-5).
 - Must not watch configuration files on disk; configuration reload occurs exclusively via explicit `WM_APP_RELOAD_CONFIG` IPC message (BR-1, AD-5).
 - Must bypass shortcut interception when foreground window is a known virtual machine or remote desktop client (FR-3, AD-6).
+- Must never resolve an arrangement target that belongs to Wira Desk itself; the chord is consumed and nothing moves, rather than being passed back to Windows or retargeted at another window (FR-14, LBR-WM-6, DEC-006).
 
 ## Non-Goals
 

@@ -1,8 +1,14 @@
 ---
 type: decision
 id: DEC-006
-status: draft
-touches: []
+status: applied
+touches:
+  - .what/window-management/02-rules/rules-window-management.md
+  - .what/window-management/SRS-window-management.md
+  - .what/window-management/04-usecases/UC-2-snap-window-half.md
+  - .how/window-management/04-components/LC-arrangement-engine.md
+  - .what/settings/02-rules/rules-settings.md
+  - .how/settings/04-components/LC-settings-shell.md
 supersedes: null
 superseded_by: null
 created: '2026-08-26'

@@ -4,7 +4,7 @@
 
 Decisions are no longer looked up through the memlog — the memlog goes back to being just a pass log.
 
-**6 decisions** — applied: 5 · draft: 1.
+**6 decisions** — applied: 6.
 
 | id | Title | Status | Type | Touches | File |
 | --- | --- | --- | --- | --- | --- |
@@ -13,4 +13,4 @@ Decisions are no longer looked up through the memlog — the memlog goes back to
 | `DEC-003` | A chord the Windows shell owns is refused and explained, never overridden | `applied` | — | `.what/settings/02-rules/rules-settings.md`, `.what/settings/04-usecases/UC-4-change-shortcut.md`, `.what/settings/05-scenarios/SCN-01-invalid-shortcut-rejected.md`, `.how/settings/SDD-settings.md` | `decisions/DEC-003-windows-shell-chords-are-refused-not-overridden.md` |
 | `DEC-004` | The hook reports the chord it observed, and swallows it only while a field is recording | `applied` | — | `.what/settings/02-rules/rules-settings.md`, `.what/settings/04-usecases/UC-4-change-shortcut.md`, `.what/settings/05-scenarios/SCN-01-invalid-shortcut-rejected.md`, `.how/settings/SDD-settings.md`, `.how/window-management/SDD-window-management.md`, `.how/_platform/ARCHITECTURE-SPINE.md` | `decisions/DEC-004-recorder-lease-swallows-and-reports-the-chord.md` |
 | `DEC-005` | The key check reports what was observed, and never predicts what will happen | `applied` | — | `.what/settings/02-rules/rules-settings.md`, `.what/settings/05-scenarios/SCN-01-invalid-shortcut-rejected.md`, `.how/settings/SDD-settings.md` | `decisions/DEC-005-key-check-reports-observations-never-predictions.md` |
-| `DEC-006` | Arrangement never targets a Wira Desk window, and the Settings window's painted size is its Win32 size | `draft` | — | — | `decisions/DEC-006-arrangement-never-targets-a-wira-desk-window.md` |
+| `DEC-006` | Arrangement never targets a Wira Desk window, and the Settings window's painted size is its Win32 size | `applied` | — | `.what/window-management/02-rules/rules-window-management.md`, `.what/window-management/SRS-window-management.md`, `.what/window-management/04-usecases/UC-2-snap-window-half.md`, `.how/window-management/04-components/LC-arrangement-engine.md`, `.what/settings/02-rules/rules-settings.md`, `.how/settings/04-components/LC-settings-shell.md` | `decisions/DEC-006-arrangement-never-targets-a-wira-desk-window.md` |

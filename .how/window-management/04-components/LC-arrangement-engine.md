@@ -16,10 +16,11 @@ created: 2026-08-21
 
 `LC-arrangement-engine` plans DPI-aware window geometry for keyboard-driven snapping and overlapping stacks. It is invoked synchronously from `LC-worker-thread` after a snap or stack command is dequeued. Responsibilities:
 
-1. Resolving the active monitor work area in physical pixels, accounting for per-monitor DPI (FR-14).
-2. Computing half-screen placements (left, right, maximize) without activating the window during geometry application (`SWP_NOACTIVATE`).
-3. Planning overlapping stack layouts for up to three half-width windows with visible leading edges on small monitors (FR-15).
-4. Returning `PlacementPlan` structs consumed by `Win32WindowMover` (`SetWindowPos`).
+1. Refusing a target that belongs to Wira Desk itself, before any geometry is resolved (LBR-WM-6, DEC-006).
+2. Resolving the active monitor work area in physical pixels, accounting for per-monitor DPI (FR-14).
+3. Computing half-screen placements (left, right, maximize) without activating the window during geometry application (`SWP_NOACTIVATE`).
+4. Planning overlapping stack layouts for up to three half-width windows with visible leading edges on small monitors (FR-15).
+5. Returning `PlacementPlan` structs consumed by `Win32WindowMover` (`SetWindowPos`).
 
 The engine never installs hooks, never writes configuration, and never calls blocking enumeration beyond what the worker already collected.
 
@@ -51,5 +52,6 @@ The engine never installs hooks, never writes configuration, and never calls blo
 
 ## Notes
 
+- **Target eligibility:** Ownership is decided from the target process’s image basename and from the daemon’s own process id. Identity that cannot be read degrades to “not ours”, so a process the daemon cannot open does not silently lose snapping; the complementary guard in the `settings` container (LBR-ST-13) covers the residual case.
 - **DPI:** Plans use monitor DPI at plan time; moving a window across monitors after snap is out of scope for this command.
 - **Evidence:** [PARTIAL] `crates/daemon/src/arrangement/`, `crates/daemon/src/context/spatial.rs`.

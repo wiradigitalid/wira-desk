@@ -34,6 +34,7 @@ User presses a configured window snapping keyboard shortcut (e.g. `Ctrl + Win + 
 | --- | --- | --- |
 | Step 1 | Foreground window is currently maximized | System restores window to normal state before applying half-screen snapping dimensions. |
 | Step 2 | Keystroke has unconfigured modifier combinations | System passes keystroke through via `CallNextHookEx` without executing snapping action. |
+| Step 4 | Foreground window belongs to Wira Desk itself — the Settings window or its onboarding modal | System resolves no target and arranges nothing. The chord stays consumed rather than passed back to Windows, and the refusal is recorded as a Tier-2 diagnostic with no popup. |
 | Step 4 | Window spans multi-monitor boundary | System determines primary containing monitor via center-point calculation and applies snap to that monitor's work area. |
 | Step 6 | Window enforces custom minimum size constraints larger than half-screen | System positions window flush to screen edge while respecting application's enforced minimum boundaries. |
 
@@ -55,3 +56,4 @@ The active window is cleanly resized and positioned to exactly half of the activ
 - `LBR-WM-1` (Exact shortcut matching only)
 - `LBR-WM-3` (Non-blocking kernel API sterilization)
 - `LBR-WM-4` (Lock-free drop-on-saturation policy)
+- `LBR-WM-6` (Arrangement target eligibility)

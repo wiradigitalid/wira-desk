@@ -59,7 +59,13 @@ decisions:
 
   - id: DEC-006
     title: Arrangement never targets a Wira Desk window, and the Settings window's painted size is its Win32 size
-    status: draft
+    status: applied
     file: decisions/DEC-006-arrangement-never-targets-a-wira-desk-window.md
     created: '2026-08-26'
-    touches: []
+    touches:
+      - .what/window-management/02-rules/rules-window-management.md
+      - .what/window-management/SRS-window-management.md
+      - .what/window-management/04-usecases/UC-2-snap-window-half.md
+      - .how/window-management/04-components/LC-arrangement-engine.md
+      - .what/settings/02-rules/rules-settings.md
+      - .how/settings/04-components/LC-settings-shell.md

@@ -51,5 +51,6 @@ The shell never writes `config.toml` directly; all persistence goes through `LC-
 
 ## Notes
 
+- **Window size boundary:** The window is frameless, transparent, and laid out at a fixed size, so a frame larger than the layout leaves an invisible region that still owns its hit-test area and swallows mouse clicks. A size change imposed from outside the process is clamped at the window’s own message boundary; a size the layout itself declares legal is not (LBR-ST-13, DEC-006).
 - **Accessibility:** Toggle and capture states must expose UI Automation values, not color alone (FR-21, LBR-ST-6).
 - **Evidence:** [PARTIAL] `crates/settings/src/app.rs`, `crates/settings/src/theme.rs`.
