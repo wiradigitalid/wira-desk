@@ -388,7 +388,19 @@ where
     if rt.mods.any() {
         if let Some(action) = lease_action(rt, lease_foreground_pid) {
             report_recorded_chord(vk, rt.mods);
-            rt.bypass_latched = action == LeaseAction::Observe;
+            // Deliberately does NOT set `bypass_latched`. That latch exists
+            // to protect a *swallowed* chord's tail (its own key-up, and the
+            // modifier releases) from falling back into normal handling —
+            // Observe swallows nothing, and Record's swallowed key-down has
+            // no matching `swallow_release_vk` to protect either, since we
+            // return before that assignment runs. Latching here instead
+            // blocked every *other* key pressed while the same modifiers
+            // stayed held: hold Ctrl+Alt, tap Left (latches), tap Right
+            // without releasing Ctrl+Alt — the latch's top-of-function guard
+            // passed Right through blind, before this check or
+            // `match_shortcut` ever ran, so it was neither reported nor
+            // executed until every modifier came up. That is the reported
+            // symptom of "sometimes not detected while testing."
             return KeyHandleOutcome {
                 disposition: match action {
                     LeaseAction::Observe => KeyHandleResult::PassToNext,
@@ -1512,6 +1524,49 @@ mod tests {
 
         let outcome = handle_key_event_with_bypass(&mut rt, VK_1, true, |_| false, |_| 777);
         assert_eq!(outcome.disposition, KeyHandleResult::PassToNext);
+    }
+
+    #[test]
+    fn observe_lease_reports_a_second_key_pressed_without_releasing_modifiers() {
+        // Regression: firing the lease for one key must not latch bypass —
+        // that used to swallow-through every *other* key pressed while the
+        // same modifiers stayed held, until every modifier came up. A user
+        // testing shortcuts by holding Ctrl+Alt and tapping through
+        // Left, Right, Enter, Down without releasing Ctrl+Alt in between
+        // must see every one of those taps handled independently.
+        let mut rt = test_runtime(
+            Shortcut::parse("win+backtick").unwrap(),
+            Shortcut::parse("alt+backtick").unwrap(),
+        );
+        rt.capture_lease_level = CAPTURE_LEASE_OBSERVE;
+        rt.capture_lease_pid = 777;
+
+        let _ = handle_key_event_with_bypass(&mut rt, VK_LCONTROL, true, |_| false, |_| 777);
+        let _ = handle_key_event_with_bypass(&mut rt, VK_LMENU, true, |_| false, |_| 777);
+
+        const VK_LEFT: u32 = 0x25;
+        const VK_RIGHT: u32 = 0x27;
+
+        let first = handle_key_event_with_bypass(&mut rt, VK_LEFT, true, |_| false, |_| 777);
+        assert_eq!(first.disposition, KeyHandleResult::PassToNext);
+        // The precise regression guard: Observe must never latch bypass at
+        // all. `disposition` alone cannot tell a genuine lease pass-through
+        // apart from the old bug's stale-latch pass-through — both read
+        // `PassToNext` — so this checks the state the bug actually left
+        // behind instead.
+        assert!(
+            !rt.bypass_latched,
+            "observe swallows nothing, so there is no tail to protect with a latch; \
+             a set latch is what silently swallowed-through every later key"
+        );
+        let _ = handle_key_event_with_bypass(&mut rt, VK_LEFT, false, |_| false, |_| 777);
+
+        // Ctrl and Alt are still held here — this is the exact scenario the
+        // old latch broke.
+        assert!(rt.mods.ctrl && rt.mods.alt);
+        let second = handle_key_event_with_bypass(&mut rt, VK_RIGHT, true, |_| false, |_| 777);
+        assert_eq!(second.disposition, KeyHandleResult::PassToNext);
+        assert!(!rt.bypass_latched);
     }
 
     #[test]
