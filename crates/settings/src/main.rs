@@ -1,6 +1,7 @@
 #![windows_subsystem = "windows"]
 
 mod app;
+mod daemon_watch;
 mod hookbridge;
 mod persistence;
 mod theme;
@@ -13,13 +14,15 @@ use windows_sys::Win32::Foundation::{CloseHandle, GetLastError, ERROR_ALREADY_EX
 use windows_sys::Win32::System::Threading::CreateMutexW;
 use windows_sys::Win32::UI::Input::KeyboardAndMouse::{GetAsyncKeyState, VK_LWIN, VK_RWIN};
 use windows_sys::Win32::UI::WindowsAndMessaging::{
-    FindWindowW, SetForegroundWindow, ShowWindow, SW_RESTORE,
+    FindWindowW, MessageBoxW, SetForegroundWindow, ShowWindow, MB_ICONINFORMATION, MB_OK,
+    SW_RESTORE,
 };
 
 use shared::constants::SETTINGS_SINGLE_INSTANCE_MUTEX;
 use shared::{config_path, migrate_appdata, Config};
 
 use app::{format_shortcut_display, Pane, SaveFeedback, SettingsModel, ShortcutField};
+use daemon_watch::{DaemonWatch, Startup};
 use persistence::{resolve_launch_intent, LaunchIntent};
 
 fn wide(s: &str) -> Vec<u16> {
@@ -287,6 +290,34 @@ fn main() -> Result<(), slint::PlatformError> {
                 CloseHandle(mutex);
             }
         }
+        return Ok(());
+    }
+
+    // Settings does not open without a daemon to configure. Checked before the
+    // window is built rather than on the first watch tick, so a user who runs
+    // the executable directly gets an explanation instead of a window that
+    // appears and vanishes half a second later.
+    if daemon_watch::startup_decision(
+        daemon_watch::daemon_is_running(),
+        daemon_watch::allow_no_daemon(),
+    ) == Startup::RefuseNoDaemon
+    {
+        let text = wide(daemon_watch::NO_DAEMON_MESSAGE);
+        let caption = wide("Wira Desk Settings");
+        // SAFETY: `text` and `caption` are NUL-terminated wide strings in locals
+        // that outlive the call, and a null owner handle is the documented way to
+        // show an unowned modal box — which is what this is, since no window
+        // exists yet. The return value is the button pressed; there is only one.
+        unsafe {
+            MessageBoxW(
+                0,
+                text.as_ptr(),
+                caption.as_ptr(),
+                MB_OK | MB_ICONINFORMATION,
+            );
+        }
+        // The single-instance handle is deliberately left open, exactly as on
+        // the normal path: it is released when the process exits.
         return Ok(());
     }
 
@@ -563,12 +594,9 @@ fn main() -> Result<(), slint::PlatformError> {
                     .and_then(|sc| sc.to_canonical_string())
                     .unwrap_or(raw_combo);
 
-                // Daemon detection check: FindWindowW for daemon presence
-                let class = wide(shared::constants::DAEMON_WINDOW_CLASS);
-                let title = wide(shared::constants::DAEMON_WINDOW_TITLE);
-                // SAFETY: `class` and `title` are NUL-terminated wide string vectors that outlive the call.
-                // `FindWindowW` returns a HWND or 0 if daemon is not running, handled cleanly.
-                let daemon_running = unsafe { FindWindowW(class.as_ptr(), title.as_ptr()) != 0 };
+                // Same probe the liveness watch uses, so what Key Check
+                // reports and what keeps this window open cannot disagree.
+                let daemon_running = daemon_watch::daemon_is_running();
 
                 let vk = shared::shortcut::vk_from_name(&display_key);
                 m.key_check.record_key(
@@ -765,6 +793,33 @@ fn main() -> Result<(), slint::PlatformError> {
                         sync_model_to_ui(&w, &m);
                     }
                 }
+            },
+        );
+    }
+
+    // Daemon liveness watch. Settings is bound to the daemon's lifetime — see
+    // `daemon_watch` for why a window left open after the daemon exits would be
+    // reporting things that are no longer true.
+    let daemon_timer = slint::Timer::default();
+    {
+        let window_weak = main_window.as_weak();
+        let mut watch = DaemonWatch::new(daemon_watch::daemon_is_running);
+        daemon_timer.start(
+            slint::TimerMode::Repeated,
+            daemon_watch::POLL_INTERVAL,
+            move || {
+                if !watch.tick() {
+                    return;
+                }
+                // Hide the window *and* quit the loop. Hiding alone relies on
+                // Slint's quit-on-last-window-closed behaviour, and if that ever
+                // stops holding — or the window has already been hidden by
+                // something else — the process would keep running with no window
+                // at all, which is the exact state this watch exists to prevent.
+                if let Some(w) = window_weak.upgrade() {
+                    let _ = w.hide();
+                }
+                let _ = slint::quit_event_loop();
             },
         );
     }

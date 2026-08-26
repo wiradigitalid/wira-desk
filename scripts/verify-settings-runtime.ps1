@@ -86,6 +86,12 @@ if (-not $SkipBuild) {
 $exe = Join-Path $repoRoot 'target\debug\wiradesk-settings.exe'
 if (-not (Test-Path $exe)) { Write-Fail "missing $exe"; exit 1 }
 
+# Settings refuses to open with no daemon running, and closes itself when the
+# daemon it opened with exits. This harness deliberately runs without a daemon
+# (it does not require Administrator, so it cannot start one), so it waives that
+# rule for the processes it launches. Start-Process inherits this environment.
+$env:WIRADESK_SETTINGS_ALLOW_NO_DAEMON = '1'
+
 $wiraDeskDir = Join-Path $env:APPDATA 'WiraDesk'
 $configPath = Join-Path $wiraDeskDir 'config.toml'
 $legacyDir = Join-Path $env:APPDATA 'WinTick'
