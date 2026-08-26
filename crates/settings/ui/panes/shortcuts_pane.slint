@@ -103,6 +103,19 @@ export component ShortcutsPane inherits VerticalLayout {
         }
     }
 
+    // Guidance for CHOOSING a chord, so it sits where the reader starts rather than at the
+    // bottom of the Key check card, which reports what a keypress already did. A sibling of
+    // the groups rather than part of the title block above: that block is spaced at 2px
+    // because it is a title and its subtitle, and a third line crammed into it reads as a
+    // continuation of the subtitle instead of a separate note.
+    Text {
+        text: "💡 Tip: Windows reserves Win + 1..9, Win + E, Win + D, and Win + Ctrl + ←/→. Wira Desk ships on Ctrl + Alt + ... — a good family for custom actions too.";
+        font-family: Typography.font_family;
+        font-size: Typography.size_caption;
+        color: Palette.accent_primary;
+        wrap: word-wrap;
+    }
+
     ShortcutGroup {
         heading: "Switching";
         rows: root.rows_switching;

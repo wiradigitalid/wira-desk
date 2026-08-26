@@ -309,9 +309,16 @@ fn main() -> Result<(), slint::PlatformError> {
     // delay needed. Without this the window opens wherever winit's own
     // default placement puts it — near the top-left corner, not the centre
     // a user expects a first-run or reopened window to land in.
+    let debug_path = shared::log_path()
+        .parent()
+        .unwrap()
+        .join("wiradesk-settings-center-debug.txt");
+    let _ = std::fs::write(&debug_path, "timer registered\n");
     let window_weak_for_center = main_window.as_weak();
     slint::Timer::single_shot(std::time::Duration::from_millis(0), move || {
+        let _ = std::fs::write(&debug_path, "timer fired\n");
         let Some(w) = window_weak_for_center.upgrade() else {
+            let _ = std::fs::write(&debug_path, "timer fired, window upgrade failed\n");
             return;
         };
         w.window().with_winit_window(|win| {
@@ -321,7 +328,7 @@ fn main() -> Result<(), slint::PlatformError> {
             let window_size = win.outer_size();
             let position_before = win.outer_position();
             let _ = std::fs::write(
-                std::env::temp_dir().join("wiradesk-settings-center-debug.txt"),
+                &debug_path,
                 format!(
                     "current_monitor={:?}\nprimary_monitor={:?}\nwindow_size={window_size:?}\nposition_before={position_before:?}\n",
                     current.map(|m| (m.position(), m.size())),
