@@ -67,15 +67,28 @@ allow = [
     "CC0-1.0",
     "Unlicense",
     "BSL-1.0",
-    # Font licences, and they are not hypothetical. `epaint_default_fonts` is licensed
-    # `(MIT OR Apache-2.0) AND OFL-1.1 AND Ubuntu-font-1.0`, and it really is in the
-    # shipped binary: `settings/src/theme.rs` builds on `FontDefinitions::default()`, so
-    # egui's bundled faces remain the last-resort glyph fallback behind Segoe UI and
-    # Tahoma. Both licences permit redistribution of the unmodified fonts and neither
-    # reaches our own source; what they require is attribution, which `NOTICE` carries
-    # (generated from `cargo metadata`, so it cannot silently omit a dependency).
-    "OFL-1.1",
-    "Ubuntu-font-1.0",
+    # Slint is tri-licensed: `GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR
+    # LicenseRef-Slint-Software-3.0`. An `OR` expression is satisfied by allowing one
+    # branch, and the branch accepted here is the royalty-free one. The other two are
+    # deliberately absent rather than forgotten. `GPL-3.0-only` would pull the
+    # distributed work under copyleft and contradict this product's MIT `LICENSE`; the
+    # commercial licence buys nothing that a desktop application does not already get
+    # for free, because its per-device royalty exists for embedded use.
+    #
+    # This entry is not free of obligation, which is the reason it carries a comment at
+    # all. The royalty-free licence requires that the use of Slint be disclosed on a
+    # public page where the binaries can be found. `README.md` and the release notes in
+    # `.github/workflows/release.yml` carry that attribution, and deleting it from
+    # either place breaks the licence this line accepts. The licence also forbids
+    # redistributing an application that re-exposes Slint's own APIs; Settings is an
+    # end-user application rather than a library, so that condition holds by shape and
+    # not by anything anyone has to remember.
+    "LicenseRef-Slint-Royalty-free-2.0",
+    # The font licences that used to sit here — `OFL-1.1` and `Ubuntu-font-1.0`, carried
+    # by `epaint_default_fonts` — left the graph together with egui. They are removed
+    # rather than kept in case they return: an allow entry that no dependency needs is a
+    # rule which cannot fail, and if a bundled face ever comes back, a red gate is the
+    # point. Verified absent across all 600 packages `cargo metadata` resolves.
 ]
 confidence-threshold = 0.8
 

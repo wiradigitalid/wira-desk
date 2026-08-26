@@ -51,6 +51,12 @@ Migration from a prior WinTick install is triggered by the **presence** of the l
 
 Pre-release (`0.1.0`). Behavior and packaging may change.
 
+## Built with Slint
+
+[![#MadeWithSlint](https://raw.githubusercontent.com/slint-ui/slint/master/logo/MadeWithSlint-logo-light.svg)](https://slint.dev)
+
+The Settings window is built with [Slint](https://slint.dev). Slint is offered under a choice of licences, and Wira Desk uses it under the **Slint Royalty-free License 2.0** - which requires that this use be disclosed on a public page where the binaries can be found. That is what this section is, so it belongs to the licence rather than to courtesy: it is not decoration to be tidied away.
+
 ## License
 
-MIT - see [LICENSE](LICENSE).
+MIT - see [LICENSE](LICENSE). Third-party dependency licences are listed in [NOTICE](NOTICE), generated from `cargo metadata`.

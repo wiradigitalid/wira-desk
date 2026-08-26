@@ -43,7 +43,12 @@ jobs:
             '',
             'These binaries are not code-signed, so Windows SmartScreen will warn and the',
             'UAC prompt will show an unverified publisher. See SECURITY.md for what that',
-            'does and does not tell you, and for the hardening note about where to install.'
+            'does and does not tell you, and for the hardening note about where to install.',
+            '',
+            'Made with Slint (https://slint.dev), used under the Slint Royalty-free',
+            'License 2.0. That licence requires this disclosure on the page the binaries',
+            'are downloaded from, which is this one -- so these two lines are a licence',
+            'term, not a credit. See deny.toml for which branch of the licence applies.'
           ) -join "`n"
           gh release create $env:GITHUB_REF_NAME `
             dist\wiradesk.exe dist\wiradesk-settings.exe dist\SHA256SUMS `
