@@ -334,6 +334,22 @@ fn main() -> Result<(), slint::PlatformError> {
     let is_dark = theme::detect_theme() == theme::ThemeMode::Dark;
     main_window.global::<Palette>().set_is_dark(is_dark);
 
+    // Center on the current (or primary, before the window has been shown
+    // anywhere) monitor. Without this the window opens wherever winit's own
+    // default placement puts it — near the top-left corner, not the centre
+    // a user expects a first-run or reopened window to land in.
+    main_window.window().with_winit_window(|win| {
+        let monitor = win.current_monitor().or_else(|| win.primary_monitor());
+        if let Some(monitor) = monitor {
+            let monitor_pos = monitor.position();
+            let monitor_size = monitor.size();
+            let window_size = win.outer_size();
+            let x = monitor_pos.x + (monitor_size.width as i32 - window_size.width as i32) / 2;
+            let y = monitor_pos.y + (monitor_size.height as i32 - window_size.height as i32) / 2;
+            win.set_outer_position(winit::dpi::PhysicalPosition::new(x, y));
+        }
+    });
+
     // Initial state sync
     sync_model_to_ui(&main_window, &model.borrow());
 

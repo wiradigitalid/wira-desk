@@ -4178,6 +4178,7 @@ dependencies = [
  "slint",
  "slint-build",
  "windows-sys 0.52.0",
+ "winit",
 ]
 
 [[package]]
