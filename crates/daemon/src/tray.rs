@@ -14,8 +14,9 @@ use std::mem::{size_of, zeroed};
 use windows_sys::Win32::Foundation::{HWND, LPARAM, LRESULT, WPARAM};
 use windows_sys::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows_sys::Win32::UI::Shell::{
-    Shell_NotifyIconW, NIF_ICON, NIF_INFO, NIF_MESSAGE, NIF_SHOWTIP, NIF_TIP, NIIF_ERROR, NIM_ADD,
-    NIM_DELETE, NIM_MODIFY, NIM_SETVERSION, NOTIFYICONDATAW, NOTIFYICON_VERSION_4,
+    Shell_NotifyIconW, NIF_ICON, NIF_INFO, NIF_MESSAGE, NIF_SHOWTIP, NIF_TIP, NIIF_ERROR,
+    NIIF_INFO, NIM_ADD, NIM_DELETE, NIM_MODIFY, NIM_SETVERSION, NOTIFYICONDATAW,
+    NOTIFYICON_VERSION_4,
 };
 use windows_sys::Win32::UI::WindowsAndMessaging::{
     ChangeWindowMessageFilterEx, CreateWindowExW, DefWindowProcW, DestroyIcon, DispatchMessageW,
@@ -231,11 +232,15 @@ fn set_state(data: &mut TrayData, state: TrayState) {
     }
 }
 
-/// Show a Tier 3 balloon/toast (`NIF_INFO`) — reuse `notify_data` as the
+/// Show a balloon/toast (`NIF_INFO`) — reuse `notify_data` as the
 /// base instead of building a fresh `NOTIFYICONDATAW`
 /// from scratch; `notify_data` itself is not modified and remains used as-is
-/// by `add_icon`/`modify_icon`/`delete_icon`.
-fn show_toast(data: &TrayData, title: &str, msg: &str) {
+/// by `add_icon`/`modify_icon`/`delete_icon`. `icon_flag` is one of the
+/// `NIIF_*` constants (`NIIF_INFO`, `NIIF_ERROR`, ...) so the shell renders
+/// the icon that matches what the message actually says — an informational
+/// "now running" toast must not wear the same red error glyph as a Tier 3
+/// hook-dead toast.
+fn show_toast(data: &TrayData, title: &str, msg: &str, icon_flag: u32) {
     // SAFETY: same contract as `modify_icon`. The two extra fields are fixed-size arrays
     // inside `nid`, and `fill_wide_buf` is bounded by their `N` and always NUL-terminates,
     // so neither write can run past the struct nor hand the shell an unterminated string.
@@ -244,7 +249,7 @@ fn show_toast(data: &TrayData, title: &str, msg: &str) {
         nid.uFlags |= NIF_INFO;
         fill_wide_buf(&mut nid.szInfoTitle, title);
         fill_wide_buf(&mut nid.szInfo, msg);
-        nid.dwInfoFlags = NIIF_ERROR;
+        nid.dwInfoFlags = icon_flag;
         Shell_NotifyIconW(NIM_MODIFY, &nid);
     }
 }
@@ -335,6 +340,17 @@ unsafe fn wndproc_impl(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> 
                     "Wira Desk: initial NIM_ADD failed — tray icon not visible; will retry on TaskbarCreated",
                 );
             }
+            // Every start, not only the first: this is the one signal that
+            // Wira Desk is actually alive and its hook is installed, without
+            // opening Settings or checking Task Manager to find out. Placed
+            // after `add_icon` so the toast has an icon to anchor to rather
+            // than racing a tray icon that is not there yet.
+            show_toast(
+                data,
+                "Wira Desk",
+                "Wira Desk is now running and listening for shortcuts.",
+                NIIF_INFO,
+            );
             // First run. Launched here rather than in `main` so the
             // tray icon already exists — otherwise a user who closes the
             // tutorial would be left with no visible sign Wira Desk is running.
@@ -372,6 +388,7 @@ unsafe fn wndproc_impl(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> 
                     data,
                     "Wira Desk",
                     "The keyboard hook stopped responding and could not be recovered automatically.\n\nRestart Wira Desk to bring window switching back.",
+                    NIIF_ERROR,
                 );
                 data.hook_dead_toast_sent = true;
                 #[cfg(debug_assertions)]
