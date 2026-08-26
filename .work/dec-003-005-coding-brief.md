@@ -9,7 +9,7 @@ Binding documents: `.control/decisions/DEC-003…`, `DEC-004…`, `DEC-005…`;
 `.what/settings/02-rules/rules-settings.md` (LBR-ST-10..12);
 `.what/settings/04-usecases/UC-4-change-shortcut.md`; `.what/settings/05-scenarios/SCN-01-…`;
 `.how/settings/SDD-settings.md`; `.how/window-management/SDD-window-management.md`;
-`.how/_platform/ARCHITECTURE-SPINE.md` (AD-1).
+`.how/_platform/ARCHITECTURE-SPINE.md` (its cross-actor channel decision).
 
 ## Order matters — DEF-3 is first, and nothing else works before it
 
