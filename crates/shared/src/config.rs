@@ -41,6 +41,12 @@ pub struct SwitcherConfig {
 pub struct SnappingConfig {
     pub snap_half_left: String,
     pub snap_half_right: String,
+    /// Top half. Added after the original freeze; legacy config without it keeps
+    /// every value it holds and gains this default, because every field on this
+    /// struct carries `#[serde(default)]`.
+    pub snap_half_top: String,
+    /// Bottom half, the complement of `snap_half_top`.
+    pub snap_half_bottom: String,
     pub snap_maximize: String,
 }
 
@@ -85,6 +91,8 @@ impl Default for SnappingConfig {
         Self {
             snap_half_left: "ctrl+win+left".to_string(),
             snap_half_right: "ctrl+win+right".to_string(),
+            snap_half_top: "ctrl+alt+up".to_string(),
+            snap_half_bottom: "ctrl+alt+down".to_string(),
             snap_maximize: "ctrl+win+enter".to_string(),
         }
     }
@@ -214,7 +222,27 @@ mod tests {
         let cfg = SnappingConfig::default();
         assert_eq!(cfg.snap_half_left, "ctrl+win+left");
         assert_eq!(cfg.snap_half_right, "ctrl+win+right");
+        assert_eq!(cfg.snap_half_top, "ctrl+alt+up");
+        assert_eq!(cfg.snap_half_bottom, "ctrl+alt+down");
         assert_eq!(cfg.snap_maximize, "ctrl+win+enter");
+    }
+
+    #[test]
+    fn legacy_config_without_the_vertical_halves_still_loads() {
+        // A file written before the top and bottom halves existed must keep every value
+        // it holds and gain only the two new defaults.
+        let toml = r#"
+            [snapping]
+            snap_half_left = "ctrl+alt+left"
+            snap_half_right = "ctrl+alt+right"
+            snap_maximize = "ctrl+alt+enter"
+        "#;
+        let cfg = Config::from_toml_str(toml).unwrap();
+        assert_eq!(cfg.snapping.snap_half_left, "ctrl+alt+left");
+        assert_eq!(cfg.snapping.snap_half_right, "ctrl+alt+right");
+        assert_eq!(cfg.snapping.snap_maximize, "ctrl+alt+enter");
+        assert_eq!(cfg.snapping.snap_half_top, "ctrl+alt+up");
+        assert_eq!(cfg.snapping.snap_half_bottom, "ctrl+alt+down");
     }
 
     #[test]

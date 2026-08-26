@@ -124,6 +124,10 @@ pub fn validate(text: &str) -> Result<(Config, HookSnapshot, WorkerSnapshot), Re
         Shortcut::parse(&cfg.snapping.snap_half_left).ok_or(RejectReason::InvalidShortcut)?;
     let snap_right =
         Shortcut::parse(&cfg.snapping.snap_half_right).ok_or(RejectReason::InvalidShortcut)?;
+    let snap_top =
+        Shortcut::parse(&cfg.snapping.snap_half_top).ok_or(RejectReason::InvalidShortcut)?;
+    let snap_bottom =
+        Shortcut::parse(&cfg.snapping.snap_half_bottom).ok_or(RejectReason::InvalidShortcut)?;
     let snap_maximize =
         Shortcut::parse(&cfg.snapping.snap_maximize).ok_or(RejectReason::InvalidShortcut)?;
     let stack = Shortcut::parse(&cfg.layout.stack_shortcut).ok_or(RejectReason::InvalidShortcut)?;
@@ -133,6 +137,8 @@ pub fn validate(text: &str) -> Result<(Config, HookSnapshot, WorkerSnapshot), Re
         fallback: Some(fallback),
         snap_left: Some(snap_left),
         snap_right: Some(snap_right),
+        snap_top: Some(snap_top),
+        snap_bottom: Some(snap_bottom),
         snap_maximize: Some(snap_maximize),
         stack: Some(stack),
     };

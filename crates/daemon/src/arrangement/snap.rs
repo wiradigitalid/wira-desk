@@ -24,6 +24,25 @@ fn split_x(work: &Rect) -> Result<i32, PlanError> {
         .ok_or(PlanError::UnrepresentableGeometry)
 }
 
+/// The y coordinate that divides the work area into halves.
+///
+/// The vertical twin of [`split_x`], and deliberately the same shape rather than a second
+/// approach: one boundary computed once, with both halves derived from it, so
+/// `top.bottom == bottom.top` always holds and the halves tile the work area with neither
+/// a one-pixel gap nor a one-pixel overlap. An odd height gives the floor to the top half
+/// and the remainder to the bottom, matching how [`split_x`] favours the left.
+fn split_y(work: &Rect) -> Result<i32, PlanError> {
+    let height = work
+        .checked_height()
+        .ok_or(PlanError::UnrepresentableGeometry)?;
+    if height <= 0 {
+        return Err(PlanError::EmptyOrInvertedWorkArea);
+    }
+    work.top
+        .checked_add(height / 2)
+        .ok_or(PlanError::UnrepresentableGeometry)
+}
+
 /// Validate before planning. Uses [`Rect::validate`] rather than `is_valid`
 /// so an unrepresentable work area is reported as such instead of being
 /// misfiled as merely empty.
@@ -44,6 +63,22 @@ pub fn plan_snap_right(work: &WorkArea, window: WindowId) -> PlanResult {
     ensure_usable(work)?;
     let mid = split_x(&work.rect)?;
     let rect = Rect::new(mid, work.rect.top, work.rect.right, work.rect.bottom)?;
+    Ok(PlacementPlan::single(window, rect))
+}
+
+/// Top half of the usable work area.
+pub fn plan_snap_top(work: &WorkArea, window: WindowId) -> PlanResult {
+    ensure_usable(work)?;
+    let mid = split_y(&work.rect)?;
+    let rect = Rect::new(work.rect.left, work.rect.top, work.rect.right, mid)?;
+    Ok(PlacementPlan::single(window, rect))
+}
+
+/// Bottom half — the exact complement of [`plan_snap_top`].
+pub fn plan_snap_bottom(work: &WorkArea, window: WindowId) -> PlanResult {
+    ensure_usable(work)?;
+    let mid = split_y(&work.rect)?;
+    let rect = Rect::new(work.rect.left, mid, work.rect.right, work.rect.bottom)?;
     Ok(PlacementPlan::single(window, rect))
 }
 
@@ -145,6 +180,110 @@ mod tests {
         assert_eq!(right, Rect::new(-960, -200, 0, 880).unwrap());
     }
 
+    // --- vertical halves --------------------------------------
+
+    #[test]
+    fn snap_top_returns_top_half() {
+        let work = primary_work_area();
+        let r = only(&plan_snap_top(&work, W).unwrap());
+        assert_eq!(r, Rect::new(0, 0, 1920, 520).unwrap());
+    }
+
+    #[test]
+    fn snap_bottom_returns_complementary_half() {
+        let work = primary_work_area();
+        let r = only(&plan_snap_bottom(&work, W).unwrap());
+        assert_eq!(r, Rect::new(0, 520, 1920, 1040).unwrap());
+    }
+
+    #[test]
+    fn vertical_halves_tile_the_work_area_without_gap_or_overlap() {
+        for work in [
+            primary_work_area(),
+            negative_origin_work_area(),
+            odd_width_work_area(),
+        ] {
+            let top = only(&plan_snap_top(&work, W).unwrap());
+            let bottom = only(&plan_snap_bottom(&work, W).unwrap());
+            assert_eq!(top.bottom, bottom.top, "gap or overlap at the seam");
+            assert_eq!(top.top, work.rect.top);
+            assert_eq!(bottom.bottom, work.rect.bottom);
+            assert_eq!(
+                top.height() + bottom.height(),
+                work.rect.height(),
+                "halves must exactly cover the work area"
+            );
+            // Full width, both of them: a vertical division changes only the y axis.
+            assert_eq!(top.left, work.rect.left);
+            assert_eq!(top.right, work.rect.right);
+            assert_eq!(bottom.left, work.rect.left);
+            assert_eq!(bottom.right, work.rect.right);
+        }
+    }
+
+    #[test]
+    fn odd_height_is_split_deterministically() {
+        let work = odd_width_work_area(); // height 769
+        let top = only(&plan_snap_top(&work, W).unwrap());
+        let bottom = only(&plan_snap_bottom(&work, W).unwrap());
+        assert_eq!(top.height(), 384);
+        assert_eq!(bottom.height(), 385);
+        // Repeat: pressing the same chord again must not shift the window.
+        for _ in 0..4 {
+            assert_eq!(only(&plan_snap_top(&work, W).unwrap()), top);
+            assert_eq!(only(&plan_snap_bottom(&work, W).unwrap()), bottom);
+        }
+    }
+
+    #[test]
+    fn vertical_halves_work_at_negative_origin() {
+        let work = negative_origin_work_area(); // top -200, height 1080
+        let top = only(&plan_snap_top(&work, W).unwrap());
+        let bottom = only(&plan_snap_bottom(&work, W).unwrap());
+        assert_eq!(top, Rect::new(-1920, -200, 0, 340).unwrap());
+        assert_eq!(bottom, Rect::new(-1920, 340, 0, 880).unwrap());
+    }
+
+    #[test]
+    fn vertical_halves_stay_inside_the_work_area() {
+        for work in [
+            primary_work_area(),
+            negative_origin_work_area(),
+            odd_width_work_area(),
+        ] {
+            assert!(plan_snap_top(&work, W).unwrap().fits_within(&work.rect));
+            assert!(plan_snap_bottom(&work, W).unwrap().fits_within(&work.rect));
+        }
+    }
+
+    #[test]
+    fn one_pixel_tall_work_area_still_splits_safely() {
+        // Degenerate but representable: the top half becomes empty, which the Rect
+        // constructor refuses rather than emitting a zero-height placement.
+        let sliver = WorkArea::new(Rect::new(0, 0, 100, 1).unwrap(), 96).unwrap();
+        assert_eq!(
+            plan_snap_top(&sliver, W),
+            Err(PlanError::EmptyOrInvertedWorkArea)
+        );
+        // The bottom half is the whole sliver and remains valid.
+        assert_eq!(
+            only(&plan_snap_bottom(&sliver, W).unwrap()),
+            Rect::new(0, 0, 100, 1).unwrap()
+        );
+    }
+
+    #[test]
+    fn the_two_axes_divide_independently() {
+        // A horizontal division must not disturb the x extent, and a vertical one must
+        // not disturb the y extent. Stated because both planners share a work area and
+        // an off-by-one in either would be easy to read past.
+        let work = primary_work_area();
+        let left = only(&plan_snap_left(&work, W).unwrap());
+        let top = only(&plan_snap_top(&work, W).unwrap());
+        assert_eq!((left.top, left.bottom), (work.rect.top, work.rect.bottom));
+        assert_eq!((top.left, top.right), (work.rect.left, work.rect.right));
+    }
+
     // --- maximize uses the work area ---------------------------
 
     #[test]
@@ -167,11 +306,13 @@ mod tests {
 
     #[test]
     fn identical_geometry_yields_identical_plans_at_every_dpi() {
-        let mut seen: Option<(Rect, Rect, Rect)> = None;
+        let mut seen: Option<(Rect, Rect, Rect, Rect, Rect)> = None;
         for work in dpi_variants() {
             let triple = (
                 only(&plan_snap_left(&work, W).unwrap()),
                 only(&plan_snap_right(&work, W).unwrap()),
+                only(&plan_snap_top(&work, W).unwrap()),
+                only(&plan_snap_bottom(&work, W).unwrap()),
                 only(&plan_snap_maximize(&work, W).unwrap()),
             );
             match &seen {
@@ -201,6 +342,8 @@ mod tests {
         for result in [
             plan_snap_left(&empty, W),
             plan_snap_right(&empty, W),
+            plan_snap_top(&empty, W),
+            plan_snap_bottom(&empty, W),
             plan_snap_maximize(&empty, W),
         ] {
             assert_eq!(result, Err(PlanError::EmptyOrInvertedWorkArea));

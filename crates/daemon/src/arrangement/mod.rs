@@ -208,11 +208,13 @@ mod tests {
         assert_eq!(Command::SnapRight.as_u8(), 3);
         assert_eq!(Command::SnapMaximize.as_u8(), 4);
         assert_eq!(Command::OverlappingStack.as_u8(), 5);
+        assert_eq!(Command::SnapTop.as_u8(), 6);
+        assert_eq!(Command::SnapBottom.as_u8(), 7);
     }
 
     #[test]
     fn unknown_command_values_still_decode_as_nop() {
-        assert_eq!(Command::from_u8(6), Command::Nop);
+        assert_eq!(Command::from_u8(8), Command::Nop);
         assert_eq!(Command::from_u8(200), Command::Nop);
     }
 
@@ -223,6 +225,8 @@ mod tests {
         let snapping = SnappingConfig::default();
         assert_eq!(snapping.snap_half_left, "ctrl+win+left");
         assert_eq!(snapping.snap_half_right, "ctrl+win+right");
+        assert_eq!(snapping.snap_half_top, "ctrl+alt+up");
+        assert_eq!(snapping.snap_half_bottom, "ctrl+alt+down");
         assert_eq!(snapping.snap_maximize, "ctrl+win+enter");
         assert_eq!(LayoutConfig::default().stack_shortcut, "ctrl+win+down");
     }
@@ -307,14 +311,18 @@ mod tests {
         );
     }
 
-    // --- no inter-monitor command ------------------------------
+    // --- the command set stays closed at its new size ----------
 
     #[test]
-    fn command_set_contains_no_inter_monitor_arrangement() {
-        // Movement between monitors stays delegated to native Win+Shift+Arrow.
-        // The frozen u8 range is 0..=5 and every value is accounted for, so an
-        // inter-monitor command cannot exist without breaking the freeze.
-        for raw in 0u8..=5 {
+    fn command_set_is_complete_over_its_whole_range() {
+        // Successor to `command_set_contains_no_inter_monitor_arrangement`, which asserted
+        // the same completeness property over `0..=5` and carried the delegation of
+        // inter-monitor movement to native `Win+Shift+Arrow` as its reason. `DEC-007`
+        // withdraws that delegation, so the *reason* is gone — but the property it
+        // protected is not, and the set must stay closed at whatever size it reaches.
+        // Deleting the test rather than replacing it would have thrown away the guard
+        // along with the rule it happened to be attached to.
+        for raw in 0u8..=7 {
             let cmd = Command::from_u8(raw);
             assert!(
                 matches!(
@@ -325,10 +333,15 @@ mod tests {
                         | Command::SnapRight
                         | Command::SnapMaximize
                         | Command::OverlappingStack
+                        | Command::SnapTop
+                        | Command::SnapBottom
                 ),
                 "unexpected command at wire value {raw}"
             );
         }
+        // One past the end must still be `Nop`, so the range above is the whole set
+        // rather than merely a prefix of it.
+        assert_eq!(Command::from_u8(8), Command::Nop);
     }
 
     // --- Plan semantics -----------------------------------------------------

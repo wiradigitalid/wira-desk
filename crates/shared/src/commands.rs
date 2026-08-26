@@ -17,8 +17,12 @@ pub enum Command {
     SnapRight = 3,
     /// Maximize the active window (Ctrl+Win+Enter).
     SnapMaximize = 4,
-    /// Rearrange windows with overlapping stack layout (Ctrl+Win+Down).
+    /// Rearrange windows with overlapping stack layout.
     OverlappingStack = 5,
+    /// Snap the active window to the top half of the screen.
+    SnapTop = 6,
+    /// Snap the active window to the bottom half of the screen.
+    SnapBottom = 7,
 }
 
 impl Command {
@@ -31,6 +35,8 @@ impl Command {
             3 => Command::SnapRight,
             4 => Command::SnapMaximize,
             5 => Command::OverlappingStack,
+            6 => Command::SnapTop,
+            7 => Command::SnapBottom,
             _ => Command::Nop,
         }
     }
@@ -55,6 +61,8 @@ mod tests {
             Command::SnapRight,
             Command::SnapMaximize,
             Command::OverlappingStack,
+            Command::SnapTop,
+            Command::SnapBottom,
         ] {
             assert_eq!(Command::from_u8(cmd.as_u8()), cmd);
         }
@@ -62,7 +70,7 @@ mod tests {
 
     #[test]
     fn unknown_values_map_to_nop() {
-        assert_eq!(Command::from_u8(6), Command::Nop);
+        assert_eq!(Command::from_u8(8), Command::Nop);
         assert_eq!(Command::from_u8(255), Command::Nop);
     }
 
@@ -78,5 +86,7 @@ mod tests {
         assert_eq!(Command::SnapRight.as_u8(), 3);
         assert_eq!(Command::SnapMaximize.as_u8(), 4);
         assert_eq!(Command::OverlappingStack.as_u8(), 5);
+        assert_eq!(Command::SnapTop.as_u8(), 6);
+        assert_eq!(Command::SnapBottom.as_u8(), 7);
     }
 }

@@ -101,7 +101,11 @@ pub fn drain_commands() {
                 crate::util::append_debug_trace("WORKER_DRAIN: cycle=1");
                 execute_cycle();
             }
-            Command::SnapLeft | Command::SnapRight | Command::SnapMaximize => {
+            Command::SnapLeft
+            | Command::SnapRight
+            | Command::SnapTop
+            | Command::SnapBottom
+            | Command::SnapMaximize => {
                 execute_snap(Command::from_u8(raw));
             }
             Command::OverlappingStack => execute_stack(),
@@ -281,6 +285,8 @@ fn execute_snap(command: Command) {
     let plan = match command {
         Command::SnapLeft => snap::plan_snap_left(&ctx.work_area, ctx.target),
         Command::SnapRight => snap::plan_snap_right(&ctx.work_area, ctx.target),
+        Command::SnapTop => snap::plan_snap_top(&ctx.work_area, ctx.target),
+        Command::SnapBottom => snap::plan_snap_bottom(&ctx.work_area, ctx.target),
         Command::SnapMaximize => snap::plan_snap_maximize(&ctx.work_area, ctx.target),
         _ => return,
     };

@@ -601,6 +601,8 @@ pub struct Chords {
     pub fallback: Option<Shortcut>,
     pub snap_left: Option<Shortcut>,
     pub snap_right: Option<Shortcut>,
+    pub snap_top: Option<Shortcut>,
+    pub snap_bottom: Option<Shortcut>,
     pub snap_maximize: Option<Shortcut>,
     pub stack: Option<Shortcut>,
 }
@@ -618,7 +620,7 @@ impl Chords {
     /// It exists exactly once on purpose. The order is also the Settings pane's draw order
     /// and its keyboard focus order; three independently maintained copies of it is how the
     /// visible order and the precedence order start disagreeing with nothing detecting it.
-    pub fn in_declared_order(&self) -> [ChordSlot; 6] {
+    pub fn in_declared_order(&self) -> [ChordSlot; 8] {
         [
             ChordSlot {
                 chord: self.primary,
@@ -635,6 +637,14 @@ impl Chords {
             ChordSlot {
                 chord: self.snap_right,
                 command: Command::SnapRight.as_u8(),
+            },
+            ChordSlot {
+                chord: self.snap_top,
+                command: Command::SnapTop.as_u8(),
+            },
+            ChordSlot {
+                chord: self.snap_bottom,
+                command: Command::SnapBottom.as_u8(),
             },
             ChordSlot {
                 chord: self.snap_maximize,
@@ -845,7 +855,7 @@ fn load_shortcuts(worker_hwnd: HWND) -> Chords {
     // shipped default, and its diagnostic name appear together. The six hand-written
     // blocks this replaces each repeated that triple, and a new chord meant writing a
     // seventh block correctly rather than adding a row.
-    let rows: [(&str, &str, &str); 6] = [
+    let rows: [(&str, &str, &str); 8] = [
         (
             "switcher.shortcut",
             &cfg.switcher.shortcut,
@@ -867,6 +877,16 @@ fn load_shortcuts(worker_hwnd: HWND) -> Chords {
             &snap_defaults.snap_half_right,
         ),
         (
+            "snapping.snap_half_top",
+            &cfg.snapping.snap_half_top,
+            &snap_defaults.snap_half_top,
+        ),
+        (
+            "snapping.snap_half_bottom",
+            &cfg.snapping.snap_half_bottom,
+            &snap_defaults.snap_half_bottom,
+        ),
+        (
             "snapping.snap_maximize",
             &cfg.snapping.snap_maximize,
             &snap_defaults.snap_maximize,
@@ -878,7 +898,7 @@ fn load_shortcuts(worker_hwnd: HWND) -> Chords {
         ),
     ];
 
-    let mut resolved: [Option<Shortcut>; 6] = [None; 6];
+    let mut resolved: [Option<Shortcut>; 8] = [None; 8];
     for (i, (field, configured, default)) in rows.iter().enumerate() {
         resolved[i] = Some(resolve_one(worker_hwnd, field, configured, default));
     }
@@ -888,8 +908,10 @@ fn load_shortcuts(worker_hwnd: HWND) -> Chords {
         fallback: resolved[1],
         snap_left: resolved[2],
         snap_right: resolved[3],
-        snap_maximize: resolved[4],
-        stack: resolved[5],
+        snap_top: resolved[4],
+        snap_bottom: resolved[5],
+        snap_maximize: resolved[6],
+        stack: resolved[7],
     }
 }
 
@@ -1260,6 +1282,8 @@ mod tests {
             fallback: Shortcut::parse("alt+backtick"),
             snap_left: Shortcut::parse("ctrl+win+left"),
             snap_right: Shortcut::parse("ctrl+win+right"),
+            snap_top: Shortcut::parse("ctrl+alt+up"),
+            snap_bottom: Shortcut::parse("ctrl+alt+down"),
             snap_maximize: Shortcut::parse("ctrl+win+enter"),
             stack: Shortcut::parse("ctrl+win+down"),
         }
