@@ -6,16 +6,22 @@
 //! Absent by design : `SendMessage`, `GetWindowText`, any internal
 //! geometry cache, and any virtual-desktop integration.
 
-use windows_sys::Win32::Foundation::{FALSE, HWND, RECT, S_OK};
+use windows_sys::Win32::Foundation::{CloseHandle, FALSE, HANDLE, HWND, RECT, S_OK};
 use windows_sys::Win32::Graphics::Dwm::{DwmGetWindowAttribute, DWMWA_CLOAKED};
 use windows_sys::Win32::Graphics::Gdi::{
     GetMonitorInfoW, MonitorFromWindow, MONITORINFO, MONITOR_DEFAULTTONULL,
 };
+use windows_sys::Win32::System::Threading::{
+    GetCurrentProcessId, OpenProcess, QueryFullProcessImageNameW, PROCESS_NAME_WIN32,
+    PROCESS_QUERY_LIMITED_INFORMATION,
+};
 use windows_sys::Win32::UI::HiDpi::GetDpiForWindow;
 use windows_sys::Win32::UI::WindowsAndMessaging::{
-    GetForegroundWindow, IsWindow, SetWindowPos, SET_WINDOW_POS_FLAGS, SWP_ASYNCWINDOWPOS,
-    SWP_NOACTIVATE, SWP_NOOWNERZORDER, SWP_NOZORDER,
+    GetForegroundWindow, GetWindowThreadProcessId, IsWindow, SetWindowPos, SET_WINDOW_POS_FLAGS,
+    SWP_ASYNCWINDOWPOS, SWP_NOACTIVATE, SWP_NOOWNERZORDER, SWP_NOZORDER,
 };
+
+use shared::constants::SETTINGS_EXE_NAME;
 
 use crate::cycling::WindowId;
 
@@ -67,6 +73,22 @@ pub fn resolve_context_for(hwnd: HWND) -> Option<PlatformContext> {
     if unsafe { is_cloaked(hwnd) } {
         #[cfg(debug_assertions)]
         crate::util::append_debug_trace(&format!("ARRANGE_CONTEXT: cloaked target={hwnd}"));
+        return None;
+    }
+
+    // The daemon must never grow its own Settings window into an arrangement
+    // target (DEC-006, LBR-WM-6): Settings is frameless, transparent, and
+    // laid out at a fixed size, so an enlarged frame leaves an invisible
+    // region that still swallows clicks. Checked after cloaking (an invalid
+    // or invisible target is already excluded) and before any geometry is
+    // touched, so the sequence reads validity → visibility → ownership →
+    // geometry.
+    // SAFETY: `is_own_window` accepts any handle — every identity lookup inside it
+    // degrades to "not ours" on failure rather than propagating an error, so no
+    // precondition is placed on `hwnd` beyond what `IsWindow` already confirmed above.
+    if unsafe { is_own_window(hwnd) } {
+        #[cfg(debug_assertions)]
+        crate::util::append_debug_trace(&format!("ARRANGE_CONTEXT: own_window target={hwnd}"));
         return None;
     }
 
@@ -156,6 +178,80 @@ unsafe fn is_cloaked(hwnd: HWND) -> bool {
         core::mem::size_of::<u32>() as u32,
     );
     hr == S_OK && cloaked != 0
+}
+
+/// Upper bound for a full process image path, matching the capacity used
+/// elsewhere in the workspace for `QueryFullProcessImageNameW`.
+const IMAGE_PATH_CAPACITY: usize = 32_768;
+
+/// Ask whether `hwnd` belongs to the daemon itself or to the Settings process.
+/// Duplicated locally rather than imported from `crate::cycling`, to keep
+/// `arrangement` and `cycling` decoupled (per this file's story-isolation
+/// design, same as [`is_cloaked`] above).
+///
+/// Identity is read with `OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, ..)` +
+/// `QueryFullProcessImageNameW` and nothing else — no `SendMessage`, no
+/// `GetWindowText`, no blocking cross-process call (`LBR-WM-3`).
+///
+/// Fails open, not closed: every lookup failure (no PID, denied `OpenProcess`,
+/// vanished process, failed query) degrades to "not ours" and lets the
+/// arrangement proceed, exactly like [`is_cloaked`]'s degrade-to-"not cloaked".
+/// Failing closed would silently kill snapping for any window whose process
+/// cannot be opened; the residual false negative this leaves (an enlarged
+/// frame this check missed) is covered on the Settings side instead.
+///
+/// # Safety
+/// `hwnd` may be any value, including 0 or a stale handle — `GetWindowThreadProcessId`
+/// reports failure rather than faulting on one, and every Win32 call below is checked
+/// before its result is used.
+unsafe fn is_own_window(hwnd: HWND) -> bool {
+    let mut pid: u32 = 0;
+    let thread_id = GetWindowThreadProcessId(hwnd, &mut pid);
+    if thread_id == 0 || pid == 0 {
+        return false;
+    }
+
+    if pid == GetCurrentProcessId() {
+        return true;
+    }
+
+    // PROCESS_QUERY_LIMITED_INFORMATION is the narrowest right that still permits
+    // `QueryFullProcessImageNameW`.
+    let process: HANDLE = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, pid);
+    if process == 0 {
+        return false;
+    }
+
+    // One `vec![0u16; ..]` buffer, allocated fresh for this call. This path runs
+    // once per arrangement command on the Worker thread, never once per window
+    // across a sweep of hundreds — unlike `cycling::source`, which reuses a
+    // scratch buffer for exactly that reason. There is no equivalent reuse
+    // opportunity here, so this is deliberate, not an oversight to "fix".
+    let mut path = vec![0u16; IMAGE_PATH_CAPACITY];
+    let mut size = path.len() as u32;
+    let ok = QueryFullProcessImageNameW(process, PROCESS_NAME_WIN32, path.as_mut_ptr(), &mut size);
+    CloseHandle(process);
+
+    if ok == FALSE || size == 0 {
+        return false;
+    }
+
+    basename_matches_settings_exe(&path[..(size as usize).min(path.len())])
+}
+
+/// Pure comparison over a UTF-16 process-image path: extract the basename
+/// (after the last `\` or `/`, or the whole slice if there is none) and
+/// compare it case-insensitively against [`SETTINGS_EXE_NAME`].
+/// Kept separate from [`is_own_window`] so the comparison is unit-testable
+/// without a live window or process handle.
+fn basename_matches_settings_exe(path: &[u16]) -> bool {
+    let basename_start = path
+        .iter()
+        .rposition(|&unit| unit == b'\\' as u16 || unit == b'/' as u16)
+        .map(|i| i + 1)
+        .unwrap_or(0);
+    let basename = String::from_utf16_lossy(&path[basename_start..]);
+    basename.eq_ignore_ascii_case(SETTINGS_EXE_NAME)
 }
 
 /// Convert a Win32 `RECT` into the contract's half-open [`Rect`].
@@ -435,6 +531,57 @@ mod tests {
     // Exercising the actual `w <= 0`/`h <= 0` branch against a real mover
     // requires a live HWND, which is the already-disclosed
     // live-window-harness gap, not something fakeable here.
+
+    // --- target ownership: basename comparison -----------------
+
+    fn utf16(s: &str) -> Vec<u16> {
+        s.encode_utf16().collect()
+    }
+
+    #[test]
+    fn backslash_path_is_ours() {
+        assert!(basename_matches_settings_exe(&utf16(
+            r"C:\Program Files\Wira Desk\wiradesk-settings.exe"
+        )));
+    }
+
+    #[test]
+    fn forward_slash_path_is_ours() {
+        assert!(basename_matches_settings_exe(&utf16(
+            "C:/Program Files/Wira Desk/wiradesk-settings.exe"
+        )));
+    }
+
+    #[test]
+    fn bare_basename_with_no_separator_is_ours() {
+        assert!(basename_matches_settings_exe(&utf16(
+            "wiradesk-settings.exe"
+        )));
+    }
+
+    #[test]
+    fn uppercase_basename_is_ours() {
+        assert!(basename_matches_settings_exe(&utf16(
+            "WIRADESK-SETTINGS.EXE"
+        )));
+    }
+
+    #[test]
+    fn settings_helper_basename_is_not_ours() {
+        assert!(!basename_matches_settings_exe(&utf16(
+            "wiradesk-settings-helper.exe"
+        )));
+    }
+
+    #[test]
+    fn unrelated_basename_is_not_ours() {
+        assert!(!basename_matches_settings_exe(&utf16("notepad.exe")));
+    }
+
+    #[test]
+    fn empty_slice_is_not_ours() {
+        assert!(!basename_matches_settings_exe(&[]));
+    }
 
     #[test]
     fn placement_flags_are_non_activating_and_z_order_preserving() {
