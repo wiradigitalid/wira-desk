@@ -17,15 +17,15 @@ use shared::constants::WM_APP_LOG_WARNING;
 
 use crate::util::debug_log;
 
-/// Size ceiling for `wiradesk.log`. Tier 2 events are rare by design (a
-/// config reload rejection, a reserved shortcut warning — not a per-keystroke
-/// or per-heartbeat write), so a byte cap is simpler to implement and test
-/// correctly than pruning by parsed line age, for the same slow growth this
-/// log actually sees. No backup file is kept: once the cap is reached, the
-/// file is truncated and restarted rather than rotated to a `.old` — old
-/// Tier 2 warnings are not worth preserving past the point they'd force this
-/// file to keep growing forever.
-const LOG_MAX_BYTES: u64 = 1_000_000; // 1 MB
+/// Size ceiling for the *active* `wiradesk.log`, before it rotates to
+/// `wiradesk.log.old`. Two files, one generation of backup, so the on-disk
+/// total is bounded at roughly twice this — never more. A byte cap rather
+/// than pruning by parsed line age: Tier 2 events are rare by design (a
+/// config reload rejection, a reserved shortcut warning — not a
+/// per-keystroke or per-heartbeat write), so age-based pruning would cost a
+/// read-filter-rewrite of the whole file on every write for no benefit a
+/// size check does not already give.
+const LOG_MAX_BYTES: u64 = 1_000_000; // 1 MB active + 1 MB `.old` = 2 MB total
 
 /// Write one timestamped log line to `shared::log_path`, then notify
 /// `wndproc_impl` to set `Warning` state via `PostMessageW` — only the
@@ -51,24 +51,25 @@ fn write_line(msg: &str) {
 }
 
 /// `write_line`'s actual logic, over an explicit path — the seam that makes
-/// the size-cap decision testable without touching the real
+/// the rotation decision testable without touching the real
 /// `%APPDATA%\WiraDesk\wiradesk.log`.
 fn write_line_to(path: &Path, msg: &str) {
     if let Some(parent) = path.parent() {
         let _ = std::fs::create_dir_all(parent);
     }
-    let line = format!("[{}] {msg}\n", timestamp());
     // A file that does not exist yet is not "at the cap" — `unwrap_or(false)`
     // covers exactly that, and any other metadata failure the same way:
-    // append is always the safe default when the size cannot be determined.
+    // no rotation is the safe default when the size cannot be determined.
     let at_cap = std::fs::metadata(path)
         .map(|m| m.len() >= LOG_MAX_BYTES)
         .unwrap_or(false);
+    if at_cap {
+        rotate(path);
+    }
+    let line = format!("[{}] {msg}\n", timestamp());
     match std::fs::OpenOptions::new()
         .create(true)
-        .write(true)
-        .append(!at_cap)
-        .truncate(at_cap)
+        .append(true)
         .open(path)
     {
         Ok(mut f) => {
@@ -78,6 +79,25 @@ fn write_line_to(path: &Path, msg: &str) {
         }
         Err(_) => debug_log("Wira Desk: log::warn — failed to open wiradesk.log"),
     }
+}
+
+/// Rename the active log to `<path>.old`, overwriting whatever generation
+/// was there before — a second rotation must not accumulate a third
+/// generation, only ever replace the one backup this design keeps. A failed
+/// rename (e.g. `wiradesk.log.old` held open elsewhere) is left for the
+/// caller's `OpenOptions::create(true)` to recover from: the active file
+/// either moved and a fresh one gets created, or it did not move and the
+/// existing one keeps growing past the cap until the next successful
+/// rotation — degraded, not lost.
+fn rotate(path: &Path) {
+    let old = old_path(path);
+    let _ = std::fs::rename(path, &old);
+}
+
+fn old_path(path: &Path) -> std::path::PathBuf {
+    let mut name = path.as_os_str().to_os_string();
+    name.push(".old");
+    std::path::PathBuf::from(name)
 }
 
 /// Local timestamp `YYYY-MM-DD HH:MM:SS` via `GetLocalTime` — no `chrono`/`time`
@@ -150,9 +170,11 @@ mod tests {
     }
 
     #[test]
-    fn a_file_already_at_the_cap_is_truncated_not_grown_forever() {
+    fn a_file_already_at_the_cap_rotates_to_dot_old_instead_of_growing_forever() {
         let path = temp_log_path("cap");
+        let old = old_path(&path);
         let _ = std::fs::remove_file(&path);
+        let _ = std::fs::remove_file(&old);
 
         // Pre-fill past the cap directly, without going through `write_line_to` —
         // the point under test is what happens on the *next* write once the
@@ -162,34 +184,83 @@ mod tests {
 
         write_line_to(&path, "after the cap");
 
-        let contents = std::fs::read_to_string(&path).unwrap();
+        let active = std::fs::read_to_string(&path).unwrap();
         assert!(
-            !contents.contains('x'),
-            "the oversized content must be gone, not merely appended past: {} bytes",
-            contents.len()
+            !active.contains('x'),
+            "the oversized content must have moved to .old, not stayed in the active file: {} bytes",
+            active.len()
         );
-        assert!(contents.contains("after the cap"));
+        assert!(active.contains("after the cap"));
         assert!(
-            (contents.len() as u64) < LOG_MAX_BYTES,
-            "a reset file must not still be near the cap"
+            (active.len() as u64) < LOG_MAX_BYTES,
+            "the rotated-into active file must start fresh, not still be near the cap"
         );
+
+        let backup = std::fs::read_to_string(&old).unwrap();
+        assert!(
+            backup.contains('x'),
+            "the content that was in the active file before rotation must survive in .old"
+        );
+
         let _ = std::fs::remove_file(&path);
+        let _ = std::fs::remove_file(&old);
     }
 
     #[test]
-    fn no_backup_file_is_ever_created_on_truncation() {
-        let path = temp_log_path("nobackup");
-        let backup = path.with_extension("log.old");
+    fn a_second_rotation_replaces_dot_old_rather_than_accumulating_a_third_generation() {
+        let path = temp_log_path("second-rotation");
+        let old = old_path(&path);
         let _ = std::fs::remove_file(&path);
-        let _ = std::fs::remove_file(&backup);
+        let _ = std::fs::remove_file(&old);
 
-        std::fs::write(&path, vec![b'x'; LOG_MAX_BYTES as usize]).unwrap();
-        write_line_to(&path, "triggers truncation");
+        std::fs::write(&path, vec![b'a'; LOG_MAX_BYTES as usize]).unwrap();
+        write_line_to(&path, "first rotation"); // .old now holds the 'a's
 
+        std::fs::write(&path, vec![b'b'; LOG_MAX_BYTES as usize]).unwrap();
+        write_line_to(&path, "second rotation"); // .old must now hold the 'b's, not the 'a's
+
+        let backup = std::fs::read_to_string(&old).unwrap();
         assert!(
-            !backup.exists(),
-            "no .old (or any other backup) file must be written — old logs are discarded, not kept"
+            !backup.contains('a'),
+            "the first generation must be gone once a second rotation replaces it"
         );
+        assert!(backup.contains('b'));
+
         let _ = std::fs::remove_file(&path);
+        let _ = std::fs::remove_file(&old);
+    }
+
+    #[test]
+    fn on_disk_total_never_exceeds_two_generations() {
+        let path = temp_log_path("total-bound");
+        let old = old_path(&path);
+        let _ = std::fs::remove_file(&path);
+        let _ = std::fs::remove_file(&old);
+
+        for i in 0..5 {
+            std::fs::write(&path, vec![b'y'; LOG_MAX_BYTES as usize]).unwrap();
+            write_line_to(&path, &format!("rotation {i}"));
+        }
+
+        let mut siblings: Vec<_> = std::fs::read_dir(path.parent().unwrap())
+            .unwrap()
+            .filter_map(|e| e.ok())
+            .map(|e| e.path())
+            .filter(|p| {
+                p.file_name().is_some_and(|n| {
+                    n.to_string_lossy()
+                        .starts_with(&*path.file_name().unwrap().to_string_lossy())
+                })
+            })
+            .collect();
+        siblings.sort();
+        assert_eq!(
+            siblings.len(),
+            2,
+            "repeated rotations must never leave more than the active file plus one .old: {siblings:?}"
+        );
+
+        let _ = std::fs::remove_file(&path);
+        let _ = std::fs::remove_file(&old);
     }
 }
