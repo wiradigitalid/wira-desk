@@ -204,9 +204,9 @@ fn sync_model_to_ui(window: &MainWindow, model: &SettingsModel) {
             SaveFeedback::None => {
                 if has_conflicts {
                     let msg = if model.any_swappable_conflict() {
-                        "⚠️ Shortcut conflict detected. Resolve with Swap ⇄ or edit key."
+                        "⚠ Shortcut conflict detected. Resolve with Swap ⇄ or edit key."
                     } else {
-                        "⚠️ Shortcut conflict detected. Edit key to resolve."
+                        "⚠ Shortcut conflict detected. Edit key to resolve."
                     };
                     (msg, false, true, false)
                 } else {
