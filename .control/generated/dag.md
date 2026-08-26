@@ -22,4 +22,17 @@ dag:
   order:
   - parallel:
     - S1
+- wave: W4
+  order:
+  - parallel:
+    - S1
+  - parallel:
+    - S2
+  - parallel:
+    - S3
+    - S4
+  - parallel:
+    - S5
+  - parallel:
+    - S6
 ```

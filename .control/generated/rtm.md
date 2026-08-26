@@ -171,6 +171,27 @@ rtm:
   broken_at: ''
 - BG: BG-3
   CAP: CAP-2
+  FR: FR-14
+  DEC: []
+  UC: UC-2
+  story: S2
+  wave: W4
+  release: 0.4.0
+  test:
+  - arrangement::snap::tests::snap_top_returns_top_half
+  - arrangement::snap::tests::snap_bottom_returns_complementary_half
+  - arrangement::snap::tests::vertical_halves_tile_the_work_area_without_gap_or_overlap
+  - arrangement::snap::tests::odd_height_is_split_deterministically
+  - arrangement::snap::tests::vertical_halves_work_at_negative_origin
+  - arrangement::snap::tests::one_pixel_tall_work_area_still_splits_safely
+  - commands::tests::frozen_command_wire_values
+  - commands::tests::roundtrip_all_commands
+  status: unknown
+  exempt: false
+  green: false
+  broken_at: status
+- BG: BG-3
+  CAP: CAP-2
   FR: FR-15
   DEC: []
   UC: ''
@@ -299,6 +320,25 @@ rtm:
   broken_at: ''
 - BG: BG-2
   CAP: CAP-5
+  FR: FR-18
+  DEC: []
+  UC: UC-4
+  story: S6
+  wave: W4
+  release: 0.4.0
+  test:
+  - app::tests::shortcuts_pane_exposes_every_field
+  - app::tests::focus_order_has_no_duplicates
+  - app::tests::focus_order_starts_with_navigation_and_ends_with_actions
+  - app::tests::every_field_has_a_distinct_key_and_label
+  - app::tests::field_declaration_order_is_the_precedence_order
+  - persistence::tests::a_collision_names_both_fields
+  status: unknown
+  exempt: false
+  green: false
+  broken_at: status
+- BG: BG-2
+  CAP: CAP-5
   FR: FR-19
   DEC: []
   UC: ''
@@ -401,18 +441,45 @@ rtm:
   green: true
   broken_at: ''
 - BG: BG-3
+  CAP: CAP-2
+  FR: FR-22
+  DEC: []
+  UC: UC-2
+  story: S2
+  wave: W4
+  release: 0.4.0
+  test:
+  - arrangement::snap::tests::snap_top_returns_top_half
+  - arrangement::snap::tests::snap_bottom_returns_complementary_half
+  - arrangement::snap::tests::vertical_halves_tile_the_work_area_without_gap_or_overlap
+  - arrangement::snap::tests::odd_height_is_split_deterministically
+  - arrangement::snap::tests::vertical_halves_work_at_negative_origin
+  - arrangement::snap::tests::one_pixel_tall_work_area_still_splits_safely
+  - commands::tests::frozen_command_wire_values
+  - commands::tests::roundtrip_all_commands
+  status: unknown
+  exempt: false
+  green: false
+  broken_at: status
+- BG: BG-3
   CAP: CAP-12
   FR: FR-23
   DEC: []
   UC: UC-7
-  story: ''
-  wave: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  story: S3
+  wave: W4
+  release: 0.4.0
+  test:
+  - arrangement::monitor::tests::single_monitor_yields_an_empty_plan
+  - arrangement::monitor::tests::next_monitor_wraps_from_last_to_first
+  - arrangement::monitor::tests::a_left_half_stays_a_left_half_across_monitors
+  - arrangement::monitor::tests::proportional_mapping_survives_a_resolution_difference
+  - arrangement::monitor::tests::empty_destination_work_area_is_rejected
+  - arrangement::mod::tests::command_set_is_complete_over_its_whole_range
+  status: unknown
   exempt: false
-  broken_at: story
+  green: false
+  broken_at: status
 - BG: BG-1
   CAP: CAP-8
   FR: FR-3
@@ -613,6 +680,25 @@ rtm:
   exempt: false
   green: true
   broken_at: ''
+- BG: BG-2
+  CAP: CAP-3
+  FR: FR-7
+  DEC: []
+  UC: UC-4
+  story: S6
+  wave: W4
+  release: 0.4.0
+  test:
+  - app::tests::shortcuts_pane_exposes_every_field
+  - app::tests::focus_order_has_no_duplicates
+  - app::tests::focus_order_starts_with_navigation_and_ends_with_actions
+  - app::tests::every_field_has_a_distinct_key_and_label
+  - app::tests::field_declaration_order_is_the_precedence_order
+  - persistence::tests::a_collision_names_both_fields
+  status: unknown
+  exempt: false
+  green: false
+  broken_at: status
 - BG: BG-1
   CAP: CAP-4
   FR: FR-8
