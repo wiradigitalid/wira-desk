@@ -279,10 +279,16 @@ mod tests {
         let cfg = Config::default();
         assert_eq!(cfg.switcher.shortcut, "win+backtick");
         assert_eq!(cfg.switcher.fallback_shortcut, "alt+backtick");
-        assert_eq!(cfg.snapping.snap_half_left, "ctrl+win+left");
-        assert_eq!(cfg.snapping.snap_half_right, "ctrl+win+right");
-        assert_eq!(cfg.snapping.snap_maximize, "ctrl+win+enter");
-        assert_eq!(cfg.layout.stack_shortcut, "ctrl+win+down");
+        assert_eq!(cfg.snapping.snap_half_left, "ctrl+alt+left");
+        assert_eq!(cfg.snapping.snap_half_right, "ctrl+alt+right");
+        assert_eq!(cfg.snapping.snap_half_top, "ctrl+alt+up");
+        assert_eq!(cfg.snapping.snap_half_bottom, "ctrl+alt+down");
+        assert_eq!(cfg.snapping.snap_maximize, "ctrl+alt+enter");
+        assert_eq!(
+            cfg.layout.move_next_monitor_shortcut,
+            "ctrl+alt+shift+enter"
+        );
+        assert_eq!(cfg.layout.stack_shortcut, "ctrl+alt+shift+down");
         assert!(!cfg.general.auto_start);
         assert!(!cfg.layout.enable_overlapping_stack);
         assert_eq!(cfg.layout.stack_width_percent, 50);

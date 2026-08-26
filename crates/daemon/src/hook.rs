@@ -1352,19 +1352,39 @@ pub fn spawn(worker_hwnd: HWND, h_mod: HINSTANCE) -> (JoinHandle<()>, Arc<Atomic
 mod tests {
     use super::*;
 
-    /// The six shipped chords as they stood before `DEC-008` moved the family, so the
-    /// tests below keep exercising the same values this refactor must not change.
+    /// The modifier state a given chord is pressed with.
+    ///
+    /// Derived from the chord instead of written out, so a test cannot drift from the
+    /// default it is exercising. Two tests did exactly that when `DEC-008` moved the family:
+    /// they held `win: true, ctrl: true` while the default had become `ctrl+alt`, and they
+    /// failed for the right reason.
+    fn mods_of(sc: Shortcut) -> ModifierState {
+        ModifierState {
+            win: sc.win,
+            ctrl: sc.ctrl,
+            alt: sc.alt,
+            shift: sc.shift,
+        }
+    }
+
+    /// The shipped chords, read from the real defaults rather than restated here.
+    ///
+    /// Derived from `Config::default()` on purpose: a hand-written copy in the test module
+    /// is a second list of the same facts, and the whole point of `Chords` is that a chord
+    /// exists in one place. When `DEC-008` moved the family, this helper needed no edit —
+    /// which is the property being bought.
     fn shipped_chords() -> Chords {
+        let cfg = Config::default();
         Chords {
-            primary: Shortcut::parse("win+backtick"),
-            fallback: Shortcut::parse("alt+backtick"),
-            snap_left: Shortcut::parse("ctrl+win+left"),
-            snap_right: Shortcut::parse("ctrl+win+right"),
-            snap_top: Shortcut::parse("ctrl+alt+up"),
-            snap_bottom: Shortcut::parse("ctrl+alt+down"),
-            snap_maximize: Shortcut::parse("ctrl+win+enter"),
-            move_next_monitor: Shortcut::parse("ctrl+alt+shift+enter"),
-            stack: Shortcut::parse("ctrl+win+down"),
+            primary: Shortcut::parse(&cfg.switcher.shortcut),
+            fallback: Shortcut::parse(&cfg.switcher.fallback_shortcut),
+            snap_left: Shortcut::parse(&cfg.snapping.snap_half_left),
+            snap_right: Shortcut::parse(&cfg.snapping.snap_half_right),
+            snap_top: Shortcut::parse(&cfg.snapping.snap_half_top),
+            snap_bottom: Shortcut::parse(&cfg.snapping.snap_half_bottom),
+            snap_maximize: Shortcut::parse(&cfg.snapping.snap_maximize),
+            move_next_monitor: Shortcut::parse(&cfg.layout.move_next_monitor_shortcut),
+            stack: Shortcut::parse(&cfg.layout.stack_shortcut),
         }
     }
 
@@ -1382,13 +1402,10 @@ mod tests {
 
     #[test]
     fn exact_snap_left_match() {
-        let mods = ModifierState {
-            win: true,
-            ctrl: true,
-            ..Default::default()
-        };
+        let chords = shipped_chords();
+        let snap_left = chords.snap_left.expect("the shipped default parses");
         assert_eq!(
-            match_shortcut(&shipped_chords(), mods, 0x25), // VK_LEFT
+            match_shortcut(&chords, mods_of(snap_left), snap_left.vk),
             Some(Command::SnapLeft.as_u8())
         );
     }
@@ -1491,13 +1508,8 @@ mod tests {
         assert_eq!(unbind_duplicates(&mut resolved), vec![(3, 8)]);
         chords.stack = resolved[8];
         assert_eq!(chords.stack, None);
-        let mods = ModifierState {
-            win: true,
-            ctrl: true,
-            ..Default::default()
-        };
         assert_eq!(
-            match_shortcut(&chords, mods, 0x28), // VK_DOWN
+            match_shortcut(&chords, mods_of(clash), clash.vk),
             Some(Command::SnapRight.as_u8()),
             "the keeper's action fires"
         );
@@ -1507,19 +1519,17 @@ mod tests {
     fn an_unbound_chord_matches_nothing() {
         // `None` is not "some chord nobody presses" — it must be unreachable. This is the
         // property `DEC-009`'s unbinding rests on, asserted here rather than assumed.
+        let shipped = shipped_chords();
+        let snap_left = shipped.snap_left.expect("the shipped default parses");
+        let snap_right = shipped.snap_right.expect("the shipped default parses");
         let chords = Chords {
             snap_left: None,
-            ..shipped_chords()
+            ..shipped
         };
-        let mods = ModifierState {
-            win: true,
-            ctrl: true,
-            ..Default::default()
-        };
-        assert!(match_shortcut(&chords, mods, 0x25).is_none());
+        assert!(match_shortcut(&chords, mods_of(snap_left), snap_left.vk).is_none());
         // Every other action still reaches its own chord.
         assert_eq!(
-            match_shortcut(&chords, mods, 0x27), // VK_RIGHT
+            match_shortcut(&chords, mods_of(snap_right), snap_right.vk),
             Some(Command::SnapRight.as_u8())
         );
     }
@@ -1540,13 +1550,8 @@ mod tests {
             .position(|s| s.chord == Some(clash))
             .expect("the clashing chord is in the sequence");
         assert_eq!(order[first].command, Command::SnapRight.as_u8());
-        let mods = ModifierState {
-            win: true,
-            ctrl: true,
-            ..Default::default()
-        };
         assert_eq!(
-            match_shortcut(&chords, mods, 0x28), // VK_DOWN
+            match_shortcut(&chords, mods_of(clash), clash.vk),
             Some(Command::SnapRight.as_u8())
         );
     }

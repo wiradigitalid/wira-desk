@@ -215,12 +215,13 @@ pub fn reservation(sc: &Shortcut) -> Option<ReservedInfo> {
         });
     }
 
-    // Ctrl + Win + Enter is deliberately absent from this catalogue, even
-    // though `OQ-16` lists it as an unmeasured candidate that would otherwise
-    // default to `Immutable`: it launches Narrator on stock Windows, but it is
-    // also this product's own shipped `snap_maximize` default. Adding it here
-    // would make the shipped default fail its own validation — the exact
-    // carve-out `DEC-003` already makes for `Alt+Backtick`.
+    // Ctrl + Win + Enter is still absent from this catalogue, and the reason has changed.
+    // It launches Narrator on stock Windows, and it used to be this product's own shipped
+    // `snap_maximize` default, so adding it would have made that default fail its own
+    // validation. `DEC-008` moved the family to `Ctrl+Alt`, so that premise no longer holds
+    // and the chord *could* now be catalogued. It is left out because `DEC-008`'s scope was
+    // the two virtual-desktop arrows, and adding a third entry is a decision nobody has
+    // taken — `OQ-16` still carries it as unmeasured.
 
     // 3. Shell-Owned Shortcuts (Win + Key)
     if sc.win && !sc.ctrl && !sc.alt && !sc.shift {
@@ -389,6 +390,27 @@ pub fn reservation(sc: &Shortcut) -> Option<ReservedInfo> {
         });
     }
 
+    // Win + Ctrl + Left / Right -> navigate between virtual desktops.
+    //
+    // The gap this closes: the catalogue already listed `Win+Ctrl+D` and `Win+Ctrl+F4`,
+    // which *create* and *close* a virtual desktop, and skipped the two arrows that
+    // *navigate* between them. Three quarters of one shell feature was catalogued and the
+    // quarter this product's own default sat on was not — so `ctrl+win+left` shipped as the
+    // snap default and silently took a Windows function, which is precisely what `DEC-003`
+    // forbids. Adding these two was only possible once `DEC-008` moved the family off them:
+    // while `ctrl+win+left` was a shipped default, cataloguing it would have made that
+    // default fail its own validation.
+    //
+    // `ShellOwned` rather than `Immutable`: the low-level hook demonstrably can swallow
+    // these — that is how the old default worked at all — so the refusal can honestly offer
+    // an alternative, which is the distinction `DEC-003` draws between the two kinds.
+    if sc.win && sc.ctrl && !sc.alt && !sc.shift && matches!(sc.vk, 0x25 | 0x27) {
+        return Some(ReservedInfo {
+            kind: Reservation::ShellOwned,
+            owner: "switch between your virtual desktops",
+        });
+    }
+
     None
 }
 
@@ -439,6 +461,61 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn win_ctrl_arrow_is_shell_owned() {
+        for chord in ["win+ctrl+left", "win+ctrl+right"] {
+            let sc = Shortcut::parse(chord).expect("parses");
+            let info = reservation(&sc).unwrap_or_else(|| panic!("{chord} must be reserved"));
+            assert_eq!(info.kind, Reservation::ShellOwned);
+            assert_eq!(info.owner, "switch between your virtual desktops");
+        }
+    }
+
+    #[test]
+    fn win_ctrl_up_and_down_are_not_claimed() {
+        // Only the two arrows Windows actually navigates desktops with. Reserving the whole
+        // arrow cluster would refuse chords nothing owns, which is its own kind of wrong.
+        for chord in ["win+ctrl+up", "win+ctrl+down"] {
+            let sc = Shortcut::parse(chord).expect("parses");
+            assert!(reservation(&sc).is_none(), "{chord} must stay available");
+        }
+    }
+
+    #[test]
+    fn ctrl_alt_arrow_is_not_reserved() {
+        // The family the shipped defaults moved to. Not in the catalogue, because the
+        // catalogue lists chords WINDOWS owns — a graphics driver binding screen rotation to
+        // these is a real cost (OQ-20) that no list of Windows chords can express, and
+        // DEC-002 forbids probing for it.
+        for chord in [
+            "ctrl+alt+left",
+            "ctrl+alt+right",
+            "ctrl+alt+up",
+            "ctrl+alt+down",
+            "ctrl+alt+enter",
+            "ctrl+alt+shift+down",
+            "ctrl+alt+shift+enter",
+        ] {
+            let sc = Shortcut::parse(chord).expect("parses");
+            assert!(reservation(&sc).is_none(), "{chord} must be configurable");
+        }
+    }
+
+    #[test]
+    fn adding_ctrl_leaves_the_escape_hatches_alone() {
+        // The escape-hatch guards are conditioned on `alt && !ctrl`, so the Ctrl+Alt family
+        // cannot collide with Alt+Tab, Alt+F4, or Alt+Shift+Tab by construction rather than
+        // by luck. Asserted because that is the load-bearing reason the family was safe.
+        for chord in ["ctrl+alt+tab", "ctrl+alt+f4"] {
+            let sc = Shortcut::parse(chord).expect("parses");
+            assert!(reservation(&sc).is_none(), "{chord} must stay available");
+        }
+        for chord in ["alt+tab", "alt+f4"] {
+            let sc = Shortcut::parse(chord).expect("parses");
+            assert!(reservation(&sc).is_some(), "{chord} must stay refused");
+        }
+    }
 
     #[test]
     fn parse_win_backtick() {

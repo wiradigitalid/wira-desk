@@ -57,9 +57,9 @@ pub struct LayoutConfig {
     pub enable_overlapping_stack: bool,
     /// Width of each window as a percentage of screen width (default 50).
     pub stack_width_percent: u32,
-    /// Overlapping stack shortcut. Introduced by the frozen contract with the
-    /// reviewable default `ctrl+win+down`; consumers may use it but must not
-    /// renumber or reinterpret this field.
+    /// Overlapping stack shortcut. The field name is part of the frozen contract and must
+    /// not be renumbered or reinterpreted; its *default* moved to `ctrl+alt+shift+down` when
+    /// the chord family moved, because `ctrl+alt+down` became the bottom-half snap.
     pub stack_shortcut: String,
     /// Move the active window to the next monitor. Lives in `[layout]` rather than
     /// `[snapping]` because it arranges *across* screens rather than dividing one, which
@@ -94,11 +94,11 @@ impl Default for SwitcherConfig {
 impl Default for SnappingConfig {
     fn default() -> Self {
         Self {
-            snap_half_left: "ctrl+win+left".to_string(),
-            snap_half_right: "ctrl+win+right".to_string(),
+            snap_half_left: "ctrl+alt+left".to_string(),
+            snap_half_right: "ctrl+alt+right".to_string(),
             snap_half_top: "ctrl+alt+up".to_string(),
             snap_half_bottom: "ctrl+alt+down".to_string(),
-            snap_maximize: "ctrl+win+enter".to_string(),
+            snap_maximize: "ctrl+alt+enter".to_string(),
         }
     }
 }
@@ -108,7 +108,7 @@ impl Default for LayoutConfig {
         Self {
             enable_overlapping_stack: false,
             stack_width_percent: 50,
-            stack_shortcut: "ctrl+win+down".to_string(),
+            stack_shortcut: "ctrl+alt+shift+down".to_string(),
             move_next_monitor_shortcut: "ctrl+alt+shift+enter".to_string(),
         }
     }
@@ -223,14 +223,71 @@ mod tests {
     // Epics 3, 4, and 5 consume these as sibling lanes. They may read them but
     // must not renumber or reinterpret them, so the values are pinned here.
 
+    /// The shipped chord family, pinned so it cannot drift unnoticed.
+    ///
+    /// These values changed once, and the fact that this test had to be edited is the point
+    /// of pinning them. `Win+Ctrl+Left/Right` is Windows' own virtual-desktop navigation, and
+    /// the previous default took it silently because the low-level hook sees the chord first.
     #[test]
     fn frozen_snapping_defaults() {
         let cfg = SnappingConfig::default();
-        assert_eq!(cfg.snap_half_left, "ctrl+win+left");
-        assert_eq!(cfg.snap_half_right, "ctrl+win+right");
+        assert_eq!(cfg.snap_half_left, "ctrl+alt+left");
+        assert_eq!(cfg.snap_half_right, "ctrl+alt+right");
         assert_eq!(cfg.snap_half_top, "ctrl+alt+up");
         assert_eq!(cfg.snap_half_bottom, "ctrl+alt+down");
-        assert_eq!(cfg.snap_maximize, "ctrl+win+enter");
+        assert_eq!(cfg.snap_maximize, "ctrl+alt+enter");
+    }
+
+    #[test]
+    fn no_shipped_default_is_a_reserved_chord() {
+        // A default that fails its own validation is the exact carve-out problem the reserved
+        // catalogue exists to avoid, and it is how `ctrl+win+left` shipped while
+        // `Win+Ctrl+Left` was a Windows shell chord.
+        let cfg = Config::default();
+        for raw in [
+            &cfg.switcher.shortcut,
+            &cfg.snapping.snap_half_left,
+            &cfg.snapping.snap_half_right,
+            &cfg.snapping.snap_half_top,
+            &cfg.snapping.snap_half_bottom,
+            &cfg.snapping.snap_maximize,
+            &cfg.layout.move_next_monitor_shortcut,
+            &cfg.layout.stack_shortcut,
+        ] {
+            let parsed = crate::Shortcut::parse(raw).expect("every shipped default parses");
+            assert!(
+                crate::shortcut::reservation(&parsed).is_none(),
+                "shipped default {raw} is a reserved chord"
+            );
+        }
+        // `switcher.fallback_shortcut` is deliberately excluded: `alt+backtick` is carved out
+        // by name in `DEC-003` as the product's own identity, and it is the one default the
+        // catalogue is allowed to disagree with.
+    }
+
+    #[test]
+    fn every_shipped_default_is_distinct() {
+        // The guard for the collision `DEC-009` handles at runtime: it must never be the
+        // shipped configuration that produces one.
+        let cfg = Config::default();
+        let all = [
+            &cfg.switcher.shortcut,
+            &cfg.switcher.fallback_shortcut,
+            &cfg.snapping.snap_half_left,
+            &cfg.snapping.snap_half_right,
+            &cfg.snapping.snap_half_top,
+            &cfg.snapping.snap_half_bottom,
+            &cfg.snapping.snap_maximize,
+            &cfg.layout.move_next_monitor_shortcut,
+            &cfg.layout.stack_shortcut,
+        ];
+        for i in 0..all.len() {
+            for j in (i + 1)..all.len() {
+                let a = crate::Shortcut::parse(all[i]).expect("parses");
+                let b = crate::Shortcut::parse(all[j]).expect("parses");
+                assert_ne!(a, b, "{} and {} are the same chord", all[i], all[j]);
+            }
+        }
     }
 
     #[test]
@@ -253,7 +310,10 @@ mod tests {
 
     #[test]
     fn frozen_stack_shortcut_default() {
-        assert_eq!(LayoutConfig::default().stack_shortcut, "ctrl+win+down");
+        assert_eq!(
+            LayoutConfig::default().stack_shortcut,
+            "ctrl+alt+shift+down"
+        );
         assert_eq!(
             LayoutConfig::default().move_next_monitor_shortcut,
             "ctrl+alt+shift+enter"
@@ -306,7 +366,7 @@ mod tests {
         "#;
         let cfg = Config::from_toml_str(toml).unwrap();
         assert_eq!(cfg.layout.stack_width_percent, 70);
-        assert_eq!(cfg.layout.stack_shortcut, "ctrl+win+down");
+        assert_eq!(cfg.layout.stack_shortcut, "ctrl+alt+shift+down");
         assert_eq!(
             cfg.layout.move_next_monitor_shortcut,
             "ctrl+alt+shift+enter"

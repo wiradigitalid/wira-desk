@@ -225,12 +225,15 @@ mod tests {
     #[test]
     fn arrangement_shortcut_defaults_are_frozen() {
         let snapping = SnappingConfig::default();
-        assert_eq!(snapping.snap_half_left, "ctrl+win+left");
-        assert_eq!(snapping.snap_half_right, "ctrl+win+right");
+        assert_eq!(snapping.snap_half_left, "ctrl+alt+left");
+        assert_eq!(snapping.snap_half_right, "ctrl+alt+right");
         assert_eq!(snapping.snap_half_top, "ctrl+alt+up");
         assert_eq!(snapping.snap_half_bottom, "ctrl+alt+down");
-        assert_eq!(snapping.snap_maximize, "ctrl+win+enter");
-        assert_eq!(LayoutConfig::default().stack_shortcut, "ctrl+win+down");
+        assert_eq!(snapping.snap_maximize, "ctrl+alt+enter");
+        assert_eq!(
+            LayoutConfig::default().stack_shortcut,
+            "ctrl+alt+shift+down"
+        );
         assert_eq!(
             LayoutConfig::default().move_next_monitor_shortcut,
             "ctrl+alt+shift+enter"
