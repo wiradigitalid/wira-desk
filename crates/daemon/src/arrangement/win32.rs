@@ -19,8 +19,9 @@ use windows_sys::Win32::System::Threading::{
 };
 use windows_sys::Win32::UI::HiDpi::GetDpiForWindow;
 use windows_sys::Win32::UI::WindowsAndMessaging::{
-    GetForegroundWindow, GetWindowRect, GetWindowThreadProcessId, IsWindow, SetWindowPos,
-    SET_WINDOW_POS_FLAGS, SWP_ASYNCWINDOWPOS, SWP_NOACTIVATE, SWP_NOOWNERZORDER, SWP_NOZORDER,
+    GetForegroundWindow, GetSystemMetrics, GetWindowRect, GetWindowThreadProcessId, IsWindow,
+    SetWindowPos, SET_WINDOW_POS_FLAGS, SM_CXVIRTUALSCREEN, SM_CYVIRTUALSCREEN, SM_XVIRTUALSCREEN,
+    SM_YVIRTUALSCREEN, SWP_ASYNCWINDOWPOS, SWP_NOACTIVATE, SWP_NOOWNERZORDER, SWP_NOZORDER,
 };
 
 use shared::constants::SETTINGS_EXE_NAME;
@@ -362,49 +363,53 @@ fn compensate_for_frame_insets(target: Rect, insets: FrameInsets) -> Option<Rect
     .ok()
 }
 
-/// Clamp `rect` to `monitor`'s full physical extent (`rcMonitor`, never the
-/// work area — the invisible border legitimately occupies the strip between
-/// the work area and the true monitor edge).
+/// Clamp `rect` to `bounds` (the whole virtual desktop's physical extent —
+/// see [`virtual_desktop_bounds`] for why this is a union rather than one
+/// monitor's own `rcMonitor`).
 ///
-/// Widening outward by [`FrameInsets`] is only safe up to the monitor's own
-/// pixels. At the *outermost* edge of the whole virtual desktop — a monitor
-/// with nothing adjacent to it, which is exactly where a leftmost or
-/// topmost monitor's border sits — there is no neighbour to absorb the
-/// extra width, and without this clamp the compensated rect bleeds into
-/// space no monitor occupies. Falls back to the unclamped `rect` if
-/// clamping would invert it (degenerate on any real monitor, given
-/// `insets` is a handful of pixels against a monitor thousands of pixels
-/// wide) — the width/height check right after this call is what actually
-/// rejects a placement that still cannot be made to fit.
-fn clamp_to_monitor(rect: Rect, monitor: RECT) -> Rect {
-    let left = rect.left.max(monitor.left);
-    let top = rect.top.max(monitor.top);
-    let right = rect.right.min(monitor.right);
-    let bottom = rect.bottom.min(monitor.bottom);
+/// Widening outward by [`FrameInsets`] is only safe up to real pixels
+/// somewhere. At the *outermost* edge of the whole virtual desktop — no
+/// monitor at all beyond it, on any monitor, which is where a leftmost or
+/// topmost monitor's border sits — there is nothing to absorb the extra
+/// width, and without this clamp the compensated rect bleeds into space
+/// nothing occupies. Falls back to the unclamped `rect` if clamping would
+/// invert it (degenerate on any real desktop, given `insets` is a handful
+/// of pixels against a desktop thousands of pixels wide) — the
+/// width/height check right after this call is what actually rejects a
+/// placement that still cannot be made to fit.
+fn clamp_to_bounds(rect: Rect, bounds: RECT) -> Rect {
+    let left = rect.left.max(bounds.left);
+    let top = rect.top.max(bounds.top);
+    let right = rect.right.min(bounds.right);
+    let bottom = rect.bottom.min(bounds.bottom);
     Rect::new(left, top, right, bottom).unwrap_or(rect)
 }
 
-/// The target window's monitor, in full physical pixels (`rcMonitor`).
-/// Best-effort: `None` on any failure, which the caller treats as "no known
-/// bounds" — the placement still lands unclamped rather than failing the
-/// whole command over a diagnostic query.
+/// The union of every monitor's full physical pixels — the whole virtual
+/// desktop, not any one monitor's `rcMonitor`. Clamping against a single
+/// target monitor was tried first and measured wrong on a real two-monitor
+/// setup: the edge a portrait monitor shares with its landscape neighbour
+/// is not the outer edge of anything — a monitor sits right there — so
+/// clamping to that single monitor's own bounds cancelled compensation on
+/// *that* shared edge too, not only the one edge with genuinely nothing
+/// beyond it. The virtual-desktop union clamps only the edges that are
+/// truly outermost across every monitor, which is the one case widening
+/// outward has nowhere real to land.
 ///
-/// SAFETY: `hwnd` must be a value `IsWindow` has already confirmed live —
-/// true of `apply`'s only call site. `&mut info` is a live local of the
-/// exact struct `GetMonitorInfoW` is told to write into, with `cbSize` set
-/// to that struct's size beforehand, which is how the call knows how much
-/// of it may write.
-unsafe fn monitor_rect(hwnd: HWND) -> Option<RECT> {
-    let monitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONULL);
-    if monitor == 0 {
-        return None;
+/// SAFETY: `GetSystemMetrics` takes a plain index and touches no memory;
+/// the four virtual-screen indices are always answerable once any display
+/// exists, which is guaranteed on a running desktop session.
+unsafe fn virtual_desktop_bounds() -> RECT {
+    let left = GetSystemMetrics(SM_XVIRTUALSCREEN);
+    let top = GetSystemMetrics(SM_YVIRTUALSCREEN);
+    let width = GetSystemMetrics(SM_CXVIRTUALSCREEN);
+    let height = GetSystemMetrics(SM_CYVIRTUALSCREEN);
+    RECT {
+        left,
+        top,
+        right: left + width,
+        bottom: top + height,
     }
-    let mut info: MONITORINFO = std::mem::zeroed();
-    info.cbSize = std::mem::size_of::<MONITORINFO>() as u32;
-    if GetMonitorInfoW(monitor, &mut info) == FALSE {
-        return None;
-    }
-    Some(info.rcMonitor)
 }
 
 /// Non-activating, Z-order-preserving, asynchronous. `SWP_ASYNCWINDOWPOS` is
@@ -447,15 +452,17 @@ impl WindowMover for Win32WindowMover {
         // SAFETY: `hwnd` was revalidated live by `IsWindow` immediately above.
         let insets = unsafe { frame_insets(hwnd) }.unwrap_or_default();
         let rect = compensate_for_frame_insets(placement.rect, insets).unwrap_or(placement.rect);
-        // Widening outward for the border is only safe up to this monitor's
-        // actual pixels — clamped here so the outermost monitor's edge (no
-        // neighbour to bleed into) never sends part of the window into
-        // space no monitor occupies.
-        // SAFETY: `hwnd` was revalidated live by `IsWindow` immediately above.
-        let rect = match unsafe { monitor_rect(hwnd) } {
-            Some(monitor) => clamp_to_monitor(rect, monitor),
-            None => rect,
-        };
+        // Widening outward for the border is only safe up to the whole
+        // virtual desktop's actual pixels — clamped here so the truly
+        // outermost edge (no monitor at all beyond it, on any monitor)
+        // never sends part of the window into space nothing occupies. An
+        // edge shared with a neighbouring monitor is deliberately left
+        // alone: a monitor sits right there, so bleeding into it is
+        // harmless, which is why this clamps against the union of every
+        // monitor rather than only the target's own.
+        // SAFETY: `virtual_desktop_bounds` takes no arguments and touches no
+        // memory of ours; it is safe on every call, not only after `IsWindow`.
+        let rect = clamp_to_bounds(rect, unsafe { virtual_desktop_bounds() });
         #[cfg(debug_assertions)]
         crate::util::append_debug_trace(&format!(
             "ARRANGE_APPLY: target={hwnd} requested=({},{},{},{}) adjusted=({},{},{},{})",
@@ -713,39 +720,47 @@ mod tests {
         assert_eq!(adjusted, target);
     }
 
-    // --- Clamping the compensated rect to the monitor's real pixels ----
+    // --- Clamping the compensated rect to the virtual desktop's real pixels
+
+    /// The two real monitors this fix was measured against: a portrait 4K
+    /// monitor at 175% scaling on the left, a landscape 4K monitor at 150%
+    /// on the right, sharing the boundary at x=0.
+    const PORTRAIT_MONITOR: RECT = RECT {
+        left: -2160,
+        top: -838,
+        right: 0,
+        bottom: 3002,
+    };
+    const LANDSCAPE_MONITOR: RECT = RECT {
+        left: 0,
+        top: 0,
+        right: 3840,
+        bottom: 2160,
+    };
+    const UNION_OF_BOTH: RECT = RECT {
+        left: -2160,
+        top: -838,
+        right: 3840,
+        bottom: 3002,
+    };
 
     #[test]
-    fn a_rect_already_inside_the_monitor_is_unchanged() {
-        let monitor = RECT {
-            left: -2160,
-            top: -838,
-            right: 0,
-            bottom: 3002,
-        };
+    fn a_rect_already_inside_the_bounds_is_unchanged() {
         let rect = Rect::new(-2160, -838, -1069, 2929).unwrap();
-        assert_eq!(clamp_to_monitor(rect, monitor), rect);
+        assert_eq!(clamp_to_bounds(rect, PORTRAIT_MONITOR), rect);
     }
 
     #[test]
-    fn compensation_past_the_monitors_outer_edge_is_pulled_back_in() {
-        // The exact shape reported for a portrait 4K monitor at 175%
-        // scaling sitting at the leftmost edge of the virtual desktop,
-        // where compensating outward by the border has nothing to bleed
-        // into: the monitor itself is (-2160,-838,0,3002), and widening
-        // the target by an 11px border pushes the left edge to -2171 —
-        // 11px past the monitor's own left edge.
-        let monitor = RECT {
-            left: -2160,
-            top: -838,
-            right: 0,
-            bottom: 3002,
-        };
+    fn compensation_past_the_true_outer_edge_is_pulled_back_in() {
+        // The exact shape reported for the portrait monitor: compensating
+        // outward by an 11px border pushes the left edge to -2171 — 11px
+        // past that monitor's own left edge, which is also the leftmost
+        // edge of the whole virtual desktop, with nothing beyond it.
         let compensated = Rect::new(-2171, -838, -1069, 2929).unwrap();
-        let clamped = clamp_to_monitor(compensated, monitor);
+        let clamped = clamp_to_bounds(compensated, UNION_OF_BOTH);
         assert_eq!(
             clamped.left, -2160,
-            "must not bleed past the monitor's own left edge"
+            "must not bleed past the true outer edge of the whole desktop"
         );
         assert_eq!(
             clamped.right, -1069,
@@ -754,18 +769,38 @@ mod tests {
     }
 
     #[test]
-    fn clamping_never_inverts_a_rect_that_still_fits_the_monitor() {
-        let monitor = RECT {
-            left: 0,
-            top: 0,
-            right: 3840,
-            bottom: 2160,
-        };
+    fn compensation_across_a_shared_monitor_boundary_is_left_alone() {
+        // Regression for the first version of this fix, which clamped
+        // against the *target's own* monitor rather than the desktop union:
+        // it cancelled compensation on the boundary the portrait monitor
+        // shares with its landscape neighbour too, not only the true outer
+        // edge — visible as a margin on both sides of a window snapped
+        // against that shared boundary, reported directly after the first
+        // fix shipped. Snap-right on the portrait monitor compensates its
+        // right edge past x=0 into the landscape monitor's own pixels,
+        // which is exactly where widening outward is harmless: a monitor
+        // is right there.
+        let compensated = Rect::new(-1091, -838, 11, 2929).unwrap();
+        let clamped = clamp_to_bounds(compensated, UNION_OF_BOTH);
+        assert_eq!(
+            clamped, compensated,
+            "an edge shared with a neighbouring monitor must not be clamped \
+             at all — a single-monitor bounds would wrongly cancel this"
+        );
+        // The same rect clamped against the portrait monitor's own bounds
+        // alone (the bug the union fixes) would have been pulled back to
+        // `right: 0` instead — pinned here so a future refactor cannot
+        // silently reintroduce the per-monitor version of this function.
+        assert_eq!(clamp_to_bounds(compensated, PORTRAIT_MONITOR).right, 0);
+    }
+
+    #[test]
+    fn clamping_never_inverts_a_rect_that_still_fits_the_bounds() {
         // Compensated past every edge at once — still comfortably smaller
         // than the monitor, so clamping must produce a normal, non-inverted
         // rect rather than falling back to the unclamped input.
         let compensated = Rect::new(-20, -20, 3860, 2180).unwrap();
-        let clamped = clamp_to_monitor(compensated, monitor);
+        let clamped = clamp_to_bounds(compensated, LANDSCAPE_MONITOR);
         assert_eq!(clamped, Rect::new(0, 0, 3840, 2160).unwrap());
     }
 
