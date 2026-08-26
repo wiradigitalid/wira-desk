@@ -42,7 +42,10 @@ impl Pane {
         match self {
             Pane::General => "General",
             Pane::Shortcuts => "Shortcuts",
-            Pane::Layout => "Layout & Snapping",
+            // "Layout", not "Layout & Snapping": this pane holds the overlapping-stack
+            // toggle and its width slider and no chord at all. Every chord lives in the
+            // Shortcuts pane, and the old name promised otherwise.
+            Pane::Layout => "Layout",
             Pane::VmExceptions => "VM & Exceptions",
             Pane::About => "About",
         }
@@ -60,24 +63,92 @@ impl Pane {
 
 /// Which shortcut field the capturer is bound to.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// The editable chord fields, **in the declared sequence**.
+///
+/// This order is load-bearing three times over: the Shortcuts pane is drawn from it, keyboard
+/// focus follows it, and it is the precedence order that decides which of two colliding
+/// actions keeps the chord. There is exactly one list of it, and `LBR-ST-14` is the rule that
+/// says so. Grouping the rows under headings may gather them; it must not reorder them, which
+/// is why the group boundaries are not visible here.
 pub enum ShortcutField {
     Switcher,
     Fallback,
     SnapLeft,
     SnapRight,
+    SnapTop,
+    SnapBottom,
     SnapMaximize,
+    MoveNextMonitor,
     Stack,
 }
 
 impl ShortcutField {
-    pub const ALL: [ShortcutField; 6] = [
+    pub const ALL: [ShortcutField; 9] = [
         ShortcutField::Switcher,
         ShortcutField::Fallback,
         ShortcutField::SnapLeft,
         ShortcutField::SnapRight,
+        ShortcutField::SnapTop,
+        ShortcutField::SnapBottom,
         ShortcutField::SnapMaximize,
+        ShortcutField::MoveNextMonitor,
         ShortcutField::Stack,
     ];
+
+    /// Recover a field from its position in the declared sequence.
+    ///
+    /// The UI carries the index rather than a name, and this is the one place that reads it
+    /// back. Out of range falls back to the first field rather than panicking: the index
+    /// comes across a UI boundary, and a settings window that closes itself on a stale event
+    /// is worse than one that acts on the wrong row.
+    pub fn from_index(index: i32) -> ShortcutField {
+        ShortcutField::ALL
+            .get(usize::try_from(index).unwrap_or(0))
+            .copied()
+            .unwrap_or(ShortcutField::Switcher)
+    }
+
+    /// One line under the row title, in the user's terms.
+    pub fn description(self) -> &'static str {
+        match self {
+            ShortcutField::Switcher => {
+                "Switches between windows of your active app on this monitor."
+            }
+            ShortcutField::Fallback => "Alternative shortcut if Win key is used by another app.",
+            ShortcutField::SnapLeft => "Snaps the active window to the left half of this monitor.",
+            ShortcutField::SnapRight => {
+                "Snaps the active window to the right half of this monitor."
+            }
+            ShortcutField::SnapTop => {
+                "Snaps the active window to the top half — the useful division on a short screen."
+            }
+            ShortcutField::SnapBottom => {
+                "Snaps the active window to the bottom half of this monitor."
+            }
+            ShortcutField::SnapMaximize => "Expands the active window to fill this monitor.",
+            ShortcutField::MoveNextMonitor => {
+                "Moves the active window to the next monitor, keeping the same share of the screen."
+            }
+            ShortcutField::Stack => "Arranges windows of this app in a clickable stack.",
+        }
+    }
+
+    /// The heading this field sits under in the Shortcuts pane.
+    ///
+    /// Presentation only. Grouping gathers rows that are already adjacent in [`ALL`]; it
+    /// never reorders them, so the groups fall out of the declared sequence rather than
+    /// being a second ordering laid over it.
+    pub fn group(self) -> &'static str {
+        match self {
+            ShortcutField::Switcher | ShortcutField::Fallback => "Switching",
+            ShortcutField::SnapLeft
+            | ShortcutField::SnapRight
+            | ShortcutField::SnapTop
+            | ShortcutField::SnapBottom
+            | ShortcutField::SnapMaximize => "Snap & resize",
+            ShortcutField::MoveNextMonitor | ShortcutField::Stack => "Move & arrange",
+        }
+    }
 
     pub fn label(self) -> &'static str {
         match self {
@@ -85,7 +156,10 @@ impl ShortcutField {
             ShortcutField::Fallback => "Fallback switch shortcut",
             ShortcutField::SnapLeft => "Snap to left half",
             ShortcutField::SnapRight => "Snap to right half",
+            ShortcutField::SnapTop => "Snap to top half",
+            ShortcutField::SnapBottom => "Snap to bottom half",
             ShortcutField::SnapMaximize => "Maximize",
+            ShortcutField::MoveNextMonitor => "Move to next monitor",
             ShortcutField::Stack => "Overlapping stack",
         }
     }
@@ -105,7 +179,10 @@ impl ShortcutField {
             ShortcutField::Fallback => &cfg.switcher.fallback_shortcut,
             ShortcutField::SnapLeft => &cfg.snapping.snap_half_left,
             ShortcutField::SnapRight => &cfg.snapping.snap_half_right,
+            ShortcutField::SnapTop => &cfg.snapping.snap_half_top,
+            ShortcutField::SnapBottom => &cfg.snapping.snap_half_bottom,
             ShortcutField::SnapMaximize => &cfg.snapping.snap_maximize,
+            ShortcutField::MoveNextMonitor => &cfg.layout.move_next_monitor_shortcut,
             ShortcutField::Stack => &cfg.layout.stack_shortcut,
         }
     }
@@ -116,7 +193,10 @@ impl ShortcutField {
             ShortcutField::Fallback => cfg.switcher.fallback_shortcut = value,
             ShortcutField::SnapLeft => cfg.snapping.snap_half_left = value,
             ShortcutField::SnapRight => cfg.snapping.snap_half_right = value,
+            ShortcutField::SnapTop => cfg.snapping.snap_half_top = value,
+            ShortcutField::SnapBottom => cfg.snapping.snap_half_bottom = value,
             ShortcutField::SnapMaximize => cfg.snapping.snap_maximize = value,
+            ShortcutField::MoveNextMonitor => cfg.layout.move_next_monitor_shortcut = value,
             ShortcutField::Stack => cfg.layout.stack_shortcut = value,
         }
     }
@@ -134,7 +214,10 @@ impl ShortcutField {
             ShortcutField::Fallback => "switcher.fallback_shortcut",
             ShortcutField::SnapLeft => "snapping.snap_half_left",
             ShortcutField::SnapRight => "snapping.snap_half_right",
+            ShortcutField::SnapTop => "snapping.snap_half_top",
+            ShortcutField::SnapBottom => "snapping.snap_half_bottom",
             ShortcutField::SnapMaximize => "snapping.snap_maximize",
+            ShortcutField::MoveNextMonitor => "layout.move_next_monitor_shortcut",
             ShortcutField::Stack => "layout.stack_shortcut",
         }
     }
@@ -1013,6 +1096,107 @@ mod tests {
                 f.label()
             );
         }
+    }
+
+    #[test]
+    fn field_declaration_order_is_the_precedence_order() {
+        // The discriminant is what crosses the UI boundary as `listening_field` and comes
+        // back through `from_index`, and it is also the position that decides which of two
+        // colliding actions keeps the chord. Those are only the same thing while the
+        // discriminants match `ALL`'s order, so that identity is asserted rather than assumed.
+        for (i, f) in ShortcutField::ALL.into_iter().enumerate() {
+            assert_eq!(f as usize, i, "{} sits out of declared order", f.label());
+            assert_eq!(
+                ShortcutField::from_index(i as i32),
+                f,
+                "round trip through the UI index must return the same field"
+            );
+        }
+    }
+
+    #[test]
+    fn an_out_of_range_index_does_not_panic() {
+        // The index arrives from the UI. A settings window that closes itself on a stale
+        // event is worse than one that acts on the first row.
+        assert_eq!(ShortcutField::from_index(-1), ShortcutField::Switcher);
+        assert_eq!(ShortcutField::from_index(99), ShortcutField::Switcher);
+    }
+
+    #[test]
+    fn every_field_has_a_distinct_key_label_and_description() {
+        let mut keys: Vec<&str> = ShortcutField::ALL.iter().map(|f| f.key()).collect();
+        let mut labels: Vec<&str> = ShortcutField::ALL.iter().map(|f| f.label()).collect();
+        let mut descs: Vec<&str> = ShortcutField::ALL.iter().map(|f| f.description()).collect();
+        for list in [&mut keys, &mut labels, &mut descs] {
+            let before = list.len();
+            list.sort_unstable();
+            list.dedup();
+            assert_eq!(before, list.len(), "two fields share a value");
+        }
+        // Both reverse lookups must resolve every field: `from_key` is how a save-time
+        // rejection becomes a human label, and `from_label` is how the renderer maps a focus
+        // stop back to a field. A field missing from either breaks silently, not at compile
+        // time.
+        for f in ShortcutField::ALL {
+            assert_eq!(ShortcutField::from_key(f.key()), Some(f));
+            assert_eq!(ShortcutField::from_label(f.label()), Some(f));
+        }
+    }
+
+    #[test]
+    fn every_field_belongs_to_one_of_the_three_groups() {
+        let groups = ["Switching", "Snap & resize", "Move & arrange"];
+        for f in ShortcutField::ALL {
+            assert!(
+                groups.contains(&f.group()),
+                "{} is in an undeclared group",
+                f.label()
+            );
+        }
+    }
+
+    #[test]
+    fn grouping_never_reorders_the_declared_sequence() {
+        // `LBR-ST-14`: a heading may gather rows, never move them. Concatenating the groups
+        // in pane order must reproduce `ALL` exactly — which is only true while each group's
+        // members are contiguous in the declared sequence.
+        let mut regrouped: Vec<ShortcutField> = Vec::new();
+        for heading in ["Switching", "Snap & resize", "Move & arrange"] {
+            regrouped.extend(
+                ShortcutField::ALL
+                    .into_iter()
+                    .filter(|f| f.group() == heading),
+            );
+        }
+        assert_eq!(regrouped, ShortcutField::ALL.to_vec());
+    }
+
+    #[test]
+    fn no_chord_field_lives_outside_the_shortcuts_pane() {
+        // The capture lease is armed from which pane is showing (`DEC-004`), so a chord field
+        // in a second pane means two panes arming the observe lease — a regression in the
+        // `DEC-005` key check. Asserted because the pane split is the thing a future tidy-up
+        // is most likely to undo.
+        for pane in Pane::ALL {
+            if pane == Pane::Shortcuts {
+                continue;
+            }
+            let order = focus_order(pane);
+            for f in ShortcutField::ALL {
+                assert!(
+                    !order.contains(&f.label()),
+                    "{} appears in the {} pane",
+                    f.label(),
+                    pane.label()
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn the_layout_pane_no_longer_claims_snapping() {
+        assert_eq!(Pane::Layout.label(), "Layout");
+        assert_eq!(Pane::from_label("Layout"), Some(Pane::Layout));
     }
 
     #[test]

@@ -137,78 +137,41 @@ fn sync_model_to_ui(window: &MainWindow, model: &SettingsModel) {
         window.set_auto_start(model.draft.general.auto_start);
 
         // Shortcuts
-        window.set_sc_switcher(slint::SharedString::from(format_shortcut_display(
-            &model.draft.switcher.shortcut,
-        )));
-        window.set_sc_fallback(slint::SharedString::from(format_shortcut_display(
-            &model.draft.switcher.fallback_shortcut,
-        )));
-        window.set_sc_snap_left(slint::SharedString::from(format_shortcut_display(
-            &model.draft.snapping.snap_half_left,
-        )));
-        window.set_sc_snap_right(slint::SharedString::from(format_shortcut_display(
-            &model.draft.snapping.snap_half_right,
-        )));
-        window.set_sc_snap_max(slint::SharedString::from(format_shortcut_display(
-            &model.draft.snapping.snap_maximize,
-        )));
-        window.set_sc_stack(slint::SharedString::from(format_shortcut_display(
-            &model.draft.layout.stack_shortcut,
-        )));
+        // The Shortcuts pane is built from `ShortcutField::ALL`, the one declared sequence
+        // (`LBR-ST-14`). Nothing here names an individual action, so an action added to that
+        // array appears in the pane, in the right group, with its conflict and swap state,
+        // without a line changing in this file — which is the property the previous
+        // one-property-per-field shape could not offer.
+        let row_of = |field: ShortcutField| ShortcutRowData {
+            index: field as i32,
+            title: slint::SharedString::from(field.label()),
+            description: slint::SharedString::from(field.description()),
+            shortcut: slint::SharedString::from(format_shortcut_display(field.get(&model.draft))),
+            conflict_name: slint::SharedString::from(
+                model.find_conflict(field).map(|f| f.label()).unwrap_or(""),
+            ),
+            can_swap: model.can_swap(field),
+        };
+        let group_rows = |heading: &str| -> slint::ModelRc<ShortcutRowData> {
+            let rows: Vec<ShortcutRowData> = ShortcutField::ALL
+                .into_iter()
+                .filter(|f| f.group() == heading)
+                .map(row_of)
+                .collect();
+            slint::ModelRc::new(slint::VecModel::from(rows))
+        };
+        window.set_rows_switching(group_rows("Switching"));
+        window.set_rows_snap(group_rows("Snap & resize"));
+        window.set_rows_move(group_rows("Move & arrange"));
 
-        // Listening Field Index (-1 = Idle)
+        // Listening index is the action's position in the declared sequence, which is exactly
+        // its discriminant — so the pane, the focus order, and the collision precedence all
+        // read the same number rather than three hand-kept mappings.
         let listening_idx = match &model.capture {
             app::CaptureState::Idle => -1,
-            app::CaptureState::Listening(field) => match field {
-                ShortcutField::Switcher => 0,
-                ShortcutField::Fallback => 1,
-                ShortcutField::SnapLeft => 2,
-                ShortcutField::SnapRight => 3,
-                ShortcutField::SnapMaximize => 4,
-                ShortcutField::Stack => 5,
-            },
+            app::CaptureState::Listening(field) => *field as i32,
         };
         window.set_listening_field(listening_idx);
-
-        // Conflicts
-        let conf_switcher = model
-            .find_conflict(ShortcutField::Switcher)
-            .map(|f| f.label())
-            .unwrap_or("");
-        let conf_fallback = model
-            .find_conflict(ShortcutField::Fallback)
-            .map(|f| f.label())
-            .unwrap_or("");
-        let conf_snap_left = model
-            .find_conflict(ShortcutField::SnapLeft)
-            .map(|f| f.label())
-            .unwrap_or("");
-        let conf_snap_right = model
-            .find_conflict(ShortcutField::SnapRight)
-            .map(|f| f.label())
-            .unwrap_or("");
-        let conf_snap_max = model
-            .find_conflict(ShortcutField::SnapMaximize)
-            .map(|f| f.label())
-            .unwrap_or("");
-        let conf_stack = model
-            .find_conflict(ShortcutField::Stack)
-            .map(|f| f.label())
-            .unwrap_or("");
-
-        window.set_conflict_switcher(slint::SharedString::from(conf_switcher));
-        window.set_conflict_fallback(slint::SharedString::from(conf_fallback));
-        window.set_conflict_snap_left(slint::SharedString::from(conf_snap_left));
-        window.set_conflict_snap_right(slint::SharedString::from(conf_snap_right));
-        window.set_conflict_snap_max(slint::SharedString::from(conf_snap_max));
-        window.set_conflict_stack(slint::SharedString::from(conf_stack));
-
-        window.set_can_swap_switcher(model.can_swap(ShortcutField::Switcher));
-        window.set_can_swap_fallback(model.can_swap(ShortcutField::Fallback));
-        window.set_can_swap_snap_left(model.can_swap(ShortcutField::SnapLeft));
-        window.set_can_swap_snap_right(model.can_swap(ShortcutField::SnapRight));
-        window.set_can_swap_snap_max(model.can_swap(ShortcutField::SnapMaximize));
-        window.set_can_swap_stack(model.can_swap(ShortcutField::Stack));
 
         // KeyCheck Diagnostic State
         window.set_kc_mod_ctrl(model.key_check.mod_ctrl);
@@ -354,6 +317,13 @@ fn main() -> Result<(), slint::PlatformError> {
             let monitor_pos = monitor.position();
             let monitor_size = monitor.size();
             let window_size = win.outer_size();
+            let scale_factor = win.scale_factor();
+            let _ = std::fs::write(
+                std::env::temp_dir().join("wiradesk-settings-center-debug.txt"),
+                format!(
+                    "scale_factor={scale_factor}\nmonitor_pos={monitor_pos:?}\nmonitor_size={monitor_size:?}\nwindow_size={window_size:?}\n"
+                ),
+            );
             let x = monitor_pos.x + (monitor_size.width as i32 - window_size.width as i32) / 2;
             let y = monitor_pos.y + (monitor_size.height as i32 - window_size.height as i32) / 2;
             win.set_outer_position(winit::dpi::PhysicalPosition::new(x, y));
@@ -429,15 +399,7 @@ fn main() -> Result<(), slint::PlatformError> {
         let window_weak = main_window.as_weak();
         main_window.on_start_capture(move |idx| {
             let mut m = model_rc.borrow_mut();
-            let field = match idx {
-                0 => ShortcutField::Switcher,
-                1 => ShortcutField::Fallback,
-                2 => ShortcutField::SnapLeft,
-                3 => ShortcutField::SnapRight,
-                4 => ShortcutField::SnapMaximize,
-                5 => ShortcutField::Stack,
-                _ => ShortcutField::Switcher,
-            };
+            let field = ShortcutField::from_index(idx);
             if m.capture.is_listening_for(field) {
                 m.cancel_capture();
             } else {
@@ -453,15 +415,7 @@ fn main() -> Result<(), slint::PlatformError> {
         let window_weak = main_window.as_weak();
         main_window.on_swap_shortcuts(move |idx| {
             let mut m = model_rc.borrow_mut();
-            let field = match idx {
-                0 => ShortcutField::Switcher,
-                1 => ShortcutField::Fallback,
-                2 => ShortcutField::SnapLeft,
-                3 => ShortcutField::SnapRight,
-                4 => ShortcutField::SnapMaximize,
-                5 => ShortcutField::Stack,
-                _ => ShortcutField::Switcher,
-            };
+            let field = ShortcutField::from_index(idx);
             if let Some(conf) = m.find_conflict(field) {
                 m.swap_shortcuts(field, conf);
             }

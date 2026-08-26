@@ -99,11 +99,14 @@ fn classify_parse_failure(input: &str) -> ShortcutError {
 /// Returns the offending field name and reason on the first failure, leaving
 /// the caller's active configuration untouched.
 pub fn validate_config(cfg: &Config) -> Result<(), (&'static str, ShortcutError)> {
-    // These six paths must match `app::ShortcutField::key()` exactly —
-    // `describe()` maps a rejection reported here back to a human label
-    // through that table, and the two are kept as separate literals so this
-    // module has no dependency on the UI-facing field enum.
-    let fields: [(&'static str, &str); 6] = [
+    // These nine paths must match `app::ShortcutField::key()` exactly, and in the same
+    // ORDER: `describe()` maps a rejection reported here back to a human label through that
+    // table, and the order decides which of two colliding fields is named as the first
+    // holder. The two are kept as separate literals so this module has no dependency on the
+    // UI-facing field enum — a coupling `LBR-ST-14` accepts in exchange for the layer
+    // boundary, and which `app::tests::field_declaration_order_is_the_precedence_order`
+    // guards from the other side.
+    let fields: [(&'static str, &str); 9] = [
         ("switcher.shortcut", &cfg.switcher.shortcut),
         (
             "switcher.fallback_shortcut",
@@ -111,10 +114,16 @@ pub fn validate_config(cfg: &Config) -> Result<(), (&'static str, ShortcutError)
         ),
         ("snapping.snap_half_left", &cfg.snapping.snap_half_left),
         ("snapping.snap_half_right", &cfg.snapping.snap_half_right),
+        ("snapping.snap_half_top", &cfg.snapping.snap_half_top),
+        ("snapping.snap_half_bottom", &cfg.snapping.snap_half_bottom),
         ("snapping.snap_maximize", &cfg.snapping.snap_maximize),
+        (
+            "layout.move_next_monitor_shortcut",
+            &cfg.layout.move_next_monitor_shortcut,
+        ),
         ("layout.stack_shortcut", &cfg.layout.stack_shortcut),
     ];
-    let mut seen: Vec<(&'static str, String)> = Vec::with_capacity(6);
+    let mut seen: Vec<(&'static str, String)> = Vec::with_capacity(fields.len());
 
     for (name, value) in fields {
         let canonical = validate_shortcut(value).map_err(|e| (name, e))?;

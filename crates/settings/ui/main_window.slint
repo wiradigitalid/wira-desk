@@ -4,7 +4,7 @@ import { ScrollView } from "std-widgets.slint";
 import { Titlebar } from "components/titlebar.slint";
 import { Sidebar } from "components/sidebar.slint";
 import { GeneralPane } from "panes/general_pane.slint";
-import { ShortcutsPane } from "panes/shortcuts_pane.slint";
+import { ShortcutsPane, ShortcutRowData } from "panes/shortcuts_pane.slint";
 import { LayoutPane } from "panes/layout_pane.slint";
 import { VmExceptionsPane } from "panes/vm_exceptions_pane.slint";
 import { AboutPane } from "panes/about_pane.slint";
@@ -31,28 +31,18 @@ export component MainWindow inherits Window {
     // General Pane Properties
     in-out property <bool> auto_start: false;
 
-    // Shortcuts Pane Properties
-    in property <string> sc_switcher: "Win + `";
-    in property <string> sc_fallback: "Alt + `";
-    in property <string> sc_snap_left: "Ctrl + Win + ←";
-    in property <string> sc_snap_right: "Ctrl + Win + →";
-    in property <string> sc_snap_max: "Ctrl + Win + Enter";
-    in property <string> sc_stack: "Ctrl + Win + ↓";
+    // Shortcuts Pane Properties.
+    //
+    // Three models rather than one property per field per concern. The previous shape was
+    // one `sc_`, one `conflict_`, and one `can_swap_` property per action; at nine actions
+    // that is twenty-seven declarations here and twenty-seven more where they are bound,
+    // and an action added to the model with any one of them forgotten is drawn wrong or not
+    // at all. The Rust side builds these from `ShortcutField::ALL`, so the declared sequence
+    // is the only list (`LBR-ST-14`).
+    in property <[ShortcutRowData]> rows_switching;
+    in property <[ShortcutRowData]> rows_snap;
+    in property <[ShortcutRowData]> rows_move;
     in property <int> listening_field: -1;
-
-    in property <string> conflict_switcher: "";
-    in property <string> conflict_fallback: "";
-    in property <string> conflict_snap_left: "";
-    in property <string> conflict_snap_right: "";
-    in property <string> conflict_snap_max: "";
-    in property <string> conflict_stack: "";
-
-    in property <bool> can_swap_switcher: false;
-    in property <bool> can_swap_fallback: false;
-    in property <bool> can_swap_snap_left: false;
-    in property <bool> can_swap_snap_right: false;
-    in property <bool> can_swap_snap_max: false;
-    in property <bool> can_swap_stack: false;
 
     // KeyCheck Properties
     in property <bool> kc_mod_ctrl: false;
@@ -224,27 +214,10 @@ export component MainWindow inherits Window {
                             }
 
                             if root.current_pane == 1 : ShortcutsPane {
-                                sc_switcher: root.sc_switcher;
-                                sc_fallback: root.sc_fallback;
-                                sc_snap_left: root.sc_snap_left;
-                                sc_snap_right: root.sc_snap_right;
-                                sc_snap_max: root.sc_snap_max;
-                                sc_stack: root.sc_stack;
+                                rows_switching: root.rows_switching;
+                                rows_snap: root.rows_snap;
+                                rows_move: root.rows_move;
                                 listening_field: root.listening_field;
-
-                                conflict_switcher: root.conflict_switcher;
-                                conflict_fallback: root.conflict_fallback;
-                                conflict_snap_left: root.conflict_snap_left;
-                                conflict_snap_right: root.conflict_snap_right;
-                                conflict_snap_max: root.conflict_snap_max;
-                                conflict_stack: root.conflict_stack;
-
-                                can_swap_switcher: root.can_swap_switcher;
-                                can_swap_fallback: root.can_swap_fallback;
-                                can_swap_snap_left: root.can_swap_snap_left;
-                                can_swap_snap_right: root.can_swap_snap_right;
-                                can_swap_snap_max: root.can_swap_snap_max;
-                                can_swap_stack: root.can_swap_stack;
 
                                 kc_mod_ctrl: root.kc_mod_ctrl;
                                 kc_mod_win: root.kc_mod_win;

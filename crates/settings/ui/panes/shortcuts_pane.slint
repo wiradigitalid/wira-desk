@@ -3,30 +3,75 @@ import { Card, CardDivider } from "../components/card.slint";
 import { ShortcutRow } from "../components/shortcut_row.slint";
 import { KeyCheck } from "../components/key_check.slint";
 
+// One editable action, as the pane needs it.
+//
+// The pane is driven entirely by these rows rather than by one property per field. Nine
+// actions times four properties was thirty-six hand-written bindings, which is the shape
+// that lets an action be added to the model and silently never drawn. `index` is the
+// action's position in the declared sequence (`LBR-ST-14`) and is what the capture and swap
+// callbacks carry back; it is deliberately not the row's position inside its group.
+export struct ShortcutRowData {
+    index: int,
+    title: string,
+    description: string,
+    shortcut: string,
+    conflict_name: string,
+    can_swap: bool,
+}
+
+// A labelled group of rows: one card, one heading.
+component ShortcutGroup inherits VerticalLayout {
+    in property <string> heading;
+    in property <[ShortcutRowData]> rows;
+    in property <int> listening_field: -1;
+
+    callback capture(int);
+    callback swap(int);
+
+    spacing: 6px;
+
+    Text {
+        text: root.heading;
+        font-family: Typography.font_family;
+        font-size: Typography.size_caption;
+        font-weight: 600;
+        letter-spacing: 0.8px;
+        color: Palette.text_secondary;
+    }
+
+    Card {
+        VerticalLayout {
+            padding: 0px;
+            for row[i] in root.rows: VerticalLayout {
+                if i > 0: CardDivider {}
+                ShortcutRow {
+                    title: row.title;
+                    description: row.description;
+                    current_shortcut: row.shortcut;
+                    is_listening: root.listening_field == row.index;
+                    conflict_name: row.conflict_name;
+                    can_swap: row.can_swap;
+                    capture_clicked => {
+                        root.capture(row.index);
+                    }
+                    swap_clicked => {
+                        root.swap(row.index);
+                    }
+                }
+            }
+        }
+    }
+}
+
 export component ShortcutsPane inherits VerticalLayout {
-    // 6 Shortcut Fields Data
-    in property <string> sc_switcher: "Win + `";
-    in property <string> sc_fallback: "Alt + `";
-    in property <string> sc_snap_left: "Ctrl + Win + ←";
-    in property <string> sc_snap_right: "Ctrl + Win + →";
-    in property <string> sc_snap_max: "Ctrl + Win + Enter";
-    in property <string> sc_stack: "Ctrl + Win + ↓";
+    // Three groups, mirroring the three configuration sections already on disk
+    // (`[switcher]`, `[snapping]`, `[layout]`), so what a user sees and what the product
+    // stores stop telling different stories.
+    in property <[ShortcutRowData]> rows_switching;
+    in property <[ShortcutRowData]> rows_snap;
+    in property <[ShortcutRowData]> rows_move;
 
-    in property <int> listening_field: -1; // -1 = idle, 0..5 = listening
-
-    in property <string> conflict_switcher: "";
-    in property <string> conflict_fallback: "";
-    in property <string> conflict_snap_left: "";
-    in property <string> conflict_snap_right: "";
-    in property <string> conflict_snap_max: "";
-    in property <string> conflict_stack: "";
-
-    in property <bool> can_swap_switcher: false;
-    in property <bool> can_swap_fallback: false;
-    in property <bool> can_swap_snap_left: false;
-    in property <bool> can_swap_snap_right: false;
-    in property <bool> can_swap_snap_max: false;
-    in property <bool> can_swap_stack: false;
+    in property <int> listening_field: -1; // -1 = idle, otherwise the action's index
 
     // KeyCheck Diagnostic Card Properties
     in property <bool> kc_mod_ctrl: false;
@@ -42,7 +87,7 @@ export component ShortcutsPane inherits VerticalLayout {
     callback swap_shortcuts(int);
     callback key_check_beat_done();
 
-    spacing: 12px;
+    spacing: 14px;
     alignment: start;
 
     // Heading Section
@@ -55,94 +100,49 @@ export component ShortcutsPane inherits VerticalLayout {
             font-weight: 700;
             color: Palette.text_primary;
         }
+
         Text {
-            text: "Click any shortcut button to record physical key combinations directly.";
+            text: "Click any shortcut button to record physical key combinations directly. Every action Wira Desk can trigger lives here.";
             font-family: Typography.font_family;
             font-size: Typography.size_caption;
             color: Palette.text_secondary;
+            wrap: word-wrap;
         }
     }
 
-    // Main Card containing all 6 rows
-    Card {
-        VerticalLayout {
-            padding: 0px;
+    ShortcutGroup {
+        heading: "Switching";
+        rows: root.rows_switching;
+        listening_field: root.listening_field;
+        capture(i) => {
+            root.start_capture(i);
+        }
+        swap(i) => {
+            root.swap_shortcuts(i);
+        }
+    }
 
-            ShortcutRow {
-                title: "Switch windows of the same application";
-                description: "Switches between windows of your active app on this monitor.";
-                current_shortcut: root.sc_switcher;
-                is_listening: root.listening_field == 0;
-                conflict_name: root.conflict_switcher;
-                can_swap: root.can_swap_switcher;
-                capture_clicked => { root.start_capture(0); }
-                swap_clicked => { root.swap_shortcuts(0); }
-            }
+    ShortcutGroup {
+        heading: "Snap & resize";
+        rows: root.rows_snap;
+        listening_field: root.listening_field;
+        capture(i) => {
+            root.start_capture(i);
+        }
+        swap(i) => {
+            root.swap_shortcuts(i);
+        }
+    }
 
-            CardDivider {}
-
-            ShortcutRow {
-                title: "Fallback switch shortcut";
-                description: "Alternative shortcut if Win key is used by another app.";
-                current_shortcut: root.sc_fallback;
-                is_listening: root.listening_field == 1;
-                conflict_name: root.conflict_fallback;
-                can_swap: root.can_swap_fallback;
-                capture_clicked => { root.start_capture(1); }
-                swap_clicked => { root.swap_shortcuts(1); }
-            }
-
-            CardDivider {}
-
-            ShortcutRow {
-                title: "Snap to left half";
-                description: "Snaps the active window to the left half of this monitor.";
-                current_shortcut: root.sc_snap_left;
-                is_listening: root.listening_field == 2;
-                conflict_name: root.conflict_snap_left;
-                can_swap: root.can_swap_snap_left;
-                capture_clicked => { root.start_capture(2); }
-                swap_clicked => { root.swap_shortcuts(2); }
-            }
-
-            CardDivider {}
-
-            ShortcutRow {
-                title: "Snap to right half";
-                description: "Snaps the active window to the right half of this monitor.";
-                current_shortcut: root.sc_snap_right;
-                is_listening: root.listening_field == 3;
-                conflict_name: root.conflict_snap_right;
-                can_swap: root.can_swap_snap_right;
-                capture_clicked => { root.start_capture(3); }
-                swap_clicked => { root.swap_shortcuts(3); }
-            }
-
-            CardDivider {}
-
-            ShortcutRow {
-                title: "Maximize";
-                description: "Expands the active window to fill this monitor.";
-                current_shortcut: root.sc_snap_max;
-                is_listening: root.listening_field == 4;
-                conflict_name: root.conflict_snap_max;
-                can_swap: root.can_swap_snap_max;
-                capture_clicked => { root.start_capture(4); }
-                swap_clicked => { root.swap_shortcuts(4); }
-            }
-
-            CardDivider {}
-
-            ShortcutRow {
-                title: "Overlapping stack";
-                description: "Arranges windows of this app in a clickable stack.";
-                current_shortcut: root.sc_stack;
-                is_listening: root.listening_field == 5;
-                conflict_name: root.conflict_stack;
-                can_swap: root.can_swap_stack;
-                capture_clicked => { root.start_capture(5); }
-                swap_clicked => { root.swap_shortcuts(5); }
-            }
+    ShortcutGroup {
+        heading: "Move & arrange";
+        rows: root.rows_move;
+        listening_field: root.listening_field;
+        capture(i) => {
+            root.start_capture(i);
+        }
+        swap(i) => {
+            root.swap_shortcuts(i);
         }
     }
 
@@ -156,6 +156,8 @@ export component ShortcutsPane inherits VerticalLayout {
         last_canonical: root.kc_last_canonical;
         verdict: root.kc_verdict;
         beat: root.kc_beat;
-        beat_done => { root.key_check_beat_done(); }
+        beat_done => {
+            root.key_check_beat_done();
+        }
     }
 }
