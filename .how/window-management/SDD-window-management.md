@@ -50,6 +50,9 @@ The four Logical Components (LCs) operate strictly within the `daemon` container
 [OS Explorer / Shell] ──(TaskbarCreated)──> LC-tray-controller
 [health::heartbeat]   ──(WM_APP_HOOK_CHECK)──> LC-hook-thread
 LC-hook-thread        ──(WM_APP_HOOK_DEAD)──> LC-tray-controller
+[settings process]    ──(WM_APP_CAPTURE_LEASE)──> LC-tray-controller
+LC-tray-controller    ──(WM_APP_HOOK_LEASE)──> LC-hook-thread
+LC-hook-thread        ──(observed chord: vk + modifiers)──> [settings process]
 Settings (IPC)        ──(WM_APP_RELOAD_CONFIG)──> LC-tray-controller ──(WM_APP_CONFIG_SNAPSHOT)──> LC-hook-thread
 ```
 
@@ -88,6 +91,7 @@ Failure modes across all internal and external Win32 / IPC boundaries:
 | **Virtual Desktop Manager COM** (`IVirtualDesktopManager`) | COM apartment query delays worker execution. | COM subsystem disabled, uninitialized, or returns `REGDB_E_CLASSNOTREG`. | Returns `S_OK` with stale membership for animating desktop transition. | Candidate window is treated as ineligible (fails closed); cycling remains strictly within proven current desktop. | `debug!` note on COM initialization failure; candidate marked `VirtualDesktopUnavailable`. |
 | **Foreground Process Identity** (`OpenProcess`, `QueryFullProcessImageNameW`) | Querying protected system process takes >5 ms. | Process terminates before handle query or access denied. | Returns empty executable image name string. | Fails open: VM/RDP bypass treats unresolved window as non-bypassable or passes through safely without crash. | Atomic failure counter incremented; `debug!` diagnostic logged at worker boundary. |
 | **Config Reload IPC** (`WM_APP_RELOAD_CONFIG`) | Settings process slow to write TOML file. | `config.toml` missing on disk during reload signal. | TOML file contains malformed syntax or invalid key names. | Daemon falls back safely to default in-memory configuration; cycling continues uninterrupted. | `warn!` logging parse failure and fallback to defaults; tray icon shows Tier-2 Red Dot. |
+| **Capture Lease IPC** (`WM_APP_CAPTURE_LEASE` → `WM_APP_HOOK_LEASE`) | No slow path: one integer comparison, forwarded off the callback thread. | Settings dies without disarming; the lease names a process id that no longer exists. | The lease names a process id Windows has since recycled onto an unrelated process. | Nothing: the lease is inert unless the named process also holds the foreground window, and a dead holder is reaped on the existing heartbeat. Under recycling the keyboard could reach Wira Desk while an unrelated process holds a lease — the residual risk `OQ-17` carries. | `debug!` trace recording the lease level and the process id as **received**, alongside what was sent, so a derived-value failure cannot be read as a silent sender (`DEF-3`). |
 
 ## Robustness Analysis (ABCE)
 
@@ -104,7 +108,7 @@ The Robustness Analysis classifies the technical design for all realized use cas
 
 ### 2. Control Objects
 
-- **`C-HookController` (`LC-hook-thread`):** Owns hook lifecycle, QPC anti-macro throttle check (50 ms), bypass classification, and raw byte serialization to the ring buffer.
+- **`C-HookController` (`LC-hook-thread`):** Owns hook lifecycle, QPC anti-macro throttle check (50 ms), bypass classification, raw byte serialization to the ring buffer, and the capture lease. The lease is three independent decisions rather than one switch — report the chord to Settings, withhold Wira Desk's own action, withhold the keystroke from Windows — and two named combinations of them: **observe** (`yes / yes / no`) while the Shortcuts pane is visible, **record** (`yes / yes / yes`) while a field is listening. Both require the settings process to hold the foreground window, both fire only on a non-modifier key-down carrying at least one modifier, and the comparison sits above `match_shortcut` so it is reached by a chord that is not yet configured. Withholding the keystroke exists only to record; no chord is ever claimed for a Wira Desk action on the strength of a lease (`DEC-004`, LBR-ST-11).
 - **`C-WorkerDispatcher` (`LC-worker-thread`):** Dispatches ring-buffer command opcodes on thread wake-up, orchestrates candidate collection, filters candidates, and applies activation or geometry updates.
 - **`C-CyclingSelector` (`daemon::cycling`):** Evaluates same-app candidate eligibility (exe name match, style filters), spatial alignment (monitor matching, virtual desktop isolation), and selects the next Z-order target.
 - **`C-ArrangementPlanner` (`LC-arrangement-engine`):** Resolves monitor work-area bounds and DPI scale factors to plan coordinate rectangles for half-screen snaps (left/right), full maximize, and overlapping cascade stacks.

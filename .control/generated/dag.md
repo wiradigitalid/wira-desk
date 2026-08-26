@@ -14,4 +14,12 @@ dag:
     - S3
     - S5
     - S6
+- wave: W2
+  order:
+  - parallel:
+    - S1
+- wave: W3
+  order:
+  - parallel:
+    - S1
 ```

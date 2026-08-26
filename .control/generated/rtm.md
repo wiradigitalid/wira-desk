@@ -101,6 +101,34 @@ rtm:
   FR: FR-13
   DEC: []
   UC: UC-6
+  story: S1
+  wave: W3
+  release: 0.3.0
+  test:
+  - app::tests::capture_starts_idle
+  - app::tests::beginning_capture_targets_exactly_one_field
+  - app::tests::accepting_a_valid_capture_stores_the_canonical_form
+  - app::tests::accepting_without_listening_is_a_no_op
+  - app::tests::cancelling_capture_changes_nothing
+  - app::tests::editing_the_draft_marks_dirty_without_touching_saved
+  - app::tests::a_successful_save_promotes_the_draft_and_clears_dirty
+  - app::tests::a_rejected_save_reports_an_error_and_does_not_promote_the_draft
+  - app::tests::focus_order_starts_with_navigation_and_ends_with_actions
+  - app::tests::focus_order_has_no_duplicates
+  - app::tests::shortcuts_pane_exposes_every_field
+  - persistence::tests::valid_shortcut_returns_canonical_form
+  - persistence::tests::default_config_passes_its_own_validation
+  - persistence::tests::reload_uses_the_frozen_message_identifier
+  - persistence::tests::reload_signal_is_harmless_when_no_daemon_is_running
+  status: unknown
+  exempt: false
+  green: false
+  broken_at: status
+- BG: BG-2
+  CAP: CAP-10
+  FR: FR-13
+  DEC: []
+  UC: UC-6
   story: S6
   wave: W1
   release: 0.1.0
@@ -172,6 +200,25 @@ rtm:
   FR: FR-17
   DEC: []
   UC: UC-5
+  story: S1
+  wave: W2
+  release: 0.2.0
+  test:
+  - app::tests::onboarding_is_absent_unless_requested
+  - app::tests::onboarding_starts_at_welcome_and_advances_to_done
+  - app::tests::onboarding_dummy_window_focus_toggles_on_shortcut
+  - app::tests::onboarding_escape_triggers_skip
+  - app::tests::onboarding_teaches_the_spatial_philosophy
+  - app::tests::skip_reaches_the_same_terminal_state_as_completing
+  status: unknown
+  exempt: false
+  green: false
+  broken_at: status
+- BG: BG-2
+  CAP: CAP-5
+  FR: FR-17
+  DEC: []
+  UC: UC-5
   story: S5
   wave: W1
   release: 0.1.0
@@ -190,6 +237,34 @@ rtm:
   exempt: false
   green: true
   broken_at: ''
+- BG: BG-2
+  CAP: CAP-5
+  FR: FR-18
+  DEC: []
+  UC: UC-4
+  story: S1
+  wave: W3
+  release: 0.3.0
+  test:
+  - app::tests::capture_starts_idle
+  - app::tests::beginning_capture_targets_exactly_one_field
+  - app::tests::accepting_a_valid_capture_stores_the_canonical_form
+  - app::tests::accepting_without_listening_is_a_no_op
+  - app::tests::cancelling_capture_changes_nothing
+  - app::tests::editing_the_draft_marks_dirty_without_touching_saved
+  - app::tests::a_successful_save_promotes_the_draft_and_clears_dirty
+  - app::tests::a_rejected_save_reports_an_error_and_does_not_promote_the_draft
+  - app::tests::focus_order_starts_with_navigation_and_ends_with_actions
+  - app::tests::focus_order_has_no_duplicates
+  - app::tests::shortcuts_pane_exposes_every_field
+  - persistence::tests::valid_shortcut_returns_canonical_form
+  - persistence::tests::default_config_passes_its_own_validation
+  - persistence::tests::reload_uses_the_frozen_message_identifier
+  - persistence::tests::reload_signal_is_harmless_when_no_daemon_is_running
+  status: unknown
+  exempt: false
+  green: false
+  broken_at: status
 - BG: BG-2
   CAP: CAP-5
   FR: FR-18
@@ -436,6 +511,34 @@ rtm:
   exempt: false
   green: true
   broken_at: ''
+- BG: BG-2
+  CAP: CAP-3
+  FR: FR-7
+  DEC: []
+  UC: UC-4
+  story: S1
+  wave: W3
+  release: 0.3.0
+  test:
+  - app::tests::capture_starts_idle
+  - app::tests::beginning_capture_targets_exactly_one_field
+  - app::tests::accepting_a_valid_capture_stores_the_canonical_form
+  - app::tests::accepting_without_listening_is_a_no_op
+  - app::tests::cancelling_capture_changes_nothing
+  - app::tests::editing_the_draft_marks_dirty_without_touching_saved
+  - app::tests::a_successful_save_promotes_the_draft_and_clears_dirty
+  - app::tests::a_rejected_save_reports_an_error_and_does_not_promote_the_draft
+  - app::tests::focus_order_starts_with_navigation_and_ends_with_actions
+  - app::tests::focus_order_has_no_duplicates
+  - app::tests::shortcuts_pane_exposes_every_field
+  - persistence::tests::valid_shortcut_returns_canonical_form
+  - persistence::tests::default_config_passes_its_own_validation
+  - persistence::tests::reload_uses_the_frozen_message_identifier
+  - persistence::tests::reload_signal_is_harmless_when_no_daemon_is_running
+  status: unknown
+  exempt: false
+  green: false
+  broken_at: status
 - BG: BG-2
   CAP: CAP-3
   FR: FR-7

@@ -4,7 +4,7 @@ scope: component
 component: settings
 status: reviewed
 created: '2026-08-21'
-updated: '2026-08-25'
+updated: '2026-08-26'
 ---
 
 # Business Rules — settings
@@ -24,6 +24,9 @@ Local component business rules binding the `settings` Product Component. Global 
 | LBR-ST-7 | Completing or skipping the first-run tutorial must write a valid configuration to disk so that onboarding does not re-trigger on subsequent launches. | `settings` | FR-17, BR-3 | active |
 | LBR-ST-8 | A refused shortcut must be reported on the field carrying it; when the refusal is a collision with another action, the report must name both actions. | `settings` | FR-18, DEC-001 | active |
 | LBR-ST-9 | The submit action must never be disabled to express a shortcut refusal; a draft holding a collision must be refused when it is submitted. | `settings` | FR-18, DEC-001 | active |
+| LBR-ST-10 | A chord the Windows shell already owns must be refused and never claimed for a Wira Desk action, and the refusal must name the Windows function the user would have lost. Where the chord is one Wira Desk could technically have taken, the refusal must also offer a way through; where Windows keeps it regardless of any hook, it must not, because no alternative would be true. | `settings` | FR-18, DEC-003 | active |
+| LBR-ST-11 | The daemon may withhold a chord from Windows on the settings process's behalf only while a shortcut field is recording. While the Shortcuts pane is merely visible, the daemon must report the chord and withhold only its own action, never the keystroke. | `settings`, `window-management` | FR-18, DEC-004, AD-1 | active |
+| LBR-ST-12 | The key check must state only what was observed, correlating the daemon's report against what the settings window received, and must never predict whether a chord nobody has pressed is available. With no daemon report available it must say so and stop diagnosing. | `settings` | FR-18, DEC-002, DEC-005 | active |
 
 ## Retired
 

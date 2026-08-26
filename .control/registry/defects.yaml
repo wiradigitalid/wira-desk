@@ -99,3 +99,64 @@ defects:
       `STACK_WIDTH_SLIDER.name` and records both stops into drawn list; `crates/settings/src/app.rs`
       declares both in `focus_order(Pane::Layout)`. Uniqueness and focus-stop order verified by
       unit tests and full workspace test run.
+
+  - id: DEF-3
+    title: The shortcut capture lease can never arm — Settings sends a PID where the daemon reads an HWND
+    status: open
+    severity: high
+    component: settings
+    root_cause: architecture
+    violates: [UC-4, FR-7]
+    decision: DEC-004
+    found_in: "unreleased"
+    found_by: Capture-lease scope consultation, 2026-08-26
+    summary: >-
+      Three places describe `WM_APP_CAPTURE_LEASE`'s `lParam` and two of them disagree.
+      `crates/shared/src/constants.rs:141,145` -- the contract, and the SSOT -- says
+      `lParam` = Settings window HWND. `crates/settings/src/persistence.rs:176` sends
+      `std::process::id()`, a PID, and its own SAFETY comment says so.
+      `crates/daemon/src/tray.rs:399-406` reads the value as an HWND and calls
+      `GetWindowThreadProcessId` on it to derive a PID. That call fails for a value that is
+      not a window handle and leaves its out-parameter untouched, so `pid` stays 0;
+      `crates/daemon/src/hook.rs:883` stores 0, and the guard at `:274`
+      (`rt.capture_lease_pid != 0`) then makes the whole branch unreachable. The lease has
+      never once armed. In the improbable case where a PID value collides with a live HWND,
+      the daemon derives some unrelated process's PID instead, which is not better -- it is
+      the same failure with a worse shape.
+    why_it_hid: >-
+      Three things, and the first is the one worth remembering. (1) The SSOT is on the wrong
+      side: because `constants.rs` says HWND, `tray.rs` is correct against the contract and
+      `persistence.rs` is the violator -- so a review that reads either side against the
+      contract confirms that side. The fix therefore has to change the contract, not just
+      code. (2) No test touches it. `capture_lease_pid` appears only in two `HookRuntime`
+      initialisers, both 0, and the branch is unreachable from a test by construction: it
+      calls `rt.identity.foreground_pid()` directly, which is `GetForegroundWindow` at
+      `crates/daemon/src/context/vm_bypass.rs:119`, and a test harness with no foreground
+      window returns 0 while the guard demands non-zero. This is DEF-1's failure repeating
+      one branch earlier -- the lease check sits ABOVE the `handle_key_event_with_bypass`
+      seam DEF-1 introduced, so it never benefits from it. (3) The debug trace misleads:
+      `hook.rs:886` prints `HOOK_LEASE: arm=true pid=0`, and 0 is indistinguishable from a
+      disarm, so a reader of the log blames Settings for not sending.
+    impact: >-
+      UC-4's recording step cannot work for any chord that is already one of the six
+      configured shortcuts: the daemon claims its own chord while Settings is trying to
+      re-record it, so the window switches and Settings loses the foreground. This is the
+      reported symptom. It also blocks the observe lease `DEC-004` and `DEC-005` are built
+      on, because both read the same PID comparison. Not yet shipped -- none of the lease
+      code is in `HEAD`; it is uncommitted work in the working tree, which is why this row
+      is a finding about unfinished work rather than a regression against a release.
+    fix: >-
+      Not `fastpath`. Gated on `DEC-004` reaching `accepted` -- the wave that carries it does
+      not exist yet, so no wave id can honestly be named here.
+    fix_direction: >-
+      Carry the PID and delete the HWND conversion, correcting `constants.rs` in the same
+      change so the contract stops sanctioning the wrong shape: the hook compares against a
+      PID, `std::process::id()` cannot fail, and a PID is inert data where a cross-process
+      HWND is a handle whose validity the sender cannot guarantee. Encode the lease level in
+      `wParam` (0 none, 1 observe, 2 record) rather than adding a second message or a second
+      boolean. MUST NOT be closed by fixing only `persistence.rs`: that leaves the contract
+      saying HWND, and the next reader restores the bug. The lease decision MUST also move
+      behind a seam of the shape DEF-1 established, so a test can supply the foreground
+      identity instead of the desktop -- an untestable branch is what let this ship as far
+      as it did.
+    owner: repo owner

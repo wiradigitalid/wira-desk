@@ -3,12 +3,12 @@ type: sdd
 component: settings
 status: reviewed
 created: 2026-08-21
-updated: 2026-08-21
+updated: 2026-08-25
 realizes: [UC-4, UC-5, UC-6]
 binds: [AD-1, AD-5, AD-11, AD-11a, AD-12, AD-13]
 reviewed:
-  date: '2026-08-21'
-  sha: '325b78d'
+  date: '2026-08-25'
+  sha: '0f02673'
   lenses: [structure, prose, edge-case-hunter]
 ---
 
@@ -96,10 +96,18 @@ wrong in both directions — refusing a chord the daemon's low-level hook still 
 clearing one an earlier third-party hook silently consumes instead. The honest state is silence:
 nothing is logged at the moment of editing, and nothing is logged at the moment of a press that an
 earlier hook swallows either, since the daemon never observes a keystroke it was never delivered.
-This is not limited to another application — `is_reserved_system_shortcut` only refuses five
-combinations, so a chord such as `Win+Shift+S` or `Win+V` is accepted, then becomes permanently
-unreachable because the shell claims it first, producing exactly this silence. A real clash surfaces only as
-the shortcut not acting when it is pressed.
+Two of the three sources of that silence have since been closed, and the boundary is now drawn where
+the knowledge actually is. Chords the **Windows shell** owns are refused from a curated catalogue
+carried as data in `shared` — written, reviewed, and versioned knowledge rather than a trial
+registration, so it sits inside `DEC-002` rather than against it — and each entry declares whether
+Windows keeps the chord regardless of any hook or whether Wira Desk could have taken it and will not
+(`DEC-003`). The catalogue replaced `is_reserved_system_shortcut`'s five combinations, under which a
+chord such as `Win+Shift+S` or `Win+V` was accepted and then permanently unreachable. Chords an
+**external application** holds are still never predicted; what exists now is an observation after the
+fact, correlating the daemon's report of what its hook saw against what this window received
+(`DEC-005`). What remains genuinely silent is narrower than before and MUST NOT be described as
+closed: a chord absent from the catalogue, and a chord nobody presses while the key check is on
+screen.
 
 ## Robustness Analysis (ABCE)
 
@@ -109,7 +117,8 @@ The Robustness Analysis classifies the technical design for all realized use cas
 
 - **`B-SettingsUI` (Immediate-Mode Graphic Surface):** Top-level `eframe` window and `egui::Ui` context rendering panes, buttons, checkboxes, sliders, and feedback banners.
 - **`B-ConfigFile` (TOML Storage on Disk):** Atomic file storage endpoint at `%APPDATA%\WiraDesk\config.toml` (and `.tmp` staging file).
-- **`B-DaemonWindow` (Win32 IPC Target):** Top-level message-only window `WiraDeskDaemonHiddenWindow` receiving `WM_APP_RELOAD_CONFIG` (0x8001).
+- **`B-DaemonWindow` (Win32 IPC Target):** Top-level message-only window `WiraDeskDaemonHiddenWindow` receiving `WM_APP_RELOAD_CONFIG` (0x8001) and `WM_APP_CAPTURE_LEASE`. The lease message carries its level in `wParam` (0 none, 1 observe, 2 record) and this process's id in `lParam` — a process id and not a window handle, because the hook's comparison is against a foreground process id and a handle would have to be converted on the daemon side (`DEC-004`, `DEF-3`).
+- **`B-ChordReport` (Win32 IPC Source):** This process's own window, receiving the daemon's report of a chord its hook observed: a virtual-key code and a modifier set, posted never sent. The first channel in this product that runs daemon→settings, which is why `AD-1` names it explicitly.
 - **`B-ThemeRegistry` (Windows Personalization Key):** Win32 Registry endpoint `HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize` (`AppsUseLightTheme`).
 - **`B-SystemFonts` (Windows Font Subsystem):** Physical file storage at `%SystemRoot%\Fonts\segoeui.ttf` and `%SystemRoot%\Fonts\tahoma.ttf`.
 - **`B-TaskScheduler` (Windows CLI Endpoint):** Windows Task Scheduler CLI interface (`schtasks.exe`).
@@ -118,7 +127,9 @@ The Robustness Analysis classifies the technical design for all realized use cas
 ### 2. Control Objects
 
 - **`C-ShellController` (`LC-settings-shell`):** Coordinates application lifecycle, periodic theme polling (500 ms repaint pulse), pane routing, and deterministic keyboard focus sequence.
-- **`C-CaptureManager` (`LC-shortcut-capturer`):** Manages `CaptureState` transitions (`Idle` ↔ `Listening`), translates `egui::Key` + `Modifiers` into candidate strings, filters modifier-only states, and emits screen reader announcements.
+- **`C-CaptureManager` (`LC-shortcut-capturer`):** Manages `CaptureState` transitions (`Idle` ↔ `Listening`), builds the candidate chord from the daemon's reported virtual-key code rather than from window-system text, filters modifier-only states, and emits screen reader announcements. Reading the raw code is what makes `Alt+Backtick` — this product's own fallback default, which yields no character at all — recordable, and it retires three heuristics that guessed at the same answer. The text-derived path survives only as a marked fallback for when no daemon is running (`DEC-004`).
+- **`C-LeaseArbiter` (`LC-shortcut-capturer`):** Derives the lease level from `(pane, capture)` and posts it only when it changes, so arming and disarming have one owning place each rather than one per exit path. Fails closed: the daemon additionally requires this process to hold the foreground window, and a lease left armed against a dead process is reaped on the daemon's existing heartbeat (residual risk of process-id reuse: `OQ-17`).
+- **`C-KeyCheck` (`LC-shortcut-capturer`):** Correlates the daemon's report against what this window received and renders one of four verdicts, stating only what was observed. Reports nothing about a chord nobody pressed, and declines to diagnose at all when no daemon report is available (`DEC-005`).
 - **`C-PersistenceManager` (`LC-config-writer`):** Orchestrates configuration validation (`validate_config`), atomic disk serialization (`Config::save`), and IPC signal emission (`signal_reload`).
 - **`C-OnboardingWizard` (`LC-settings-shell`):** Drives the 3-step first-run tutorial state machine (`Welcome` → `TrySwitching` → `Done`) and writes initial configuration on completion or skip.
 - **`C-AutoStartController` (`daemon::autostart`):** Evaluates `schtasks.exe` arguments (`/Create`, `/Query`, `/Delete`) and synchronizes configuration state. It lives in the daemon, not in this component; `settings` reaches it only by writing `general.auto_start` and signalling reload.

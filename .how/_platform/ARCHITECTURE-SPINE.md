@@ -37,7 +37,7 @@ The paradigm maps to the execution units:
 
 - **Binds:** all
 - **Prevents:** Shared mutable state between threads/processes causing data races or deadlocks.
-- **Rule:** Each actor (hook thread, worker thread, settings process) owns its state exclusively. Cross-actor communication uses only: lock-free ring buffer (hook→worker), Win32 Window Messages (settings→daemon), TOML file (settings→daemon config), ShellExecute (daemon→settings launch).
+- **Rule:** Each actor (hook thread, worker thread, settings process) owns its state exclusively. Cross-actor communication uses only: lock-free ring buffer (hook→worker), Win32 Window Messages (settings→daemon, and daemon→settings for the observed-chord report a capture lease authorises — `DEC-004`), TOML file (settings→daemon config), ShellExecute (daemon→settings launch). No payload crossing the process boundary is ever a pointer: the lease carries a process id and its level, and the report carries a virtual-key code and a modifier set, all as plain integers.
 
 ### AD-2 — Inter-Thread Communication: Hook-Side Throttle + u8 Enum
 
