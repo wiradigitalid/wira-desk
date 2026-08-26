@@ -7,7 +7,9 @@
 //! geometry cache, and any virtual-desktop integration.
 
 use windows_sys::Win32::Foundation::{CloseHandle, FALSE, HANDLE, HWND, RECT, S_OK};
-use windows_sys::Win32::Graphics::Dwm::{DwmGetWindowAttribute, DWMWA_CLOAKED};
+use windows_sys::Win32::Graphics::Dwm::{
+    DwmGetWindowAttribute, DWMWA_CLOAKED, DWMWA_EXTENDED_FRAME_BOUNDS,
+};
 use windows_sys::Win32::Graphics::Gdi::{
     GetMonitorInfoW, MonitorFromWindow, MONITORINFO, MONITOR_DEFAULTTONULL,
 };
@@ -17,8 +19,8 @@ use windows_sys::Win32::System::Threading::{
 };
 use windows_sys::Win32::UI::HiDpi::GetDpiForWindow;
 use windows_sys::Win32::UI::WindowsAndMessaging::{
-    GetForegroundWindow, GetWindowThreadProcessId, IsWindow, SetWindowPos, SET_WINDOW_POS_FLAGS,
-    SWP_ASYNCWINDOWPOS, SWP_NOACTIVATE, SWP_NOOWNERZORDER, SWP_NOZORDER,
+    GetForegroundWindow, GetWindowRect, GetWindowThreadProcessId, IsWindow, SetWindowPos,
+    SET_WINDOW_POS_FLAGS, SWP_ASYNCWINDOWPOS, SWP_NOACTIVATE, SWP_NOOWNERZORDER, SWP_NOZORDER,
 };
 
 use shared::constants::SETTINGS_EXE_NAME;
@@ -262,6 +264,82 @@ pub fn rect_from_win32(r: RECT) -> Result<Rect, PlanError> {
     Rect::new(r.left, r.top, r.right, r.bottom)
 }
 
+/// The gap between a window's true outer rect (`GetWindowRect`) and its
+/// visible frame (`DwmGetWindowAttribute(DWMWA_EXTENDED_FRAME_BOUNDS)`).
+/// Windows 10 replaced the classic thick resize border with a border that is
+/// hit-testable but invisible, extending a few pixels *outside* the visible
+/// frame on most windows — so `SetWindowPos`, which positions the outer
+/// rect, leaves that many pixels of gap between the visible window and
+/// whatever edge it was asked to touch. Chromium-based apps (Chrome, Edge,
+/// and Electron apps) draw their own frame and tend to carry a larger,
+/// more visible instance of exactly this gap, which is what actually
+/// surfaces the problem to a user snapping windows.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+struct FrameInsets {
+    left: i32,
+    top: i32,
+    right: i32,
+    bottom: i32,
+}
+
+impl FrameInsets {
+    /// Clamped to non-negative: Windows makes no promise that the extended
+    /// frame is never larger than the outer rect, and a negative inset here
+    /// would flip [`compensate_for_frame_insets`] into shrinking the target
+    /// instead of widening past it.
+    fn from_rects(outer: RECT, extended: RECT) -> FrameInsets {
+        FrameInsets {
+            left: (extended.left - outer.left).max(0),
+            top: (extended.top - outer.top).max(0),
+            right: (outer.right - extended.right).max(0),
+            bottom: (outer.bottom - extended.bottom).max(0),
+        }
+    }
+}
+
+/// Best-effort: `None` on any Win32/DWM failure, which the caller treats as
+/// "no border" — the placement still lands, just without compensation,
+/// rather than failing the whole command over a diagnostic query.
+///
+/// SAFETY: `hwnd` must be a value `IsWindow` has already confirmed live —
+/// true of `apply`'s only call site, immediately after that check. Both
+/// out-params are live locals of the exact type/size the two APIs are told
+/// to write into, and neither API retains the pointer past the call.
+unsafe fn frame_insets(hwnd: HWND) -> Option<FrameInsets> {
+    let mut outer: RECT = std::mem::zeroed();
+    if GetWindowRect(hwnd, &mut outer) == FALSE {
+        return None;
+    }
+    let mut extended: RECT = std::mem::zeroed();
+    let hr = DwmGetWindowAttribute(
+        hwnd,
+        DWMWA_EXTENDED_FRAME_BOUNDS as u32,
+        &mut extended as *mut RECT as *mut core::ffi::c_void,
+        core::mem::size_of::<RECT>() as u32,
+    );
+    if hr != S_OK {
+        return None;
+    }
+    Some(FrameInsets::from_rects(outer, extended))
+}
+
+/// Widen `target` outward by `insets` so that, once passed to
+/// `SetWindowPos`, the window's *visible* frame lands on `target` instead
+/// of its outer rect landing there. `None` only on coordinate overflow —
+/// the same [`PlanError::UnrepresentableGeometry`] shape `Rect` itself
+/// guards against, though this returns `Option` rather than that enum
+/// since [`Win32WindowMover::apply`] has no planning-stage error to report
+/// through; a `None` here falls back to the uncompensated `target`.
+fn compensate_for_frame_insets(target: Rect, insets: FrameInsets) -> Option<Rect> {
+    Rect::new(
+        target.left.checked_sub(insets.left)?,
+        target.top.checked_sub(insets.top)?,
+        target.right.checked_add(insets.right)?,
+        target.bottom.checked_add(insets.bottom)?,
+    )
+    .ok()
+}
+
 /// Non-activating, Z-order-preserving, asynchronous. `SWP_ASYNCWINDOWPOS` is
 /// what keeps a hung target from blocking the Worker: the request is posted
 /// rather than delivered synchronously.
@@ -291,7 +369,17 @@ impl WindowMover for Win32WindowMover {
             return false;
         }
 
-        let rect = placement.rect;
+        // Compensate for the target's invisible resize border, if it has
+        // one, so the *visible* window edge lands on `placement.rect`
+        // rather than its outer (`GetWindowRect`) edge landing there —
+        // otherwise a window with such a border (most windows, on Windows
+        // 10+) ends up inset from the screen edge by exactly that border's
+        // width when snapped or maximized. Best-effort: a failed query
+        // degrades to zero insets, which is the placement this file always
+        // produced before this compensation existed.
+        // SAFETY: `hwnd` was revalidated live by `IsWindow` immediately above.
+        let insets = unsafe { frame_insets(hwnd) }.unwrap_or_default();
+        let rect = compensate_for_frame_insets(placement.rect, insets).unwrap_or(placement.rect);
         let width = match rect.checked_width() {
             Some(w) if w > 0 => w,
             _ => {
@@ -447,6 +535,94 @@ mod tests {
         apply_plan(&mut mover, &plan);
         let order: Vec<WindowId> = mover.calls.iter().map(|p| p.window).collect();
         assert_eq!(order, vec![WindowId(9), WindowId(4), WindowId(7)]);
+    }
+
+    // --- Invisible-border compensation --------------------------
+
+    #[test]
+    fn no_border_yields_zero_insets() {
+        let outer = RECT {
+            left: 100,
+            top: 100,
+            right: 900,
+            bottom: 700,
+        };
+        // Extended frame identical to the outer rect: a window with no
+        // invisible resize border at all.
+        assert_eq!(
+            FrameInsets::from_rects(outer, outer),
+            FrameInsets::default()
+        );
+    }
+
+    #[test]
+    fn a_typical_left_right_bottom_border_is_measured_correctly() {
+        // The common Windows 10+ shape: a few pixels of invisible border on
+        // the left, right, and bottom, none on top.
+        let outer = RECT {
+            left: 100,
+            top: 100,
+            right: 900,
+            bottom: 700,
+        };
+        let extended = RECT {
+            left: 107,
+            top: 100,
+            right: 893,
+            bottom: 693,
+        };
+        assert_eq!(
+            FrameInsets::from_rects(outer, extended),
+            FrameInsets {
+                left: 7,
+                top: 0,
+                right: 7,
+                bottom: 7,
+            }
+        );
+    }
+
+    #[test]
+    fn an_inverted_extended_frame_clamps_to_zero_rather_than_going_negative() {
+        // Not expected in practice, but Windows makes no promise the
+        // extended frame is never larger than the outer rect — a negative
+        // inset here would flip compensation into shrinking the target.
+        let outer = RECT {
+            left: 100,
+            top: 100,
+            right: 900,
+            bottom: 700,
+        };
+        let extended = RECT {
+            left: 90, // "outside" the outer rect
+            top: 100,
+            right: 910,
+            bottom: 700,
+        };
+        assert_eq!(
+            FrameInsets::from_rects(outer, extended),
+            FrameInsets::default()
+        );
+    }
+
+    #[test]
+    fn compensation_widens_the_target_by_exactly_the_insets() {
+        let target = Rect::new(0, 0, 1920, 1040).unwrap();
+        let insets = FrameInsets {
+            left: 7,
+            top: 0,
+            right: 7,
+            bottom: 7,
+        };
+        let adjusted = compensate_for_frame_insets(target, insets).unwrap();
+        assert_eq!(adjusted, Rect::new(-7, 0, 1927, 1047).unwrap());
+    }
+
+    #[test]
+    fn zero_insets_leave_the_target_unchanged() {
+        let target = Rect::new(0, 0, 1920, 1040).unwrap();
+        let adjusted = compensate_for_frame_insets(target, FrameInsets::default()).unwrap();
+        assert_eq!(adjusted, target);
     }
 
     // --- RECT conversion preserves coordinates -----------------
