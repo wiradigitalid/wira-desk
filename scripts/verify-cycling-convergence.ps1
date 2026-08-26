@@ -45,7 +45,9 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$repoRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+# The workspace root, two levels up: this script lives in `scripts\`, and every
+# path below is relative to the root that holds `target\` and `Cargo.toml`.
+$repoRoot = Split-Path -Parent (Split-Path -Parent $PSCommandPath)
 Set-Location $repoRoot
 
 $WM_APP = 0x8000
