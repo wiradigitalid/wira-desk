@@ -9,6 +9,7 @@ import { LayoutPane } from "panes/layout_pane.slint";
 import { VmExceptionsPane } from "panes/vm_exceptions_pane.slint";
 import { AboutPane } from "panes/about_pane.slint";
 import { KeyCheck } from "components/key_check.slint";
+import { ScrollHint } from "components/scroll_hint.slint";
 import { OnboardingModal } from "onboarding.slint";
 
 export component MainWindow inherits Window {
@@ -200,10 +201,18 @@ export component MainWindow inherits Window {
 
                     VerticalLayout {
 
-                    ScrollView {
+                    // Host for the scroll area plus its bottom affordance. A Rectangle rather
+                    // than a layout because the hint has to *overlay* the last rows, not take
+                    // a row of its own — a hint that pushes content up has not saved the
+                    // reader anything.
+                    Rectangle {
                         // Takes every pixel the pinned band below does not, so the band keeps
                         // its full height and the rows give up space instead of it.
                         vertical-stretch: 1;
+
+                    sv := ScrollView {
+                        width: 100%;
+                        height: 100%;
                         viewport-x: 0px;
 
                         VerticalLayout {
@@ -246,6 +255,19 @@ export component MainWindow inherits Window {
                                 typeface: root.app_typeface;
                             }
                         }
+                    }
+
+                    // Shown only while there is genuinely more below and the reader has not
+                    // scrolled yet. Not restricted to one pane: the condition already
+                    // silences it wherever the content fits, so special-casing a pane would
+                    // be a second rule saying the same thing.
+                    ScrollHint {
+                        x: 0;
+                        width: parent.width;
+                        y: parent.height - self.height;
+                        active: sv.viewport-height > sv.visible-height + 4px
+                            && sv.viewport-y > -12px;
+                    }
                     }
 
                     // Pinned Key check band, Shortcuts pane only.

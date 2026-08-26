@@ -1,0 +1,59 @@
+import { Palette } from "../theme.slint";
+
+// A "there is more below" affordance for a scroll area.
+//
+// The chevron is drawn as a `Path`, never as a font glyph. Neither font this window loads —
+// Segoe UI Variable Text nor Segoe UI — carries the chevron or arrow codepoints; that was
+// verified by reading their cmap tables after a warning sign rendered as a box. A tofu where
+// the hint should be is worse than no hint at all, and a drawn path cannot tofu.
+export component ScrollHint inherits Rectangle {
+    // True only while the area is genuinely scrollable **and** sitting at the top.
+    //
+    // Both halves are load-bearing. Without the first it invites a scroll that does nothing,
+    // which teaches the reader to distrust it. Without the second it keeps nagging after they
+    // have already complied — the failure that makes hero-page prompts irritating rather than
+    // helpful.
+    in property <bool> active: false;
+
+    // Ping-pong driver for the bob. Slint has no looping keyframe, so a Timer flips this and
+    // the `animate` below eases between the two positions.
+    property <bool> lifted: false;
+
+    height: 34px;
+
+    // A veil, not a solid strip: the rows fade into the hint instead of being cut off by it.
+    // A hard edge reads as "the list ends here", which is the opposite of what this says.
+    background: @linear-gradient(180deg, transparent 0%, Palette.bg_mica 78%);
+
+    opacity: root.active ? 1.0 : 0.0;
+    animate opacity { duration: 200ms; easing: ease-out; }
+
+    Path {
+        width: 16px;
+        height: 9px;
+        x: (parent.width - self.width) / 2;
+        // Bobs 3px either side of its resting line. Small on purpose: this is a settings
+        // dialog, and a hint that moves more than it needs to reads as a defect.
+        y: parent.height - self.height - 9px + (root.lifted ? -3px : 3px);
+        animate y {
+            duration: 900ms;
+            easing: ease-in-out;
+        }
+        viewbox-width: 16;
+        viewbox-height: 9;
+        commands: "M 1 1 L 8 7.5 L 15 1";
+        fill: transparent;
+        stroke: Palette.accent_primary;
+        stroke-width: 1.6px;
+    }
+
+    // Inert while idle: no tick and no repaint unless the hint is actually showing. Same
+    // convention the Key check timer already follows.
+    Timer {
+        interval: 900ms;
+        running: root.active;
+        triggered => {
+            root.lifted = !root.lifted;
+        }
+    }
+}
