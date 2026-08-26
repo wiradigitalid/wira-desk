@@ -334,10 +334,20 @@ fn main() -> Result<(), slint::PlatformError> {
     let is_dark = theme::detect_theme() == theme::ThemeMode::Dark;
     main_window.global::<Palette>().set_is_dark(is_dark);
 
-    // Center on the current (or primary, before the window has been shown
-    // anywhere) monitor. Without this the window opens wherever winit's own
-    // default placement puts it — near the top-left corner, not the centre
-    // a user expects a first-run or reopened window to land in.
+    // `show()` before centering: the backing winit window is only created
+    // once the component is actually shown, so `with_winit_window` below
+    // would silently find nothing to reposition if called first — the
+    // window would then still open wherever the OS default placement puts
+    // it, exactly the symptom this whole block exists to fix. `run()` at
+    // the end of `main` still shows it again, which is a no-op on an
+    // already-visible window.
+    main_window.show()?;
+
+    // Center on the current (or primary, in case a window that has just
+    // been shown cannot yet answer which monitor it is on) monitor. Without
+    // this the window opens wherever winit's own default placement puts
+    // it — near the top-left corner, not the centre a user expects a
+    // first-run or reopened window to land in.
     main_window.window().with_winit_window(|win| {
         let monitor = win.current_monitor().or_else(|| win.primary_monitor());
         if let Some(monitor) = monitor {
