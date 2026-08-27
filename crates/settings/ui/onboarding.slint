@@ -2,6 +2,56 @@ import { Palette, Typography } from "theme.slint";
 import { Card, CardDivider } from "components/card.slint";
 import { ToggleSwitch } from "components/toggle_switch.slint";
 
+// One row of the "what this does" cards, on the first and last screens.
+//
+// A component because it had been written by hand five times, and the copies had drifted in
+// two ways that are structural rather than typographical. None of the description texts set
+// `wrap`, so the longest of them ran outside the card and the tail of the sentence was drawn
+// past its edge. And the glyph had no column, so no two rows lined up: emoji, symbols, and
+// letters have very different advance widths in Segoe UI, and each row started its text
+// wherever its own glyph happened to end.
+component InfoRow inherits HorizontalLayout {
+    in property <string> glyph;
+    in property <string> title;
+    in property <string> body;
+
+    spacing: 10px;
+
+    // Fixed width, so every row's text begins at the same x whatever glyph sits above it.
+    Rectangle {
+        width: 24px;
+        Text {
+            text: root.glyph;
+            font-size: 16px;
+            horizontal-alignment: center;
+            vertical-alignment: top;
+            y: 1px;
+        }
+    }
+
+    VerticalLayout {
+        spacing: 2px;
+        horizontal-stretch: 1;
+        Text {
+            text: root.title;
+            font-family: Typography.font_family;
+            font-size: 13.5px;
+            font-weight: 600;
+            color: Palette.text_primary;
+        }
+        Text {
+            text: root.body;
+            font-family: Typography.font_family;
+            font-size: 12px;
+            color: Palette.text_secondary;
+            wrap: word-wrap;
+        }
+    }
+
+    // Whatever the row needs on its right, such as a toggle.
+    @children
+}
+
 export component OnboardingModal inherits Rectangle {
     in property <int> current_step: 1; // 1 = Welcome, 2 = TrySwitching, 3 = Done
     in property <int> focus_index: 0; // 0 = Window 1, 1 = Window 2
@@ -103,24 +153,18 @@ export component OnboardingModal inherits Rectangle {
                     padding: 12px;
                     spacing: 8px;
 
-                    HorizontalLayout {
-                        spacing: 8px;
-                        Text { text: "⚡"; font-size: 18px; vertical-alignment: center; }
-                        VerticalLayout {
-                            Text { text: "Same-Application Spatial Cycling"; font-size: 13.5px; font-weight: 600; color: Palette.text_primary; }
-                            Text { text: "Press Win + ` to cycle focus between windows of the active app with zero visual delay."; font-size: 12px; color: Palette.text_secondary; }
-                        }
+                    InfoRow {
+                        glyph: "⚡";
+                        title: "Same-Application Spatial Cycling";
+                        body: "Press Win + ` to cycle focus between windows of the active app with zero visual delay.";
                     }
 
                     CardDivider {}
 
-                    HorizontalLayout {
-                        spacing: 8px;
-                        Text { text: "🔒"; font-size: 18px; vertical-alignment: center; }
-                        VerticalLayout {
-                            Text { text: "Spatial Preservation Lock"; font-size: 13.5px; font-weight: 600; color: Palette.text_primary; }
-                            Text { text: "Focus never jumps to another physical display or background virtual desktop unintentionally."; font-size: 12px; color: Palette.text_secondary; }
-                        }
+                    InfoRow {
+                        glyph: "🔒";
+                        title: "Spatial Preservation Lock";
+                        body: "Focus never jumps to another physical display or background virtual desktop unintentionally.";
                     }
                 }
             }
@@ -244,24 +288,18 @@ export component OnboardingModal inherits Rectangle {
                     padding: 12px;
                     spacing: 8px;
 
-                    HorizontalLayout {
-                        spacing: 8px;
-                        Text { text: "🚀"; font-size: 18px; vertical-alignment: center; }
-                        VerticalLayout {
-                            Text { text: "System Tray Resident"; font-size: 13.5px; font-weight: 600; color: Palette.text_primary; }
-                            Text { text: "Wira Desk runs quietly in the background. Right-click the tray icon anytime for Settings."; font-size: 12px; color: Palette.text_secondary; }
-                        }
+                    InfoRow {
+                        glyph: "🚀";
+                        title: "System Tray Resident";
+                        body: "Wira Desk runs quietly in the background. Right-click the tray icon anytime for Settings.";
                     }
 
                     CardDivider {}
 
-                    HorizontalLayout {
-                        spacing: 8px;
-                        Text { text: "⌨"; font-size: 18px; vertical-alignment: center; }
-                        VerticalLayout {
-                            Text { text: "Fully Customizable"; font-size: 13.5px; font-weight: 600; color: Palette.text_primary; }
-                            Text { text: "Customize shortcuts, window snapping parameters, and VM passthrough rules anytime."; font-size: 12px; color: Palette.text_secondary; }
-                        }
+                    InfoRow {
+                        glyph: "⌨";
+                        title: "Fully Customizable";
+                        body: "Customize shortcuts, window snapping parameters, and VM passthrough rules anytime.";
                     }
 
                     CardDivider {}
@@ -271,16 +309,15 @@ export component OnboardingModal inherits Rectangle {
                     // account, and the task it would create has to name the interactive user;
                     // and because a silent install has no wizard, so winget users would never
                     // have been asked at all.
-                    HorizontalLayout {
-                        spacing: 8px;
-                        Text { text: "↻"; font-size: 18px; vertical-alignment: center; }
-                        VerticalLayout {
-                            horizontal-stretch: 1;
-                            Text { text: "Start with Windows"; font-size: 13.5px; font-weight: 600; color: Palette.text_primary; }
-                            Text { text: "Comes back after every sign-in, so the shortcuts are always there. You can change this later in Settings."; font-size: 12px; color: Palette.text_secondary; wrap: word-wrap; }
-                        }
+                    InfoRow {
+                        // An emoji rather than the "↻" symbol that was here first: a plain
+                        // arrow renders as a thin monochrome glyph beside four colour emoji,
+                        // which reads as a missing character rather than a deliberate one.
+                        glyph: "🔄";
+                        title: "Start with Windows";
+                        body: "Comes back after every sign-in. Change it any time in Settings.";
                         ToggleSwitch {
-                            y: 4px;
+                            y: 3px;
                             checked <=> root.auto_start;
                             toggled(val) => { root.auto_start_toggled(val); }
                         }

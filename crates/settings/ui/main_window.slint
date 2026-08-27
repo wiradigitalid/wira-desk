@@ -23,9 +23,24 @@ export component MainWindow inherits Window {
     in property <int> onboarding_focus_index: 0;
     in property <bool> onboarding_sim_success: false;
 
-    // Window size binding
+    // Window size binding.
+    //
+    // The onboarding height is fixed rather than sized to content, so it has to fit the
+    // tallest screen — the last one, since the start-at-sign-in question added a third row
+    // to its card.
+    //
+    // 440px was tried first and reported as too tall, and the reason it looked wrong is worth
+    // keeping: at the time the third row's description ran to several lines because the text
+    // was long and the glyph column had no width, so the arithmetic was measuring a row that
+    // should not have been that tall. With `InfoRow` giving the glyph a column and the
+    // description shortened to one line, 412px is the estimate. Still an estimate — nothing
+    // here has been measured on screen, and this is the one number to change if the footer
+    // sits tight or the card floats.
+    //
+    // Deliberately not per-step. Only the last screen grew, but a window that resizes as the
+    // user presses Next draws attention to itself at the moment the content should have it.
     width: is_onboarding ? 580px : 760px;
-    height: is_onboarding ? 380px : 610px;
+    height: is_onboarding ? 412px : 610px;
 
     // Navigation & Panes
     in-out property <int> current_pane: 0;
