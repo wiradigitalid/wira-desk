@@ -10,11 +10,26 @@
 // holds in the public export too.
 1 ICON "..\\daemon\\wiradesk.ico"
 
-// Version is duplicated from `Cargo.toml` because a resource script cannot read it;
-// `version_resource_matches_cargo_manifest` in `main.rs` asserts the two agree.
+// THE VERSION IS NOT WRITTEN IN THIS FILE. `build.rs` passes it as the four macros
+// below, taken from `CARGO_PKG_VERSION`, which the root manifest defines once in
+// `[workspace.package]`.
+//
+// What used to be here was a duplicated literal plus a comment claiming that
+// `version_resource_matches_cargo_manifest` asserted it matched. That test lives in the
+// daemon crate and reads the daemon's own `wiradesk.rc`; nothing ever checked this file.
+// So the number here could drift while the About screen — which reads
+// `CARGO_PKG_VERSION` directly, in `src/main.rs` — kept reporting the true one, and the
+// whole suite would stay green with the properties dialog and the About screen
+// disagreeing. Generating it removes the duplicate rather than guarding it.
+//
+// `WD_STR` is two levels because a macro cannot be pasted into `"..."` directly; the
+// indirection makes the inner one expand before it is stringized.
+#define WD_STR_INNER(x) #x
+#define WD_STR(x) WD_STR_INNER(x)
+
 1 VERSIONINFO
-FILEVERSION 0,1,0,0
-PRODUCTVERSION 0,1,0,0
+FILEVERSION WD_MAJOR,WD_MINOR,WD_PATCH,0
+PRODUCTVERSION WD_MAJOR,WD_MINOR,WD_PATCH,0
 FILEFLAGSMASK 0x3fL
 FILEFLAGS 0x0L
 FILEOS 0x40004L
@@ -27,12 +42,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Wira Digital Indonesia"
             VALUE "FileDescription", "Wira Desk Settings"
-            VALUE "FileVersion", "0.1.0"
+            VALUE "FileVersion", WD_STR(WD_VERSION)
             VALUE "InternalName", "wiradesk-settings"
             VALUE "LegalCopyright", "Copyright (c) 2026 Wira Digital Indonesia"
             VALUE "OriginalFilename", "wiradesk-settings.exe"
             VALUE "ProductName", "Wira Desk"
-            VALUE "ProductVersion", "0.1.0"
+            VALUE "ProductVersion", WD_STR(WD_VERSION)
         END
     END
     BLOCK "VarFileInfo"

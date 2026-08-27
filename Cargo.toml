@@ -6,6 +6,24 @@ members = [
 ]
 resolver = "2"
 
+# THE ONE PLACE THE VERSION IS WRITTEN BY HAND.
+#
+# Before this existed the number lived in eleven literals across five files — three
+# manifests and two resource scripts with four fields each — held together by a single
+# test that covered only the daemon's. `crates/settings/wiradesk-settings.rc` was
+# unguarded, and Settings shows its version in the About screen from
+# `CARGO_PKG_VERSION`, so the screen and the file properties could disagree with nothing
+# failing.
+#
+# The three crates inherit this with `version.workspace = true`, and each resource script
+# receives it as preprocessor macros from its `build.rs`. Bumping is one edit here, and
+# `scripts/bump-version.ps1` exists so it is one command instead.
+#
+# Who may change which digit is not a convention here — it is a rule, in `AGENTS.md`
+# under "Versioning authority". Below 1.0 the minor digit carries the breaking change.
+[workspace.package]
+version = "0.1.0"
+
 # Safety-documentation gate for the unsafe surface.
 #
 # This daemon runs elevated and installs a global low-level keyboard hook, so the

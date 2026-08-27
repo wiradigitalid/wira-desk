@@ -177,31 +177,57 @@ mod tests {
         );
     }
 
-    /// A resource script cannot read `Cargo.toml`, so the version is written in both
-    /// places. This is what keeps the duplicate honest: an edit that updates one and
-    /// forgets the other fails here, instead of shipping a binary whose properties
-    /// dialog and UAC prompt report a version the product is not.
+    /// The version reaches both resource scripts as preprocessor macros from their
+    /// `build.rs`, so there is no duplicate of `Cargo.toml`'s number to keep honest.
+    ///
+    /// This replaced a test that compared the two literals. That test worked, and its
+    /// existence was also the problem: it covered only this crate's script, while
+    /// `crates/settings/wiradesk-settings.rc` carried the same duplicate with a comment
+    /// claiming this very test guarded it. Nothing did. So the Settings binary's
+    /// properties dialog could report one version while its About screen — reading
+    /// `CARGO_PKG_VERSION` directly — reported another, with the whole suite green.
+    ///
+    /// What is asserted now is that the duplicate has not come back. A future edit that
+    /// hard-codes a version into either script fails here, which is the only failure mode
+    /// left once the number is generated.
     #[test]
-    fn version_resource_matches_cargo_manifest() {
-        let rc = include_str!("../wiradesk.rc");
-        let version = env!("CARGO_PKG_VERSION");
+    fn resource_scripts_hold_no_version_literal() {
+        let scripts = [
+            ("wiradesk.rc", include_str!("../wiradesk.rc")),
+            (
+                "wiradesk-settings.rc",
+                include_str!("../../settings/wiradesk-settings.rc"),
+            ),
+        ];
 
-        // Win32 wants a four-field comma form; `Cargo.toml` carries three fields.
-        let mut fields: Vec<&str> = version.split('.').collect();
-        while fields.len() < 4 {
-            fields.push("0");
-        }
-        let comma = fields.join(",");
+        for (name, rc) in scripts {
+            for (field, macro_form) in [
+                ("FILEVERSION", "FILEVERSION WD_MAJOR,WD_MINOR,WD_PATCH,0"),
+                (
+                    "PRODUCTVERSION",
+                    "PRODUCTVERSION WD_MAJOR,WD_MINOR,WD_PATCH,0",
+                ),
+                ("FileVersion", "VALUE \"FileVersion\", WD_STR(WD_VERSION)"),
+                (
+                    "ProductVersion",
+                    "VALUE \"ProductVersion\", WD_STR(WD_VERSION)",
+                ),
+            ] {
+                assert!(
+                    rc.contains(macro_form),
+                    "{name} does not take {field} from build.rs - expected {macro_form:?}. \
+                     If a literal was written back in, the number now lives in two places \
+                     again and only one of them is `[workspace.package] version`."
+                );
+            }
 
-        for expected in [
-            format!("FILEVERSION {comma}"),
-            format!("PRODUCTVERSION {comma}"),
-            format!("VALUE \"FileVersion\", \"{version}\""),
-            format!("VALUE \"ProductVersion\", \"{version}\""),
-        ] {
+            // The stringizing indirection is load-bearing: with one level the literal text
+            // `WD_VERSION` is what lands in the binary, and nothing at runtime would notice.
             assert!(
-                rc.contains(&expected),
-                "wiradesk.rc is missing {expected:?} - it drifted from Cargo.toml version {version}"
+                rc.contains("#define WD_STR_INNER(x) #x")
+                    && rc.contains("#define WD_STR(x) WD_STR_INNER(x)"),
+                "{name} is missing the two-level WD_STR macro; a single level emits the \
+                 text \"WD_VERSION\" into the version resource instead of the version"
             );
         }
     }

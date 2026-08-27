@@ -14,12 +14,22 @@ CREATEPROCESS_MANIFEST_RESOURCE_ID RT_MANIFEST "wiradesk.manifest"
 // reads as "unverified publisher", a prompt that also cannot name the program is a
 // worse thing to ask a user to approve.
 //
-// The version is duplicated from `Cargo.toml` because a resource script cannot read
-// it. `version_resource_matches_cargo_manifest` in `main.rs` asserts the two agree,
-// so drift fails the test suite rather than shipping a binary that misreports itself.
+// THE VERSION IS NOT WRITTEN IN THIS FILE. `build.rs` passes it as the four macros
+// below, taken from `CARGO_PKG_VERSION`, which the root manifest defines once in
+// `[workspace.package]`. A resource script cannot read `Cargo.toml`, and the previous
+// answer was to duplicate the number here and guard the duplicate with a test — which
+// worked for this file and silently did not exist for the Settings one.
+//
+// Two levels of macro are needed to turn `WD_VERSION` into a string literal, because a
+// macro cannot be pasted into `"..."` directly. The indirection is what makes the outer
+// one expand before it is stringized; a single-level version would emit the literal text
+// `WD_VERSION` into the binary.
+#define WD_STR_INNER(x) #x
+#define WD_STR(x) WD_STR_INNER(x)
+
 1 VERSIONINFO
-FILEVERSION 0,1,0,0
-PRODUCTVERSION 0,1,0,0
+FILEVERSION WD_MAJOR,WD_MINOR,WD_PATCH,0
+PRODUCTVERSION WD_MAJOR,WD_MINOR,WD_PATCH,0
 FILEFLAGSMASK 0x3fL
 FILEFLAGS 0x0L
 FILEOS 0x40004L
@@ -32,12 +42,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Wira Digital Indonesia"
             VALUE "FileDescription", "Wira Desk"
-            VALUE "FileVersion", "0.1.0"
+            VALUE "FileVersion", WD_STR(WD_VERSION)
             VALUE "InternalName", "wiradesk"
             VALUE "LegalCopyright", "Copyright (c) 2026 Wira Digital Indonesia"
             VALUE "OriginalFilename", "wiradesk.exe"
             VALUE "ProductName", "Wira Desk"
-            VALUE "ProductVersion", "0.1.0"
+            VALUE "ProductVersion", WD_STR(WD_VERSION)
         END
     END
     BLOCK "VarFileInfo"

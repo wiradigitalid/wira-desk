@@ -247,6 +247,21 @@ At the start of a turn, read the tracker for the area you are about to touch, so
 repeated. After finishing, add an entry to it. Keep entries specific: what changed, and why
 it was not obvious.
 
+## Versioning authority
+
+Semantic versioning. Below `1.0` the **minor** digit carries the breaking change — `0.1.x` to
+`0.2.0` is the incompatible step — so minor does the work major will do after `1.0`.
+
+- An agent MAY bump the **patch** digit, in the same change that needs it.
+- An agent MUST NOT change the **major** or **minor** digit. Proposing one is expected; making
+  the change requires the owner's explicit go-ahead in that session.
+- A change qualifies as patch ONLY if all of these hold: it adds no behaviour, adds no setting,
+  changes no default, creates no new file or registry key or scheduled task, and alters neither
+  the configuration schema nor a shortcut binding. A three-line diff that changes a default is a
+  minor, not a patch.
+- Work needing a minor or major bump MUST be written under `## [Unreleased]` in `CHANGELOG.md`
+  and left there for the owner. It MUST NOT be released by bumping the version anyway.
+
 ## Before you finish
 
 ```powershell

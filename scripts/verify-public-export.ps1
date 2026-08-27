@@ -360,15 +360,32 @@ else {
 # advertised 1.2.0 for a product at 0.1.0. Deriving the truth from `Cargo.toml` instead makes
 # the rule self-maintaining: it keeps working after the next release, and it fails on drift in
 # either direction rather than on a hardcoded list.
-$daemonManifest = Join-Path $root 'crates\daemon\Cargo.toml'
-if (Test-Path -LiteralPath $daemonManifest) {
+# The version moved to `[workspace.package]` in the root manifest, and the three crates
+# inherit it with `version.workspace = true`. This check therefore reads the root, not a
+# crate: reading `crates/daemon/Cargo.toml` now finds `version.workspace = true` and no
+# number, which is how this check failed the moment the consolidation landed.
+#
+# It is redirected rather than loosened. The regex is unchanged and still demands three
+# numeric fields; only the file it reads moved, because that is where the fact moved.
+$workspaceManifest = Join-Path $root 'Cargo.toml'
+if (Test-Path -LiteralPath $workspaceManifest) {
     $crateVersion = $null
-    foreach ($line in Get-Content -LiteralPath $daemonManifest) {
-        if ($line -match '^\s*version\s*=\s*"([0-9]+\.[0-9]+\.[0-9]+)"') { $crateVersion = $Matches[1]; break }
+    $inWorkspacePackage = $false
+    foreach ($line in Get-Content -LiteralPath $workspaceManifest) {
+        # Section-aware, because the root manifest holds several tables and a bare
+        # `version = "..."` under any other one would be the wrong number.
+        if ($line -match '^\s*\[([^\]]+)\]') {
+            $inWorkspacePackage = ($Matches[1] -eq 'workspace.package')
+            continue
+        }
+        if ($inWorkspacePackage -and $line -match '^\s*version\s*=\s*"([0-9]+\.[0-9]+\.[0-9]+)"') {
+            $crateVersion = $Matches[1]
+            break
+        }
     }
     $checked++
     if (-not $crateVersion) {
-        Write-Fail 'could not read the crate version from crates/daemon/Cargo.toml'
+        Write-Fail 'could not read the product version from [workspace.package] in Cargo.toml'
         $failures.Add('crate version unreadable')
     }
     else {
