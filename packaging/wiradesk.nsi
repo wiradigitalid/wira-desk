@@ -46,6 +46,21 @@
 ;   re-imports from a legacy WinTick install. The uninstaller says where the folder is and
 ;   leaves the decision to a human.
 
+; ---------------------------------------------------------------------------------
+; When code signing arrives
+;
+; The uninstaller is the awkward half, and it is worth knowing the answer before the
+; certificate does. `WriteUninstaller` normally produces `uninstall.exe` on the USER'S
+; machine at install time, so there is no moment on a build agent at which it exists to be
+; signed — which is why older projects carry a two-pass hack that runs the installer in a
+; special mode just to emit the uninstaller, signs it, and packs the result back in as an
+; ordinary `File`.
+;
+; That hack is not needed here. NSIS 3.08 added `!uninstfinalize`, a hook that runs against
+; the generated uninstaller at compile time, and the workflow already pins a version well
+; past it. Signing becomes one directive plus a `signtool` invocation, and the two-pass
+; approach should not be reintroduced.
+
 Unicode true
 ManifestDPIAware true
 

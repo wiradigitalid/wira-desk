@@ -51,18 +51,33 @@ jobs:
           # package manager, for the reason `ci.yml` already states about gitleaks and
           # cargo-deny: a pinned version plus a published SHA-256 is the least this should
           # do, and bumping the version means updating the checksum in the same commit.
-          #
           # Not from the runner image, because the windows-2025 images ship no NSIS at all
-          # and `windows-latest` moves. Not from NSIS's own SourceForge downloads, because
-          # every direct URL there answers an automated client with an HTML interstitial
-          # instead of the archive — a checksum step there would be verifying a web page.
-          # This mirror is the archive the Tauri toolchain fetches for the same purpose.
-          $expected = '1bb9fc85ee5b220d3869325dbb9d191dfe6537070f641c30fbb275c97051fd0c'
-          Invoke-WebRequest -Uri 'https://github.com/tauri-apps/binary-releases/releases/download/nsis-3/nsis-3.zip' -OutFile nsis.zip
+          # and `windows-latest` moves.
+          #
+          # THE VERSION FLOOR IS A SECURITY FLOOR, NOT A PREFERENCE. CVE-2023-37378 is a
+          # local privilege escalation in NSIS UNINSTALLERS: the temporary directory they
+          # extract into is writable by every user, so a low-privileged attacker can win a
+          # race and plant a DLL that the uninstaller then loads. Our uninstaller runs
+          # elevated, which is exactly the exploitable shape. NSIS 3.08 and earlier are
+          # vulnerable; 3.09 fixed it with per-process isolated temporary directories.
+          # Never pin below 3.09, and the assertion below is here so that a future mirror
+          # swap cannot quietly reintroduce one.
+          #
+          # `curl.exe` and not `Invoke-WebRequest`: SourceForge answers PowerShell's web
+          # client with an HTML interstitial and answers curl with the actual archive, so
+          # the obvious cmdlet would have this step checksumming a web page. curl ships
+          # with Windows and is present on the runners.
+          $expected = '56581f90db321581c5381193d796fffcf2d24b2f8fed2160a6c6a3baa67f2c4f'
+          curl.exe -sSLf -o nsis.zip 'https://downloads.sourceforge.net/project/nsis/NSIS%203/3.12/nsis-3.12.zip'
           $actual = (Get-FileHash nsis.zip -Algorithm SHA256).Hash.ToLower()
           if ($actual -ne $expected) { throw "NSIS checksum mismatch: got $actual" }
           Expand-Archive nsis.zip -DestinationPath nsis
-          Join-Path $PWD 'nsis\nsis-3.08' | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+          $makensis = Join-Path $PWD 'nsis\nsis-3.12\makensis.exe'
+          $version = (& $makensis /VERSION).Trim().TrimStart('v')
+          if ([version]$version -lt [version]'3.09') {
+            throw "NSIS $version is vulnerable to CVE-2023-37378 in its uninstaller; 3.09 or later is required"
+          }
+          Split-Path $makensis | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
 
       - name: Build the installer
         shell: pwsh
