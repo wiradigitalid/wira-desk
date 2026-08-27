@@ -20,11 +20,29 @@ pub struct Config {
     pub vm_bypass: VmBypassConfig,
 }
 
-#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct GeneralConfig {
     /// Auto-start on Windows boot (Task Scheduler highest privileges).
     pub auto_start: bool,
+    /// Check for a newer release periodically. **Defaults to `true`**, by the owner's
+    /// decision, taken against the alternative of asking once during onboarding.
+    ///
+    /// This is the only setting in this product that causes a network request, and
+    /// `PRIVACY.md` describes that request line by line rather than summarising it: what is
+    /// sent, what an IP address reveals anyway, and where this switch is. Turning it off
+    /// stops the periodic check entirely; the manual button in Settings stays, so a user can
+    /// ask once without leaving anything running.
+    pub check_updates: bool,
+}
+
+impl Default for GeneralConfig {
+    fn default() -> Self {
+        Self {
+            auto_start: false,
+            check_updates: true,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

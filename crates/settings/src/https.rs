@@ -27,12 +27,6 @@
 //! The URL split and the scheme refusal. Everything past `WinHttpOpen` needs a network, and
 //! is verified by the layer above it refusing a body whose digest does not match.
 
-// Nothing calls this yet. It is a layer of the updater, and the layer that wires the
-// button, the progress, and the installer launch lands separately. The allow is scoped
-// to this module and goes when the caller arrives; wiring a half-built updater into the
-// UI to satisfy a lint would be the worse trade.
-#![allow(dead_code)]
-
 use std::ptr;
 
 use windows_sys::Win32::Foundation::FALSE;

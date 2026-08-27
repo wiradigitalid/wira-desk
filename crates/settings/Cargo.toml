@@ -38,6 +38,9 @@ windows-sys = { version = "0.52", features = [
     # the supply chain of the thing doing the verifying.
     "Win32_Networking_WinHttp",
     "Win32_Security_Cryptography",
+    # `ShellExecuteW`, which is the only way to launch a program whose manifest asks for
+    # elevation -- `CreateProcess` cannot, and fails with 740.
+    "Win32_UI_Shell",
 ] }
 
 [build-dependencies]

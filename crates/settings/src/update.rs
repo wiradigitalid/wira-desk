@@ -17,12 +17,6 @@
 //! both this updater and the download page on the website, so the two cannot disagree about
 //! what the current version is.
 
-// Nothing calls `decide` yet: this is the decision layer, and the fetch, hash, verify, and
-// launch layers land on top of it separately. The allow is scoped to this module and is
-// expected to go when the caller arrives; wiring a half-built updater into the UI just to
-// satisfy a lint would be the worse trade.
-#![allow(dead_code)]
-
 use serde::Deserialize;
 
 /// The repository this build belongs to, taken from `Cargo.toml`.
@@ -72,8 +66,12 @@ pub enum Rejected {
     BadChecksum,
     /// `setup_url` was not an HTTPS URL on the expected repository.
     BadUrl,
-    /// The offered version is not newer than the running one.
-    NotNewer { running: String, offered: String },
+    // There is deliberately no "not newer" variant. `decide` answers that case with
+    // `Decision::UpToDate`, which is not a refusal -- being current is the normal outcome,
+    // not an error. A variant existed here at first and `-D warnings` caught it as never
+    // constructed once the blanket dead-code allow came off, which is the lint doing exactly
+    // the job it is set to `deny` for: a variant the logic cannot produce is a lie told by
+    // the type, and every `match` on it grows an arm that can never run.
 }
 
 /// The outcome of asking whether to offer an update.
@@ -199,6 +197,262 @@ pub fn decide(running: &str, descriptor: &str) -> Decision {
     } else {
         Decision::UpToDate
     }
+}
+
+// ── Orchestration ───────────────────────────────────────────────────────────────────
+//
+// The three layers joined: decide, download, launch. Everything below runs on a worker
+// thread and reports through a channel, following `hookbridge`'s shape rather than
+// inventing a second one — the UI thread drains the receiver on a timer, so every model
+// mutation stays on the thread that owns the model.
+
+use std::sync::mpsc::{channel, Receiver, Sender};
+
+use crate::https::HttpError;
+
+/// Where the release descriptor lives. The filename never changes, so this URL is stable
+/// across every version — no API, no rate limit, no HTML to parse.
+pub fn latest_json_url() -> String {
+    format!("{REPOSITORY}/releases/latest/download/latest.json")
+}
+
+/// Ceiling for the descriptor. It is a few hundred bytes; anything approaching this is
+/// either not our file or not worth reading.
+const DESCRIPTOR_LIMIT: u64 = 64 * 1024;
+
+/// Ceiling for the installer. The real one is around 8 MB, and this leaves generous room
+/// for it to grow without leaving the download unbounded.
+const INSTALLER_LIMIT: u64 = 192 * 1024 * 1024;
+
+/// What the worker reports back. One message per state the UI can be in, so the UI never
+/// has to infer anything from a combination of flags.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Progress {
+    /// The check finished and there is nothing newer.
+    UpToDate,
+    /// A newer, validated release exists.
+    Available(Release),
+    /// The installer is downloading. Bytes so far, and the total if the server said.
+    Downloading { received: u64 },
+    /// The installer was verified and handed to Windows. Settings should now exit.
+    Launched,
+    /// Something went wrong, in words a person can act on.
+    Failed(String),
+}
+
+/// Human wording for a refusal. Deliberately specific: "update failed" tells a user
+/// nothing, and the difference between "you are offline" and "the file we were offered was
+/// not ours" is the difference between waiting and worrying.
+fn describe(rejected: &Rejected) -> String {
+    match rejected {
+        Rejected::Unreadable => {
+            "The update information could not be read. It may be a temporary problem with \
+             the download server."
+                .to_owned()
+        }
+        Rejected::BadVersion(v) => {
+            format!("The update information named an unusable version ({v}).")
+        }
+        Rejected::BadChecksum => {
+            "The update information carried a malformed checksum, so nothing was \
+             downloaded."
+                .to_owned()
+        }
+        Rejected::BadUrl => {
+            "The update information pointed somewhere other than this product's own \
+             releases, so nothing was downloaded."
+                .to_owned()
+        }
+    }
+}
+
+fn describe_http(err: &HttpError) -> String {
+    match err {
+        HttpError::NotHttps => {
+            "The download address was not a secure one, so nothing was fetched.".to_owned()
+        }
+        HttpError::Win32 { call, code } => {
+            format!(
+                "The connection failed ({call}, code {code}). Check your network and try again."
+            )
+        }
+        HttpError::Status(code) => {
+            format!("The download server answered with status {code}.")
+        }
+        HttpError::TooLarge { limit } => {
+            format!("The download was larger than the {limit}-byte limit and was stopped.")
+        }
+        HttpError::NotUtf8 => "The update information was not readable text.".to_owned(),
+        HttpError::Hash(e) => format!("The checksum could not be computed ({}).", e.call),
+    }
+}
+
+/// Ask once, on a worker thread.
+pub fn spawn_check(running: String) -> Receiver<Progress> {
+    let (tx, rx) = channel();
+    std::thread::spawn(move || {
+        let msg = match crate::https::get_text(&latest_json_url(), DESCRIPTOR_LIMIT) {
+            Err(e) => Progress::Failed(describe_http(&e)),
+            Ok(body) => match decide(&running, &body) {
+                Decision::UpToDate => Progress::UpToDate,
+                Decision::Available(release) => Progress::Available(release),
+                Decision::Refused(reason) => Progress::Failed(describe(&reason)),
+            },
+        };
+        let _ = tx.send(msg);
+    });
+    rx
+}
+
+/// Where a downloaded installer is staged.
+///
+/// A fresh randomly named directory under the user's temp, created for this download and
+/// nothing else. The name is unpredictable and the directory is new, so nothing can be
+/// waiting there under the name we are about to write.
+///
+/// **The residual risk is stated rather than hidden.** This directory is writable by the
+/// user, so between the moment the digest is verified and the moment Windows starts the
+/// file, another process running as that same user could replace it. The window is small
+/// and closing it properly needs the Authenticode check that arrives with the certificate —
+/// at which point the file is verified by its signature immediately before launch, and a
+/// swap is caught. Until then this is the honest state of it, and it is no worse than a
+/// user downloading the installer themselves and double-clicking it.
+fn staging_dir() -> Result<std::path::PathBuf, String> {
+    // Not random for secrecy; random so the path cannot be predicted and pre-created by
+    // something else. Two sources, because either alone repeats too easily: the process id,
+    // and the clock.
+    let nonce = format!(
+        "{:x}{:x}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0)
+    );
+    let dir = std::env::temp_dir().join(format!("WiraDesk-update-{nonce}"));
+    std::fs::create_dir(&dir)
+        .map_err(|e| format!("A temporary folder for the download could not be created ({e})."))?;
+    Ok(dir)
+}
+
+/// Download, verify, and hand the installer to Windows.
+///
+/// Runs on a worker thread and reports progress. On success the last message is
+/// [`Progress::Launched`], after which Settings must exit — the installer stops the daemon
+/// and replaces `wiradesk-settings.exe`, and Windows cannot replace a running image. That
+/// contract is written at the matching place in `packaging/wiradesk.iss`.
+pub fn spawn_install(release: Release) -> Receiver<Progress> {
+    let (tx, rx) = channel();
+    std::thread::spawn(move || {
+        let msg = install_now(&release, &tx);
+        let _ = tx.send(msg);
+    });
+    rx
+}
+
+fn install_now(release: &Release, tx: &Sender<Progress>) -> Progress {
+    let dir = match staging_dir() {
+        Ok(d) => d,
+        Err(e) => return Progress::Failed(e),
+    };
+    let dest = dir.join("WiraDesk-setup.exe");
+
+    // A coarse heartbeat rather than a byte count from the sink: the download layer reports
+    // the total when it finishes, and a progress bar that only moves at the end is worse
+    // than one that says "working". Sent once so the UI can show activity.
+    let _ = tx.send(Progress::Downloading { received: 0 });
+
+    let digest = match crate::https::download_to_file(&release.setup_url, &dest, INSTALLER_LIMIT) {
+        Ok(d) => d,
+        Err(e) => {
+            let _ = std::fs::remove_dir_all(&dir);
+            return Progress::Failed(describe_http(&e));
+        }
+    };
+
+    // THE GATE. Until a certificate exists this is the only thing standing between a
+    // downloaded file and an elevated installer running, so a mismatch destroys the file
+    // rather than reporting and leaving it.
+    if !crate::sha256::matches_hex(&digest, &release.setup_sha256) {
+        let _ = std::fs::remove_dir_all(&dir);
+        return Progress::Failed(
+            "The downloaded file did not match the checksum published for it, so it was \
+             deleted and nothing was run. This usually means the download was corrupted; if \
+             it happens again, download the installer from the releases page instead."
+                .to_owned(),
+        );
+    }
+
+    match launch_installer(&dest) {
+        Ok(()) => Progress::Launched,
+        Err(e) => {
+            // The file is left in place deliberately on a launch failure. It is verified, and
+            // the most likely cause is a policy that blocked the launch rather than anything
+            // wrong with the file — so telling the user where it is lets them run it
+            // themselves, which is a better answer than deleting their download.
+            Progress::Failed(format!(
+                "{e} The verified installer is at {}, and can be run directly.",
+                dest.display()
+            ))
+        }
+    }
+}
+
+/// Hand the installer to the shell.
+///
+/// **`ShellExecuteW`, not `CreateProcess`, and this is not a style choice.** The installer's
+/// manifest requests administrator, and `CreateProcess` cannot elevate — it fails with
+/// `ERROR_ELEVATION_REQUIRED` (740). Only the shell raises the consent prompt. That exact
+/// mistake is what made the installer's own finish-page checkbox fail on a real machine, and
+/// repeating it here would produce an update that reports success and does nothing.
+///
+/// `/SILENT` rather than `/VERYSILENT`: progress stays visible, questions the user already
+/// answered are not asked again. The launch is detached — the shell does not wait — and the
+/// caller exits immediately after, because the installer replaces `wiradesk-settings.exe`
+/// and Windows cannot replace a running image.
+fn launch_installer(path: &std::path::Path) -> Result<(), String> {
+    use windows_sys::Win32::UI::Shell::ShellExecuteW;
+    use windows_sys::Win32::UI::WindowsAndMessaging::SW_SHOWNORMAL;
+
+    let file = wide(&path.to_string_lossy());
+    let verb = wide("open");
+    let args = wide("/SILENT");
+
+    // SAFETY: `file`, `verb`, and `args` are NUL-terminated wide strings held in locals that
+    // outlive the call — the previous version of this bound them inside the argument list,
+    // where they would have been dropped before `ShellExecuteW` read them. A null owner
+    // window is documented for a caller with no window to parent the consent prompt to, and
+    // a null directory means the shell picks one, which is wanted here: the installer must
+    // not inherit a working directory that could influence its DLL search.
+    let result = unsafe {
+        ShellExecuteW(
+            0,
+            verb.as_ptr(),
+            file.as_ptr(),
+            args.as_ptr(),
+            std::ptr::null(),
+            SW_SHOWNORMAL,
+        )
+    };
+
+    // ShellExecuteW returns an HINSTANCE-shaped value; anything at or below 32 is an error
+    // code rather than a handle. 1223 is ERROR_CANCELLED, which here means the user declined
+    // the consent prompt — not a fault, and it must not read like one.
+    let code = result as isize;
+    if code > 32 {
+        return Ok(());
+    }
+    if code == 5 || code == 1223 {
+        return Err("The update needs your permission to install, and it was declined.".to_owned());
+    }
+    Err(format!(
+        "Windows refused to start the installer (code {code}). An application-control policy \
+         such as Smart App Control can do this to a program that is not yet signed."
+    ))
+}
+
+fn wide(s: &str) -> Vec<u16> {
+    s.encode_utf16().chain(std::iter::once(0)).collect()
 }
 
 #[cfg(test)]

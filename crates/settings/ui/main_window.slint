@@ -95,6 +95,13 @@ export component MainWindow inherits Window {
     ];
 
     // About Pane Properties
+    in property <string> update_status: "";
+    in property <bool> update_busy: false;
+    in property <bool> update_ready: false;
+    in-out property <bool> check_updates: true;
+    callback check_updates_clicked();
+    callback install_update_clicked();
+    callback check_updates_toggled(bool);
     in property <string> app_version: "0.1.0";
     in property <string> app_typeface: "Segoe UI Variable Text (System Loaded)";
 
@@ -278,6 +285,13 @@ export component MainWindow inherits Window {
                             if root.current_pane == 4 : AboutPane {
                                 version: root.app_version;
                                 typeface: root.app_typeface;
+                                update_status: root.update_status;
+                                update_busy: root.update_busy;
+                                update_ready: root.update_ready;
+                                check_updates <=> root.check_updates;
+                                check_updates_clicked => { root.check_updates_clicked(); }
+                                install_update_clicked => { root.install_update_clicked(); }
+                                check_updates_toggled(val) => { root.check_updates_toggled(val); }
                             }
                         }
                     }

@@ -140,6 +140,12 @@ fn sync_model_to_ui(window: &MainWindow, model: &SettingsModel) {
         // General
         window.set_auto_start(model.draft.general.auto_start);
 
+        // Updates
+        window.set_check_updates(model.draft.general.check_updates);
+        window.set_update_status(slint::SharedString::from(&model.update_status));
+        window.set_update_busy(model.update_busy);
+        window.set_update_ready(model.update_available.is_some());
+
         // Shortcuts
         // The Shortcuts pane is built from `ShortcutField::ALL`, the one declared sequence
         // (`LBR-ST-14`). Nothing here names an individual action, so an action added to that
@@ -855,6 +861,134 @@ fn main() -> Result<(), slint::PlatformError> {
                     // The window is already gone, so there is nothing to hide — but the
                     // loop still has to end, which is the whole point of this watch.
                     let _ = slint::quit_event_loop();
+                }
+            },
+        );
+    }
+
+    // ── Updates ─────────────────────────────────────────────────────────────
+    //
+    // The worker runs on its own thread and reports through a channel, which a UI-thread
+    // timer drains -- the same shape `hookbridge` already uses, and for the same reason:
+    // every model mutation stays on the thread that owns the model. A synchronous fetch on
+    // the UI thread would freeze the window for the length of a multi-megabyte download.
+    let update_rx: Rc<std::cell::RefCell<Option<std::sync::mpsc::Receiver<update::Progress>>>> =
+        Rc::new(std::cell::RefCell::new(None));
+
+    {
+        let model_rc = Rc::clone(&model);
+        let window_weak = main_window.as_weak();
+        let rx_slot = Rc::clone(&update_rx);
+        main_window.on_check_updates_clicked(move || {
+            let mut m = model_rc.borrow_mut();
+            if m.update_busy {
+                return;
+            }
+            m.update_busy = true;
+            m.update_available = None;
+            m.update_status = "Checking…".to_owned();
+            *rx_slot.borrow_mut() = Some(update::spawn_check(env!("CARGO_PKG_VERSION").to_owned()));
+            if let Some(w) = window_weak.upgrade() {
+                sync_model_to_ui(&w, &m);
+            }
+        });
+    }
+    {
+        let model_rc = Rc::clone(&model);
+        let window_weak = main_window.as_weak();
+        let rx_slot = Rc::clone(&update_rx);
+        main_window.on_install_update_clicked(move || {
+            let mut m = model_rc.borrow_mut();
+            if m.update_busy {
+                return;
+            }
+            let Some(release) = m.update_available.clone() else {
+                return;
+            };
+            m.update_busy = true;
+            m.update_status = "Downloading the update…".to_owned();
+            *rx_slot.borrow_mut() = Some(update::spawn_install(release));
+            if let Some(w) = window_weak.upgrade() {
+                sync_model_to_ui(&w, &m);
+            }
+        });
+    }
+    {
+        let model_rc = Rc::clone(&model);
+        let window_weak = main_window.as_weak();
+        main_window.on_check_updates_toggled(move |val| {
+            let mut m = model_rc.borrow_mut();
+            m.draft.general.check_updates = val;
+            if let Some(w) = window_weak.upgrade() {
+                sync_model_to_ui(&w, &m);
+            }
+        });
+    }
+
+    let update_timer = slint::Timer::default();
+    {
+        let model_rc = Rc::clone(&model);
+        let window_weak = main_window.as_weak();
+        let rx_slot = Rc::clone(&update_rx);
+        update_timer.start(
+            slint::TimerMode::Repeated,
+            std::time::Duration::from_millis(200),
+            move || {
+                // Take the message out before borrowing the model, so the receiver is not
+                // held across a model mutation that could call back into this closure.
+                let message = match rx_slot.borrow().as_ref() {
+                    Some(rx) => rx.try_recv().ok(),
+                    None => None,
+                };
+                let Some(message) = message else {
+                    return;
+                };
+
+                let mut m = model_rc.borrow_mut();
+                let mut launched = false;
+                match message {
+                    update::Progress::UpToDate => {
+                        m.update_busy = false;
+                        m.update_available = None;
+                        m.update_status = format!(
+                            "You are on the newest version ({}).",
+                            env!("CARGO_PKG_VERSION")
+                        );
+                    }
+                    update::Progress::Available(release) => {
+                        m.update_busy = false;
+                        m.update_status = format!("Version {} is available.", release.version);
+                        m.update_available = Some(release);
+                    }
+                    update::Progress::Downloading { .. } => {
+                        m.update_status = "Downloading the update…".to_owned();
+                    }
+                    update::Progress::Launched => {
+                        m.update_busy = false;
+                        m.update_status = "The installer is starting…".to_owned();
+                        launched = true;
+                    }
+                    update::Progress::Failed(reason) => {
+                        // Never silent, and never a dead end. The reason is shown and the
+                        // button becomes usable again, because the launch failure that
+                        // prompted this requirement -- an application-control policy blocking
+                        // an unsigned installer -- was intermittent and cleared on a retry.
+                        m.update_busy = false;
+                        m.update_available = None;
+                        m.update_status = format!("{reason} You can try again.");
+                    }
+                }
+
+                if let Some(w) = window_weak.upgrade() {
+                    sync_model_to_ui(&w, &m);
+                    if launched {
+                        // The installer stops the daemon and replaces this executable, and
+                        // Windows cannot replace a running image -- so Settings must be gone
+                        // before it gets there. The contract is written at the matching place
+                        // in `packaging/wiradesk.iss`.
+                        drop(m);
+                        close_window(&w);
+                    }
                 }
             },
         );

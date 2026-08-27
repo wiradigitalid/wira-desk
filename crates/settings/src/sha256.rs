@@ -15,12 +15,6 @@
 //! and come back to check it later. Hashing what was written, as it is written, is what
 //! makes "verified before it is ever executed" true by construction.
 
-// Nothing calls this yet. It is a layer of the updater, and the layer that wires the
-// button, the progress, and the installer launch lands separately. The allow is scoped
-// to this module and goes when the caller arrives; wiring a half-built updater into the
-// UI to satisfy a lint would be the worse trade.
-#![allow(dead_code)]
-
 use std::ptr;
 
 use windows_sys::Win32::Security::Cryptography::{
@@ -155,13 +149,6 @@ pub fn to_hex(digest: &[u8; DIGEST_LEN]) -> String {
     out
 }
 
-/// Digest of a complete slice, for callers that already hold all the bytes.
-pub fn hex_of(bytes: &[u8]) -> Result<String, CngError> {
-    let mut hasher = Sha256::new()?;
-    hasher.update(bytes)?;
-    Ok(to_hex(&hasher.finish()?))
-}
-
 /// Constant-time-ish comparison of a computed digest against an expected hex string.
 ///
 /// Case-insensitive on the expected side, because `SHA256SUMS` and `latest.json` are written
@@ -184,6 +171,16 @@ pub fn matches_hex(digest: &[u8; DIGEST_LEN], expected_hex: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Digest of a complete slice. Lives here rather than beside `to_hex` because the
+    /// download path hashes incrementally and never holds all the bytes at once, so this
+    /// shape has only ever had test callers. Exporting it would invite the pattern the
+    /// download layer exists to avoid.
+    fn hex_of(bytes: &[u8]) -> Result<String, CngError> {
+        let mut hasher = Sha256::new()?;
+        hasher.update(bytes)?;
+        Ok(to_hex(&hasher.finish()?))
+    }
 
     /// The published NIST vectors. These are the reason this module is testable at all: the
     /// download layer above it cannot be exercised without a network, but the thing that

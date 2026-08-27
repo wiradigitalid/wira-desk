@@ -1,9 +1,21 @@
 import { Palette, Typography } from "../theme.slint";
 import { Card, CardDivider } from "../components/card.slint";
+import { ToggleSwitch } from "../components/toggle_switch.slint";
 
 export component AboutPane inherits VerticalLayout {
     in property <string> version: "0.1.0";
     in property <string> typeface: "Segoe UI Variable Text (System Loaded)";
+
+    // Updates. `status` is the one line the user reads, written by the Rust side for every
+    // outcome, because "update failed" tells nobody anything -- see `update::describe`.
+    in property <string> update_status: "";
+    in property <bool> update_busy: false;
+    in property <bool> update_ready: false;
+    in-out property <bool> check_updates: true;
+
+    callback check_updates_clicked();
+    callback install_update_clicked();
+    callback check_updates_toggled(bool);
 
     spacing: 12px;
     alignment: start;
@@ -42,6 +54,114 @@ export component AboutPane inherits VerticalLayout {
                 font-family: Typography.font_family;
                 font-size: Typography.size_caption;
                 color: Palette.text_secondary;
+            }
+        }
+    }
+
+
+    // Updates.
+    //
+    // In About rather than General because this is where a version number already lives, and
+    // "which version am I on" and "is there a newer one" are the same question asked twice.
+    Card {
+        VerticalLayout {
+            padding: 16px;
+            spacing: 10px;
+
+            HorizontalLayout {
+                spacing: 8px;
+                VerticalLayout {
+                    horizontal-stretch: 1;
+                    spacing: 2px;
+                    Text {
+                        text: "Check for updates automatically";
+                        font-family: Typography.font_family;
+                        font-size: Typography.size_subheading;
+                        font-weight: 600;
+                        color: Palette.text_primary;
+                    }
+                    Text {
+                        // The only network request this product makes, and the only place a
+                        // user can stop it. PRIVACY.md describes it line by line.
+                        text: "The only time Wira Desk contacts the internet. Nothing about you is sent.";
+                        font-family: Typography.font_family;
+                        font-size: Typography.size_caption;
+                        color: Palette.text_secondary;
+                        wrap: word-wrap;
+                    }
+                }
+                ToggleSwitch {
+                    y: 4px;
+                    checked <=> root.check_updates;
+                    toggled(val) => { root.check_updates_toggled(val); }
+                }
+            }
+
+            CardDivider {}
+
+            HorizontalLayout {
+                spacing: 10px;
+                alignment: start;
+
+                // Two buttons, never both. "Check" until something is found, then "Install".
+                // A single button that changes meaning is a button a user has to read twice.
+                if !root.update_ready : Rectangle {
+                    width: 132px;
+                    height: 32px;
+                    border-radius: 6px;
+                    background: root.update_busy
+                        ? Palette.bg_subtle
+                        : (check_touch.has_hover ? Palette.bg_card_hover : Palette.bg_subtle);
+                    border-width: 1px;
+                    border-color: Palette.stroke_card;
+
+                    Text {
+                        text: root.update_busy ? "Checking…" : "Check for updates";
+                        font-family: Typography.font_family;
+                        font-size: 12.5px;
+                        font-weight: 600;
+                        color: root.update_busy ? Palette.text_tertiary : Palette.text_primary;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+
+                    check_touch := TouchArea {
+                        enabled: !root.update_busy;
+                        clicked => { root.check_updates_clicked(); }
+                    }
+                }
+
+                if root.update_ready : Rectangle {
+                    width: 150px;
+                    height: 32px;
+                    border-radius: 6px;
+                    background: root.update_busy
+                        ? Palette.text_tertiary
+                        : (install_touch.has_hover ? Palette.accent_hover : Palette.accent_primary);
+
+                    Text {
+                        text: root.update_busy ? "Downloading…" : "Download and install";
+                        font-family: Typography.font_family;
+                        font-size: 12.5px;
+                        font-weight: 700;
+                        color: Palette.text_on_accent;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+
+                    install_touch := TouchArea {
+                        enabled: !root.update_busy;
+                        clicked => { root.install_update_clicked(); }
+                    }
+                }
+            }
+
+            if root.update_status != "" : Text {
+                text: root.update_status;
+                font-family: Typography.font_family;
+                font-size: Typography.size_caption;
+                color: Palette.text_secondary;
+                wrap: word-wrap;
             }
         }
     }

@@ -580,6 +580,17 @@ pub struct SettingsModel {
     pub onboarding_focus_index: usize,
     /// Whether simulated cycling has been triggered at least once in Step 2.
     pub onboarding_simulated_success: bool,
+    /// The one line the About pane shows about updates. Written for every outcome by
+    /// `update::describe`, because "update failed" tells a user nothing and the difference
+    /// between "you are offline" and "the file offered was not ours" is the difference
+    /// between waiting and worrying.
+    pub update_status: String,
+    /// A check or a download is in flight. Disables both buttons, so a second click cannot
+    /// start a second worker against the same staging directory.
+    pub update_busy: bool,
+    /// A validated newer release, once a check has found one. Its presence is what swaps the
+    /// button from "Check for updates" to "Download and install".
+    pub update_available: Option<crate::update::Release>,
     /// The tutorial's start-at-sign-in answer, pre-checked, and **held apart from
     /// `draft.general.auto_start` on purpose.**
     ///
@@ -615,6 +626,9 @@ impl SettingsModel {
             feedback: SaveFeedback::None,
             theme: theme::detect_theme(),
             onboarding: onboarding.then_some(OnboardingStep::Welcome),
+            update_status: String::new(),
+            update_busy: false,
+            update_available: None,
             onboarding_focus_index: 0,
             onboarding_simulated_success: false,
             // Pre-checked. A tray utility that does not come back after a restart is a
