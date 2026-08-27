@@ -145,6 +145,19 @@ fn sync_model_to_ui(window: &MainWindow, model: &SettingsModel) {
         window.set_update_status(slint::SharedString::from(&model.update_status));
         window.set_update_busy(model.update_busy);
         window.set_update_ready(model.update_available.is_some());
+        window.set_update_version(slint::SharedString::from(
+            model
+                .update_available
+                .as_ref()
+                .map(|r| r.version.as_str())
+                .unwrap_or(""),
+        ));
+        window.set_update_has_notes(
+            model
+                .update_available
+                .as_ref()
+                .is_some_and(|r| !r.notes_url.is_empty()),
+        );
 
         // Shortcuts
         // The Shortcuts pane is built from `ShortcutField::ALL`, the one declared sequence
@@ -922,6 +935,20 @@ fn main() -> Result<(), slint::PlatformError> {
             if let Some(w) = window_weak.upgrade() {
                 sync_model_to_ui(&w, &m);
             }
+        });
+    }
+
+    {
+        let model_rc = Rc::clone(&model);
+        main_window.on_open_release_notes(move || {
+            let m = model_rc.borrow();
+            let Some(release) = m.update_available.as_ref() else {
+                return;
+            };
+            // Handed to the shell rather than rendered here. Release notes are a web page,
+            // and a settings window is not a browser -- the one that is already the user's
+            // choice is a better place to read them than anything this could draw.
+            update::open_in_browser(&release.notes_url);
         });
     }
 

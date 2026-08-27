@@ -98,6 +98,9 @@ export component MainWindow inherits Window {
     in property <string> update_status: "";
     in property <bool> update_busy: false;
     in property <bool> update_ready: false;
+    in property <string> update_version: "";
+    in property <bool> update_has_notes: false;
+    callback open_release_notes();
     in-out property <bool> check_updates: true;
     callback check_updates_clicked();
     callback install_update_clicked();
@@ -288,6 +291,9 @@ export component MainWindow inherits Window {
                                 update_status: root.update_status;
                                 update_busy: root.update_busy;
                                 update_ready: root.update_ready;
+                                update_version: root.update_version;
+                                update_has_notes: root.update_has_notes;
+                                open_release_notes => { root.open_release_notes(); }
                                 check_updates <=> root.check_updates;
                                 check_updates_clicked => { root.check_updates_clicked(); }
                                 install_update_clicked => { root.install_update_clicked(); }

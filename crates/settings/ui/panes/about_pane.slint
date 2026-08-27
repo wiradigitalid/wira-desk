@@ -11,6 +11,9 @@ export component AboutPane inherits VerticalLayout {
     in property <string> update_status: "";
     in property <bool> update_busy: false;
     in property <bool> update_ready: false;
+    in property <string> update_version: "";
+    in property <bool> update_has_notes: false;
+    callback open_release_notes();
     in-out property <bool> check_updates: true;
 
     callback check_updates_clicked();
@@ -58,6 +61,29 @@ export component AboutPane inherits VerticalLayout {
         }
     }
 
+
+    Card {
+        VerticalLayout {
+            padding: 16px;
+            spacing: 8px;
+
+            Text {
+                text: "Wira Desk switches smoothly between windows of the active application on your current monitor.";
+                font-family: Typography.font_family;
+                font-size: Typography.size_body;
+                color: Palette.text_secondary;
+                wrap: word-wrap;
+            }
+
+            Text {
+                text: "Designed to be invisible, fast, and resource-efficient for all-day multitasking.";
+                font-family: Typography.font_family;
+                font-size: Typography.size_caption;
+                color: Palette.text_tertiary;
+                wrap: word-wrap;
+            }
+        }
+    }
 
     // Updates.
     //
@@ -131,6 +157,29 @@ export component AboutPane inherits VerticalLayout {
                     }
                 }
 
+                if root.update_ready && root.update_has_notes : Rectangle {
+                    width: 96px;
+                    height: 32px;
+                    border-radius: 6px;
+                    background: notes_touch.has_hover ? Palette.bg_card_hover : Palette.bg_subtle;
+                    border-width: 1px;
+                    border-color: Palette.stroke_card;
+
+                    Text {
+                        text: "What is new";
+                        font-family: Typography.font_family;
+                        font-size: 12.5px;
+                        font-weight: 600;
+                        color: Palette.text_primary;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+
+                    notes_touch := TouchArea {
+                        clicked => { root.open_release_notes(); }
+                    }
+                }
+
                 if root.update_ready : Rectangle {
                     width: 150px;
                     height: 32px;
@@ -156,34 +205,20 @@ export component AboutPane inherits VerticalLayout {
                 }
             }
 
+            if root.update_ready : Text {
+                text: "Wira Desk will close, Windows will ask for your permission, and version "
+                    + root.update_version + " will install. Your settings are kept.";
+                font-family: Typography.font_family;
+                font-size: Typography.size_caption;
+                color: Palette.text_secondary;
+                wrap: word-wrap;
+            }
+
             if root.update_status != "" : Text {
                 text: root.update_status;
                 font-family: Typography.font_family;
                 font-size: Typography.size_caption;
                 color: Palette.text_secondary;
-                wrap: word-wrap;
-            }
-        }
-    }
-
-    Card {
-        VerticalLayout {
-            padding: 16px;
-            spacing: 8px;
-
-            Text {
-                text: "Wira Desk switches smoothly between windows of the active application on your current monitor.";
-                font-family: Typography.font_family;
-                font-size: Typography.size_body;
-                color: Palette.text_secondary;
-                wrap: word-wrap;
-            }
-
-            Text {
-                text: "Designed to be invisible, fast, and resource-efficient for all-day multitasking.";
-                font-family: Typography.font_family;
-                font-size: Typography.size_caption;
-                color: Palette.text_tertiary;
                 wrap: word-wrap;
             }
         }

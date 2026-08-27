@@ -451,6 +451,47 @@ fn launch_installer(path: &std::path::Path) -> Result<(), String> {
     ))
 }
 
+/// Open a release-notes URL in the user's browser.
+///
+/// **Validated before it is handed to the shell, and by the same rule as the installer
+/// download.** `notes_url` arrives in the same descriptor as `setup_url`, so it deserves the
+/// same suspicion: a tampered file could otherwise use this to open any address it liked, in
+/// a browser, at a moment the user is expecting a page from this project. The host and
+/// repository are pinned; anything else is silently not opened, because a failed link is a
+/// smaller harm than a link somewhere else.
+pub fn open_in_browser(url: &str) {
+    use windows_sys::Win32::UI::Shell::ShellExecuteW;
+    use windows_sys::Win32::UI::WindowsAndMessaging::SW_SHOWNORMAL;
+
+    let Some((repo_host, _)) = split_https(REPOSITORY) else {
+        return;
+    };
+    let Some((host, _)) = split_https(url) else {
+        return;
+    };
+    if host != repo_host || !url.starts_with(REPOSITORY) {
+        return;
+    }
+
+    let target = wide(url);
+    let verb = wide("open");
+    // SAFETY: `target` and `verb` are NUL-terminated wide strings in locals that outlive the
+    // call. A null owner window is documented for a caller with no window to parent to, and
+    // null parameters and directory are the documented "nothing to add" values. The result is
+    // discarded: a browser that fails to open is not something this can act on, and the URL
+    // is also shown in the release itself.
+    unsafe {
+        ShellExecuteW(
+            0,
+            verb.as_ptr(),
+            target.as_ptr(),
+            std::ptr::null(),
+            std::ptr::null(),
+            SW_SHOWNORMAL,
+        );
+    }
+}
+
 fn wide(s: &str) -> Vec<u16> {
     s.encode_utf16().chain(std::iter::once(0)).collect()
 }
