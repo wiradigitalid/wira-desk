@@ -231,6 +231,24 @@ fn sync_model_to_ui(window: &MainWindow, model: &SettingsModel) {
     }
 }
 
+/// Close the window and end the process, for every path that means "the user is done".
+///
+/// **`hide()` alone is not enough, and one place in this file already knew it.** The
+/// daemon watch calls both, with a comment saying that hiding relies on Slint quitting
+/// when the last window closes and that a process left running with no window is the
+/// state it exists to prevent. The other three paths — the Settings close button, Skip
+/// Tutorial, and Escape during onboarding — only hid.
+///
+/// A settings process alive with no window is not merely untidy, it is unreachable, and
+/// it makes the *next* launch fail too: it still holds `SETTINGS_SINGLE_INSTANCE_MUTEX`,
+/// so `main` takes the already-running branch, tries to restore a window that is hidden
+/// or gone, and returns. From the user's side Settings stops opening at all, with no
+/// error anywhere — which is exactly how it was reported.
+fn close_window(window: &MainWindow) {
+    let _ = window.hide();
+    let _ = slint::quit_event_loop();
+}
+
 fn main() -> Result<(), slint::PlatformError> {
     migrate_appdata();
 
@@ -354,7 +372,7 @@ fn main() -> Result<(), slint::PlatformError> {
         let window_weak = main_window.as_weak();
         main_window.on_window_close_clicked(move || {
             if let Some(w) = window_weak.upgrade() {
-                let _ = w.hide();
+                close_window(&w);
             }
         });
     }
@@ -513,7 +531,7 @@ fn main() -> Result<(), slint::PlatformError> {
             m.skip_onboarding();
             m.save(&config_path());
             if let Some(w) = window_weak.upgrade() {
-                let _ = w.hide();
+                close_window(&w);
             }
         });
     }
@@ -607,7 +625,7 @@ fn main() -> Result<(), slint::PlatformError> {
                     m.skip_onboarding();
                     m.save(&config_path());
                     if let Some(w) = window_weak.upgrade() {
-                        let _ = w.hide();
+                        close_window(&w);
                     }
                     return;
                 }
@@ -791,8 +809,15 @@ fn main() -> Result<(), slint::PlatformError> {
     // Daemon liveness watch. Settings is bound to the daemon's lifetime — see
     // `daemon_watch` for why a window left open after the daemon exits would be
     // reporting things that are no longer true.
+    //
+    // The override waives the whole rule, not half of it. `startup_decision` already
+    // consults `allow_no_daemon` before the window is built; the watch did not, so a
+    // developer who set the variable got a window that opened and then closed itself on
+    // the first poll — the exact "appears and vanishes" behaviour the startup check
+    // exists to avoid, moved a second later. Found while trying to reproduce a reported
+    // Settings-does-not-open fault, where it made the local run useless as evidence.
     let daemon_timer = slint::Timer::default();
-    {
+    if !daemon_watch::allow_no_daemon() {
         let window_weak = main_window.as_weak();
         let mut watch = DaemonWatch::new(daemon_watch::daemon_is_running);
         daemon_timer.start(
@@ -802,15 +827,15 @@ fn main() -> Result<(), slint::PlatformError> {
                 if !watch.tick() {
                     return;
                 }
-                // Hide the window *and* quit the loop. Hiding alone relies on
-                // Slint's quit-on-last-window-closed behaviour, and if that ever
-                // stops holding — or the window has already been hidden by
-                // something else — the process would keep running with no window
-                // at all, which is the exact state this watch exists to prevent.
+                // `close_window` carries the reasoning this site used to state on its
+                // own; it is now shared with the three paths that were missing it.
                 if let Some(w) = window_weak.upgrade() {
-                    let _ = w.hide();
+                    close_window(&w);
+                } else {
+                    // The window is already gone, so there is nothing to hide — but the
+                    // loop still has to end, which is the whole point of this watch.
+                    let _ = slint::quit_event_loop();
                 }
-                let _ = slint::quit_event_loop();
             },
         );
     }
