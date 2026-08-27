@@ -155,8 +155,21 @@ impl PlacementPlan {
 
 pub type PlanResult = Result<PlacementPlan, PlanError>;
 
-/// Applies a plan to the real desktop. Implemented by.
+/// Applies a plan to the real desktop.
 pub trait WindowMover {
+    /// Take a maximized window back to its normal state, so it can be positioned.
+    ///
+    /// **This is part of the trait rather than a step each command remembers, because
+    /// forgetting it is exactly what happened.** `SetWindowPos` on a still-maximized window
+    /// is unreliable — the maximized state is bound to the monitor it was maximized on, and
+    /// the window springs back rather than landing where it was told. Only the
+    /// move-to-monitor path restored first; snapping and stacking did not, so a window
+    /// maximized by double-clicking its title bar could not be snapped at all. A comment on
+    /// the one path that had it asserted the snap path did too, which is why nobody looked.
+    ///
+    /// A no-op for a window that is not maximized.
+    fn restore(&mut self, window: WindowId);
+
     fn apply(&mut self, placement: &Placement) -> bool;
 }
 

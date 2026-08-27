@@ -466,6 +466,24 @@ const PLACEMENT_FLAGS: SET_WINDOW_POS_FLAGS =
 pub struct Win32WindowMover;
 
 impl WindowMover for Win32WindowMover {
+    fn restore(&mut self, window: WindowId) {
+        use windows_sys::Win32::UI::WindowsAndMessaging::{IsZoomed, ShowWindowAsync, SW_RESTORE};
+
+        // `SW_RESTORE` rather than `SW_SHOWNORMAL`: restore leaves a minimized window's
+        // activation alone, and the arrangement path is deliberately non-activating.
+        //
+        // `ShowWindowAsync` rather than `ShowWindow` keeps this thread off a cross-process
+        // wait, which `LBR-WM-3` bans — a hung target must not be able to hang the Worker.
+        // SAFETY: both calls take only a window handle, write nothing through a pointer, and
+        // are documented to fail benignly on a stale handle, which is why the result is
+        // discarded rather than checked. `apply` revalidates the handle immediately after.
+        unsafe {
+            if IsZoomed(window.0) != 0 {
+                ShowWindowAsync(window.0, SW_RESTORE);
+            }
+        }
+    }
+
     fn apply(&mut self, placement: &Placement) -> bool {
         let hwnd = placement.window.0;
 
@@ -584,6 +602,10 @@ pub fn apply_plan<M: WindowMover + ?Sized>(
     let mut applied = 0;
     let mut skipped = 0;
     for placement in placements {
+        // Restore first, always. Every arrangement command reaches the desktop through this
+        // loop, so putting the step here is what stops the next one added from forgetting
+        // it — which is the defect this fixes, not a hypothetical.
+        mover.restore(placement.window);
         if mover.apply(placement) {
             applied += 1;
         } else {
@@ -600,23 +622,47 @@ mod tests {
 
     /// Records every call so argument and ordering assertions are possible
     /// without touching User32.
+    /// What the mover was asked to do, in order. Recording restore and apply in one
+    /// sequence rather than two lists is deliberate: the property that matters is not that
+    /// both happened, it is that restore happened *first* for each window.
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    enum MoverCall {
+        Restore(WindowId),
+        Apply(Placement),
+    }
+
     struct FakeMover {
-        calls: Vec<Placement>,
+        log: Vec<MoverCall>,
         invalid: Vec<WindowId>,
     }
 
     impl FakeMover {
         fn new(invalid: Vec<WindowId>) -> Self {
             FakeMover {
-                calls: Vec::new(),
+                log: Vec::new(),
                 invalid,
             }
+        }
+
+        /// Just the placements, for the tests that only care about those.
+        fn calls(&self) -> Vec<Placement> {
+            self.log
+                .iter()
+                .filter_map(|c| match c {
+                    MoverCall::Apply(p) => Some(*p),
+                    MoverCall::Restore(_) => None,
+                })
+                .collect()
         }
     }
 
     impl WindowMover for FakeMover {
+        fn restore(&mut self, window: WindowId) {
+            self.log.push(MoverCall::Restore(window));
+        }
+
         fn apply(&mut self, placement: &Placement) -> bool {
-            self.calls.push(*placement);
+            self.log.push(MoverCall::Apply(*placement));
             !self.invalid.contains(&placement.window)
         }
     }
@@ -628,6 +674,40 @@ mod tests {
         }
     }
 
+    /// The defect this guards was reported from real use: a window maximized by
+    /// double-clicking its title bar could not be snapped. Only the move-to-monitor command
+    /// restored first; snapping and stacking went straight to `SetWindowPos`, which on a
+    /// still-maximized window leaves it where it was. The step now lives in `apply_plan`, so
+    /// every command inherits it and a command added later cannot omit it.
+    #[test]
+    fn every_window_is_restored_before_it_is_moved() {
+        let mut mover = FakeMover::new(vec![]);
+        let plan = [placement(1, 0, 100), placement(2, 100, 200)];
+        apply_plan(&mut mover, &plan);
+
+        assert_eq!(
+            mover.log,
+            vec![
+                MoverCall::Restore(WindowId(1)),
+                MoverCall::Apply(plan[0]),
+                MoverCall::Restore(WindowId(2)),
+                MoverCall::Apply(plan[1]),
+            ],
+            "each window must be restored immediately before its own move"
+        );
+    }
+
+    /// A window that cannot be moved is still restored first, because whether it can be
+    /// moved is not known until `apply` is attempted. Restoring is what makes the attempt
+    /// meaningful, so skipping it for a target that later fails would be backwards.
+    #[test]
+    fn a_target_that_fails_to_move_was_still_restored() {
+        let mut mover = FakeMover::new(vec![WindowId(2)]);
+        let plan = [placement(1, 0, 100), placement(2, 100, 200)];
+        assert_eq!(apply_plan(&mut mover, &plan), (1, 1));
+        assert!(mover.log.contains(&MoverCall::Restore(WindowId(2))));
+    }
+
     // --- partial failure ---------------------------------------
 
     #[test]
@@ -635,7 +715,7 @@ mod tests {
         let mut mover = FakeMover::new(vec![]);
         let plan = [placement(1, 0, 100), placement(2, 100, 200)];
         assert_eq!(apply_plan(&mut mover, &plan), (2, 0));
-        assert_eq!(mover.calls.len(), 2);
+        assert_eq!(mover.calls().len(), 2);
     }
 
     #[test]
@@ -648,7 +728,7 @@ mod tests {
         ];
         assert_eq!(apply_plan(&mut mover, &plan), (2, 1));
         // Every target was still attempted, in order.
-        let attempted: Vec<WindowId> = mover.calls.iter().map(|p| p.window).collect();
+        let attempted: Vec<WindowId> = mover.calls().iter().map(|p| p.window).collect();
         assert_eq!(attempted, vec![WindowId(1), WindowId(2), WindowId(3)]);
     }
 
@@ -663,7 +743,7 @@ mod tests {
     fn empty_plan_applies_nothing() {
         let mut mover = FakeMover::new(vec![]);
         assert_eq!(apply_plan(&mut mover, &[]), (0, 0));
-        assert!(mover.calls.is_empty());
+        assert!(mover.calls().is_empty());
     }
 
     #[test]
@@ -675,7 +755,7 @@ mod tests {
             placement(7, 100, 150),
         ];
         apply_plan(&mut mover, &plan);
-        let order: Vec<WindowId> = mover.calls.iter().map(|p| p.window).collect();
+        let order: Vec<WindowId> = mover.calls().iter().map(|p| p.window).collect();
         assert_eq!(order, vec![WindowId(9), WindowId(4), WindowId(7)]);
     }
 

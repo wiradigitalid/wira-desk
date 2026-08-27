@@ -335,12 +335,8 @@ fn execute_monitor_move() {
         return;
     };
 
-    // Restore before placing. The maximized state is bound to the monitor the window was
-    // maximized on, so `SetWindowPos` on a still-maximized window is unreliable — the window
-    // springs back rather than landing where it was told. `UC-2` already restores before a
-    // half-screen snap; this inherits that rather than inventing a second answer.
-    restore_if_maximized(hwnd);
-
+    // No restore here any more: `apply_plan` does it for every placement of every command,
+    // which is what this comment used to claim about the snap path without it being true.
     apply_or_report(
         monitor::plan_move_to_monitor(
             &monitors[from].work,
@@ -370,23 +366,6 @@ fn current_window_rect(hwnd: isize) -> Option<crate::arrangement::Rect> {
         return None;
     }
     crate::arrangement::win32::rect_from_win32(r).ok()
-}
-
-/// Take a maximized window back to its normal state, so it can be positioned.
-///
-/// `SW_RESTORE` rather than `SW_SHOWNORMAL`: restore leaves a minimized window's activation
-/// alone, and the arrangement path is deliberately non-activating throughout.
-fn restore_if_maximized(hwnd: isize) {
-    use windows_sys::Win32::UI::WindowsAndMessaging::{IsZoomed, ShowWindowAsync, SW_RESTORE};
-    // SAFETY: both calls take only a handle validated by `resolve_context`, write nothing,
-    // and are documented to fail benignly on a stale one. `ShowWindowAsync` rather than
-    // `ShowWindow` keeps the Worker off a cross-process wait, the same reason `LBR-WM-3`
-    // bans blocking calls on this thread.
-    unsafe {
-        if IsZoomed(hwnd) != 0 {
-            ShowWindowAsync(hwnd, SW_RESTORE);
-        }
-    }
 }
 
 // The Worker's own configuration, replaced only by an accepted reload.
