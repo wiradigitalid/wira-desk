@@ -580,6 +580,15 @@ pub struct SettingsModel {
     pub onboarding_focus_index: usize,
     /// Whether simulated cycling has been triggered at least once in Step 2.
     pub onboarding_simulated_success: bool,
+    /// The tutorial's start-at-sign-in answer, pre-checked, and **held apart from
+    /// `draft.general.auto_start` on purpose.**
+    ///
+    /// The question is asked on the last screen. Skip lives on the first one, so a user who
+    /// skips never sees it — and if the answer went straight into the draft, skipping would
+    /// register an elevated logon task for someone who was never asked. Keeping it separate
+    /// means only [`SettingsModel::accept_onboarding_auto_start`] can commit it, and only
+    /// finishing calls that.
+    pub onboarding_auto_start: bool,
     /// Pure observer state for KeyCheck live keyboard responsiveness instrument.
     pub key_check: KeyCheckState,
     /// The field the most recent successful capture overwrote, and the chord
@@ -608,6 +617,11 @@ impl SettingsModel {
             onboarding: onboarding.then_some(OnboardingStep::Welcome),
             onboarding_focus_index: 0,
             onboarding_simulated_success: false,
+            // Pre-checked. A tray utility that does not come back after a restart is a
+            // utility the user has to remember to start, which is the thing it exists to
+            // save them from. Asking with the box already ticked is the honest middle:
+            // visible, one click to decline, and never decided in silence.
+            onboarding_auto_start: true,
             key_check: KeyCheckState::default(),
             last_capture: None,
             sent_lease_level: CAPTURE_LEASE_NONE,
@@ -810,6 +824,17 @@ impl SettingsModel {
     /// what every existing test says it means.
     pub fn dismiss_onboarding(&mut self) {
         self.onboarding = None;
+    }
+
+    /// Commit the tutorial's start-at-sign-in answer into the draft.
+    ///
+    /// Called only when the tutorial is *finished*, never when it is skipped. Skipping
+    /// happens on the first screen, before the question has been shown, and a skipped
+    /// question is not a yes — registering a task that runs elevated at every sign-in
+    /// because someone dismissed a tutorial would be exactly the kind of quiet system
+    /// change this product refuses to make.
+    pub fn accept_onboarding_auto_start(&mut self) {
+        self.draft.general.auto_start = self.onboarding_auto_start;
     }
 
     /// Simulate toggling dummy window focus in Onboarding Step 2.
@@ -1267,6 +1292,44 @@ mod tests {
         assert!(
             m.onboarding.is_none(),
             "after finishing, the tutorial must stop being drawn or Settings stays unreachable"
+        );
+    }
+
+    /// The asymmetry that matters more than the checkbox itself. Skip is on the first
+    /// screen and the question is on the last, so a skipped tutorial has not answered it —
+    /// and answering it yes would register a task that runs elevated at every sign-in with
+    /// no prompt, for a user who never saw the question.
+    #[test]
+    fn skipping_the_tutorial_does_not_answer_the_auto_start_question() {
+        let mut skipped = SettingsModel::new(Config::default(), true);
+        assert!(
+            skipped.onboarding_auto_start,
+            "the question is pre-checked, which is the whole reason this test exists"
+        );
+        skipped.skip_onboarding();
+        assert!(
+            !skipped.draft.general.auto_start,
+            "skipping must leave auto-start off; only finishing commits the answer"
+        );
+    }
+
+    #[test]
+    fn finishing_commits_the_pre_checked_auto_start_answer() {
+        let mut m = SettingsModel::new(Config::default(), true);
+        while !m.advance_onboarding() {}
+        m.accept_onboarding_auto_start();
+        assert!(m.draft.general.auto_start);
+    }
+
+    #[test]
+    fn finishing_after_declining_leaves_auto_start_off() {
+        let mut m = SettingsModel::new(Config::default(), true);
+        m.onboarding_auto_start = false;
+        while !m.advance_onboarding() {}
+        m.accept_onboarding_auto_start();
+        assert!(
+            !m.draft.general.auto_start,
+            "unticking the box must survive finishing, or the question was decoration"
         );
     }
 

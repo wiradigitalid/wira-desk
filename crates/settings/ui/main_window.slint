@@ -110,6 +110,8 @@ export component MainWindow inherits Window {
     callback onboarding_back();
     callback onboarding_skip();
     callback onboarding_finish();
+    in-out property <bool> onboarding_auto_start: true;
+    callback onboarding_auto_start_toggled(bool);
     callback onboarding_simulate();
 
     callback key_pressed_event(string, bool, bool, bool, bool);
@@ -173,6 +175,8 @@ export component MainWindow inherits Window {
                 finish_clicked => { root.onboarding_finish(); }
                 simulate_clicked => { root.onboarding_simulate(); }
                 drag_requested => { root.window_drag_requested(); }
+                auto_start <=> root.onboarding_auto_start;
+                auto_start_toggled(val) => { root.onboarding_auto_start_toggled(val); }
             }
         }
 

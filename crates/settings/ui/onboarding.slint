@@ -1,5 +1,6 @@
 import { Palette, Typography } from "theme.slint";
 import { Card, CardDivider } from "components/card.slint";
+import { ToggleSwitch } from "components/toggle_switch.slint";
 
 export component OnboardingModal inherits Rectangle {
     in property <int> current_step: 1; // 1 = Welcome, 2 = TrySwitching, 3 = Done
@@ -17,6 +18,12 @@ export component OnboardingModal inherits Rectangle {
     // titlebar this branch no longer draws. Settings keeps its titlebar and keeps
     // dragging from there; this is the onboarding-only replacement.
     callback drag_requested();
+
+    // Start-at-sign-in, asked on the last screen. Pre-checked, and bound to a property
+    // separate from the Settings one: skipping the tutorial must not answer a question the
+    // user never saw.
+    in-out property <bool> auto_start: true;
+    callback auto_start_toggled(bool);
 
     background: Palette.bg_card;
     border-radius: 12px;
@@ -254,6 +261,28 @@ export component OnboardingModal inherits Rectangle {
                         VerticalLayout {
                             Text { text: "Fully Customizable"; font-size: 13.5px; font-weight: 600; color: Palette.text_primary; }
                             Text { text: "Customize shortcuts, window snapping parameters, and VM passthrough rules anytime."; font-size: 12px; color: Palette.text_secondary; }
+                        }
+                    }
+
+                    CardDivider {}
+
+                    // The one decision this tutorial asks for. It is here rather than in the
+                    // installer because the installer runs elevated and possibly as a different
+                    // account, and the task it would create has to name the interactive user;
+                    // and because a silent install has no wizard, so winget users would never
+                    // have been asked at all.
+                    HorizontalLayout {
+                        spacing: 8px;
+                        Text { text: "↻"; font-size: 18px; vertical-alignment: center; }
+                        VerticalLayout {
+                            horizontal-stretch: 1;
+                            Text { text: "Start with Windows"; font-size: 13.5px; font-weight: 600; color: Palette.text_primary; }
+                            Text { text: "Comes back after every sign-in, so the shortcuts are always there. You can change this later in Settings."; font-size: 12px; color: Palette.text_secondary; wrap: word-wrap; }
+                        }
+                        ToggleSwitch {
+                            y: 4px;
+                            checked <=> root.auto_start;
+                            toggled(val) => { root.auto_start_toggled(val); }
                         }
                     }
                 }

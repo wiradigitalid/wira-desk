@@ -123,6 +123,7 @@ fn sync_model_to_ui(window: &MainWindow, model: &SettingsModel) {
         window.set_onboarding_step(step_num);
         window.set_onboarding_focus_index(model.onboarding_focus_index as i32);
         window.set_onboarding_sim_success(model.onboarding_simulated_success);
+        window.set_onboarding_auto_start(model.onboarding_auto_start);
     } else {
         // Navigation Pane
         let pane_idx = match model.pane {
@@ -549,8 +550,24 @@ fn main() -> Result<(), slint::PlatformError> {
         // means the tour is done, and the right answer is the thing the tour was about.
         main_window.on_onboarding_finish(move || {
             let mut m = model_rc.borrow_mut();
+            // Before the save, because the save is what the daemon reads to converge the
+            // scheduled task. Only here: the skip path deliberately does not call this, since
+            // Skip lives on the first screen and the question is on the last, so skipping is
+            // not an answer to it.
+            m.accept_onboarding_auto_start();
             m.save(&config_path());
             m.dismiss_onboarding();
+            if let Some(w) = window_weak.upgrade() {
+                sync_model_to_ui(&w, &m);
+            }
+        });
+    }
+    {
+        let model_rc = Rc::clone(&model);
+        let window_weak = main_window.as_weak();
+        main_window.on_onboarding_auto_start_toggled(move |val| {
+            let mut m = model_rc.borrow_mut();
+            m.onboarding_auto_start = val;
             if let Some(w) = window_weak.upgrade() {
                 sync_model_to_ui(&w, &m);
             }
