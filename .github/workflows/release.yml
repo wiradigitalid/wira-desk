@@ -41,53 +41,113 @@ jobs:
           }
           "VERSION=$crate" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
 
+      - name: Changelog has a section for this tag
+        shell: pwsh
+        run: |
+          # A tag with no changelog section fails HERE, before anything is built or
+          # published, because the alternative is a release whose notes nobody wrote — and
+          # the in-app updater shows this text to the user before they decide to update, so
+          # an empty section is a worse outcome than a failed workflow.
+          #
+          # Extracts `## [x.y.z]` up to the next `## ` heading. Emptiness is a failure too:
+          # a heading with nothing under it would otherwise pass and publish silence.
+          $lines = Get-Content CHANGELOG.md
+          $start = -1
+          for ($i = 0; $i -lt $lines.Count; $i++) {
+            if ($lines[$i] -match "^##\s+\[$([regex]::Escape($env:VERSION))\]") { $start = $i; break }
+          }
+          if ($start -lt 0) {
+            throw "CHANGELOG.md has no '## [$env:VERSION]' section. Add one before tagging; see the note at the top of that file."
+          }
+          $body = New-Object System.Collections.Generic.List[string]
+          for ($i = $start + 1; $i -lt $lines.Count; $i++) {
+            if ($lines[$i] -match '^##\s') { break }
+            $body.Add($lines[$i])
+          }
+          $text = ($body -join "`n").Trim()
+          if (-not $text) {
+            throw "CHANGELOG.md section '## [$env:VERSION]' is empty. Release notes are read by users through the updater, so an empty section is not publishable."
+          }
+          Set-Content changelog-section.md -Value $text -Encoding utf8
+          Write-Host "--- notes for $env:VERSION ---"
+          Write-Host $text
+
       - name: Build release
         run: cargo build --workspace --release --locked
 
-      - name: Install NSIS
+      - name: Install Inno Setup
         shell: pwsh
         run: |
           # Downloaded and checksum-verified rather than taken from the runner image or a
           # package manager, for the reason `ci.yml` already states about gitleaks and
           # cargo-deny: a pinned version plus a published SHA-256 is the least this should
           # do, and bumping the version means updating the checksum in the same commit.
-          # Not from the runner image, because the windows-2025 images ship no NSIS at all
-          # and `windows-latest` moves.
           #
-          # THE VERSION FLOOR IS A SECURITY FLOOR, NOT A PREFERENCE. CVE-2023-37378 is a
-          # local privilege escalation in NSIS UNINSTALLERS: the temporary directory they
-          # extract into is writable by every user, so a low-privileged attacker can win a
-          # race and plant a DLL that the uninstaller then loads. Our uninstaller runs
-          # elevated, which is exactly the exploitable shape. NSIS 3.08 and earlier are
-          # vulnerable; 3.09 fixed it with per-process isolated temporary directories.
-          # Never pin below 3.09, and the assertion below is here so that a future mirror
-          # swap cannot quietly reintroduce one.
+          # THE CHECKSUM IS ALSO THE VERSION PIN. CVE-2025-15595 is a local privilege
+          # escalation in Inno Setup installers by DLL hijacking during install; 6.2.1 and
+          # earlier are vulnerable, and our installer runs elevated, which is exactly the
+          # exploitable shape. A matching SHA-256 identifies this build bit-for-bit, so it
+          # cannot be 6.2.1. Never pin below 6.2.2.
           #
-          # `curl.exe` and not `Invoke-WebRequest`: SourceForge answers PowerShell's web
-          # client with an HTML interstitial and answers curl with the actual archive, so
-          # the obvious cmdlet would have this step checksumming a web page. curl ships
-          # with Windows and is present on the runners.
-          $expected = '56581f90db321581c5381193d796fffcf2d24b2f8fed2160a6c6a3baa67f2c4f'
-          curl.exe -sSLf -o nsis.zip 'https://downloads.sourceforge.net/project/nsis/NSIS%203/3.12/nsis-3.12.zip'
-          $actual = (Get-FileHash nsis.zip -Algorithm SHA256).Hash.ToLower()
-          if ($actual -ne $expected) { throw "NSIS checksum mismatch: got $actual" }
-          Expand-Archive nsis.zip -DestinationPath nsis
-          $makensis = Join-Path $PWD 'nsis\nsis-3.12\makensis.exe'
-          $version = (& $makensis /VERSION).Trim().TrimStart('v')
-          if ([version]$version -lt [version]'3.09') {
-            throw "NSIS $version is vulnerable to CVE-2023-37378 in its uninstaller; 3.09 or later is required"
+          # The floor is ALSO asserted, but in the build step rather than here, and that
+          # placement is deliberate. Nothing in this package reports its own version
+          # usefully: `ISCC /?` prints only "Inno Setup 6", and the version resources of
+          # `ISCC.exe`, `ISCmplr.dll`, and `Compil32.exe` are all `0.0.0.0`. The precise
+          # version appears in exactly one place — the compiler's banner while compiling —
+          # so that is where it is checked. An earlier attempt asserted it here against
+          # `ISCC /?` and would have thrown on every run: a gate that cannot pass where it
+          # was written.
+          #
+          # Pinned to the 6.x line rather than 7.x deliberately; `packaging/wiradesk.iss`
+          # carries the reason in full.
+          #
+          # `/PORTABLE=1` is why this needs no elevation and leaves no machine state: it
+          # unpacks the compiler into a directory instead of installing it. The download is
+          # from GitHub Releases, which is where jrsoftware publishes — the `files.
+          # jrsoftware.org/is/6/...` path that looks canonical returns 404 for this
+          # version, and that was found by checking rather than by a failed release.
+          $expected = '9c73c3bae7ed48d44112a0f48e66742c00090bdb5bef71d9d3c056c66e97b732'
+          curl.exe -sSLf -o innosetup.exe 'https://github.com/jrsoftware/issrc/releases/download/is-6_7_3/innosetup-6.7.3.exe'
+          $actual = (Get-FileHash innosetup.exe -Algorithm SHA256).Hash.ToLower()
+          if ($actual -ne $expected) { throw "Inno Setup checksum mismatch: got $actual" }
+          $dir = Join-Path $PWD 'inno'
+          & .\innosetup.exe /PORTABLE=1 /VERYSILENT /SUPPRESSMSGBOXES "/DIR=$dir" | Out-Null
+          if (-not (Test-Path (Join-Path $dir 'ISCC.exe'))) {
+            throw "ISCC.exe not found in $dir after the portable install"
           }
-          Split-Path $makensis | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+          $dir | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
 
       - name: Build the installer
         shell: pwsh
         run: |
+          # No version is passed in. `wiradesk.iss` reads it out of the staged binary's own
+          # version resource, so the installer cannot disagree with the program it
+          # installs. The tag-versus-crate step above is still needed and still earns its
+          # place: it guards the tag, which names the release, not the installer.
           New-Item -ItemType Directory stage, dist | Out-Null
           Copy-Item target\release\wiradesk.exe, target\release\wiradesk-settings.exe stage\
           Copy-Item LICENSE, NOTICE stage\
           Copy-Item crates\daemon\wiradesk.ico stage\
-          makensis /DVERSION=$env:VERSION "/DSTAGE_DIR=$PWD\stage" "/DOUT_DIR=$PWD\dist" packaging\wiradesk.nsi
-          if ($LASTEXITCODE -ne 0) { throw "makensis failed with $LASTEXITCODE" }
+          $out = & ISCC.exe "/DSTAGE_DIR=$PWD\stage" "/DOUT_DIR=$PWD\dist" packaging\wiradesk.iss
+          $out | Write-Host
+          if ($LASTEXITCODE -ne 0) { throw "ISCC failed with $LASTEXITCODE" }
+
+          # The security floor, asserted against the compiler that actually just ran. See
+          # the install step for why it lives here and not there. Absence of the line is a
+          # failure, not a pass, so a future Inno release that stops printing it breaks
+          # loudly instead of silently disabling this check.
+          $m = $out | Select-String -Pattern 'Compiler engine version: Inno Setup ([\d.]+)' | Select-Object -First 1
+          if (-not $m) { throw 'could not read the Inno Setup engine version from the compiler output' }
+          $engine = $m.Matches.Groups[1].Value
+          if ([version]$engine -lt [version]'6.2.2') {
+            throw "Inno Setup $engine is vulnerable to CVE-2025-15595; 6.2.2 or later is required"
+          }
+          Write-Host "Inno Setup engine $engine, above the 6.2.2 floor"
+
+          $setup = "dist\WiraDesk-$env:VERSION-x64-setup.exe"
+          if (-not (Test-Path $setup)) {
+            throw "expected $setup; ISCC named it from the binary's version resource, so this means the resource and the crate disagree"
+          }
 
       - name: Stage artefacts and checksums
         shell: pwsh
@@ -101,17 +161,59 @@ jobs:
             Set-Content dist\SHA256SUMS -Encoding ascii
           Get-Content dist\SHA256SUMS
 
+      - name: Publish latest.json for the in-app updater
+        shell: pwsh
+        run: |
+          # THIS FILE IS THE UPDATE CHANNEL, and its name is the whole point. Because the
+          # name never changes, `releases/latest/download/latest.json` is a permanently
+          # stable URL: no GitHub API, no rate limit, no HTML to parse. The installer
+          # filename carries a version and therefore cannot sit behind a stable link, which
+          # is the problem this file exists to solve.
+          #
+          # Read by two consumers that must not disagree, so there is one file rather than
+          # two: the application's own updater, and the download page on wiradigital.id.
+          #
+          # The hash here is what the updater checks a download against before executing
+          # it. Until a code-signing certificate exists it is the only verification there
+          # is, which makes this step security-relevant rather than metadata: it must be
+          # the hash of the artefact actually published, computed here, never transcribed.
+          $setupName = "WiraDesk-$env:VERSION-x64-setup.exe"
+          $setup = Join-Path 'dist' $setupName
+          $sha = (Get-FileHash $setup -Algorithm SHA256).Hash.ToLower()
+          $base = "https://github.com/$env:GITHUB_REPOSITORY/releases/download/$env:GITHUB_REF_NAME"
+          [ordered]@{
+            version      = $env:VERSION
+            released     = (Get-Date -Format 'yyyy-MM-dd')
+            setup_url    = "$base/$setupName"
+            setup_sha256 = $sha
+            notes_url    = "https://github.com/$env:GITHUB_REPOSITORY/releases/tag/$env:GITHUB_REF_NAME"
+          } | ConvertTo-Json | Set-Content dist\latest.json -Encoding utf8
+          Get-Content dist\latest.json
+
       - name: Publish
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          # Two ways to install, and neither is presented as the way to update. Updating is
+          # a button inside the application -- Settings, "Check for updates" -- which
+          # downloads this installer, verifies it, and runs it. A user is never asked to
+          # type a command to stay current, and a previous version of these notes did
+          # exactly that, which is why the omission is called out rather than left silent.
+          # The changelog section first, then the boilerplate that is true of every
+          # release. The section is the part written for a person; everything below it is
+          # standing information, and the last two lines are a licence term.
           $notes = @(
+            (Get-Content changelog-section.md -Raw).Trim(),
+            '',
+            '---',
+            '',
             'Install with the setup executable, or through winget:',
             '',
             '    winget install WiraDigitalIndonesia.WiraDesk',
             '',
-            'To update later: winget upgrade WiraDigitalIndonesia.WiraDesk',
+            'Updating is built in: Settings has a "Check for updates" button. Whichever way',
+            'you installed, that button is the update path, and it needs no command line.',
             '',
             'The installer places Wira Desk under %ProgramFiles%, which is deliberate and not',
             'configurable to a per-user location. Auto-start runs the daemon elevated at every',
@@ -133,7 +235,7 @@ jobs:
             'term, not a credit. See deny.toml for which branch of the licence applies.'
           ) -join "`n"
           gh release create $env:GITHUB_REF_NAME `
-            (Get-ChildItem dist\*.exe | ForEach-Object { $_.FullName }) dist\SHA256SUMS `
+            (Get-ChildItem dist\*.exe | ForEach-Object { $_.FullName }) dist\SHA256SUMS dist\latest.json `
             --title $env:GITHUB_REF_NAME --notes $notes
 
       - name: Decide whether winget can be updated

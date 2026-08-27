@@ -1,21 +1,54 @@
 ; Wira Desk installer — Inno Setup.
 ;
 ; ============================================================================
-; THIS IS AN EVALUATION PROTOTYPE. IT IS NOT BUILT BY CI AND NOTHING SHIPS FROM
-; IT. `packaging/wiradesk.nsi` is the installer this product currently uses.
+; THIS IS THE INSTALLER. There is no second one: `packaging/wiradesk.nsi` was
+; deleted when this file won, because keeping both is how a repository ends up
+; shipping the one nobody has looked at in a year.
 ;
-; It exists so the choice recorded in `docs/packaging-choice.md` can be compared
-; against a working equivalent rather than against documentation. It implements
-; the same eight requirements as the NSIS script, deliberately including the
-; awkward one (graceful daemon shutdown), because a prototype that skipped the
-; hard part would flatter Inno Setup rather than test it.
+; The comparison that chose it is `docs/packaging-choice.md`, and the deciding
+; reason is the `AppVersion` line below: the version is read out of the built
+; binary, so the installer cannot disagree about its version with the program it
+; installs. Two more rows followed from the same principle — `AppId` handles
+; upgrade-in-place, and `[UninstallRun]` removes the scheduled task in one
+; declarative line rather than a plugin call whose return value must be popped
+; off a stack by hand.
 ;
-; Exactly one of these two files should survive the decision. Keeping both is
-; how a repository ends up shipping the one nobody has looked at in a year.
+; The decision was taken before the first tag on purpose. After a release, the
+; old uninstaller and a new installer do not know about each other, and a user
+; who upgrades ends up with two Add/Remove Programs entries, one of them broken.
 ; ============================================================================
+;
+; TWO INSTALL CHANNELS, ONE UPDATE MECHANISM, AND WHAT THAT DEMANDS OF THIS FILE.
+;
+; This installer is run three ways, and only the first shows a wizard:
+;   1. A person double-clicks it.
+;   2. winget runs it silently, for `winget install` and `winget upgrade`.
+;   3. The application's own updater runs it silently, after downloading and
+;      verifying it. That is the update path users are pointed at; winget is a
+;      way to install, never a command a user is asked to type.
+;
+; So the silent path is not a corner case here — it is the path that carries
+; every update. Anything that only works on the wizard path is broken for
+; everyone who updates. See the `[Run]` section, which is exactly that defect.
 ;
 ; Build:
 ;   ISCC.exe /DSTAGE_DIR=<abs path to staged files> /DOUT_DIR=<abs path> packaging\wiradesk.iss
+;
+; TOOLCHAIN LICENCE, AND ONE OBLIGATION THAT IS ALREADY MET.
+;
+; Inno Setup's licence grants permission "to anyone to use this software for any
+; purpose, including commercial applications". The "Non-commercial use only" line
+; the compiler prints is a request to buy a commercial licence — added in 6.5.0 —
+; and not a restriction the licence imposes. It is also compiler-only: it does not
+; appear anywhere in the installer this file produces, which was checked by
+; searching the compiled binary rather than assumed.
+;
+; The condition that does bind us is that binary redistributions retain the
+; copyright notice and web addresses already in place. It is satisfied by
+; construction: the produced Setup carries "This installation was built with Inno
+; Setup." and a `jrsoftware.org` URL, both emitted by the engine. Nothing here
+; strips them, and nothing should — that would be the one way to fall out of
+; compliance, and it would look like tidying up.
 ;
 ; Pinned to the Inno Setup **6.x** line rather than 7.x on purpose. 6.7.3
 ; (2026-05-26) is mature and well past CVE-2025-15595, which affected 6.2.1 and
@@ -36,8 +69,10 @@
 ; `crates/daemon/build.rs` fills from the crate version. That makes the binary
 ; the single source of truth and removes a whole class of mismatch: the
 ; installer cannot disagree with the program it installs, because it is asking
-; the program. The NSIS script takes the version as a command-line define
-; instead, which works but is one more thing for a release workflow to get right.
+; the program. Note what this does NOT remove: the release workflow still checks
+; that the git tag agrees with the crate version, because the tag names the
+; GitHub release and could still contradict the binary inside it. What went away
+; is having to pass the version in, not having to agree about it.
 #define DaemonExe "wiradesk.exe"
 #define SettingsExe "wiradesk-settings.exe"
 #define AppVersion GetStringFileInfo(STAGE_DIR + "\" + DaemonExe, "FileVersion")
@@ -53,8 +88,12 @@
 [Setup]
 ; A fixed identity, and the reason upgrades work without being written: Inno
 ; matches AppId against the existing uninstall log, reuses the previous install
-; directory, and keeps one uninstall entry instead of accumulating them. The NSIS
-; script reaches the same place through an explicit `InstallDirRegKey`.
+; directory, and keeps one uninstall entry instead of accumulating them.
+;
+; It also carries the whole two-channel story. winget reads the installed version
+; from the Add/Remove Programs entry this AppId owns, and so does the in-app
+; updater — one entry, one source of truth, so the two channels cannot disagree
+; about what is installed. Changing this GUID orphans every existing install.
 AppId={{7E4F9C21-6B3D-4A88-9F14-2C5E8D0A1B73}
 AppName={#AppName}
 AppVersion={#AppVersion}
@@ -91,10 +130,14 @@ WizardStyle=modern
 Compression=lzma2/max
 SolidCompression=yes
 OutputDir={#OUT_DIR}
-OutputBaseFilename=WiraDesk-{#AppVersion}-x64-setup-inno
+; The `-x64-setup` ending is load-bearing: `release.yml` hands winget an
+; `installers-regex` of `-x64-setup\.exe$` so that the loose binaries published
+; beside this file cannot be mistaken for installers. Renaming this breaks the
+; winget channel silently — the manifest job simply matches nothing.
+OutputBaseFilename=WiraDesk-{#AppVersion}-x64-setup
 
-; Restart Manager is switched OFF on purpose, and this is the substantive
-; difference from the NSIS script rather than a style choice.
+; Restart Manager is switched OFF on purpose, and this is a deliberate rejection
+; of Inno's default rather than an oversight.
 ;
 ; `CloseApplications=yes` would let Windows Restart Manager decide HOW to close
 ; the running daemon. For a hidden WS_EX_TOOLWINDOW window with no
@@ -104,9 +147,9 @@ OutputBaseFilename=WiraDesk-{#AppVersion}-x64-setup-inno
 ; either: it only warns the user and waits for them to click OK, which is useless
 ; under `/VERYSILENT` where winget drives the install.
 ;
-; So the shutdown is done explicitly in [Code] below, exactly as the NSIS script
-; does it. Inno CAN match the requirement — it just cannot match it declaratively,
-; which is worth knowing before choosing it for this reason.
+; So the shutdown is done explicitly in [Code] below. This is the one requirement
+; Inno cannot meet declaratively, and it was known before choosing it — the choice
+; was made on the version-from-binary property, not on this row.
 CloseApplications=no
 
 ; When a certificate exists, signing is two directives plus a tool configured
@@ -130,9 +173,46 @@ Source: "{#STAGE_DIR}\NOTICE";         DestDir: "{app}"; DestName: "NOTICE.txt";
 Name: "{group}\{#AppName}"; Filename: "{app}\{#DaemonExe}"
 
 [Run]
-; The finish-page checkbox. `postinstall` makes it a checkbox rather than an
-; unconditional launch; `nowait` so Setup does not sit waiting on a tray daemon.
-Filename: "{app}\{#DaemonExe}"; Description: "Start {#AppName} now"; Flags: postinstall nowait skipifsilent
+; TWO ENTRIES, AND THE SECOND ONE IS A BUG FIX RATHER THAN A FEATURE.
+;
+; The first is the finish-page checkbox: `postinstall` makes it a checkbox rather
+; than an unconditional launch, `nowait` so Setup does not sit waiting on a tray
+; daemon, and `skipifsilent` because a silent install has no finish page to put a
+; checkbox on.
+;
+; That flag is correct and it was also the whole defect. With only this entry,
+; every silent install ends with the daemon not running — which is `winget
+; install`, `winget upgrade`, and every application-driven update. The visible
+; symptom is the worst kind: the user presses Update, watches a progress bar
+; complete, and the application is simply gone. Nothing errors, and no manual
+; test finds it, because a person testing by hand always takes the wizard path.
+;
+; So the second entry starts the daemon on exactly the path the first one skips.
+; It is not a duplicate: the two `Check`/`Flags` conditions are complements, so
+; precisely one of them runs. Even if both somehow fired, the daemon holds a
+; single-instance mutex and the second process would exit immediately — but that
+; is a backstop, not the design.
+; `runascurrentuser` IS ON BOTH ENTRIES AND MUST STAY. It is the fix for a real failure,
+; and it is written explicitly on both rather than left to a default, because the default
+; is what caused the failure — it flips depending on whether `postinstall` is present:
+;
+;   without postinstall -> runascurrentuser  (inherits Setup's elevated token)
+;   with    postinstall -> runasoriginaluser (the user's NON-elevated token)
+;
+; So the finish-page checkbox launched the daemon unelevated. The daemon's manifest
+; demands requireAdministrator, and `CreateProcess` — which is what [Run] uses — cannot
+; elevate; only ShellExecuteEx can. The result was not a UAC prompt but a hard failure:
+;
+;   Unable to execute file ... CreateProcess failed; code 740.
+;   The requested operation requires elevation.
+;
+; Note which path broke. The silent entry has no `postinstall`, so it was already correct;
+; the wizard path, the one a person actually takes, was the broken one. `shellexec` would
+; also work by routing through ShellExecuteEx, but it would put a SECOND UAC prompt in
+; front of a user who just consented to Setup's. Inheriting the token Setup already holds
+; costs no prompt at all.
+Filename: "{app}\{#DaemonExe}"; Description: "Start {#AppName} now"; Flags: postinstall nowait skipifsilent runascurrentuser
+Filename: "{app}\{#DaemonExe}"; Flags: nowait runascurrentuser; Check: RunningSilently
 
 [UninstallRun]
 ; The highest-consequence line in either installer script. An ONLOGON task with
@@ -163,6 +243,17 @@ const
   WM_CLOSE = $0010;
   StopPollIntervalMs = 250;
   StopMaxPolls = 24; { six seconds before forcing }
+
+{ True when Setup was started with /SILENT or /VERYSILENT, which is every
+  automated path: winget, and the application's own updater.
+
+  A wrapper rather than putting `WizardSilent` straight into a `Check:`
+  parameter, so that the [Run] entry reads as a stated intent and so there is one
+  place to change if the condition ever needs to be narrower. }
+function RunningSilently: Boolean;
+begin
+  Result := WizardSilent;
+end;
 
 { Ask a running daemon to exit, and wait for it.
 
@@ -204,7 +295,14 @@ begin
 
   { The settings window is bound to the daemon's lifetime and should already be
     gone. Asked without /F so an unsaved edit is not destroyed; a failure here
-    just means it had already closed, which is why the code is discarded. }
+    just means it had already closed, which is why the code is discarded.
+
+    DO NOT REMOVE THIS TO FIX AN UPDATER THAT DIES MID-UPDATE. It has to stay:
+    `[Files]` replaces `wiradesk-settings.exe`, and Windows cannot replace a
+    running image. The obligation is the other way round — the updater lives
+    inside Settings, so it MUST launch Setup detached and then exit, rather than
+    waiting on a process whose first act is to kill it. That contract is the
+    updater's to keep, and this comment exists because the tempting fix is here. }
   Exec(ExpandConstant('{sys}\taskkill.exe'), '/IM "{#SettingsExe}"',
        '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
 end;

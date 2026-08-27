@@ -36,36 +36,42 @@ jobs:
 
       # The installer is compiled on every push, not only on a version tag. A packaging
       # script that is only exercised at release time is a script that breaks at release
-      # time, when the tag is already pushed and the fix costs a retag. The NSIS pin, the
-      # 3.09 security floor it must never drop below, and the reason for `curl.exe` are all
-      # explained in `release.yml`; version and checksum must be bumped in both files
-      # together.
-      - name: Install NSIS
+      # time, when the tag is already pushed and the fix costs a retag. The Inno pin, the
+      # 6.2.2 security floor it must never drop below, and why the download comes from
+      # GitHub Releases are all explained in `release.yml`; version and checksum must be
+      # bumped in both files together.
+      - name: Install Inno Setup
         shell: pwsh
         run: |
-          $expected = '56581f90db321581c5381193d796fffcf2d24b2f8fed2160a6c6a3baa67f2c4f'
-          curl.exe -sSLf -o nsis.zip 'https://downloads.sourceforge.net/project/nsis/NSIS%203/3.12/nsis-3.12.zip'
-          $actual = (Get-FileHash nsis.zip -Algorithm SHA256).Hash.ToLower()
-          if ($actual -ne $expected) { throw "NSIS checksum mismatch: got $actual" }
-          Expand-Archive nsis.zip -DestinationPath nsis
-          $makensis = Join-Path $PWD 'nsis\nsis-3.12\makensis.exe'
-          $version = (& $makensis /VERSION).Trim().TrimStart('v')
-          if ([version]$version -lt [version]'3.09') {
-            throw "NSIS $version is vulnerable to CVE-2023-37378 in its uninstaller; 3.09 or later is required"
+          $expected = '9c73c3bae7ed48d44112a0f48e66742c00090bdb5bef71d9d3c056c66e97b732'
+          curl.exe -sSLf -o innosetup.exe 'https://github.com/jrsoftware/issrc/releases/download/is-6_7_3/innosetup-6.7.3.exe'
+          $actual = (Get-FileHash innosetup.exe -Algorithm SHA256).Hash.ToLower()
+          if ($actual -ne $expected) { throw "Inno Setup checksum mismatch: got $actual" }
+          $dir = Join-Path $PWD 'inno'
+          & .\innosetup.exe /PORTABLE=1 /VERYSILENT /SUPPRESSMSGBOXES "/DIR=$dir" | Out-Null
+          if (-not (Test-Path (Join-Path $dir 'ISCC.exe'))) {
+            throw "ISCC.exe not found in $dir after the portable install"
           }
-          Split-Path $makensis | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+          $dir | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
 
       - name: Installer builds
         shell: pwsh
         run: |
-          $meta = cargo metadata --format-version 1 --no-deps --locked | ConvertFrom-Json
-          $version = ($meta.packages | Where-Object { $_.name -eq 'daemon' }).version
+          # No version is passed. `wiradesk.iss` reads it out of the staged binary's own
+          # version resource, so a mismatch between installer and program is not possible
+          # rather than merely checked.
           New-Item -ItemType Directory stage, dist | Out-Null
           Copy-Item target\release\wiradesk.exe, target\release\wiradesk-settings.exe stage\
           Copy-Item LICENSE, NOTICE stage\
           Copy-Item crates\daemon\wiradesk.ico stage\
-          makensis /DVERSION=$version "/DSTAGE_DIR=$PWD\stage" "/DOUT_DIR=$PWD\dist" packaging\wiradesk.nsi
-          if ($LASTEXITCODE -ne 0) { throw "makensis failed with $LASTEXITCODE" }
+          $out = & ISCC.exe "/DSTAGE_DIR=$PWD\stage" "/DOUT_DIR=$PWD\dist" packaging\wiradesk.iss
+          $out | Write-Host
+          if ($LASTEXITCODE -ne 0) { throw "ISCC failed with $LASTEXITCODE" }
+          $m = $out | Select-String -Pattern 'Compiler engine version: Inno Setup ([\d.]+)' | Select-Object -First 1
+          if (-not $m) { throw 'could not read the Inno Setup engine version from the compiler output' }
+          if ([version]$m.Matches.Groups[1].Value -lt [version]'6.2.2') {
+            throw "Inno Setup $($m.Matches.Groups[1].Value) is vulnerable to CVE-2025-15595; 6.2.2 or later is required"
+          }
           Get-ChildItem dist
 
   secrets:
