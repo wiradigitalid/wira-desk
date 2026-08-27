@@ -149,16 +149,19 @@ export component MainWindow inherits Window {
         border-radius: is_onboarding ? 12px : 8px;
         clip: true;
 
+        // No titlebar during onboarding, and that is a deliberate difference from
+        // Settings rather than an omission. The tutorial already offers its own way out
+        // -- Skip on the first screen, "Start Using Wira Desk" on the last -- so a close
+        // button would be a third one, and a title bar frames a window the user has not
+        // chosen to open yet.
+        //
+        // What the titlebar was also providing is dragging, because the window is
+        // `no-frame` and had no other drag surface. The modal now carries one across its
+        // top strip. Settings keeps the titlebar and keeps dragging from it; the drag
+        // capability is not optional there, it just lives somewhere else here.
         if is_onboarding : VerticalLayout {
             padding: 0px;
             spacing: 0px;
-
-            Titlebar {
-                title: "Wira Desk";
-                is_onboarding: true;
-                drag_requested => { root.window_drag_requested(); }
-                close_clicked => { root.onboarding_skip(); }
-            }
 
             OnboardingModal {
                 current_step: root.onboarding_step;
@@ -169,6 +172,7 @@ export component MainWindow inherits Window {
                 skip_clicked => { root.onboarding_skip(); }
                 finish_clicked => { root.onboarding_finish(); }
                 simulate_clicked => { root.onboarding_simulate(); }
+                drag_requested => { root.window_drag_requested(); }
             }
         }
 

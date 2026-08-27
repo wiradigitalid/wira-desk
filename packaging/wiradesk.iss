@@ -316,14 +316,66 @@ begin
 end;
 
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+var
+  DataDir: String;
 begin
   if CurUninstallStep = usUninstall then
     StopDaemon
   else if CurUninstallStep = usPostUninstall then
   begin
-    if not UninstallSilent then
-      MsgBox('{#AppName} has been removed.' + #13#10 + #13#10 +
-             'Your settings and log were left in %APPDATA%\WiraDesk. Delete that ' +
-             'folder by hand if you want them gone.', mbInformation, MB_OK);
+    // OFFER THE DELETION RATHER THAN DESCRIBING IT.
+    //
+    // These are `//` comments rather than the brace form used elsewhere in this file,
+    // and deliberately: Inno's Pascal comments are delimited by `{` and `}`, so naming a
+    // constant like {userappdata} inside one closes the comment early and the prose after
+    // it is parsed as code. The compiler said "Identifier expected" at the closing brace
+    // and was right. Anything discussing Inno constants belongs in a `//` comment.
+    //
+    // This used to print an unconditional notice saying the folder had been left behind
+    // and the user could delete it by hand. Two things were wrong. It fired even when the
+    // folder did not exist, telling people about nothing. And it arrived after the
+    // decision, when the only available action was to go and find a directory in
+    // %APPDATA% themselves -- which almost nobody does, so an honest description of that
+    // behaviour is "we leave files on your machine and mention it".
+    //
+    // Deleting is now offered, only when there is something to delete, and No is the
+    // default so the destructive answer is never what a hurried Enter selects.
+    //
+    // Why this is safe to offer, having previously been argued against here. The concern
+    // was that an elevated uninstaller resolves the AppData constant against whoever is
+    // running it, who need not be the user those settings belong to. That is true, and
+    // the consequence is milder than it first looked: the wrong-profile case deletes the
+    // RUNNING administrator's own folder, which is either absent or theirs to lose, and
+    // it cannot reach another user's profile. The second objection -- that the folder
+    // carries migration semantics, since its absence re-imports from a legacy
+    // %APPDATA%\WinTick -- no longer applies to anyone but this project's own maintainer,
+    // because WinTick was never publicly released and so no user has one.
+    //
+    // Silent uninstall never prompts and never deletes. Package managers uninstall
+    // unattended, and destroying user data with nobody present to consent is not a
+    // default any of them asked for.
+    DataDir := ExpandConstant('{userappdata}\WiraDesk');
+
+    if UninstallSilent then
+      Exit;
+
+    if not DirExists(DataDir) then
+    begin
+      MsgBox('{#AppName} has been removed.', mbInformation, MB_OK);
+      Exit;
+    end;
+
+    if MsgBox('{#AppName} has been removed.' + #13#10 + #13#10 +
+              'Also delete your settings and log?' + #13#10 + #13#10 +
+              DataDir + #13#10 + #13#10 +
+              'Choose No to keep them, which is what you want if you plan to ' +
+              'reinstall.', mbConfirmation, MB_YESNO or MB_DEFBUTTON2) = IDYES then
+    begin
+      { True/True/True: delete the directory itself, its files, and its subdirectories.
+        A failure is deliberately not reported. The program is already gone, the user has
+        been told the path, and an error dialog at this point would be the last thing
+        they see from a product they just removed. }
+      DelTree(DataDir, True, True, True);
+    end;
   end;
 end;

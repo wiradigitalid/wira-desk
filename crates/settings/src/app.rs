@@ -812,11 +812,6 @@ impl SettingsModel {
         self.onboarding = None;
     }
 
-    /// True while the tutorial still has a screen to show.
-    pub fn is_on_last_onboarding_screen(&self) -> bool {
-        self.onboarding == Some(OnboardingStep::Done)
-    }
-
     /// Simulate toggling dummy window focus in Onboarding Step 2.
     pub fn toggle_onboarding_simulation(&mut self) {
         self.onboarding_focus_index = if self.onboarding_focus_index == 0 {
@@ -1248,27 +1243,31 @@ mod tests {
         assert_eq!(m.onboarding, Some(OnboardingStep::Done));
     }
 
-    /// The defect this guards was reported from a real install: the tutorial's final
-    /// button did nothing, and Settings was unreachable without closing the window.
+    /// The defect this guards was reported from a real install: completing the tutorial
+    /// made everything disappear instead of landing in Settings, so a user who finished
+    /// was worse off than one who skipped.
+    ///
+    /// Dismissal has to be expressible separately from reaching the end, because the
+    /// terminal state `Some(Done)` is what `skip` produces too, and the view decides
+    /// whether to draw the tutorial from `onboarding.is_some()`.
     #[test]
-    fn finishing_the_last_screen_leaves_the_tutorial() {
+    fn dismissing_the_tutorial_makes_settings_reachable() {
         let mut m = SettingsModel::new(Config::default(), true);
         while !m.advance_onboarding() {}
-        assert!(
-            m.is_on_last_onboarding_screen(),
-            "advancing to the end should land on the last screen, not past it"
+        assert_eq!(
+            m.onboarding,
+            Some(OnboardingStep::Done),
+            "advancing to the end lands on the last screen, not past it"
         );
 
-        // What the view asks before drawing the tutorial. While this is true the settings
-        // panes are not rendered at all, which is why dismissal has to be expressible.
+        // While this holds, the settings panes are not rendered at all.
         assert!(m.onboarding.is_some());
 
         m.dismiss_onboarding();
         assert!(
             m.onboarding.is_none(),
-            "after finishing, the tutorial must no longer be drawn or Settings stays unreachable"
+            "after finishing, the tutorial must stop being drawn or Settings stays unreachable"
         );
-        assert!(!m.is_on_last_onboarding_screen());
     }
 
     #[test]

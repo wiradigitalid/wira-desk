@@ -12,6 +12,12 @@ export component OnboardingModal inherits Rectangle {
     callback finish_clicked();
     callback simulate_clicked();
 
+    // Onboarding carries no titlebar, so the window would otherwise be immovable: the
+    // main window is `no-frame`, and the only surface that emitted a drag was the
+    // titlebar this branch no longer draws. Settings keeps its titlebar and keeps
+    // dragging from there; this is the onboarding-only replacement.
+    callback drag_requested();
+
     background: Palette.bg_card;
     border-radius: 12px;
     border-width: 1px;
@@ -341,6 +347,29 @@ export component OnboardingModal inherits Rectangle {
                 finish_touch := TouchArea {
                     clicked => { root.finish_clicked(); }
                 }
+            }
+        }
+    }
+
+    // Drag strip: the top edge down through the progress indicator, and no further.
+    //
+    // 34px is measured rather than chosen: the layout above has 18px of top padding,
+    // the indicator bars are 4px, and the next element starts after 12px of spacing.
+    // So 34px covers exactly the indicator and everything above it, and stops before
+    // the heading. Nothing in that band is interactive, which is why a plain overlay is
+    // safe here; extending it over the whole modal would put a drag surface underneath
+    // buttons, and a window that slides when you press Next is worse than one you grab
+    // by the top.
+    //
+    // Declared last so it sits above the layout. It has to, to receive the press.
+    TouchArea {
+        x: 0px;
+        y: 0px;
+        width: root.width;
+        height: 34px;
+        pointer-event(event) => {
+            if event.kind == PointerEventKind.down && event.button == PointerEventButton.left {
+                root.drag_requested();
             }
         }
     }

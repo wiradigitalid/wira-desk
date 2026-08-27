@@ -475,19 +475,13 @@ fn main() -> Result<(), slint::PlatformError> {
     {
         let model_rc = Rc::clone(&model);
         let window_weak = main_window.as_weak();
+        // Reachable only from screens 1 and 2: the Next button is `if current_step < 3`,
+        // and the last screen offers "Start Using Wira Desk" instead, which is
+        // `on_onboarding_finish`. An earlier attempt at the finish behaviour was put here
+        // and was therefore dead code -- the branch it added could not be entered.
         main_window.on_onboarding_next(move || {
             let mut m = model_rc.borrow_mut();
-            // On the last screen this button means "finish", and finishing is two things
-            // the previous version did neither of: persist, so the tutorial does not run
-            // again (whether it does is decided from whether a config file exists, exactly
-            // as the skip path relies on), and leave the tutorial view so the settings
-            // panes become reachable. Before this, pressing it did nothing at all.
-            if m.is_on_last_onboarding_screen() {
-                m.save(&config_path());
-                m.dismiss_onboarding();
-            } else {
-                m.advance_onboarding();
-            }
+            m.advance_onboarding();
             if let Some(w) = window_weak.upgrade() {
                 sync_model_to_ui(&w, &m);
             }
@@ -526,11 +520,20 @@ fn main() -> Result<(), slint::PlatformError> {
     {
         let model_rc = Rc::clone(&model);
         let window_weak = main_window.as_weak();
+        // "Start Using Wira Desk" lands in Settings. It used to hide the window, which is
+        // the reported defect: the tutorial ended and everything disappeared, so a user
+        // who completed it was worse off than one who skipped -- skipping at least leaves
+        // by a door labelled skip.
+        //
+        // Skip still hides, and the asymmetry is the point. Skip means "not now", and the
+        // right answer to that is to get out of the way and leave the tray icon. Finishing
+        // means the tour is done, and the right answer is the thing the tour was about.
         main_window.on_onboarding_finish(move || {
             let mut m = model_rc.borrow_mut();
             m.save(&config_path());
+            m.dismiss_onboarding();
             if let Some(w) = window_weak.upgrade() {
-                let _ = w.hide();
+                sync_model_to_ui(&w, &m);
             }
         });
     }
