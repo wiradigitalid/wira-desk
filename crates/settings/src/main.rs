@@ -5,6 +5,7 @@ mod daemon_watch;
 mod hookbridge;
 mod persistence;
 mod theme;
+mod update;
 
 slint::include_modules!();
 

@@ -4174,6 +4174,8 @@ version = "0.1.0"
 dependencies = [
  "embed-resource",
  "i-slint-backend-winit",
+ "serde",
+ "serde_json",
  "shared",
  "slint",
  "slint-build",
