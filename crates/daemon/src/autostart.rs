@@ -1,4 +1,16 @@
 //! Auto-start via Windows Task Scheduler (`schtasks.exe`).
+//!
+//! # Two registration paths, and why the shorter one is not enough
+//! Registration prefers `/XML` and falls back to flags. Three settings this task needs
+//! are wrong by default and `schtasks.exe` exposes no flag for any of them — the daemon
+//! does not start on battery, is *terminated* when a charger is unplugged, and is killed
+//! after 72 hours of running. [`task_xml`] carries the evidence for each. The fallback
+//! keeps auto-start working if the XML path is unavailable, with those defaults intact,
+//! because that is what shipped before and it is a better floor than nothing.
+//! `refresh_registered_path` runs `enable` on every start, so a task written by an older
+//! version is corrected without migration code.
+//!
+//! # The rest holds for both paths
 //! The task is created with trigger `ONLOGON`, `/RL HIGHEST`, and `/RU <username>`
 //! — it runs as the **active user** (not `SYSTEM`) so `%APPDATA%` stays aligned
 //! between daemon and settings, while still elevated without a UAC prompt at boot.
@@ -64,17 +76,217 @@ fn delete_args() -> Vec<String> {
     ]
 }
 
-/// Run `schtasks.exe` with the given arguments without a console window and
-/// without inheriting stdio (output is irrelevant; only the exit code is used).
+/// Run `schtasks.exe` with the given arguments without a console window.
 /// Returns `None` if the process fails to spawn.
+///
+/// **The output is captured and logged on failure, and that is the point.** This
+/// previously discarded both streams, on the reasoning that only the exit code
+/// mattered. The cost showed up the first time auto-start misbehaved on a real
+/// machine: the log said `schtasks /Create failed` and nothing else, so the reason had
+/// to be reconstructed by running `schtasks /Query` by hand. A failure that destroys
+/// its own explanation is the expensive kind.
 fn run_schtasks(args: &[String]) -> Option<std::process::ExitStatus> {
-    Command::new("schtasks.exe")
+    let out = Command::new("schtasks.exe")
         .args(args)
         .creation_flags(CREATE_NO_WINDOW)
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .status()
-        .ok()
+        .stdin(Stdio::null())
+        .output()
+        .ok()?;
+
+    if !out.status.success() {
+        // Both streams, because `schtasks` reports errors on stdout about as often as on
+        // stderr. Collapsed to one line and truncated by characters rather than bytes, so
+        // a localised message cannot split a UTF-8 sequence and panic the logger.
+        let report = |label: &str, bytes: &[u8]| {
+            let text = String::from_utf8_lossy(bytes)
+                .replace(['\r', '\n'], " ")
+                .trim()
+                .to_owned();
+            if !text.is_empty() {
+                let clipped: String = text.chars().take(300).collect();
+                debug_log(&format!("Wira Desk: schtasks {label}: {clipped}"));
+            }
+        };
+        report("stderr", &out.stderr);
+        report("stdout", &out.stdout);
+    }
+
+    Some(out.status)
+}
+
+/// Escape the five characters XML reserves, so an install path cannot break the
+/// document or inject elements into it.
+fn xml_escape(raw: &str) -> String {
+    let mut out = String::with_capacity(raw.len());
+    for ch in raw.chars() {
+        match ch {
+            '&' => out.push_str("&amp;"),
+            '<' => out.push_str("&lt;"),
+            '>' => out.push_str("&gt;"),
+            '"' => out.push_str("&quot;"),
+            '\'' => out.push_str("&apos;"),
+            _ => out.push(ch),
+        }
+    }
+    out
+}
+
+/// The task definition as Task Scheduler XML.
+///
+/// **Why XML at all, when `/Create` with flags is shorter.** Three of this task's
+/// settings are wrong by default and `schtasks.exe` has no flag for any of them —
+/// verified against `schtasks /Create /?`, which offers nothing for power management or
+/// execution limits. All three were found by reading `schtasks /Query /V` output from a
+/// real install, and two of them were then reproduced deliberately:
+///
+/// * `DisallowStartIfOnBatteries` defaults **true**, so on a laptop running on battery
+///   the daemon does not start at all. Confirmed: plugged in, it starts; on battery, it
+///   does not.
+/// * `StopIfGoingOnBatteries` defaults **true**, so unplugging the charger *terminates*
+///   a running daemon. A tray utility disappearing when a cable is pulled.
+/// * `ExecutionTimeLimit` is absent from the XML Windows emits, and absent means the
+///   72-hour default — a kill switch on day three for a process meant to run forever.
+///
+/// The element order mirrors what Windows itself emitted for a task created the old
+/// way, taken from `schtasks /Query /XML`, rather than from a reading of the schema
+/// sequence: the two disagree about where `MultipleInstancesPolicy` belongs, and output
+/// Windows produces is output Windows accepts.
+///
+/// `<Command>` is deliberately **not** quoted. The old CLI form needed `"..."` because
+/// Task Scheduler would otherwise split a spaced path into executable plus arguments;
+/// in XML the element boundary is the delimiter, so quotes would become part of the
+/// path and only work by being stripped again.
+fn task_xml(exe_path: &str, user: &str) -> String {
+    let exe = xml_escape(exe_path);
+    let who = xml_escape(user);
+    format!(
+        r#"<?xml version="1.0" encoding="UTF-16"?>
+<Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
+  <RegistrationInfo>
+    <Author>{who}</Author>
+    <Description>Starts Wira Desk when {who} signs in.</Description>
+  </RegistrationInfo>
+  <Principals>
+    <Principal id="Author">
+      <UserId>{who}</UserId>
+      <LogonType>InteractiveToken</LogonType>
+      <RunLevel>HighestAvailable</RunLevel>
+    </Principal>
+  </Principals>
+  <Settings>
+    <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
+    <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
+    <MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>
+    <ExecutionTimeLimit>PT0S</ExecutionTimeLimit>
+    <Enabled>true</Enabled>
+  </Settings>
+  <Triggers>
+    <LogonTrigger>
+      <Enabled>true</Enabled>
+    </LogonTrigger>
+  </Triggers>
+  <Actions Context="Author">
+    <Exec>
+      <Command>{exe}</Command>
+    </Exec>
+  </Actions>
+</Task>
+"#
+    )
+}
+
+/// Fully-qualified account for the XML principal, `DOMAIN\user` where a domain is
+/// known. Windows normalises it to a SID on storage; either form is accepted on input.
+fn qualified_username() -> String {
+    let user = current_username();
+    match std::env::var("USERDOMAIN") {
+        Ok(domain) if !domain.is_empty() && !user.is_empty() => format!("{domain}\\{user}"),
+        _ => user,
+    }
+}
+
+/// Where the XML may be staged, or `None` when nowhere safe is available.
+///
+/// **This is a privilege boundary, not a scratch path.** `schtasks` reads the file back
+/// as an elevated process, and whatever it reads becomes a task that runs elevated at
+/// every logon with no prompt. If the file lives anywhere a non-administrator can
+/// write, another process running as the same user can replace its contents between our
+/// write and that read, and register a task of its own choosing. Deleting the file
+/// afterwards does not help: the window is before the delete, not after it.
+///
+/// `%TEMP%` and `%APPDATA%` both fail this test — they sit in the user profile at
+/// normal user permissions, which `PRIVACY.md` already says out loud. The install
+/// directory passes, and rather than assume so, `acl` is asked. Anything short of a
+/// clear `AdminOnly` verdict returns `None`, which sends the caller down the CLI path:
+/// the battery defaults stay wrong, and that is strictly better than a privilege
+/// escalation. An unreadable DACL is treated as unsafe for the same reason.
+fn xml_staging_dir() -> Option<std::path::PathBuf> {
+    let dir = std::env::current_exe().ok()?.parent()?.to_path_buf();
+    match crate::acl::replaceable_by_non_admin(&dir) {
+        crate::acl::Verdict::AdminOnly => Some(dir),
+        crate::acl::Verdict::NonAdminWritable => {
+            debug_log(
+                "Wira Desk: autostart::xml_staging_dir — install directory is non-admin \
+                 writable; refusing to stage task XML there",
+            );
+            None
+        }
+        crate::acl::Verdict::Unknown => {
+            debug_log(
+                "Wira Desk: autostart::xml_staging_dir — install directory DACL unreadable; \
+                 treating as unsafe",
+            );
+            None
+        }
+    }
+}
+
+/// Register the task from XML. `false` on any failure, so the caller can fall back to
+/// the flag-based path rather than leaving auto-start broken.
+fn register_via_xml(exe: &str) -> bool {
+    let Some(dir) = xml_staging_dir() else {
+        return false;
+    };
+    let path = dir.join("autostart-task.xml");
+
+    // UTF-16LE with a BOM: Task Scheduler's own output declares `encoding="UTF-16"`, and
+    // handing it UTF-8 is a documented way to get an unhelpful parse error.
+    let xml = task_xml(exe, &qualified_username());
+    let mut bytes = vec![0xFF, 0xFE];
+    for unit in xml.encode_utf16() {
+        bytes.extend_from_slice(&unit.to_le_bytes());
+    }
+    if let Err(e) = std::fs::write(&path, &bytes) {
+        debug_log(&format!(
+            "Wira Desk: autostart::register_via_xml — writing {} failed: {e}",
+            path.display()
+        ));
+        return false;
+    }
+
+    let args = vec![
+        "/Create".to_string(),
+        "/TN".to_string(),
+        TASK_NAME.to_string(),
+        "/XML".to_string(),
+        path.to_string_lossy().into_owned(),
+        "/F".to_string(),
+    ];
+    let ok = run_schtasks(&args).map(|s| s.success()).unwrap_or(false);
+
+    // Removed either way. It carries no secret, but a stale task definition sitting in
+    // the install directory invites someone to edit it and wonder why nothing changed.
+    if let Err(e) = std::fs::remove_file(&path) {
+        debug_log(&format!(
+            "Wira Desk: autostart::register_via_xml — could not remove {}: {e}",
+            path.display()
+        ));
+    }
+
+    if !ok {
+        debug_log("Wira Desk: autostart::register_via_xml — schtasks /Create /XML failed");
+    }
+    ok
 }
 
 /// Absolute path of the running daemon executable.
@@ -97,7 +309,18 @@ pub fn is_registered() -> bool {
         .unwrap_or(false)
 }
 
-/// Register the auto-start task. Returns `true` when `schtasks /Create` succeeds.
+/// Register the auto-start task. Returns `true` when registration succeeds.
+///
+/// XML first, flags second, and the fallback is deliberate rather than defensive
+/// boilerplate. The XML path is the only one that can correct the three settings
+/// `schtasks` gets wrong by default (see [`task_xml`]), but it depends on a staging
+/// directory that passes an ACL check and on a schema this code cannot validate
+/// locally. If either gives way, auto-start still gets registered — with the battery
+/// defaults intact, which is the behaviour that shipped before and is worth keeping as
+/// a floor rather than replacing with nothing.
+///
+/// `refresh_registered_path` calls this on every daemon start, so a task created by an
+/// older version is rewritten with the corrected settings without any migration code.
 pub fn enable() -> bool {
     let exe = match current_exe_path() {
         Some(p) => p,
@@ -106,6 +329,12 @@ pub fn enable() -> bool {
             return false;
         }
     };
+
+    if register_via_xml(&exe) {
+        return true;
+    }
+    debug_log("Wira Desk: autostart::enable — XML registration unavailable, using flags");
+
     let user = current_username();
     let ok = run_schtasks(&create_args(&exe, &user))
         .map(|s| s.success())
@@ -211,6 +440,77 @@ pub fn disable() -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The three settings this whole XML path exists for. Each was wrong by default,
+    /// each is unreachable through a `schtasks` flag, and two were reproduced on a real
+    /// laptop before being fixed — so each is asserted by value rather than trusted to
+    /// survive an edit of the template.
+    #[test]
+    fn task_xml_corrects_the_three_schtasks_defaults() {
+        let xml = task_xml(r"C:\Program Files\Wira Desk\wiradesk.exe", r"PC\bob");
+
+        assert!(
+            xml.contains("<DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>"),
+            "on battery the daemon would not start at all"
+        );
+        assert!(
+            xml.contains("<StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>"),
+            "unplugging the charger would terminate a running daemon"
+        );
+        assert!(
+            xml.contains("<ExecutionTimeLimit>PT0S</ExecutionTimeLimit>"),
+            "absent means the 72-hour default, which kills a tray daemon on day three"
+        );
+    }
+
+    #[test]
+    fn task_xml_carries_the_logon_and_elevation_shape() {
+        let xml = task_xml(r"C:\x\wiradesk.exe", r"PC\bob");
+        assert!(xml.contains("<LogonTrigger>"));
+        assert!(xml.contains("<RunLevel>HighestAvailable</RunLevel>"));
+        assert!(xml.contains("<LogonType>InteractiveToken</LogonType>"));
+        assert!(xml.contains(r"<Command>C:\x\wiradesk.exe</Command>"));
+    }
+
+    /// `<Command>` must not be quoted here. The CLI form needs `"..."` so a spaced path
+    /// is not split into executable plus arguments; in XML the element boundary does
+    /// that job, and quotes would become part of the path.
+    #[test]
+    fn task_xml_does_not_quote_the_command_the_way_the_cli_must() {
+        let xml = task_xml(r"C:\Program Files\Wira Desk\wiradesk.exe", "bob");
+        assert!(xml.contains(r"<Command>C:\Program Files\Wira Desk\wiradesk.exe</Command>"));
+        assert!(
+            !xml.contains("<Command>\""),
+            "a quoted path in XML is a path that begins with a quote character"
+        );
+    }
+
+    /// An install directory is attacker-influenced in the sense that matters: it is a
+    /// string that ends up inside a document which becomes an elevated logon task.
+    #[test]
+    fn xml_escaping_closes_the_injection_route() {
+        let nasty = r#"C:\a&b\<x>\"q"\'p'\wiradesk.exe"#;
+        let xml = task_xml(nasty, "bob");
+
+        assert!(
+            !xml.contains("<x>"),
+            "an element survived into the document"
+        );
+        assert!(xml.contains("&amp;") && xml.contains("&lt;x&gt;"));
+        assert!(xml.contains("&quot;") && xml.contains("&apos;"));
+
+        // The closing tag must still be exactly where the parser expects it.
+        assert!(xml.contains("</Command>"));
+    }
+
+    #[test]
+    fn xml_escape_leaves_ordinary_text_alone() {
+        assert_eq!(
+            xml_escape(r"C:\Program Files\Wira Desk"),
+            r"C:\Program Files\Wira Desk"
+        );
+        assert_eq!(xml_escape(""), "");
+    }
 
     #[test]
     fn create_args_wraps_exe_path_in_quotes() {
