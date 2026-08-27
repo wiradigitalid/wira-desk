@@ -1,9 +1,10 @@
-# Publishes binaries with checksums on a version tag.
+# Publishes the installer, the loose binaries, and checksums on a version tag, then hands
+# the release to winget so `winget upgrade` is the update path.
 #
-# Read `SECURITY.md` before trusting a download: these binaries are NOT code-signed,
-# and a checksum published beside the file it describes proves the download was not
-# corrupted in transit â€” it does not prove who produced it. Building from source is
-# still the stronger check.
+# Read `SECURITY.md` before trusting a download: these binaries are NOT code-signed, and a
+# checksum published beside the file it describes proves the download was not corrupted in
+# transit — it does not prove who produced it. Building from source is still the stronger
+# check.
 name: release
 
 on:
@@ -16,34 +17,100 @@ permissions:
 jobs:
   release:
     runs-on: windows-latest
+    outputs:
+      # `secrets` is not readable from a job-level `if`, so the decision is made here, in a
+      # step, and handed downstream as an output.
+      publish-winget: ${{ steps.flags.outputs.winget }}
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
+
+      - name: Tag agrees with the crate version
+        shell: pwsh
+        run: |
+          # The tag names the release and the installer file; the crate version is what the
+          # binaries report about themselves, what the Add/Remove Programs entry will show,
+          # and what `verify-public-export.ps1` already holds consistent across the tree. A
+          # release where the two disagree ships an installer that contradicts the program
+          # it installs, so it is refused here rather than discovered by a user.
+          $meta = cargo metadata --format-version 1 --no-deps --locked | ConvertFrom-Json
+          $crate = ($meta.packages | Where-Object { $_.name -eq 'daemon' }).version
+          $tag = $env:GITHUB_REF_NAME -replace '^v', ''
+          if ($crate -ne $tag) {
+            throw "tag $env:GITHUB_REF_NAME implies version $tag, but crates/daemon is $crate"
+          }
+          "VERSION=$crate" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
       - name: Build release
         run: cargo build --workspace --release --locked
+
+      - name: Install NSIS
+        shell: pwsh
+        run: |
+          # Downloaded and checksum-verified rather than taken from the runner image or a
+          # package manager, for the reason `ci.yml` already states about gitleaks and
+          # cargo-deny: a pinned version plus a published SHA-256 is the least this should
+          # do, and bumping the version means updating the checksum in the same commit.
+          #
+          # Not from the runner image, because the windows-2025 images ship no NSIS at all
+          # and `windows-latest` moves. Not from NSIS's own SourceForge downloads, because
+          # every direct URL there answers an automated client with an HTML interstitial
+          # instead of the archive — a checksum step there would be verifying a web page.
+          # This mirror is the archive the Tauri toolchain fetches for the same purpose.
+          $expected = '1bb9fc85ee5b220d3869325dbb9d191dfe6537070f641c30fbb275c97051fd0c'
+          Invoke-WebRequest -Uri 'https://github.com/tauri-apps/binary-releases/releases/download/nsis-3/nsis-3.zip' -OutFile nsis.zip
+          $actual = (Get-FileHash nsis.zip -Algorithm SHA256).Hash.ToLower()
+          if ($actual -ne $expected) { throw "NSIS checksum mismatch: got $actual" }
+          Expand-Archive nsis.zip -DestinationPath nsis
+          Join-Path $PWD 'nsis\nsis-3.08' | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+
+      - name: Build the installer
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory stage, dist | Out-Null
+          Copy-Item target\release\wiradesk.exe, target\release\wiradesk-settings.exe stage\
+          Copy-Item LICENSE, NOTICE stage\
+          Copy-Item crates\daemon\wiradesk.ico stage\
+          makensis /DVERSION=$env:VERSION "/DSTAGE_DIR=$PWD\stage" "/DOUT_DIR=$PWD\dist" packaging\wiradesk.nsi
+          if ($LASTEXITCODE -ne 0) { throw "makensis failed with $LASTEXITCODE" }
+
       - name: Stage artefacts and checksums
         shell: pwsh
         run: |
-          New-Item -ItemType Directory dist | Out-Null
-          Copy-Item target\release\wiradesk.exe dist\
-          Copy-Item target\release\wiradesk-settings.exe dist\
+          # The loose executables ship beside the installer on purpose: `README.md`
+          # documents placing them by hand, and someone auditing a release should be able
+          # to check the program without running an installer to get at it.
+          Copy-Item target\release\wiradesk.exe, target\release\wiradesk-settings.exe dist\
           Get-FileHash dist\*.exe -Algorithm SHA256 |
             ForEach-Object { '{0}  {1}' -f $_.Hash.ToLower(), (Split-Path $_.Path -Leaf) } |
             Set-Content dist\SHA256SUMS -Encoding ascii
           Get-Content dist\SHA256SUMS
+
       - name: Publish
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           $notes = @(
+            'Install with the setup executable, or through winget:',
+            '',
+            '    winget install WiraDigitalIndonesia.WiraDesk',
+            '',
+            'To update later: winget upgrade WiraDigitalIndonesia.WiraDesk',
+            '',
+            'The installer places Wira Desk under %ProgramFiles%, which is deliberate and not',
+            'configurable to a per-user location. Auto-start runs the daemon elevated at every',
+            'logon with no prompt, so a directory only administrators can write is what protects',
+            'it. Installing it anywhere a normal user can write turns that into a privilege',
+            'escalation route -- see SECURITY.md.',
+            '',
             'Verify your download against SHA256SUMS before running:',
             '',
-            '    Get-FileHash .\wiradesk.exe -Algorithm SHA256',
+            '    Get-FileHash .\WiraDesk-' + $env:VERSION + '-x64-setup.exe -Algorithm SHA256',
             '',
             'These binaries are not code-signed, so Windows SmartScreen will warn and the',
             'UAC prompt will show an unverified publisher. See SECURITY.md for what that',
-            'does and does not tell you, and for the hardening note about where to install.',
+            'does and does not tell you.',
             '',
             'Made with Slint (https://slint.dev), used under the Slint Royalty-free',
             'License 2.0. That licence requires this disclosure on the page the binaries',
@@ -51,5 +118,39 @@ jobs:
             'term, not a credit. See deny.toml for which branch of the licence applies.'
           ) -join "`n"
           gh release create $env:GITHUB_REF_NAME `
-            dist\wiradesk.exe dist\wiradesk-settings.exe dist\SHA256SUMS `
+            (Get-ChildItem dist\*.exe | ForEach-Object { $_.FullName }) dist\SHA256SUMS `
             --title $env:GITHUB_REF_NAME --notes $notes
+
+      - name: Decide whether winget can be updated
+        id: flags
+        shell: pwsh
+        env:
+          WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
+        run: |
+          $has = if ($env:WINGET_TOKEN) { 'true' } else { 'false' }
+          "winget=$has" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+  winget:
+    # Submits a manifest pull request to microsoft/winget-pkgs, which is what makes
+    # `winget upgrade` find the new version. Skipped entirely when the secret is absent, so
+    # the release above still succeeds on a repository that has not done the setup.
+    #
+    # Three things must exist before this can work, and none of them can be created from
+    # here:
+    #   1. A fork of microsoft/winget-pkgs under the same account as this repository.
+    #   2. A CLASSIC personal access token with `public_repo` scope, stored as the
+    #      `WINGET_TOKEN` secret. Fine-grained tokens are not supported by the action.
+    #   3. One version of the package already accepted into winget-pkgs. The first
+    #      submission is a manual pull request; this automates every release after it.
+    needs: release
+    if: needs.release.outputs.publish-winget == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: vedantmgoyal9/winget-releaser@v2
+        with:
+          identifier: WiraDigitalIndonesia.WiraDesk
+          # Matches only the setup executable. The loose binaries published beside it are
+          # not installers and must not end up in the manifest.
+          installers-regex: '-x64-setup\.exe$'
+          release-tag: ${{ github.ref_name }}
+          token: ${{ secrets.WINGET_TOKEN }}

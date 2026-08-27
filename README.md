@@ -24,9 +24,44 @@ Binaries: `target\release\wiradesk.exe` and `target\release\wiradesk-settings.ex
 
 ## Install
 
-1. Build or obtain the release binaries.
-2. Place `wiradesk.exe` and `wiradesk-settings.exe` in the same folder.
-3. Run `wiradesk.exe` once as Administrator so the daemon can install its hook and migrate settings from a prior installation if present.
+Through winget:
+
+```powershell
+winget install WiraDigitalIndonesia.WiraDesk
+```
+
+Or download `WiraDesk-<version>-x64-setup.exe` from the [releases page](https://github.com/kodesh87/wira-desk/releases) and run it. Verify it against the published `SHA256SUMS` first:
+
+```powershell
+Get-FileHash .\WiraDesk-0.1.0-x64-setup.exe -Algorithm SHA256
+```
+
+The installer needs Administrator, installs to `%ProgramFiles%\Wira Desk`, and offers no per-user location. That is deliberate rather than an omission - auto-start runs the daemon elevated at every logon with no prompt, so a directory only administrators can write is the whole thing protecting it. See `SECURITY.md`.
+
+It does **not** switch auto-start on. That stays yours to enable from the tray menu or Settings.
+
+### Without the installer
+
+The loose binaries are published beside it, so you can run the program without one:
+
+1. Place `wiradesk.exe` and `wiradesk-settings.exe` in the same folder - one only administrators can write.
+2. Run `wiradesk.exe` as Administrator.
+
+Wira Desk will warn you, in the log and on the tray icon, if you turn auto-start on from a folder a normal user could overwrite.
+
+## Update
+
+```powershell
+winget upgrade WiraDigitalIndonesia.WiraDesk
+```
+
+Or run the newer setup executable over the old install; it stops the running daemon, replaces the files in place, and keeps your settings. There is no update check inside the application, and no network path in it at all - see `SECURITY.md`.
+
+## Uninstall
+
+Through winget (`winget uninstall WiraDigitalIndonesia.WiraDesk`), or from Add/Remove Programs.
+
+Uninstalling removes the program and the auto-start scheduled task. It leaves `%APPDATA%\WiraDesk\` alone - delete that folder by hand if you want your settings and log gone, and read Factory reset below first, because that folder does not behave the way you might expect.
 
 ## Administrator and keyboard hook
 

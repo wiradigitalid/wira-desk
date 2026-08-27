@@ -85,6 +85,16 @@ about what that does and does not mean:
 
 Neither is a substitute for installing in the right place. They tell you when you have not.
 
+The installer is the third piece, and it is the one that makes the right place the default:
+it requires Administrator, installs to `%ProgramFiles%\Wira Desk`, and offers **no per-user
+install location**. An installer that offered `%LOCALAPPDATA%` would be offering the
+escalation route above as a convenience, so it does not offer it. The installer also does
+not enable auto-start; registering an unprompted elevated logon task is a decision that
+stays with you.
+
+Uninstalling removes the scheduled task. An `ONLOGON` task with `/RL HIGHEST` outliving the
+executable it names is the worst thing an uninstaller could leave behind.
+
 ## Design notes
 
 - Elevation exists for one purpose: activating and moving windows owned by higher-integrity

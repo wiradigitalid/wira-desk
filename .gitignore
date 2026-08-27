@@ -1,5 +1,13 @@
 /target/
 /out/
+
+# Packaging scratch. `stage/` is what the installer is built from, `dist/` is what it is
+# built into, and `nsis/` is the checksum-verified toolchain the workflow unpacks. All
+# three are produced by `ci.yml` and `release.yml`; none is a source artefact.
+/stage/
+/dist/
+/nsis/
+/nsis.zip
 __pycache__/
 *.pyc
 

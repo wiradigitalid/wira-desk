@@ -34,6 +34,34 @@ jobs:
       - name: Release build
         run: cargo build --workspace --release --locked
 
+      # The installer is compiled on every push, not only on a version tag. A packaging
+      # script that is only exercised at release time is a script that breaks at release
+      # time, when the tag is already pushed and the fix costs a retag. The NSIS pin and
+      # the reason for this particular source are explained in `release.yml`; the version
+      # and checksum must be bumped in both files together.
+      - name: Install NSIS
+        shell: pwsh
+        run: |
+          $expected = '1bb9fc85ee5b220d3869325dbb9d191dfe6537070f641c30fbb275c97051fd0c'
+          Invoke-WebRequest -Uri 'https://github.com/tauri-apps/binary-releases/releases/download/nsis-3/nsis-3.zip' -OutFile nsis.zip
+          $actual = (Get-FileHash nsis.zip -Algorithm SHA256).Hash.ToLower()
+          if ($actual -ne $expected) { throw "NSIS checksum mismatch: got $actual" }
+          Expand-Archive nsis.zip -DestinationPath nsis
+          Join-Path $PWD 'nsis\nsis-3.08' | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+
+      - name: Installer builds
+        shell: pwsh
+        run: |
+          $meta = cargo metadata --format-version 1 --no-deps --locked | ConvertFrom-Json
+          $version = ($meta.packages | Where-Object { $_.name -eq 'daemon' }).version
+          New-Item -ItemType Directory stage, dist | Out-Null
+          Copy-Item target\release\wiradesk.exe, target\release\wiradesk-settings.exe stage\
+          Copy-Item LICENSE, NOTICE stage\
+          Copy-Item crates\daemon\wiradesk.ico stage\
+          makensis /DVERSION=$version "/DSTAGE_DIR=$PWD\stage" "/DOUT_DIR=$PWD\dist" packaging\wiradesk.nsi
+          if ($LASTEXITCODE -ne 0) { throw "makensis failed with $LASTEXITCODE" }
+          Get-ChildItem dist
+
   secrets:
     runs-on: ubuntu-latest
     steps:
