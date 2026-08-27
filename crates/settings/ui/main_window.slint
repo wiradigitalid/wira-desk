@@ -29,18 +29,20 @@ export component MainWindow inherits Window {
     // tallest screen — the last one, since the start-at-sign-in question added a third row
     // to its card.
     //
-    // 440px was tried first and reported as too tall, and the reason it looked wrong is worth
-    // keeping: at the time the third row's description ran to several lines because the text
-    // was long and the glyph column had no width, so the arithmetic was measuring a row that
-    // should not have been that tall. With `InfoRow` giving the glyph a column and the
-    // description shortened to one line, 412px is the estimate. Still an estimate — nothing
-    // here has been measured on screen, and this is the one number to change if the footer
-    // sits tight or the card floats.
+    // Third value, and the first one taken from a screenshot rather than from arithmetic.
+    // 440 was too tall; 412 still left roughly fifty pixels of slack on the last screen and
+    // well over a hundred on the first. The reduction to 396 is smaller than that slack
+    // because `InfoRow` simultaneously grew: it now has a 44px floor and vertical padding,
+    // which is what fixes the stubby one-line row and the wrapped line pressed against the
+    // card edge.
+    //
+    // The empty bands were never mostly about this number. They came from the middle region
+    // centring the card inside its stretched space; see `onboarding.slint`.
     //
     // Deliberately not per-step. Only the last screen grew, but a window that resizes as the
     // user presses Next draws attention to itself at the moment the content should have it.
     width: is_onboarding ? 580px : 760px;
-    height: is_onboarding ? 412px : 610px;
+    height: is_onboarding ? 396px : 610px;
 
     // Navigation & Panes
     in-out property <int> current_pane: 0;

@@ -17,6 +17,15 @@ component InfoRow inherits HorizontalLayout {
 
     spacing: 10px;
 
+    // A floor and a little air. Observed on screen: the one-line row read as visibly
+    // shorter than its neighbours, and a row whose description wrapped to two lines put
+    // that second line hard against the card's edge. The floor evens out the first, the
+    // padding relieves the second, and both are here rather than in the card so every use
+    // of this row gets them.
+    min-height: 44px;
+    padding-top: 5px;
+    padding-bottom: 5px;
+
     // Fixed width, so every row's text begins at the same x whatever glyph sits above it.
     Rectangle {
         width: 24px;
@@ -138,7 +147,15 @@ export component OnboardingModal inherits Rectangle {
         }
 
         // 2. Middle Content Area
+        //
+        // `alignment: start` is the fix for the empty band above the card. The outer layout
+        // is `space-between` so the footer pins to the bottom — correct — and this region
+        // absorbs the slack. Without an alignment the card was centred inside that slack,
+        // so a compact screen showed a gap above the card and another below it. Now the
+        // card sits under the heading and the slack collects in one place, above the footer,
+        // where it reads as a margin rather than as two holes.
         VerticalLayout {
+            alignment: start;
             padding-top: 10px;
             padding-bottom: 10px;
 
@@ -150,8 +167,8 @@ export component OnboardingModal inherits Rectangle {
                 border-color: Palette.stroke_card;
 
                 VerticalLayout {
-                    padding: 12px;
-                    spacing: 8px;
+                    padding: 14px;
+                    spacing: 10px;
 
                     InfoRow {
                         glyph: "⚡";
@@ -285,8 +302,8 @@ export component OnboardingModal inherits Rectangle {
                 border-color: Palette.stroke_card;
 
                 VerticalLayout {
-                    padding: 12px;
-                    spacing: 8px;
+                    padding: 14px;
+                    spacing: 10px;
 
                     InfoRow {
                         glyph: "🚀";
