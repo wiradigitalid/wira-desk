@@ -781,6 +781,10 @@ impl SettingsModel {
     }
 
     /// Advance the tutorial. Returns true once it has finished.
+    ///
+    /// `Some(Done)` is deliberately terminal and idempotent, and
+    /// `skip_reaches_the_same_terminal_state_as_completing` depends on that. Reaching the
+    /// end is not the same event as leaving the screen — see [`Self::dismiss_onboarding`].
     pub fn advance_onboarding(&mut self) -> bool {
         match self.onboarding {
             Some(OnboardingStep::Done) | None => true,
@@ -790,6 +794,27 @@ impl SettingsModel {
                 next == OnboardingStep::Done
             }
         }
+    }
+
+    /// Leave the tutorial view, so the settings panes become reachable.
+    ///
+    /// This exists because the two facts were conflated. The model uses `Some(Done)` as
+    /// "the tutorial ran to its end", which `skip` also produces; the view asks
+    /// `onboarding.is_some()` to decide whether to *draw* the tutorial. With no way to say
+    /// "finished and dismissed", the final screen's button called `advance_onboarding`,
+    /// which correctly reported success and correctly changed nothing — leaving the user on
+    /// the last screen with no route into Settings, and the titlebar close (wired to skip,
+    /// which hides the window) the only way out.
+    ///
+    /// Deliberately separate from `advance_onboarding` so that reaching the end still means
+    /// what every existing test says it means.
+    pub fn dismiss_onboarding(&mut self) {
+        self.onboarding = None;
+    }
+
+    /// True while the tutorial still has a screen to show.
+    pub fn is_on_last_onboarding_screen(&self) -> bool {
+        self.onboarding == Some(OnboardingStep::Done)
     }
 
     /// Simulate toggling dummy window focus in Onboarding Step 2.
@@ -1221,6 +1246,29 @@ mod tests {
         m.skip_onboarding();
         assert!(m.advance_onboarding());
         assert_eq!(m.onboarding, Some(OnboardingStep::Done));
+    }
+
+    /// The defect this guards was reported from a real install: the tutorial's final
+    /// button did nothing, and Settings was unreachable without closing the window.
+    #[test]
+    fn finishing_the_last_screen_leaves_the_tutorial() {
+        let mut m = SettingsModel::new(Config::default(), true);
+        while !m.advance_onboarding() {}
+        assert!(
+            m.is_on_last_onboarding_screen(),
+            "advancing to the end should land on the last screen, not past it"
+        );
+
+        // What the view asks before drawing the tutorial. While this is true the settings
+        // panes are not rendered at all, which is why dismissal has to be expressible.
+        assert!(m.onboarding.is_some());
+
+        m.dismiss_onboarding();
+        assert!(
+            m.onboarding.is_none(),
+            "after finishing, the tutorial must no longer be drawn or Settings stays unreachable"
+        );
+        assert!(!m.is_on_last_onboarding_screen());
     }
 
     #[test]

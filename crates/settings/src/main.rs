@@ -477,7 +477,17 @@ fn main() -> Result<(), slint::PlatformError> {
         let window_weak = main_window.as_weak();
         main_window.on_onboarding_next(move || {
             let mut m = model_rc.borrow_mut();
-            m.advance_onboarding();
+            // On the last screen this button means "finish", and finishing is two things
+            // the previous version did neither of: persist, so the tutorial does not run
+            // again (whether it does is decided from whether a config file exists, exactly
+            // as the skip path relies on), and leave the tutorial view so the settings
+            // panes become reachable. Before this, pressing it did nothing at all.
+            if m.is_on_last_onboarding_screen() {
+                m.save(&config_path());
+                m.dismiss_onboarding();
+            } else {
+                m.advance_onboarding();
+            }
             if let Some(w) = window_weak.upgrade() {
                 sync_model_to_ui(&w, &m);
             }
