@@ -33,6 +33,11 @@ windows-sys = { version = "0.52", features = [
     "Win32_System_Registry",
     "Win32_UI_Input_KeyboardAndMouse",
     "Win32_System_LibraryLoader",
+    # The updater. `WinHttp` fetches over HTTPS and `Cryptography` supplies SHA-256 through
+    # CNG -- both from the `windows-sys` already here, so verifying a download does not widen
+    # the supply chain of the thing doing the verifying.
+    "Win32_Networking_WinHttp",
+    "Win32_Security_Cryptography",
 ] }
 
 [build-dependencies]
