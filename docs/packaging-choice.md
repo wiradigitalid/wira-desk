@@ -6,13 +6,20 @@ that were actually in contention. That is a thin basis for a decision this hard 
 once users have an installer, so this is the comparison, against **this product's**
 requirements rather than a generic feature list.
 
-**Verdict up front: stay on NSIS now, and the reason is not that NSIS is the better tool.**
-Inno Setup is the more maintainable one and the honest expectation is that it wins later. What
-keeps NSIS today is three concrete fits with how this repository already works, listed in the
-matrix below and summarised at the end.
+**Verdict, revised 2026-08-27 after building the Inno Setup equivalent:** the two options are
+close enough that either is defensible, and the lean is now toward **Inno Setup** rather than
+away from it. The first version of this document said "stay on NSIS" on the strength of three
+arguments. Building a working `.iss` weakened two of them and disproved one outright — see
+[Measured, not argued](#measured-not-argued), which is the section that should carry the most
+weight here because it is the only one containing numbers rather than reading.
 
-Two things in this document correct claims made earlier in the same week's work, and they are
-marked where they appear. Both were stated with more confidence than the evidence supported.
+The decision window is **now**, before `v0.1.1`. After release the two engines cannot hand over
+to each other: the old uninstaller and the new installer do not know about each other, and users
+end up with both registered.
+
+Three claims made earlier in the same week's work are corrected in this document and marked
+where they appear. All three were stated with more confidence than the evidence supported, and
+all three were caught by building the thing rather than by reading about it.
 
 ## The requirements this product actually has
 
@@ -48,52 +55,96 @@ follows from that or from a rule already written down elsewhere in the repositor
 | R7 | `InstallDirRegKey` reads the previous `InstallLocation` | `UsePreviousAppDir=yes`, the default | **Inno**, marginally | Inno's correct behaviour is the default; ours is a directive we had to remember |
 | R8 | `${RunningX64}` from `x64.nsh`, then abort | `ArchitecturesAllowed=x64compatible` — declarative. Note Inno **7 renamed these**: `x64` and `x86` are deprecated in favour of `x64compatible` and `x86compatible` | **Inno**, with a version caveat | Declarative beats an imperative guard, but the identifier depends on which major version you are on |
 | R9 | `makensis /DVERSION=…` | `iscc /DVersion=…` with the preprocessor | **Tie** | Equivalent in practice |
-| R10 | Official **`.zip`**, direct download, pinnable and checksummable, extracted with no administrator rights | Distributed as a **setup `.exe`**. CI must run it silently (needs administrator, which runners have), or use `innoextract`, a Docker image, or a third-party action | **NSIS**, and this one is concrete | `ci.yml` already states the convention: pinned version plus published SHA-256, bump the checksum in the same commit. NSIS satisfies it with one `curl` and one hash check. Inno needs an install step or a third-party dependency to reach the same place |
+| R10 | Official `.zip` from SourceForge, pinnable and checksummable, extracted with no administrator rights. Note SourceForge answers `Invoke-WebRequest` with an HTML interstitial and only `curl.exe` with the archive | Setup `.exe` from **GitHub Releases**, and its own installer supports **`/PORTABLE=1`** — so it installs into a scratch directory with **no administrator rights** and no registry writes. `ISCC.exe` then runs from there | **Tie, with a slight edge to Inno on host reliability** | **Correction, and this was the strongest of the three original NSIS arguments.** The first version of this document said Inno "needs an install step or a third-party dependency". It needs neither: one `curl` from GitHub Releases, one `Get-FileHash`, and one `/PORTABLE=1 /VERYSILENT` run — verified working in a non-elevated shell. GitHub Releases is also the more dependable host of the two, since the NSIS download requires knowing that one HTTP client works and another silently does not |
 | R11 | `!uninstfinalize` — a compile-time hook over the generated uninstaller. No side files, no prompt, nothing to preserve between builds | `SignedUninstaller=yes` + `SignTool`. Works, but it writes a **persistent** uninstaller copy into `SignedUninstallerDir` whose signature is reused on later compiles, and it prompts on first compile unless the sign tool is configured on the command line | **NSIS** | **Correction.** Earlier in this week's work Inno's native uninstaller signing was listed as an advantage over NSIS. It is native, but for an automated pipeline it is the more awkward of the two — there is a stateful artefact to manage that NSIS does not have |
 | R12 | **CVE-2023-37378** — uninstaller temporary directory writable by all users, DLL plant, local privilege escalation. CVSS 7.8. Affects ≤ 3.08, fixed in 3.09. NSIS 3.12 fixed a further elevated-temp-directory escalation | **CVE-2025-15595** — DLL hijacking privilege escalation during installer execution. CVSS 7.8. Affects ≤ 6.2.1. Inno 7 enables **RedirectionGuard** by default and adds ECDSA P-256 integrity verification | **Tie — and this is the most useful row in the table** | Both tools shipped a 7.8 local privilege escalation of the same class within two years. Neither is "the safe one." What matters is the version and whether anything in CI enforces a floor |
 
+## Measured, not argued
+
+`packaging/wiradesk.iss` is a working equivalent of the NSIS script, built and compiled on
+2026-08-27 with Inno Setup 6.7.3. It implements all eight requirements, deliberately including
+the awkward one, because a prototype that skipped the hard part would have flattered Inno rather
+than tested it. Everything in this section is a number taken off that build.
+
+| Measurement | NSIS 3.12 | Inno Setup 6.7.3 | Reading |
+| --- | --- | --- | --- |
+| Compiles clean | Yes, exit 0, no warnings | Yes, exit 0 — after adding `RunOnceId` to the `[UninstallRun]` entry, which the compiler correctly warned about | Tie. Inno's warning was a real one and worth having |
+| Installer size, identical 17 MB payload | **6.35 MiB** | 8.13 MiB | **NSIS, by 28%.** Real, and irrelevant for a desktop utility at this scale |
+| Script length, comments and blanks excluded | 136 lines | **113 lines** | Inno, by about 17%. Less of a landslide than "more readable" implied — the difference is in the *kind* of line, not the count |
+| Version handling | Passed in as `/DVERSION=`, and the release workflow carries a step comparing the git tag against the crate version | **Read out of the built binary** with `GetStringFileInfo(exe, "FileVersion")` — proven: the output was named `WiraDesk-0.1.0-…` with no version supplied on the command line | **Inno.** It removes a mismatch class rather than guarding it |
+| Graceful daemon shutdown | Hand-written `FindWindow` + `WM_CLOSE` loop | Hand-written `[Code]` doing the same, and `CloseApplications=no` set to **switch Restart Manager off** | **Closer to a tie than claimed.** Inno matched the requirement in comparable code. Its declarative advantage does not reach the hardest requirement |
+| Toolchain acquisition, unelevated | `curl` + hash + `Expand-Archive` | `curl` + hash + `/PORTABLE=1 /VERYSILENT` — verified in a non-elevated shell | Tie |
+| Installer manifest | `requireAdministrator` | **`asInvoker`** | **NSIS**, marginally. Inno's documentation promises Setup "will always run with administrative privileges"; the manifest measured on the compiled binary requests only `asInvoker`, so elevation happens at runtime by a mechanism this investigation did **not** determine. Practically the user sees the same UAC prompt |
+
+Two things that did **not** change: NSIS still has the simpler uninstaller-signing path, and Inno
+still has the declarative uninstall action, the automatic upgrade behaviour, and the systematic
+message customisation.
+
 ## Scoring, honestly
 
-Counting rows gives Inno Setup four wins, NSIS three, and five ties — which would say switch, and
-would be the wrong conclusion, because the rows are not equal weight.
+The first version of this section counted four Inno wins against three for NSIS and concluded
+that row weight beat row count. After building the prototype the count is roughly five to two,
+and — more importantly — the weight has moved as well.
 
-**The three NSIS rows are the ones tied to how this repository already works:**
+**What is left of the NSIS case, after measurement:**
 
-- **R2** is a correctness requirement, not a preference. The daemon holds a global keyboard hook
-  and a tray icon; being force-terminated by Restart Manager leaves both to be cleaned up by
-  Windows rather than by the code written to clean them up. Inno *can* match this with `[Code]`
-  calling the same Win32 functions, but then the argument for switching — less code to own —
-  has evaporated for the one part of the script that matters most.
-- **R10** is the CI convention this repo has already written down and justified in a comment.
-  Meeting it with NSIS is `curl` plus `Get-FileHash`. Meeting it with Inno means installing
-  software onto the runner or taking a third-party action as a dependency.
-- **R11** matters at the moment the certificate arrives, which is a known near-term step.
+- **Installer size**, 6.35 MiB against 8.13 MiB. Genuine and unarguable. It is also the least
+  consequential advantage on the list for a desktop utility distributed over broadband, and it
+  is worth saying plainly that a 28% smaller download is not a reason to keep a script.
+- **Uninstaller signing** stays simpler: `!uninstfinalize` runs at compile time with no artefact,
+  where `SignedUninstaller` leaves a persistent signed uninstaller whose state must be carried
+  between builds. This matters at the moment the certificate arrives.
+- **`requireAdministrator` in the manifest** rather than elevation obtained at runtime. Marginal,
+  and invisible to the user.
+- **It already exists, is verified, and is wired into CI.** Not an argument about the tools at
+  all, and the honest weight to give it is "one hour of work", because that is what replacing it
+  costs while there are no installed users.
 
-**The four Inno rows are all readability and defaults**, and they are real. `[UninstallRun]`,
-`UsePreviousAppDir`, `ArchitecturesAllowed` and better-documented silent switches would each be
-one fewer thing to get right by hand. That is exactly the axis on which NSIS scripts decay: ours
-is already about 250 lines with a macro that has to be instantiated twice because NSIS compiles
+**What is left of the Inno case:**
+
+- **The version comes from the binary.** This is the one that changed my mind, because it does
+  not make an existing job easier — it deletes the job. The release workflow currently carries a
+  step whose entire purpose is catching a disagreement between the git tag and the crate version.
+  A script that asks the executable what version it is cannot disagree with it.
+- **Upgrade behaviour is correct by default** through `AppId`, rather than through a directive
+  someone has to remember.
+- **The uninstall action is one declarative line**, against an `nsExec` call whose return value
+  must be popped off the stack or it corrupts the next one.
+- **Message customisation is systematic** — `[Messages]` overrides any built-in string by name —
+  against NSIS's per-`!define` approach.
+- **Slightly less script**, 113 lines against 136, and more of it declarative.
+
+The asymmetry that decides it: **three of Inno's advantages remove ongoing work permanently,
+while NSIS's remaining advantages are either one-off or immaterial.** A smaller download does not
+compound. A version read from the binary does.
+
+## What is left to decide, and the cost of each answer
+
+Both scripts exist and both compile. This is no longer a question about capability.
+
+**Switching to Inno Setup** costs roughly an hour: point `ci.yml` and `release.yml` at `ISCC` and
+the `/PORTABLE=1` install instead of the NSIS zip, drop the tag-versus-crate comparison step
+because the version now comes from the binary, delete `wiradesk.nsi`, and re-run the gates. The
+`.iss` is already written and already compiles clean.
+
+**Staying with NSIS** costs nothing today and keeps a 28%-smaller installer, a simpler future
+signing path, and a script that is verified in CI right now. It also keeps the version-agreement
+step, the `nsExec` stack discipline, and a `!macro` instantiated twice because NSIS compiles
 installer and uninstaller functions separately.
 
-## What would flip this
+**What is not optional is choosing before release.** After `v0.1.1` ships, switching engines
+means the previous NSIS uninstaller and the new Inno installer are unaware of each other, and a
+user who upgrades ends up with two uninstall entries and one of them broken. Today that risk is
+zero, which is the cheapest it will ever be.
 
-Written down now so the decision can be re-made on evidence rather than on fatigue.
+**Whichever is chosen, delete the other file.** Two installer scripts where CI builds one is how
+a repository ends up shipping the one nobody has read in a year.
 
-1. **The script crosses roughly 400 lines, or someone has to re-read the whole thing to make a
-   one-line change.** Readability is Inno's strongest advantage and the only reason it would
-   have been the better first choice.
-2. **A second installer behaviour appears** — a service, a driver, a firewall rule, a
-   prerequisite chain. Each of those is declarative in Inno and hand-rolled in NSIS.
-3. **Localisation of the installer UI becomes a requirement.** Inno's language files are
-   markedly less work.
-4. **NSIS stops being maintained.** Its release cadence is slow by comparison — 3.12 in April
-   2026 against Inno's 7.1.0 in August 2026 — and slow is fine until it becomes stopped.
-
-None of those is true today. If any becomes true, the migration is a rewrite of one file with
-no user-visible change beyond the wizard's appearance, which is the cheapest kind of migration
-there is — provided it happens **before** there are installed users to upgrade, because
-switching installer engines after release means the old uninstaller and the new installer do not
-know about each other.
+**Recommendation: switch, if the hour is available.** Not because NSIS is bad — it demonstrably
+works — but because the version-from-binary behaviour deletes a class of release bug rather than
+guarding against it, and that compounds in a way a smaller download does not. If the hour is not
+available, staying is defensible and nothing about it is a mistake; revisit at the next release,
+not later, because the window closes at the first one.
 
 ## The conclusion worth keeping
 
