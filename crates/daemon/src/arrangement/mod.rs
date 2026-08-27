@@ -240,10 +240,14 @@ mod tests {
         );
     }
 
+    /// The stack is on by default, because the flag gates only `plan_stack` — off means
+    /// the shortcut silently does nothing, which reads as broken rather than disabled.
+    /// Fifty percent is the ratio that makes three windows overlap rather than tile:
+    /// at 33 they would sit side by side, and above it they fan.
     #[test]
-    fn stack_is_disabled_by_default_at_fifty_percent() {
+    fn stack_is_enabled_by_default_at_fifty_percent() {
         let layout = LayoutConfig::default();
-        assert!(!layout.enable_overlapping_stack);
+        assert!(layout.enable_overlapping_stack);
         assert_eq!(layout.stack_width_percent, 50);
     }
 

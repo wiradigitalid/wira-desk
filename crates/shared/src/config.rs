@@ -53,7 +53,18 @@ pub struct SnappingConfig {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct LayoutConfig {
-    /// Enable overlapping stack layout for small screens (P2 feature).
+    /// Enable the overlapping stack arrangement. **Defaults to `true`.**
+    ///
+    /// It used to default to `false`, described as a P2 feature, and that was the wrong
+    /// shape for what the flag actually gates: it guards `plan_stack` and nothing else,
+    /// so `false` does not mean "the feature is off" in any way a user can perceive — it
+    /// means pressing the stack shortcut produces an empty plan and **nothing happens, with
+    /// no explanation**. A chord that silently does nothing reads as broken, not as
+    /// disabled.
+    ///
+    /// `true` changes nothing passively either. The arrangement only ever runs when the
+    /// shortcut is pressed, so switching the default on cannot surprise anyone who does
+    /// not press it.
     pub enable_overlapping_stack: bool,
     /// Width of each window as a percentage of screen width (default 50).
     pub stack_width_percent: u32,
@@ -106,7 +117,7 @@ impl Default for SnappingConfig {
 impl Default for LayoutConfig {
     fn default() -> Self {
         Self {
-            enable_overlapping_stack: false,
+            enable_overlapping_stack: true,
             stack_width_percent: 50,
             stack_shortcut: "ctrl+alt+shift+down".to_string(),
             move_next_monitor_shortcut: "ctrl+alt+shift+enter".to_string(),

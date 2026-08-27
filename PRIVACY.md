@@ -1,8 +1,33 @@
 # Privacy
 
-Wira Desk does not send telemetry or network traffic. There is no socket, HTTP client, or
-update check in the source. Configuration and optional log files are stored locally under
+Wira Desk sends **no telemetry, ever** — no analytics, no crash reporting, no account,
+and no identifier of any kind. Exactly **one** thing in the product touches the network,
+and the next section describes it in full rather than summarising it. Configuration and optional log files are stored locally under
 `%APPDATA%\WiraDesk\`.
+
+## Checking for updates
+
+Wira Desk can check whether a newer version exists. This is the only network request the
+product ever makes.
+
+**What is sent.** An HTTPS `GET` for a small file published beside each release. Nothing is
+attached to it: no version, no machine name, no user name, no configuration, no identifier,
+no counter. It is the same request a browser makes for a public URL.
+
+**What that reveals anyway, because a request cannot hide it.** The server sees the IP
+address it came from, and that something asked for a Wira Desk release file. An IP address
+is an approximate location and, to whoever runs the network you are on, a device. We do not
+receive any of it: the file is hosted on GitHub, so GitHub's logs see it under GitHub's own
+privacy policy, exactly as they would if you opened the releases page yourself.
+
+**What is not sent, and could not be.** The request carries no payload, so nothing about how
+you use the product travels with it — not which shortcuts you pressed, not which windows
+were open, not how long the daemon has run, not whether you had checked before.
+
+**Turning it off.** Settings has a toggle. Turning it off stops the periodic check
+completely, and the manual button stays, so you can ask once without leaving anything
+running. Nothing degrades either way: the check reports that a version exists, it does not
+gate anything.
 
 ## Keystrokes
 

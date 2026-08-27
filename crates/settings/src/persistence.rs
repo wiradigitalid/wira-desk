@@ -299,7 +299,7 @@ mod tests {
         );
         assert_eq!(cfg.layout.stack_shortcut, "ctrl+alt+shift+down");
         assert!(!cfg.general.auto_start);
-        assert!(!cfg.layout.enable_overlapping_stack);
+        assert!(cfg.layout.enable_overlapping_stack);
         assert_eq!(cfg.layout.stack_width_percent, 50);
         assert!(!cfg.vm_bypass.bypass_processes.is_empty());
         assert!(!cfg.vm_bypass.bypass_classes.is_empty());

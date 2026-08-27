@@ -27,7 +27,10 @@ Initial public release of Wira Desk.
 ### Added
 
 - Same-application window cycling, and an overlapping stack arrangement with a configurable
-  width ratio.
+  width ratio. The stack is **on by default**: the setting gates only the arrangement, so
+  off meant the shortcut silently did nothing rather than the feature being disabled.
+- An optional check for new versions, off until you turn it on. It is the only network
+  request the product makes, and `PRIVACY.md` describes it line by line.
 - A settings window with shortcut configuration, a live key-check diagnostic, and a first-run
   tutorial.
 - Optional start at sign-in, through a Windows scheduled task.

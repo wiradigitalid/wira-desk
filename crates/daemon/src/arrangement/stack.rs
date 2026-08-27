@@ -94,9 +94,15 @@ mod tests {
 
     // --- disabled and empty are successful no-ops --------------
 
+    /// Explicitly disabled, not defaulted. The default is now `true`, and writing
+    /// `LayoutConfig::default()` here would have quietly turned this test into a test of
+    /// the enabled path under a name that says the opposite.
     #[test]
     fn disabled_stack_is_a_successful_noop() {
-        let layout = LayoutConfig::default(); // disabled
+        let layout = LayoutConfig {
+            enable_overlapping_stack: false,
+            ..LayoutConfig::default()
+        };
         let plan = plan_stack(&layout, &primary_work_area(), &windows(3)).unwrap();
         assert!(plan.is_noop());
     }
