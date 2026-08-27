@@ -283,6 +283,22 @@ fn execute_snap(command: Command) {
         return;
     };
 
+    // Maximize asks Windows to maximize, rather than resizing the window to the work area.
+    // The two look alike and are not: sizing leaves the window in the *normal* state, so the
+    // title bar still offers Maximize rather than Restore, a double-click maximizes it again
+    // to a slightly different size, and the application never receives `WM_GETMINMAXINFO` and
+    // so never gets the maximized bounds it asked for.
+    //
+    // The geometric plan stays as the fallback for a window whose own style forbids
+    // maximizing -- a fixed-size dialog, a tool palette -- where sizing it to the work area
+    // is still the best available answer and is what this did before.
+    if command == Command::SnapMaximize && crate::arrangement::win32::try_real_maximize(ctx.target)
+    {
+        #[cfg(debug_assertions)]
+        crate::util::append_debug_trace("WORKER_ARRANGE: SnapMaximize real=1");
+        return;
+    }
+
     let plan = match command {
         Command::SnapLeft => snap::plan_snap_left(&ctx.work_area, ctx.target),
         Command::SnapRight => snap::plan_snap_right(&ctx.work_area, ctx.target),

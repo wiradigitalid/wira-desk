@@ -19,8 +19,9 @@ use windows_sys::Win32::System::Threading::{
 };
 use windows_sys::Win32::UI::HiDpi::GetDpiForWindow;
 use windows_sys::Win32::UI::WindowsAndMessaging::{
-    GetForegroundWindow, GetWindowRect, GetWindowThreadProcessId, IsWindow, SetWindowPos,
-    SET_WINDOW_POS_FLAGS, SWP_ASYNCWINDOWPOS, SWP_NOACTIVATE, SWP_NOOWNERZORDER, SWP_NOZORDER,
+    GetForegroundWindow, GetWindowLongW, GetWindowRect, GetWindowThreadProcessId, IsWindow,
+    SetWindowPos, ShowWindowAsync, GWL_STYLE, SET_WINDOW_POS_FLAGS, SWP_ASYNCWINDOWPOS,
+    SWP_NOACTIVATE, SWP_NOOWNERZORDER, SWP_NOZORDER, SW_MAXIMIZE, WS_MAXIMIZEBOX,
 };
 
 use shared::constants::SETTINGS_EXE_NAME;
@@ -462,6 +463,51 @@ unsafe fn monitor_rect_for(rect: Rect) -> Option<RECT> {
 const PLACEMENT_FLAGS: SET_WINDOW_POS_FLAGS =
     SWP_NOACTIVATE | SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_ASYNCWINDOWPOS;
 
+/// Whether a window's style permits Windows' own maximize.
+///
+/// Split from the call below so the decision is reachable from a test while the API call is
+/// not. `WS_MAXIMIZEBOX` is what puts a working maximize button on the title bar, so a window
+/// without it is one whose author said it should not be maximized — a fixed-size dialog, a
+/// tool palette, a picker.
+pub fn style_allows_maximize(style: u32) -> bool {
+    style & WS_MAXIMIZEBOX != 0
+}
+
+/// Maximize the way the title bar's own button does, rather than by resizing to the work
+/// area.
+///
+/// **The two are not the same thing, and the difference is visible.** Sizing a window to the
+/// work area leaves it in the *normal* state: `IsZoomed` stays false, the title bar still
+/// offers Maximize rather than Restore, double-clicking it maximizes again to a slightly
+/// different size, and the window never receives `WM_GETMINMAXINFO`, so an application that
+/// asks for particular maximized bounds does not get them. It looks maximized and does not
+/// behave maximized.
+///
+/// `SW_MAXIMIZE` is what the title bar sends, so all of that follows for free.
+///
+/// Returns `false` when the window's own style forbids it, which is the caller's signal to
+/// fall back to the geometric plan. `ShowWindowAsync` rather than `ShowWindow` keeps this
+/// thread off a cross-process wait, as `LBR-WM-3` requires.
+pub fn try_real_maximize(window: WindowId) -> bool {
+    // SAFETY: `GetWindowLongW` takes only a handle and an index, writes nothing through a
+    // pointer, and returns zero for a stale handle — which `style_allows_maximize` then reads
+    // as "not maximizable", so a window that closed between planning and here falls back
+    // rather than acting on a garbage style word.
+    let style = unsafe { GetWindowLongW(window.0, GWL_STYLE) } as u32;
+    if !style_allows_maximize(style) {
+        return false;
+    }
+
+    // SAFETY: takes only a handle and a documented show command, writes nothing, and is
+    // documented to fail benignly on a stale handle. The result is discarded because a
+    // failure here is indistinguishable from the window having closed, and the caller has
+    // nothing better to do about either.
+    unsafe {
+        ShowWindowAsync(window.0, SW_MAXIMIZE);
+    }
+    true
+}
+
 /// Production mover.
 pub struct Win32WindowMover;
 
@@ -706,6 +752,32 @@ mod tests {
         let plan = [placement(1, 0, 100), placement(2, 100, 200)];
         assert_eq!(apply_plan(&mut mover, &plan), (1, 1));
         assert!(mover.log.contains(&MoverCall::Restore(WindowId(2))));
+    }
+
+    // --- real maximize ------------------------------------------
+
+    /// The gate that decides between Windows' own maximize and the geometric fallback.
+    /// `WS_MAXIMIZEBOX` is the author's statement that a window may be maximized; without it
+    /// the title bar has no working maximize button, and forcing the window to work-area size
+    /// anyway would override a deliberate choice.
+    #[test]
+    fn a_window_without_a_maximize_box_falls_back() {
+        use windows_sys::Win32::UI::WindowsAndMessaging::{
+            WS_CAPTION, WS_MAXIMIZEBOX, WS_SYSMENU, WS_THICKFRAME,
+        };
+
+        let ordinary = WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_MAXIMIZEBOX;
+        assert!(style_allows_maximize(ordinary));
+
+        let fixed_dialog = WS_CAPTION | WS_SYSMENU;
+        assert!(!style_allows_maximize(fixed_dialog));
+    }
+
+    /// A stale handle makes `GetWindowLongW` return zero, and zero must read as "fall back"
+    /// rather than as a style word to act on.
+    #[test]
+    fn a_zero_style_word_falls_back() {
+        assert!(!style_allows_maximize(0));
     }
 
     // --- partial failure ---------------------------------------
