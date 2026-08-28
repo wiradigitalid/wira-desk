@@ -28,13 +28,22 @@ const FIRST_CHECK_DELAY: Duration = Duration::from_secs(120);
 /// The interval the owner asked for: once a day.
 const CHECK_INTERVAL: Duration = Duration::from_secs(24 * 60 * 60);
 
+/// Something worth telling the user, once.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Announcement {
+    /// A version not announced before is available.
+    UpdateAvailable(String),
+    /// A run of failed checks has just begun.
+    CheckFailed(String),
+}
+
 /// What the tray needs to know, written by the checker thread and read by the UI thread.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct UpdateState {
     /// Version offered, when one is. `None` means nothing newer, or not yet checked.
     pub available: Option<String>,
-    /// Message for the toast that a failing run raises exactly once.
-    pub pending_notice: Option<String>,
+    /// Waiting to be shown once, then taken.
+    pub pending: Option<Announcement>,
 }
 
 fn state() -> &'static Mutex<UpdateState> {
@@ -48,48 +57,68 @@ pub fn snapshot() -> UpdateState {
     state().lock().map(|s| s.clone()).unwrap_or_default()
 }
 
-/// Take the pending notice, leaving none behind. The caller shows it; nobody shows it twice.
-pub fn take_notice() -> Option<String> {
-    state()
-        .lock()
-        .ok()
-        .and_then(|mut s| s.pending_notice.take())
+/// Take the pending announcement, leaving none behind. The caller shows it; nobody shows it
+/// twice, however many times the message that woke them arrives.
+pub fn take_announcement() -> Option<Announcement> {
+    state().lock().ok().and_then(|mut s| s.pending.take())
 }
 
-/// Whether a failure should raise a notification, and the memory that keeps it to one.
+/// What to announce, and the memory that keeps each thing to once.
 ///
-/// **The rule is one notification per run of failures, not one per failure.** A machine
-/// offline for a week produces one toast rather than seven. A success clears the memory, so
-/// the next outage is announced again — the alternative, notifying only ever once, would
-/// mean a user who fixed their network in March is never told about an outage in July.
+/// **Two rules, both about not repeating yourself, and they are here rather than scattered
+/// through the loop so that all of it is reachable from a test.** The checker itself cannot
+/// be tested — it sleeps for a day and talks to the network — so everything that decides
+/// anything lives in this struct instead.
 ///
-/// Kept as a plain struct with no I/O so the rule is reachable from a test. It is the only
-/// part of this module that can be.
+/// *One notification per version.* A daily check that found 0.2.0 yesterday and finds it
+/// again today has learned nothing new, and saying so again every morning is how a user
+/// turns notifications off. A **different** version is new information and is announced.
+///
+/// *One notification per run of failures.* A machine offline for a week produces one toast
+/// rather than seven. A success ends the run, so the next outage is announced again —
+/// announcing only ever once would mean a user whose network broke in March is never told
+/// about an outage in July.
 #[derive(Debug, Default, PartialEq, Eq)]
-pub struct FailureRun {
-    announced: bool,
+pub struct Announcer {
+    failing: bool,
+    announced_version: Option<String>,
 }
 
-impl FailureRun {
-    /// Record a failure. `true` when the caller should notify.
-    pub fn on_failure(&mut self) -> bool {
-        if self.announced {
-            return false;
+impl Announcer {
+    /// Fold one check result in, and say what if anything the user should see.
+    pub fn on_result(&mut self, outcome: &Result<Option<String>, String>) -> Option<Announcement> {
+        match outcome {
+            Ok(Some(version)) => {
+                self.failing = false;
+                if self.announced_version.as_deref() == Some(version.as_str()) {
+                    return None;
+                }
+                self.announced_version = Some(version.clone());
+                Some(Announcement::UpdateAvailable(version.clone()))
+            }
+            Ok(None) => {
+                // Nothing newer. Clearing the memory matters after the user actually
+                // updates: the version they were told about is now the one they run, and
+                // holding on to it would be remembering an announcement about the present.
+                self.failing = false;
+                self.announced_version = None;
+                None
+            }
+            Err(reason) => {
+                if self.failing {
+                    return None;
+                }
+                self.failing = true;
+                Some(Announcement::CheckFailed(reason.clone()))
+            }
         }
-        self.announced = true;
-        true
-    }
-
-    /// Record a success, ending any run in progress.
-    pub fn on_success(&mut self) {
-        self.announced = false;
     }
 }
 
 /// Start the checker. Called once, after the tray window exists.
 pub fn spawn(hwnd: isize) {
     thread::spawn(move || {
-        let mut failures = FailureRun::default();
+        let mut announcer = Announcer::default();
         let mut delay = FIRST_CHECK_DELAY;
 
         loop {
@@ -103,18 +132,12 @@ pub fn spawn(hwnd: isize) {
             }
 
             let outcome = run_once();
-            let notify = match &outcome {
-                Ok(_) => {
-                    failures.on_success();
-                    None
-                }
-                Err(reason) => failures.on_failure().then(|| reason.clone()),
-            };
+            let announcement = announcer.on_result(&outcome);
 
             if let Ok(mut s) = state().lock() {
                 s.available = outcome.ok().flatten();
-                if let Some(message) = notify {
-                    s.pending_notice = Some(message);
+                if announcement.is_some() {
+                    s.pending = announcement;
                 }
             }
 
@@ -152,46 +175,105 @@ fn post_state_changed(hwnd: isize) {
 mod tests {
     use super::*;
 
-    /// The rule the owner asked for, and the reason it needs a memory at all: a machine
-    /// offline for a week must produce one toast, not seven.
+    fn found(v: &str) -> Result<Option<String>, String> {
+        Ok(Some(v.to_owned()))
+    }
+    fn current() -> Result<Option<String>, String> {
+        Ok(None)
+    }
+    fn failed() -> Result<Option<String>, String> {
+        Err("offline".to_owned())
+    }
+
+    /// The rule the owner asked for. A daily check that finds the same version every morning
+    /// has learned nothing new, and saying so every morning is how a user turns notifications
+    /// off entirely.
     #[test]
-    fn a_run_of_failures_announces_once() {
-        let mut run = FailureRun::default();
-        assert!(
-            run.on_failure(),
-            "the first failure is the one worth saying"
+    fn a_version_is_announced_once_however_often_it_is_found() {
+        let mut a = Announcer::default();
+        assert_eq!(
+            a.on_result(&found("0.2.0")),
+            Some(Announcement::UpdateAvailable("0.2.0".to_owned()))
         );
         for _ in 0..10 {
-            assert!(
-                !run.on_failure(),
-                "a continuing outage is not new information"
+            assert_eq!(
+                a.on_result(&found("0.2.0")),
+                None,
+                "same version, same day after day"
             );
         }
     }
 
-    /// Without this, a user whose network broke in March would never be told about an outage
-    /// in July -- which is the failure mode of notifying only ever once.
     #[test]
-    fn a_success_ends_the_run_so_the_next_outage_is_announced() {
-        let mut run = FailureRun::default();
-        assert!(run.on_failure());
-        assert!(!run.on_failure());
+    fn a_different_version_is_new_information() {
+        let mut a = Announcer::default();
+        a.on_result(&found("0.2.0"));
+        assert_eq!(
+            a.on_result(&found("0.3.0")),
+            Some(Announcement::UpdateAvailable("0.3.0".to_owned()))
+        );
+    }
 
-        run.on_success();
+    /// After the user actually updates, the check reports current and the remembered version
+    /// is the one they now run. Holding it would be remembering an announcement about the
+    /// present.
+    #[test]
+    fn updating_clears_the_memory() {
+        let mut a = Announcer::default();
+        a.on_result(&found("0.2.0"));
+        assert_eq!(a.on_result(&current()), None);
+        assert_eq!(
+            a.on_result(&found("0.2.0")),
+            Some(Announcement::UpdateAvailable("0.2.0".to_owned())),
+            "a version offered again after a period of being current is worth saying again"
+        );
+    }
+
+    /// A machine offline for a week must produce one toast, not seven.
+    #[test]
+    fn a_run_of_failures_announces_once() {
+        let mut a = Announcer::default();
+        assert!(matches!(
+            a.on_result(&failed()),
+            Some(Announcement::CheckFailed(_))
+        ));
+        for _ in 0..10 {
+            assert_eq!(
+                a.on_result(&failed()),
+                None,
+                "a continuing outage is not news"
+            );
+        }
+    }
+
+    /// Without this, a user whose network broke in March is never told about an outage in
+    /// July.
+    #[test]
+    fn a_success_ends_the_failure_run() {
+        let mut a = Announcer::default();
+        a.on_result(&failed());
+        a.on_result(&current());
         assert!(
-            run.on_failure(),
+            matches!(a.on_result(&failed()), Some(Announcement::CheckFailed(_))),
             "a new outage after a recovery is new information"
         );
     }
 
+    /// The interaction between the two memories, which is where a scattered pair of flags
+    /// would have gone wrong: an outage in the middle must not make an already-announced
+    /// version look new when the network comes back.
     #[test]
-    fn success_on_a_healthy_run_changes_nothing() {
-        let mut run = FailureRun::default();
-        run.on_success();
-        run.on_success();
-        assert!(
-            run.on_failure(),
-            "successes must not consume the first announcement"
+    fn an_outage_does_not_re_announce_the_same_version_afterwards() {
+        let mut a = Announcer::default();
+        a.on_result(&found("0.2.0"));
+        assert!(matches!(
+            a.on_result(&failed()),
+            Some(Announcement::CheckFailed(_))
+        ));
+        assert_eq!(
+            a.on_result(&found("0.2.0")),
+            None,
+            "the version was already announced; the outage changed nothing about that"
         );
     }
 }

@@ -391,15 +391,24 @@ unsafe fn wndproc_impl(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> 
             0
         }
         m if m == shared::constants::WM_APP_UPDATE_STATE => {
-            // The tray icon's own state is untouched. An update, or a failure to look for
-            // one, is not a fault in the product's actual job, and taking the icon out of
-            // Normal for it would say something untrue: the icon's tiers exist so that a
-            // Critical icon still means what it means.
+            // The tray icon's own state is deliberately untouched. An update, or a failure to
+            // look for one, is not a fault in the product's actual job, and taking the icon
+            // out of Normal for it would make a Critical icon mean less.
             //
-            // The notice is taken rather than read, so it is shown exactly once however many
-            // times this message arrives.
-            if let Some(reason) = crate::updatecheck::take_notice() {
-                show_toast(
+            // The announcement is *taken* rather than read, so it is shown exactly once
+            // however many times this message arrives.
+            match crate::updatecheck::take_announcement() {
+                Some(crate::updatecheck::Announcement::UpdateAvailable(version)) => show_toast(
+                    data,
+                    "Wira Desk",
+                    &format!(
+                        "Version {version} is available.
+
+Open Settings from this icon to see what changed and install it."
+                    ),
+                    NIIF_INFO,
+                ),
+                Some(crate::updatecheck::Announcement::CheckFailed(reason)) => show_toast(
                     data,
                     "Wira Desk",
                     &format!(
@@ -407,10 +416,11 @@ unsafe fn wndproc_impl(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> 
 
 {reason}
 
-This will not be                          reported again until a check succeeds.",
+This will not be reported again until a check succeeds."
                     ),
                     NIIF_INFO,
-                );
+                ),
+                None => {}
             }
             0
         }
