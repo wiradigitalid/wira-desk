@@ -65,7 +65,12 @@ if (-not (Test-Path -LiteralPath $manifest)) { throw "root Cargo.toml not found 
 
 # Section-aware on purpose: the root manifest holds several tables, and a bare
 # `version = "..."` under any other one is a different fact.
-$lines = Get-Content -LiteralPath $manifest
+#
+# `-Encoding UTF8` is not optional. Without it Windows PowerShell 5.1 reads the file as the
+# system ANSI codepage, and every em dash in the comments above the version comes back as
+# mojibake — which `Set-Content` then writes out as the corruption it read. The manifest's
+# prose was silently mangled once this way before the encoding was pinned.
+$lines = Get-Content -LiteralPath $manifest -Encoding UTF8
 $inWorkspacePackage = $false
 $lineIndex = -1
 $current = $null
@@ -131,24 +136,45 @@ if ($DryRun) {
 }
 
 $lines[$lineIndex] = $lines[$lineIndex] -replace '"[0-9]+\.[0-9]+\.[0-9]+"', "`"$next`""
-Set-Content -LiteralPath $manifest -Value $lines -Encoding utf8
+
+# Written through .NET rather than `Set-Content -Encoding utf8`, which in Windows PowerShell
+# 5.1 means UTF-8 *with* a BOM. Cargo tolerates one, but it turns a one-line version change
+# into a diff that also rewrites the first line of the file, and nothing here asked for that.
+$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+[System.IO.File]::WriteAllLines($manifest, $lines, $utf8NoBom)
 Write-Host "  Cargo.toml updated"
 
 # Refreshes the workspace entries in `Cargo.lock` without touching dependency versions.
 # `--offline` because this must not become an opportunity to pull new dependencies; a bump
 # is not an update.
+# No `2>&1` here, and that is the whole point. Cargo writes its progress to stderr; in Windows
+# PowerShell 5.1 redirecting a native command's stderr wraps each line in an ErrorRecord, and
+# with `$ErrorActionPreference = 'Stop'` the first such line terminates the script — after the
+# manifest was written but before the lock was. The bump then looked like it had worked, and CI,
+# which builds with `--locked`, is where you found out it had not.
 Push-Location $root
 try {
-    cargo update --offline --workspace 2>&1 | Out-Null
-    if ($LASTEXITCODE -ne 0) {
-        Write-Warning 'cargo update --offline failed; run `cargo check` and commit Cargo.lock by hand'
-    }
-    else {
-        Write-Host '  Cargo.lock refreshed'
-    }
+    cargo update --offline --workspace | Out-Null
 }
 finally {
     Pop-Location
+}
+
+# Verified against the file rather than against cargo's exit code. A lock left at the old
+# version is the failure that matters, and it is cheap to look.
+$members = 'daemon', 'settings', 'shared'
+$lockPath = Join-Path $root 'Cargo.lock'
+$lock = Get-Content -LiteralPath $lockPath -Encoding UTF8 -Raw
+$stale = $members | Where-Object {
+    $lock -notmatch ('(?m)^name = "{0}"\r?\nversion = "{1}"$' -f [regex]::Escape($_), [regex]::Escape($next))
+}
+if ($stale) {
+    Write-Warning ("Cargo.lock still at the old version for: {0}" -f ($stale -join ', '))
+    Write-Warning 'Run `cargo update --offline --workspace` by hand and commit the lock. CI builds'
+    Write-Warning 'with --locked, so a stale lock fails the release rather than warning about it.'
+}
+else {
+    Write-Host '  Cargo.lock refreshed'
 }
 
 Write-Host ''

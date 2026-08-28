@@ -22,7 +22,7 @@ Security tab) so the report stays private until a fix exists. Please do not open
 issue for a suspected vulnerability.
 
 Helpful in a report: the Windows build, the Wira Desk version, what you did, what happened,
-and â€” if you have one â€” a minimal reproduction. There is no bounty programme and no
+and — if you have one — a minimal reproduction. There is no bounty programme and no
 guaranteed response time; this is a small project and honesty about that is more useful than
 a promise it cannot keep.
 
@@ -46,7 +46,7 @@ user-visible:
 
 - Windows SmartScreen will warn on first run, and because the daemon requires elevation the
   UAC prompt shows an unverified publisher. That is expected for an unsigned build and is not
-  evidence of tampering â€” but it also means the prompt cannot help you tell the two apart.
+  evidence of tampering — but it also means the prompt cannot help you tell the two apart.
 - The strongest verification available today is **building from source in this repository**,
   which is why the full source is published rather than binaries alone. If a release
   publishes checksums, verify them with `Get-FileHash` before running; a checksum served from
@@ -59,7 +59,7 @@ Signing is understood to be the real fix and is not yet in place. Until it is, t
 
 Both of these matter more than anything else on this page:
 
-- **Install where only administrators can write** â€” `%ProgramFiles%` or similar. The
+- **Install where only administrators can write** — `%ProgramFiles%` or similar. The
   auto-start task runs the daemon elevated at every logon with no prompt, so anyone able to
   overwrite the executable at that path gains an unprompted elevated foothold. The task
   stores an absolute path and sets no working directory, so the path itself cannot be
@@ -72,14 +72,14 @@ about what that does and does not mean:
 
 - The daemon reads the permissions of its own executable and of the directory holding it. If
   a principal that is not an administrator holds a right that would let it replace either,
-  and auto-start is registered, you get a Tier-2 warning â€” a line in `wiradesk.log` and the
+  and auto-start is registered, you get a Tier-2 warning — a line in `wiradesk.log` and the
   warning dot on the tray icon. **It warns; it does not refuse.** Auto-start still turns on,
   because a check that blocked running from a build directory would be switched off rather
   than heeded, and the choice is yours to make knowingly. Silence here is not a clean bill of
   health for anything but this one question.
 - The stored path no longer goes stale. Because the task's action is an absolute path frozen
   when auto-start was switched on, moving the executable used to leave the logon task aimed
-  at the old location â€” so installing properly *after* first running from `Downloads` left
+  at the old location — so installing properly *after* first running from `Downloads` left
   the download as the thing Windows launched elevated. The daemon now re-points the task at
   itself on every start.
 
@@ -99,7 +99,7 @@ executable it names is the worst thing an uninstaller could leave behind.
 
 - Elevation exists for one purpose: activating and moving windows owned by higher-integrity
   processes, which Windows (UIPI) blocks otherwise. It is not used to read other processes'
-  memory â€” the daemon opens processes with `PROCESS_QUERY_LIMITED_INFORMATION`, never
+  memory — the daemon opens processes with `PROCESS_QUERY_LIMITED_INFORMATION`, never
   `PROCESS_VM_READ`. The manifest is not the only check: the daemon re-queries its own token
   and refuses to start unelevated.
 - The hook callback is bounded by construction: no heap allocation, no lock, no file I/O, and
@@ -110,5 +110,5 @@ executable it names is the worst thing an uninstaller could leave behind.
   malformed, or invalid file leaves the previous configuration in force and emits one
   warning. No configuration value ever becomes a path or a command line.
 - Every `unsafe` block carries a `SAFETY:` comment stating the precondition it relies on, and
-  the compiler enforces that â€” `undocumented_unsafe_blocks` and `missing_safety_doc` are
+  the compiler enforces that — `undocumented_unsafe_blocks` and `missing_safety_doc` are
   `deny` in the workspace lints, so an undocumented block fails the build.

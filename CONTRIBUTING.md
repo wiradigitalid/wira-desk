@@ -24,15 +24,15 @@ cargo test --workspace
 Four gates, all of which must pass:
 
 - **fmt, clippy `-D warnings`, tests, release build** on Windows.
-- **Secret scan** â€” `gitleaks` over both history and the working tree, using
+- **Secret scan** — `gitleaks` over both history and the working tree, using
   `.gitleaks.toml`. Do not widen that allowlist to make a finding go away; triage it.
-- **Dependencies** â€” `cargo-deny check` (advisories, licences, bans, sources) using
+- **Dependencies** — `cargo-deny check` (advisories, licences, bans, sources) using
   `deny.toml`, whose graph is pinned to `x86_64-pc-windows-msvc`. A new dependency
   carrying a licence outside the allow-list will fail, deliberately.
 
 ## Unsafe code
 
-This is a Win32 FFI codebase, so `unsafe` is unavoidable â€” undocumented `unsafe` is
+This is a Win32 FFI codebase, so `unsafe` is unavoidable — undocumented `unsafe` is
 not. `undocumented_unsafe_blocks` and `missing_safety_doc` are `deny` in the workspace
 lints, so every `unsafe` block needs a `SAFETY:` comment and the build fails without
 one.
@@ -47,18 +47,18 @@ boundary is the one worth holding to a standard.
 ## Repository conventions
 
 `CLAUDE.md`, `AGENTS.md`, and `.cursorrules` hold the instructions AI coding tools read, and
-they are byte-identical on purpose â€” three tools, three filenames, one set of rules. Change
+they are byte-identical on purpose — three tools, three filenames, one set of rules. Change
 one and change all three in the same commit; drift between them is silent, and the tool that
 reads the stale copy is the one that misbehaves.
 
 `.constitution/project/constitution.md` records how work is conducted here. `3p.md` and `docs/3p.md`
-track progress for code and documentation respectively â€” read the relevant one before starting
+track progress for code and documentation respectively — read the relevant one before starting
 and add an entry when finished.
 
 ## Planning with BMAD and WDI Method
 
 `_bmad-output/` holds the planning archive from [BMAD-METHOD](https://github.com/bmad-code-org/BMAD-METHOD).
-Read `_bmad-output/README.md` first â€” it explains what is historical and what was redacted.
+Read `_bmad-output/README.md` first — it explains what is historical and what was redacted.
 
 The tooling **is committed** so contributors get the same agent setup without re-running the
 installer:

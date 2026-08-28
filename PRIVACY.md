@@ -33,7 +33,7 @@ gate anything.
 
 The daemon installs a global keyboard hook, so it observes every key event on the desktop.
 It reads the virtual-key code and the injected-input flag in order to match the two
-configured shortcuts, and **records none of it** â€” not to the log file, not to the debug
+configured shortcuts, and **records none of it** — not to the log file, not to the debug
 trace, not anywhere that outlives the event. No logging call in the codebase takes a
 virtual-key value as an argument.
 
@@ -49,8 +49,8 @@ Window titles are not used for switching decisions.
 | Path | Contents | Retention |
 | --- | --- | --- |
 | `%APPDATA%\WiraDesk\config.toml` | Your shortcuts, bypass lists, layout, auto-start flag | Until you delete it |
-| `%APPDATA%\WiraDesk\wiradesk.log` | Timestamped warning lines | Until you delete it â€” **there is no log rotation in this version**, so the file grows unbounded |
+| `%APPDATA%\WiraDesk\wiradesk.log` | Timestamped warning lines | Until you delete it — **there is no log rotation in this version**, so the file grows unbounded |
 
 Both live in your user profile at normal user permissions, so treat them as readable by
-anything else running as you. To reset configuration, delete `config.toml` only â€” see
+anything else running as you. To reset configuration, delete `config.toml` only — see
 `CHANGELOG.md`, because deleting the whole folder is not a reset.

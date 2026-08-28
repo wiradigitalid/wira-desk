@@ -1,4 +1,4 @@
-# Repository Instructions â€” Wira Desk
+# Repository Instructions — Wira Desk
 
 <!-- BEGIN:wdi-method -->
 This repo uses **WDI Method**. It wraps BMad; it does not replace it. This marked
@@ -216,7 +216,7 @@ file.
 ## Verify claims against artifacts
 
 The single most valuable habit in this repository, kept from an earlier and much heavier
-process that was otherwise retired: **do not accept a report that something was done â€” check
+process that was otherwise retired: **do not accept a report that something was done — check
 it.** Run the gate. Read the diff. Open the file. A report is evidence of intent, not of
 outcome.
 
@@ -226,7 +226,7 @@ published source file, and a gate that could not pass in the place it was writte
 
 ## Unsafe code
 
-This is a Win32 FFI codebase, so `unsafe` is unavoidable â€” undocumented `unsafe` is not.
+This is a Win32 FFI codebase, so `unsafe` is unavoidable — undocumented `unsafe` is not.
 `undocumented_unsafe_blocks` and `missing_safety_doc` are `deny` in the workspace lints, so a
 new block without a `SAFETY:` comment fails the build.
 

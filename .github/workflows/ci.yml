@@ -3,7 +3,7 @@
 # reasonable integrity story for them; gitleaks and cargo-deny are raw binary
 # downloads with no other mechanism, and they are the security gates themselves, so
 # a pinned version plus a published SHA-256 is the least this should do. Bumping
-# either version means updating its checksum in the same commit â€” deliberately, so
+# either version means updating its checksum in the same commit — deliberately, so
 # the bump is visible.
 name: ci
 
