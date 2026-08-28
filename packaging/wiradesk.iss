@@ -78,6 +78,10 @@
 #define AppVersion GetStringFileInfo(STAGE_DIR + "\" + DaemonExe, "FileVersion")
 #define AppName "Wira Desk"
 #define Publisher "Wira Digital Indonesia"
+// Kept identical to `LegalCopyright` in `crates/daemon/wiradesk.rc`. Two copies of one
+// sentence, because a resource script cannot read this file and this file cannot read a
+// resource script; if one is edited the other must follow.
+#define Copyright "Copyright (c) 2026 Wira Digital Indonesia"
 #define Homepage "https://github.com/kodesh87/wira-desk"
 
 ; Must match `crates/shared/src/constants.rs`. The window class is how a running
@@ -102,9 +106,35 @@ AppPublisher={#Publisher}
 AppPublisherURL={#Homepage}
 AppSupportURL={#Homepage}
 AppUpdatesURL={#Homepage}
+; VERSION RESOURCE. Filled in to match what `crates/daemon/wiradesk.rc` stamps on the
+; binaries this installs — before, the installed programs named their publisher, their
+; copyright and their language while the installer that carried them left all three blank.
+;
+; This is identity, not decoration, and it matters more here than on most installers: this
+; one requests elevation and is not signed, so the UAC prompt already says "unverified
+; publisher". The Details tab is then the only place a cautious user can look, and finding
+; an empty Copyright there is a reason to close the dialog rather than continue.
+;
+; It is NOT a workaround for Smart App Control, and must not be mistaken for one. That
+; judges signature and reputation, not metadata; every field below could be perfect and a
+; freshly built unsigned binary would still be refused.
 VersionInfoVersion={#AppVersion}
 VersionInfoCompany={#Publisher}
 VersionInfoDescription={#AppName} Setup
+VersionInfoCopyright={#Copyright}
+VersionInfoProductName={#AppName}
+VersionInfoProductVersion={#AppVersion}
+VersionInfoOriginalFileName={#AppName} Setup.exe
+AppCopyright={#Copyright}
+; TWO FIELDS STAY BLANK AND CANNOT BE FILLED FROM HERE. The Details tab shows an empty
+; `InternalName` and a `Language` of "Language Neutral", where the installed binaries show
+; "English (United States)" because `wiradesk.rc` declares `Translation 0x409` directly.
+; Inno 6.7.3 exposes no directive for either — `VersionInfoInternalName`,
+; `VersionInfoLanguage`, `VersionInfoTranslation` and `VersionInfoNeutralLanguage` were each
+; put to ISCC and each came back "Unrecognized [Setup] section directive". Recorded so the
+; next person does not spend the same twenty minutes: it is a limit of the tool, not an
+; omission here, and the only way past it would be post-processing the compiled Setup's
+; resources, which is not worth it for two cosmetic fields.
 
 ; Per-machine, and no per-user option. `PrivilegesRequiredOverridesAllowed` is
 ; deliberately NOT set: setting it would give the user a per-user install choice,
@@ -230,13 +260,20 @@ Filename: "{app}\{#DaemonExe}"; Flags: nowait runascurrentuser; Check: RunningSi
 ; idempotent `schtasks /Delete`, but the warning is right and worth not carrying.
 Filename: "{sys}\schtasks.exe"; Parameters: "/Delete /TN ""{#TaskName}"" /F"; Flags: runhidden; RunOnceId: "DeleteAutoStartTask"
 
-; NOTE, and it is deliberate: there is no [UninstallDelete] for
-; %APPDATA%\WiraDesk. An elevated uninstaller's {userappdata} resolves to the
-; ADMINISTRATOR running it, who need not be the user whose settings those are —
-; so deleting is as likely to remove the wrong profile's data as the right one.
-; That folder also carries migration semantics documented in README.md: removing
-; it does not reset settings, it re-imports from a legacy install. The user is
-; told where it is and left to decide.
+[UninstallDelete]
+; NOTE, and it is deliberate: %APPDATA%\WiraDesk is NOT listed here. An elevated
+; uninstaller's {userappdata} resolves to the ADMINISTRATOR running it, who need not be
+; the user whose settings those are — so deleting it declaratively is as likely to remove
+; the wrong profile's data as the right one. That folder is offered interactively instead,
+; in CurUninstallStepChanged, where the running user is the one being asked.
+;
+; The install directory itself is a different matter. Inno removes {app} only when it is
+; empty of everything it knows about, and it does not count the directory itself. Observed
+; on hardware: every installed file was gone and an empty "Wira Desk" folder stayed behind
+; in Program Files. `dirifempty` is the documented cure, and it is safe by construction —
+; it removes nothing if anything remains, so a file this installer did not put there still
+; blocks the deletion, which is the behaviour to want.
+Type: dirifempty; Name: "{app}"
 
 [Code]
 const

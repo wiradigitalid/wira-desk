@@ -135,10 +135,38 @@ pub fn validate_config(cfg: &Config) -> Result<(), (&'static str, ShortcutError)
     Ok(())
 }
 
+/// What became of a message posted to the daemon.
+///
+/// **Three outcomes rather than a `bool`, and the reason is a defect this replaces.** Both
+/// failures return `0` from `PostMessageW` and are indistinguishable at the call site, but
+/// they mean opposite things to a user: one says the daemon is not running, the other says
+/// it is running and refused to listen. Collapsing them showed "saved for next launch" —
+/// a sentence that reads like a normal outcome — to a user whose daemon was plainly alive
+/// in the tray.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DaemonSignal {
+    /// The daemon has it and will act on it.
+    Delivered,
+    /// No daemon window exists. Not an error: it reads the configuration when it starts.
+    DaemonAbsent,
+    /// The daemon is there and Windows dropped the message. In practice this means this
+    /// process sits below the daemon's integrity level — Settings started from Explorer
+    /// rather than from the tray — and UIPI discarded the post. See
+    /// `.how/settings/02-contracts/contract-reload-config.md`.
+    Refused,
+}
+
+impl DaemonSignal {
+    /// Whether the daemon actually received it.
+    pub fn delivered(self) -> bool {
+        self == DaemonSignal::Delivered
+    }
+}
+
 /// Outcome of a save attempt.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SaveOutcome {
-    Saved { reload_signalled: bool },
+    Saved { reload: DaemonSignal },
     Rejected(&'static str, ShortcutError),
     WriteFailed(String),
 }
@@ -158,7 +186,7 @@ pub fn save_and_notify(cfg: &Config, path: &Path) -> SaveOutcome {
     }
 
     SaveOutcome::Saved {
-        reload_signalled: signal_reload(),
+        reload: signal_reload(),
     }
 }
 
@@ -170,7 +198,7 @@ pub fn save_and_notify(cfg: &Config, path: &Path) -> SaveOutcome {
 /// window handle — the daemon's comparison is against a process id it reads
 /// itself from `GetForegroundWindow`, and sending anything else here is
 /// exactly the shape of `DEF-3`.
-pub fn signal_capture_lease(level: usize) -> bool {
+pub fn signal_capture_lease(level: usize) -> DaemonSignal {
     let class: Vec<u16> = DAEMON_WINDOW_CLASS
         .encode_utf16()
         .chain(std::iter::once(0))
@@ -186,10 +214,14 @@ pub fn signal_capture_lease(level: usize) -> bool {
     unsafe {
         let hwnd = FindWindowW(class.as_ptr(), title.as_ptr());
         if hwnd == 0 {
-            return false;
+            return DaemonSignal::DaemonAbsent;
         }
         let lparam = std::process::id() as isize;
-        PostMessageW(hwnd, shared::constants::WM_APP_CAPTURE_LEASE, level, lparam) != 0
+        if PostMessageW(hwnd, shared::constants::WM_APP_CAPTURE_LEASE, level, lparam) != 0 {
+            DaemonSignal::Delivered
+        } else {
+            DaemonSignal::Refused
+        }
     }
 }
 
@@ -197,7 +229,7 @@ pub fn signal_capture_lease(level: usize) -> bool {
 /// No configuration pointer crosses the process boundary — the data travels
 /// through the completed TOML file, and this is only a "look again" nudge
 /// There is deliberately no file watcher and no polling.
-pub fn signal_reload() -> bool {
+pub fn signal_reload() -> DaemonSignal {
     let class: Vec<u16> = DAEMON_WINDOW_CLASS
         .encode_utf16()
         .chain(std::iter::once(0))
@@ -221,9 +253,15 @@ pub fn signal_reload() -> bool {
         if hwnd == 0 {
             // The daemon is not running. Not an error: it will read the file
             // when it next starts.
-            return false;
+            return DaemonSignal::DaemonAbsent;
         }
-        PostMessageW(hwnd, WM_APP_RELOAD_CONFIG, 0, 0) != 0
+        if PostMessageW(hwnd, WM_APP_RELOAD_CONFIG, 0, 0) != 0 {
+            DaemonSignal::Delivered
+        } else {
+            // The window exists and the post was dropped. UIPI is the reachable cause:
+            // this process is below the daemon's integrity level.
+            DaemonSignal::Refused
+        }
     }
 }
 

@@ -11,7 +11,8 @@ use shared::shortcut::Reservation;
 use shared::Config;
 
 use crate::persistence::{
-    save_and_notify, signal_capture_lease, validate_shortcut, SaveOutcome, ShortcutError,
+    save_and_notify, signal_capture_lease, validate_shortcut, DaemonSignal, SaveOutcome,
+    ShortcutError,
 };
 use crate::theme::{
     self, ThemeMode, LISTENING_ANNOUNCEMENT, STACK_WIDTH_DECREASE, STACK_WIDTH_INCREASE,
@@ -288,11 +289,24 @@ impl OnboardingStep {
     }
 }
 
+/// Whether a lease post is owed, given what is wanted and what became of the last one.
+///
+/// Extracted from `sync_capture_lease` so the rule is reachable from a test. The live path
+/// needs a running daemon and an integrity boundary between two processes, and a unit test
+/// has neither — which is precisely why the defect this encodes survived: the only way to
+/// meet it was to run the product from the wrong place on the right machine.
+fn lease_post_owed(desired: usize, sent: usize, last: DaemonSignal) -> bool {
+    // The second clause is the fix. Without it a post that never arrived is remembered as
+    // one that did, no further post is ever made, and the mistake lasts as long as the
+    // window does.
+    desired != sent || !last.delivered()
+}
+
 /// Result of a Save attempt, in a form the UI can render.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SaveFeedback {
     None,
-    Saved { reload_signalled: bool },
+    Saved { reload: DaemonSignal },
     Error(String),
 }
 
@@ -614,6 +628,9 @@ pub struct SettingsModel {
     /// place per lease" — never one ad hoc `signal_capture_lease` call per
     /// call site).
     sent_lease_level: usize,
+    /// What became of the last lease post. Kept because "we sent it" and "the daemon has
+    /// it" are different facts, and treating them as one made a refusal permanent.
+    lease_signal: DaemonSignal,
 }
 
 impl SettingsModel {
@@ -639,6 +656,7 @@ impl SettingsModel {
             key_check: KeyCheckState::default(),
             last_capture: None,
             sent_lease_level: CAPTURE_LEASE_NONE,
+            lease_signal: DaemonSignal::Delivered,
         }
     }
 
@@ -671,10 +689,25 @@ impl SettingsModel {
     /// process).
     pub fn sync_capture_lease(&mut self) {
         let desired = self.desired_lease_level();
-        if desired != self.sent_lease_level {
-            signal_capture_lease(desired);
+        // Retry when the last attempt did not land, not only when the level changed.
+        //
+        // Posting only on a change is right while posts arrive. It is wrong the moment one
+        // does not: the next sync sees no change, sends nothing, and Settings goes on
+        // believing a lease is armed that the daemon never heard of. That is exactly what a
+        // Settings started outside the tray did — every post refused by UIPI, the first
+        // refusal remembered as a success, and shortcut recording quietly receiving
+        // nothing for the life of the window.
+        if lease_post_owed(desired, self.sent_lease_level, self.lease_signal) {
+            self.lease_signal = signal_capture_lease(desired);
             self.sent_lease_level = desired;
         }
+    }
+
+    /// Whether the daemon is running and refusing this process's messages — the shape a
+    /// non-elevated Settings takes against an elevated daemon. Distinct from the daemon
+    /// being absent, which is ordinary and needs no warning.
+    pub fn lease_refused(&self) -> bool {
+        self.lease_signal == DaemonSignal::Refused
     }
 
     pub fn begin_capture(&mut self, field: ShortcutField) {
@@ -795,9 +828,9 @@ impl SettingsModel {
     /// Validate, persist, and signal reload.
     pub fn save(&mut self, path: &std::path::Path) {
         match save_and_notify(&self.draft, path) {
-            SaveOutcome::Saved { reload_signalled } => {
+            SaveOutcome::Saved { reload } => {
                 self.saved = self.draft.clone();
-                self.feedback = SaveFeedback::Saved { reload_signalled };
+                self.feedback = SaveFeedback::Saved { reload };
             }
             SaveOutcome::Rejected(field, err) => {
                 self.feedback = SaveFeedback::Error(describe(field, err));
@@ -1480,11 +1513,71 @@ mod tests {
         assert!(!m.can_swap(ShortcutField::SnapLeft));
     }
 
+    /// The rule as it was before, and it is correct as far as it goes: a level the daemon
+    /// already has does not need sending again.
+    #[test]
+    fn a_delivered_lease_at_the_same_level_is_not_resent() {
+        assert!(!lease_post_owed(
+            CAPTURE_LEASE_RECORD,
+            CAPTURE_LEASE_RECORD,
+            DaemonSignal::Delivered
+        ));
+        assert!(lease_post_owed(
+            CAPTURE_LEASE_OBSERVE,
+            CAPTURE_LEASE_RECORD,
+            DaemonSignal::Delivered
+        ));
+    }
+
+    /// The defect, as a test. A Settings started outside the tray sits below the daemon's
+    /// integrity level, every post is discarded by UIPI, and the old rule remembered the
+    /// first discard as a success — so nothing was ever sent again and shortcut recording
+    /// received nothing for the life of the window.
+    #[test]
+    fn a_refused_lease_is_retried_rather_than_remembered_as_sent() {
+        assert!(
+            lease_post_owed(
+                CAPTURE_LEASE_RECORD,
+                CAPTURE_LEASE_RECORD,
+                DaemonSignal::Refused
+            ),
+            "a lease the daemon never received is still owed, however many times we tried"
+        );
+    }
+
+    /// The same holds when the daemon simply is not running yet — it may start while this
+    /// window is open, and the lease must reach it when it does.
+    #[test]
+    fn an_absent_daemon_leaves_the_lease_owed() {
+        assert!(lease_post_owed(
+            CAPTURE_LEASE_RECORD,
+            CAPTURE_LEASE_RECORD,
+            DaemonSignal::DaemonAbsent
+        ));
+    }
+
+    /// Only a refusal earns the warning. An absent daemon is an ordinary state — telling
+    /// someone their window cannot reach a program that is not running would be noise, and
+    /// it is the distinction the old `bool` could not express.
+    #[test]
+    fn only_a_refusal_is_worth_warning_about() {
+        let mut m = model();
+
+        m.lease_signal = DaemonSignal::DaemonAbsent;
+        assert!(!m.lease_refused());
+
+        m.lease_signal = DaemonSignal::Delivered;
+        assert!(!m.lease_refused());
+
+        m.lease_signal = DaemonSignal::Refused;
+        assert!(m.lease_refused());
+    }
+
     #[test]
     fn a_successful_capture_clears_stale_feedback() {
         let mut m = model();
         m.feedback = SaveFeedback::Saved {
-            reload_signalled: true,
+            reload: DaemonSignal::Delivered,
         };
         m.begin_capture(ShortcutField::SnapRight);
         m.accept_capture("ctrl+alt+f7").unwrap();

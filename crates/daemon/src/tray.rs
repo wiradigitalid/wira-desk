@@ -64,9 +64,13 @@ pub const WM_TRAYICON: u32 = shared::constants::WM_APP + 10;
 // real AV/GPO blocking `SetWindowsHookExW`. Driven from outside the process
 // via `PostMessageW` to the hidden window, located with `FindWindowW` by class name;
 // `verify-hook-runtime.ps1` is the harness that does it. UIPI is what keeps this from
-// being a hole in release: the message filter is opened only for `TaskbarCreated`
-// (see `run_message_loop`), so a non-elevated process cannot reach any `WM_APP`
-// message even if a debug build is running.
+// being a hole in release, and the claim has to be stated exactly, because the filter is
+// no longer opened for one message only. `run_message_loop` admits three: `TaskbarCreated`,
+// `WM_APP_RELOAD_CONFIG`, and `WM_APP_CAPTURE_LEASE`. **No `WM_APP_DEBUG_*` message is
+// among them**, so a non-elevated process still cannot reach any of the seams below even
+// against a debug build. Anything added to that filter list must be checked against this
+// paragraph, and this paragraph updated — a blanket "nothing gets through" sentence is
+// what would quietly stop being true.
 
 /// Trace state transitions to a file (`wiradesk-debug-trace.log`, beside
 /// `wiradesk.log`) so automated runtime verification can read them —
@@ -720,6 +724,34 @@ pub fn run_message_loop() -> i32 {
             debug_log(
                 "Wira Desk: ChangeWindowMessageFilterEx(TaskbarCreated) failed — recovery may be blocked on hardened systems",
             );
+        }
+
+        // The two messages Settings sends, admitted across the same boundary and by the
+        // same mechanism as `TaskbarCreated` above.
+        //
+        // THE FILTER WAS APPLIED ONCE AND MISSED THE TWO THAT NEEDED IT MOST. Without
+        // these, the IPC works only while the sender is itself elevated. Settings inherits
+        // this daemon's token when the tray launches it, and runs at medium integrity when
+        // a user starts it from Explorer — one binary, two integrity levels — and in the
+        // second case Windows discards every post before it arrives. From the outside that
+        // looked like two unrelated bugs: shortcut recording that missed keys, and a saved
+        // configuration the running daemon never picked up. Both under a status line that
+        // read like success, because a refused post and an absent daemon are the same `0`
+        // at the call site.
+        //
+        // Admitting these two grants no capability that was not already there.
+        // `WM_APP_RELOAD_CONFIG` carries no payload and only asks for a re-read of a file
+        // any standard user can already write, so a sender that could abuse it could
+        // simply have written the file. `WM_APP_CAPTURE_LEASE` is checked against the
+        // foreground window's process id before it can arm anything, so admitting the
+        // message is not admitting the lease.
+        for filtered in [WM_APP_RELOAD_CONFIG, WM_APP_CAPTURE_LEASE] {
+            if ChangeWindowMessageFilterEx(hwnd, filtered, MSGFLT_ALLOW, std::ptr::null_mut()) == 0
+            {
+                debug_log(
+                    "Wira Desk: ChangeWindowMessageFilterEx failed for a Settings message — Settings started outside the tray will not reach this daemon",
+                );
+            }
         }
 
         // Tier-2 check for an auto-start task pointing at a file a non-administrator

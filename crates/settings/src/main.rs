@@ -25,7 +25,7 @@ use shared::{config_path, migrate_appdata, Config};
 
 use app::{format_shortcut_display, Pane, SaveFeedback, SettingsModel, ShortcutField};
 use daemon_watch::{DaemonWatch, Startup};
-use persistence::{resolve_launch_intent, LaunchIntent};
+use persistence::{resolve_launch_intent, DaemonSignal, LaunchIntent};
 
 fn wide(s: &str) -> Vec<u16> {
     s.encode_utf16().chain(std::iter::once(0)).collect()
@@ -224,7 +224,18 @@ fn sync_model_to_ui(window: &MainWindow, model: &SettingsModel) {
 
         let (status_text, is_err, is_warn, is_succ) = match &model.feedback {
             SaveFeedback::None => {
-                if has_conflicts {
+                // A refused lease outranks a conflict warning, because it explains why the
+                // pane below will not respond to a keypress. Telling someone to edit a
+                // shortcut they cannot record is worse than saying nothing.
+                if model.lease_refused() {
+                    (
+                        "⚠ Wira Desk cannot receive changes from this window. Open Settings \
+                         from the tray icon instead.",
+                        false,
+                        true,
+                        false,
+                    )
+                } else if has_conflicts {
                     let msg = if model.any_swappable_conflict() {
                         "⚠ Shortcut conflict detected. Resolve with Swap ⇄ or edit key."
                     } else {
@@ -235,14 +246,24 @@ fn sync_model_to_ui(window: &MainWindow, model: &SettingsModel) {
                     ("Wira Desk is Active", false, false, false)
                 }
             }
-            SaveFeedback::Saved { reload_signalled } => {
-                let msg = if *reload_signalled {
-                    "Settings saved and applied"
-                } else {
-                    "Settings saved for next launch"
-                };
-                (msg, false, false, true)
-            }
+            // THREE OUTCOMES, NOT TWO. A refused post and an absent daemon both used to
+            // read "saved for next launch" — a sentence that describes a normal outcome,
+            // shown to a user whose daemon was visibly running in the tray. The refusal
+            // case is a warning, not a success, because nothing the user just changed is
+            // in effect and only they can act on it.
+            SaveFeedback::Saved { reload } => match reload {
+                DaemonSignal::Delivered => ("Settings saved and applied", false, false, true),
+                DaemonSignal::DaemonAbsent => {
+                    ("Settings saved for next launch", false, false, true)
+                }
+                DaemonSignal::Refused => (
+                    "⚠ Saved, but Wira Desk did not receive it. Open Settings from the tray \
+                     icon to apply it now.",
+                    false,
+                    true,
+                    false,
+                ),
+            },
             SaveFeedback::Error(msg) => (msg.as_str(), true, false, false),
         };
 

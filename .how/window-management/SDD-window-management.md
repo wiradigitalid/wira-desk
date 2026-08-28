@@ -96,6 +96,22 @@ Failure modes across all internal and external Win32 / IPC boundaries:
 | **Duplicate Chord Configuration** (`load_shortcuts`, `config::validate`) | No slow path: a comparison over nine values at load. | Not applicable — a chord is present or it is not. | Two fields name the same chord, so the configuration claims two actions are reachable by one keypress. | **At startup:** the later action is unbound and unreachable; every other setting is honoured. **On reload:** the whole candidate is refused and the previous configuration stays in force. Tray icon goes to its Warning state either way; no popup. | Exactly one Tier-2 `warn!` naming **both** fields and the chord. Never one warning per field, and never silence — silence is the failure `DEC-009` exists to stop. |
 | **Capture Lease IPC** (`WM_APP_CAPTURE_LEASE` → `WM_APP_HOOK_LEASE`) | No slow path: one integer comparison, forwarded off the callback thread. | Settings dies without disarming; the lease names a process id that no longer exists. | The lease names a process id Windows has since recycled onto an unrelated process. | Nothing: the lease is inert unless the named process also holds the foreground window, and a dead holder is reaped on the existing heartbeat. Under recycling the keyboard could reach Wira Desk while an unrelated process holds a lease — the residual risk `OQ-17` carries. | `debug!` trace recording the lease level and the process id as **received**, alongside what was sent, so a derived-value failure cannot be read as a silent sender (`DEF-3`). |
 
+**One failure mode both IPC rows above missed, found on hardware 2026-08-28.** Each row asks what
+happens when the message is slow, absent, or lying, and each answers as though the only reason a
+post fails is that the daemon is gone. There is a second reason: **UIPI discards a `PostMessageW`
+sent from a process below this daemon's integrity level**, and the sender cannot tell the two apart
+— `PostMessageW` returns 0 either way.
+
+It is reachable in normal use. `wiradesk-settings.exe` inherits the daemon's elevated token when the
+tray launches it, and runs at medium integrity when a user starts it from Explorer. The same binary,
+two integrity levels. In the second case the capture lease never arms — so shortcut recording misses
+every key that only the daemon's hook sees — and a saved configuration never reaches the running
+daemon.
+
+The daemon admits both messages with `ChangeWindowMessageFilterEx`, the same mechanism already
+applied to `TaskbarCreated` for this same boundary. See `contract-reload-config.md` for why widening
+the filter for these two grants no capability that was not already available.
+
 ## Robustness Analysis (ABCE)
 
 The Robustness Analysis classifies the technical design for all realized use cases (`UC-1`, `UC-2`, `UC-3`, `UC-7`) and edge-case scenarios into Boundary, Control, Entity, and Behaviour.
