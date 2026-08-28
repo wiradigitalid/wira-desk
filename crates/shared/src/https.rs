@@ -1,7 +1,7 @@
 //! HTTPS GET over WinHttp, with a size ceiling.
 //!
-//! Two callers, both in the updater: fetching `latest.json`, and downloading the installer
-//! it names. No new dependency — WinHttp is the HTTP client Windows already ships, reached
+//! Two callers, in two binaries: the daemon fetches `latest.json` on its daily check, and
+//! `settings` streams the installer through `get_streaming` so it can hash it as it writes. No new dependency — WinHttp is the HTTP client Windows already ships, reached
 //! through the `windows-sys` already in the tree.
 //!
 //! # Three rules this module will not bend
@@ -37,8 +37,6 @@ use windows_sys::Win32::Networking::WinHttp::{
     WINHTTP_QUERY_STATUS_CODE,
 };
 
-use crate::sha256::{CngError, Sha256, DIGEST_LEN};
-
 /// Sent as the user agent. Names the product and version so a maintainer reading a server
 /// log can tell what asked, which is the only thing this reveals beyond the request itself —
 /// and `PRIVACY.md` says so.
@@ -61,8 +59,6 @@ pub enum HttpError {
     TooLarge { limit: u64 },
     /// The body was not valid UTF-8, for the text form.
     NotUtf8,
-    /// SHA-256 failed, for the download form.
-    Hash(CngError),
 }
 
 /// A WinHttp handle that closes itself exactly once.
@@ -132,15 +128,25 @@ fn split_url(url: &str) -> Result<(String, String), HttpError> {
 
 /// One GET, streamed to `sink`, stopping if more than `limit` bytes arrive.
 ///
+/// Public because `settings` hashes an installer as it writes it, which needs the bytes
+/// as they arrive rather than a finished buffer. That is the whole reason this is a sink
+/// rather than a return value.
+///
+/// Generic over the sink's error so a caller can fail for its own reasons without this
+/// module having to know them. `settings` hashes each chunk as it writes it, and a broken
+/// crypto provider is not an HTTP error -- flattening the two would force one of them to
+/// be described in the other's words.
+///
 /// The body is never buffered whole inside this function: each chunk goes straight to the
 /// sink. That is what lets the caller hash an installer as it is written rather than
 /// afterwards, and what keeps the ceiling meaningful — a limit enforced after the fact is
 /// not a limit.
-fn get_streaming<F>(url: &str, limit: u64, mut sink: F) -> Result<u64, HttpError>
+pub fn get_streaming<F, E>(url: &str, limit: u64, mut sink: F) -> Result<u64, E>
 where
-    F: FnMut(&[u8]) -> Result<(), HttpError>,
+    F: FnMut(&[u8]) -> Result<(), E>,
+    E: From<HttpError>,
 {
-    let (host, path) = split_url(url)?;
+    let (host, path) = split_url(url).map_err(E::from)?;
     let agent = wide(USER_AGENT);
     let host_w = wide(&host);
     let path_w = wide(&path);
@@ -158,7 +164,7 @@ where
             0,
         )
     })
-    .ok_or_else(|| last_error("WinHttpOpen"))?;
+    .ok_or_else(|| E::from(last_error("WinHttpOpen")))?;
 
     // SAFETY: `session` is a live handle held by the guard for the rest of this function.
     // `host_w` is NUL-terminated and outlives the call. The port is the HTTPS default, and
@@ -171,7 +177,7 @@ where
             0,
         )
     })
-    .ok_or_else(|| last_error("WinHttpConnect"))?;
+    .ok_or_else(|| E::from(last_error("WinHttpConnect")))?;
 
     // SAFETY: `connect` is live. `path_w` is NUL-terminated and outlives the call. Null verb
     // means GET, null version means the default, null referrer and null accept-types are the
@@ -188,20 +194,20 @@ where
             WINHTTP_FLAG_SECURE,
         )
     })
-    .ok_or_else(|| last_error("WinHttpOpenRequest"))?;
+    .ok_or_else(|| E::from(last_error("WinHttpOpenRequest")))?;
 
     // SAFETY: `request` is live. No additional headers, hence a null pointer with a zero
     // length; no request body, hence null optional data with zero lengths. A zero context is
     // correct for a synchronous session, which has no callback to receive one.
     let ok = unsafe { WinHttpSendRequest(request.raw(), ptr::null(), 0, ptr::null(), 0, 0, 0) };
     if ok == FALSE {
-        return Err(last_error("WinHttpSendRequest"));
+        return Err(E::from(last_error("WinHttpSendRequest")));
     }
 
     // SAFETY: `request` is live and a request has been sent on it, which is this call's
     // documented precondition. The reserved argument must be null.
     if unsafe { WinHttpReceiveResponse(request.raw(), ptr::null_mut()) } == FALSE {
-        return Err(last_error("WinHttpReceiveResponse"));
+        return Err(E::from(last_error("WinHttpReceiveResponse")));
     }
 
     let mut status: u32 = 0;
@@ -221,10 +227,10 @@ where
         )
     };
     if ok == FALSE {
-        return Err(last_error("WinHttpQueryHeaders"));
+        return Err(E::from(last_error("WinHttpQueryHeaders")));
     }
     if status != 200 {
-        return Err(HttpError::Status(status));
+        return Err(E::from(HttpError::Status(status)));
     }
 
     let mut buf = vec![0u8; READ_CHUNK];
@@ -244,7 +250,7 @@ where
             )
         };
         if ok == FALSE {
-            return Err(last_error("WinHttpReadData"));
+            return Err(E::from(last_error("WinHttpReadData")));
         }
         if read == 0 {
             break; // End of body. WinHttp signals it with a zero-length read.
@@ -254,7 +260,7 @@ where
         // reaches a file or a buffer at all.
         total += u64::from(read);
         if total > limit {
-            return Err(HttpError::TooLarge { limit });
+            return Err(E::from(HttpError::TooLarge { limit }));
         }
 
         sink(&buf[..read as usize])?;
@@ -269,61 +275,11 @@ where
 /// past that is either not our file or not worth reading.
 pub fn get_text(url: &str, limit: u64) -> Result<String, HttpError> {
     let mut body: Vec<u8> = Vec::new();
-    get_streaming(url, limit, |chunk| {
+    get_streaming::<_, HttpError>(url, limit, |chunk| {
         body.extend_from_slice(chunk);
         Ok(())
     })?;
     String::from_utf8(body).map_err(|_| HttpError::NotUtf8)
-}
-
-/// Download to a file, returning the SHA-256 of exactly the bytes written.
-///
-/// The digest is computed **as the bytes are written**, not by reading the file back. Two
-/// reasons, and the second is the one that matters: reading back would hash whatever is on
-/// disk at that later moment rather than what arrived, and it would mean a complete
-/// unverified installer existed on disk with nothing yet saying it was the right one.
-///
-/// On any failure the partial file is removed. A half-downloaded installer left behind is a
-/// file a later run — or a user — could mistake for a whole one.
-pub fn download_to_file(
-    url: &str,
-    dest: &std::path::Path,
-    limit: u64,
-) -> Result<[u8; DIGEST_LEN], HttpError> {
-    use std::io::Write;
-
-    let mut hasher = Sha256::new().map_err(HttpError::Hash)?;
-    let mut file = std::fs::File::create(dest).map_err(|_| HttpError::Win32 {
-        call: "File::create",
-        code: 0,
-    })?;
-
-    let outcome = get_streaming(url, limit, |chunk| {
-        hasher.update(chunk).map_err(HttpError::Hash)?;
-        file.write_all(chunk).map_err(|_| HttpError::Win32 {
-            call: "File::write_all",
-            code: 0,
-        })
-    });
-
-    let flushed = file.flush().is_ok();
-    drop(file);
-
-    if outcome.is_err() || !flushed {
-        let _ = std::fs::remove_file(dest);
-        return Err(outcome.err().unwrap_or(HttpError::Win32 {
-            call: "File::flush",
-            code: 0,
-        }));
-    }
-
-    match hasher.finish() {
-        Ok(digest) => Ok(digest),
-        Err(e) => {
-            let _ = std::fs::remove_file(dest);
-            Err(HttpError::Hash(e))
-        }
-    }
 }
 
 #[cfg(test)]

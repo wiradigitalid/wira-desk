@@ -590,7 +590,7 @@ pub struct SettingsModel {
     pub update_busy: bool,
     /// A validated newer release, once a check has found one. Its presence is what swaps the
     /// button from "Check for updates" to "Download and install".
-    pub update_available: Option<crate::update::Release>,
+    pub update_available: Option<shared::update::Release>,
     /// The tutorial's start-at-sign-in answer, pre-checked, and **held apart from
     /// `draft.general.auto_start` on purpose.**
     ///

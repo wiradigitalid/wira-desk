@@ -9,7 +9,16 @@ publish = false
 
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
 toml = "1.1"
+# The update check moved here from `settings` because BOTH binaries need it, for different
+# halves of the job: the daemon asks whether a newer release exists, and Settings downloads
+# and installs it. Duplicating the decision into two crates would be duplicating the rules
+# that refuse a tampered descriptor, which is the last thing to keep two copies of.
+windows-sys = { version = "0.52", features = [
+    "Win32_Foundation",
+    "Win32_Networking_WinHttp",
+] }
 
 
 [lints]

@@ -3,7 +3,6 @@
 mod app;
 mod daemon_watch;
 mod hookbridge;
-mod https;
 mod persistence;
 mod sha256;
 mod theme;

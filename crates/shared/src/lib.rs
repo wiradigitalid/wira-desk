@@ -5,8 +5,10 @@
 pub mod commands;
 pub mod config;
 pub mod constants;
+pub mod https;
 pub mod migrate;
 pub mod shortcut;
+pub mod update;
 
 pub use commands::Command;
 pub use config::{
