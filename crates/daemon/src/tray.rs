@@ -343,6 +343,9 @@ unsafe fn wndproc_impl(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> 
                 data.hook_thread_id,
                 std::sync::Arc::clone(&data.health_shutdown),
             );
+            // Started here rather than in `main` because it needs a window to post to, and
+            // this arm is the first point at which one certainly exists.
+            crate::updatecheck::spawn(data.hwnd);
             if !add_icon(data) {
                 debug_log(
                     "Wira Desk: initial NIM_ADD failed — tray icon not visible; will retry on TaskbarCreated",
@@ -385,6 +388,30 @@ unsafe fn wndproc_impl(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> 
                 ));
             }
             data.hook_dead_toast_sent = false;
+            0
+        }
+        m if m == shared::constants::WM_APP_UPDATE_STATE => {
+            // The tray icon's own state is untouched. An update, or a failure to look for
+            // one, is not a fault in the product's actual job, and taking the icon out of
+            // Normal for it would say something untrue: the icon's tiers exist so that a
+            // Critical icon still means what it means.
+            //
+            // The notice is taken rather than read, so it is shown exactly once however many
+            // times this message arrives.
+            if let Some(reason) = crate::updatecheck::take_notice() {
+                show_toast(
+                    data,
+                    "Wira Desk",
+                    &format!(
+                        "Could not check for updates.
+
+{reason}
+
+This will not be                          reported again until a check succeeds.",
+                    ),
+                    NIIF_INFO,
+                );
+            }
             0
         }
         m if m == WM_APP_HOOK_DEAD => {

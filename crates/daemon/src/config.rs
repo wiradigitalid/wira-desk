@@ -337,6 +337,18 @@ impl WarnSink for TrayWarn {
 
 /// Entry point for the `WM_APP_RELOAD_CONFIG` arm. Called from there and
 /// nowhere else — there is no timer, watcher, or idle wake-up in this module.
+/// Whether the daily update check is wanted right now.
+///
+/// Read from disk on each tick rather than captured at start or taken from the Worker's
+/// snapshot. Two reasons: turning the setting off in Settings then takes effect without a
+/// reload signal or a restart, and a check that happens once a day cannot care what a file
+/// read costs. A missing or unreadable config answers with the default, which is on.
+pub fn update_check_enabled() -> bool {
+    shared::Config::load_or_default(&shared::config_path())
+        .general
+        .check_updates
+}
+
 pub fn handle_reload_message(
     worker_hwnd: windows_sys::Win32::Foundation::HWND,
     hook_thread_id: u32,

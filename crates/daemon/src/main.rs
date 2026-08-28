@@ -18,6 +18,7 @@ mod menu;
 mod metrics;
 mod ring;
 mod tray;
+mod updatecheck;
 mod util;
 mod worker;
 

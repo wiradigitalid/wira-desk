@@ -180,6 +180,13 @@ pub const WM_APP_HOOK_LEASE: u32 = WM_APP + 32;
 /// handle carried across the process boundary.
 pub const WM_APP_RECORDED_CHORD: u32 = WM_APP + 33;
 
+/// The daily update check has new state to show.
+///
+/// Carries nothing: both parameters are zero, and the result lives in
+/// `updatecheck`'s own state. A version string does not fit in a `WPARAM`, and packing one
+/// into a heap pointer for the receiver to free is a leak waiting for a dropped message.
+pub const WM_APP_UPDATE_STATE: u32 = WM_APP + 34;
+
 /// Window class for the Settings process's hidden receiver window, which exists
 /// only to receive `WM_APP_RECORDED_CHORD` from the daemon on the observe/record
 /// lease (`DEC-004`). Kept separate from the visible Slint-owned window so the

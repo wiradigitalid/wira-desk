@@ -29,6 +29,7 @@ const CMD_VIEW_LOGS: u32 = 2;
 const CMD_AUTOSTART: u32 = 3;
 const CMD_ABOUT: u32 = 4;
 const CMD_EXIT: u32 = 5;
+const CMD_UPDATE: u32 = 6;
 
 use shared::constants::SETTINGS_EXE_NAME;
 
@@ -64,6 +65,24 @@ pub fn show(hwnd: HWND, x: i32, y: i32) {
         } else {
             MF_UNCHECKED
         };
+
+        // An update, offered only when there is one.
+        //
+        // This is the item rather than "Check for updates", and the difference matters: a
+        // menu closes on click, so a check started from one has nowhere to report to. An
+        // announcement does not need anywhere to report -- it *is* the report -- and it
+        // costs the menu nothing on the days there is nothing to say, which is almost all
+        // of them.
+        let update = crate::updatecheck::snapshot();
+        if let Some(version) = update.available.as_deref() {
+            AppendMenuW(
+                hmenu,
+                MF_STRING,
+                CMD_UPDATE as usize,
+                wide(&format!("&Update to {version}...")).as_ptr(),
+            );
+            AppendMenuW(hmenu, MF_SEPARATOR, 0, null());
+        }
 
         // Group 1: Settings, View Logs, Auto-Start.
         AppendMenuW(
@@ -114,7 +133,10 @@ pub fn show(hwnd: HWND, x: i32, y: i32) {
 
         // cmd == 0 → menu dismissed without a selection (or error); no-op.
         match cmd as u32 {
-            CMD_SETTINGS => launch_settings(),
+            // Same destination as Settings. The item names the update because that is why
+            // the user is clicking, but the place to read what changed and press Install is
+            // the About pane, which is where Settings opens anyway.
+            CMD_SETTINGS | CMD_UPDATE => launch_settings(),
             CMD_VIEW_LOGS => view_logs(),
             CMD_AUTOSTART => toggle_autostart(hwnd),
             CMD_ABOUT => show_about(hwnd),
