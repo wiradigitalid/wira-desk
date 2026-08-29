@@ -367,3 +367,36 @@ fn download_to_file(
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Live smoke test for the download-and-verify half of the update pipeline, run against a
+    /// real asset in this project's own releases -- the same repository-pinned shape
+    /// `url_is_acceptable` in `shared::update` requires, so nothing hosted elsewhere could
+    /// reach this code from a real check either. Ignored by default: it downloads several
+    /// megabytes over a real connection. Deliberately stops short of `install_now` and
+    /// `launch_installer` -- the one remaining step needs a human at a UAC prompt, so this
+    /// cannot install or launch anything; it proves only "the bytes matched the checksum".
+    ///
+    /// `WIRADESK_TEST_SETUP_URL=<url> WIRADESK_TEST_SETUP_SHA256=<sha> cargo test -p settings -- --ignored the_real_installer_downloads_and_verifies`
+    #[test]
+    #[ignore]
+    fn the_real_installer_downloads_and_verifies() {
+        let url = std::env::var("WIRADESK_TEST_SETUP_URL")
+            .expect("set WIRADESK_TEST_SETUP_URL to a real releases/download asset first");
+        let sha = std::env::var("WIRADESK_TEST_SETUP_SHA256")
+            .expect("set WIRADESK_TEST_SETUP_SHA256 to that asset's real SHA-256 first");
+
+        let dir = staging_dir().expect("staging dir");
+        let dest = dir.join("probe.exe");
+        let digest = download_to_file(&url, &dest, INSTALLER_LIMIT).expect("download failed");
+        let matches = crate::sha256::matches_hex(&digest, &sha);
+        let _ = std::fs::remove_dir_all(&dir);
+        assert!(
+            matches,
+            "downloaded bytes did not match the published checksum"
+        );
+    }
+}

@@ -44,9 +44,25 @@ pub fn split_https(url: &str) -> Option<(&str, &str)> {
     })
 }
 
+/// Read only in debug builds, and only by `latest_json_url` below.
+#[cfg(debug_assertions)]
+const DEV_LATEST_JSON_URL_VAR: &str = "WIRADESK_DEV_LATEST_JSON_URL";
+
 /// Where the release descriptor lives. The filename never changes, so this URL is stable
 /// across every version -- no API, no rate limit, no HTML to parse.
+///
+/// **Debug builds only:** `WIRADESK_DEV_LATEST_JSON_URL`, when set, is returned instead of the
+/// real address. This is the seam that lets check → download → verify → launch be exercised
+/// against a stand-in descriptor before any real tag exists — before which the real URL below
+/// has nothing to answer with. `#[cfg(debug_assertions)]` compiles the branch, and the
+/// `std::env::var` call inside it, out of a release build entirely: there is no environment
+/// variable anywhere in a shipped copy of this product that can redirect where it fetches an
+/// installer from. Same shape as the debug-only seams already in `daemon::tray`.
 pub fn latest_json_url() -> String {
+    #[cfg(debug_assertions)]
+    if let Ok(url) = std::env::var(DEV_LATEST_JSON_URL_VAR) {
+        return url;
+    }
     format!("{REPOSITORY}/releases/latest/download/latest.json")
 }
 
@@ -406,5 +422,29 @@ mod tests {
             decide("0.9.0", &descriptor("0.1.0", &good_url(), "nonsense")),
             Decision::Refused(Rejected::BadChecksum)
         );
+    }
+
+    /// Live smoke test for the debug-only seam on `latest_json_url`. Ignored by default,
+    /// because it touches the network and a real, clearly-labelled test descriptor rather than
+    /// anything synthetic -- everything above this line needs neither. Meaningful only with
+    /// `WIRADESK_DEV_LATEST_JSON_URL` pointed at one:
+    ///
+    /// `WIRADESK_DEV_LATEST_JSON_URL=<url> cargo test -p shared -- --ignored the_debug_override_reaches_a_real_descriptor`
+    #[test]
+    #[ignore]
+    fn the_debug_override_reaches_a_real_descriptor() {
+        let url = std::env::var("WIRADESK_DEV_LATEST_JSON_URL")
+            .expect("set WIRADESK_DEV_LATEST_JSON_URL to a real stand-in latest.json first");
+        assert_eq!(
+            latest_json_url(),
+            url,
+            "the override must be what latest_json_url() returns"
+        );
+
+        let body = crate::https::get_text(&url, DESCRIPTOR_LIMIT).expect("fetch failed");
+        match decide("0.0.1", &body) {
+            Decision::Available(r) => println!("offered {} at {}", r.version, r.setup_url),
+            other => panic!("expected Available against a stand-in newer version, got {other:?}"),
+        }
     }
 }
