@@ -20,6 +20,13 @@ owner decides.
 
 Nothing yet.
 
+## [0.1.4] - 2026-08-29
+
+No functional change from 0.1.3. This version exists to be found: an installed 0.1.3 checking
+`releases/latest/download/latest.json` for the first time against a real newer tag, with no
+debug seam or stand-in descriptor involved anywhere -- the last half of gate 2 this repository
+had not yet proven for real. See 3p.md for what it verified.
+
 ## [0.1.3] - 2026-08-29
 
 No functional change from 0.1.2. This version exists to run `release.yml` for the first time

@@ -1002,7 +1002,7 @@ checksum = "f27ae1dd37df86211c42e150270f82743308803d90a6f6e6651cd730d5e1732f"
 
 [[package]]
 name = "daemon"
-version = "0.1.3"
+version = "0.1.4"
 dependencies = [
  "embed-resource",
  "shared",
@@ -4170,7 +4170,7 @@ dependencies = [
 
 [[package]]
 name = "settings"
-version = "0.1.3"
+version = "0.1.4"
 dependencies = [
  "embed-resource",
  "i-slint-backend-winit",
@@ -4185,7 +4185,7 @@ dependencies = [
 
 [[package]]
 name = "shared"
-version = "0.1.3"
+version = "0.1.4"
 dependencies = [
  "serde",
  "serde_json",
