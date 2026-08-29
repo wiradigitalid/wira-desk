@@ -30,7 +30,7 @@ Through winget:
 winget install WiraDigitalIndonesia.WiraDesk
 ```
 
-Or download `WiraDesk-<version>-x64-setup.exe` from the [releases page](https://github.com/kodesh87/wira-desk/releases) and run it. Verify it against the published `SHA256SUMS` first:
+Or download `WiraDesk-<version>-x64-setup.exe` from the [releases page](https://github.com/wiradigitalid/wira-desk/releases) and run it. Verify it against the published `SHA256SUMS` first:
 
 ```powershell
 Get-FileHash .\WiraDesk-0.1.0-x64-setup.exe -Algorithm SHA256

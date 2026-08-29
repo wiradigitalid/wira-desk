@@ -82,7 +82,7 @@
 // sentence, because a resource script cannot read this file and this file cannot read a
 // resource script; if one is edited the other must follow.
 #define Copyright "Copyright (c) 2026 Wira Digital Indonesia"
-#define Homepage "https://github.com/kodesh87/wira-desk"
+#define Homepage "https://github.com/wiradigitalid/wira-desk"
 
 ; Must match `crates/shared/src/constants.rs`. The window class is how a running
 ; daemon is found and asked to shut down; the task name is what uninstall removes.
