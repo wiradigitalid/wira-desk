@@ -22,7 +22,7 @@ resolver = "2"
 # Who may change which digit is not a convention here — it is a rule, in `AGENTS.md`
 # under "Versioning authority". Below 1.0 the minor digit carries the breaking change.
 [workspace.package]
-version = "0.1.2"
+version = "0.1.3"
 
 # Safety-documentation gate for the unsafe surface.
 #

@@ -20,6 +20,14 @@ owner decides.
 
 Nothing yet.
 
+## [0.1.3] - 2026-08-29
+
+No functional change from 0.1.2. This version exists to run `release.yml` for the first time
+ever — the tag-vs-crate check, the Inno Setup build inside CI, and the real
+`releases/latest/download/latest.json` this repository's own updater will check against, none
+of which had executed even once before this tag. A deliberate, disposable step before any
+version is promoted as the one people should install; see 3p.md for what it verified.
+
 ## [0.1.2] - 2026-08-28
 
 No change from 0.1.1, which was itself never published. This version exists to carry a
