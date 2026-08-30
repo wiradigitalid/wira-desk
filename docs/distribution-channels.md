@@ -16,9 +16,9 @@ does not come back — that is the piece that should wait for a signed certifica
 
 | Channel | State (2026-08-30) | What's left | Then |
 |---|---|---|---|
-| winget | **PR open**: [microsoft/winget-pkgs#426321](https://github.com/microsoft/winget-pkgs/pull/426321) | Wait for community review/merge; separately, set the `WINGET_TOKEN` repo secret so future releases update automatically | `release.yml`'s `winget` job takes over on the next tag |
+| winget | **PR open**: [microsoft/winget-pkgs#426321](https://github.com/microsoft/winget-pkgs/pull/426321) | Wait for community review/merge; `WINGET_TOKEN` repo secret is already set | `release.yml`'s `winget` job takes over on the next tag |
 | Scoop | **Live**: [wiradigitalid/scoop-wiradesk](https://github.com/wiradigitalid/scoop-wiradesk) | Nothing — `excavator.yml` is already polling on its own schedule | Updates itself forever, no action needed |
-| SourceForge | **Not started** — no account exists yet | Create a SourceForge account/project + SSH key, store `SF_USER`/`SF_SSH_KEY` as repo secrets (see below) — this one genuinely needs a human, it is a separate identity from GitHub | `release.yml`'s `sourceforge` job takes over on the next tag |
+| SourceForge | **Live**: [sourceforge.net/projects/wira-desk](https://sourceforge.net/projects/wira-desk/) | Nothing — see below, this needed no workflow code at all | Every future GitHub release is mirrored automatically by SourceForge itself |
 
 Check `3p.md`'s Progress entries for the running account of what changed and when.
 
@@ -28,9 +28,9 @@ See `packaging/winget/README.md` for the full history, including a real `wingetc
 version gotcha hit while submitting. Short version: the 0.1.4 manifest was submitted
 2026-08-30 as [microsoft/winget-pkgs#426321](https://github.com/microsoft/winget-pkgs/pull/426321).
 `wingetcreate` forked `microsoft/winget-pkgs` under whichever GitHub account owned the
-submitting token, not necessarily `wiradigitalid` — the PR itself names which. Once that PR
-merges, set the `WINGET_TOKEN` repo secret and `release.yml`'s existing `winget` job carries
-every release after.
+submitting token, not necessarily `wiradigitalid` — the PR itself names which. The `WINGET_TOKEN`
+repo secret is already set; once the PR merges, `release.yml`'s existing `winget` job carries
+every release after with no further action.
 
 ## Scoop
 
@@ -44,23 +44,17 @@ bucket ever needs to be regenerated or re-pushed.
 
 ## SourceForge
 
-Nothing to generate here — `release.yml`'s `sourceforge` job (see its own comments) already
-knows how to upload once the account side exists. That side is entirely manual and entirely
-outside this repository:
+No workflow code needed at all, in the end. SourceForge has a built-in **GitHub Releases
+Integration**: a webhook, configured from the SourceForge project's Files page, that fires on
+this GitHub repository's `release` event and copies the new files into the project's File
+Release System on its own. The project is `wira-desk` (note the hyphen — not `wiradesk`, which
+several earlier drafts of this file and `release.yml` assumed before the project actually
+existed) at https://sourceforge.net/projects/wira-desk/, and the webhook is visible under this
+repo's Settings → Webhooks, pointed at `sourceforge.net/p/wira-desk/files-sf/github_webhook`,
+firing on `release` only.
 
-1. Create a SourceForge account, then a project — Account → Create → New Project. The project
-   name suggested throughout `release.yml` and this file is `wiradesk`; if that name is taken,
-   pick another and update the `rsync` destination path in the `sourceforge` job to match.
-2. The File Release System is available on a new project immediately — no approval wait.
-3. Account Settings → SSH Settings → add a key. Generate one dedicated to this
-   (`ssh-keygen -t ed25519 -f sourceforge_wiradesk -C "wiradesk-release-bot"`), upload the
-   PUBLIC half there, then:
-   ```powershell
-   gh secret set SF_USER --body "<your-sourceforge-username>"
-   gh secret set SF_SSH_KEY < sourceforge_wiradesk
-   ```
-4. Next tag, the `sourceforge` job stops skipping and mirrors the release automatically.
-
-No PR, no fork, no third-party review — SourceForge's own account/project creation is the only
-step, and it is the user's identity being registered, so it is left here as documentation
-rather than something run on their behalf.
+An earlier version of this repository carried a hand-rolled `sourceforge` job in `release.yml`
+that did the equivalent with `rsync` over SSH, written before this native integration was found.
+It was removed once the redundancy was clear — see `3p.md`'s 2026-08-30 entry — rather than kept
+as a second, competing path to the same file tree. Nothing further is needed here: the next
+GitHub release this repository publishes is the first real test of the webhook.

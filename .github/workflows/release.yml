@@ -21,8 +21,6 @@ jobs:
       # `secrets` is not readable from a job-level `if`, so the decision is made here, in a
       # step, and handed downstream as an output.
       publish-winget: ${{ steps.flags.outputs.winget }}
-      publish-sourceforge: ${{ steps.flags.outputs.sourceforge }}
-      version: ${{ env.VERSION }}
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
@@ -240,18 +238,14 @@ jobs:
             (Get-ChildItem dist\*.exe | ForEach-Object { $_.FullName }) dist\SHA256SUMS dist\latest.json `
             --title $env:GITHUB_REF_NAME --notes $notes
 
-      - name: Decide whether winget and SourceForge can be updated
+      - name: Decide whether winget can be updated
         id: flags
         shell: pwsh
         env:
           WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
-          SF_USER: ${{ secrets.SF_USER }}
-          SF_SSH_KEY: ${{ secrets.SF_SSH_KEY }}
         run: |
           $winget = if ($env:WINGET_TOKEN) { 'true' } else { 'false' }
           "winget=$winget" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
-          $sourceforge = if ($env:SF_USER -and $env:SF_SSH_KEY) { 'true' } else { 'false' }
-          "sourceforge=$sourceforge" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
 
   winget:
     # Submits a manifest pull request to microsoft/winget-pkgs, which is what makes
@@ -278,41 +272,11 @@ jobs:
           release-tag: ${{ github.ref_name }}
           token: ${{ secrets.WINGET_TOKEN }}
 
-  sourceforge:
-    # Mirrors the installer, the loose binaries, and the checksums to SourceForge's File
-    # Release System — a second host that needs no code-signing certificate and gives a user
-    # an alternative to a raw GitHub download. Skipped entirely when either secret is absent,
-    # so a repository that has not done the one-time SourceForge setup still releases
-    # normally, exactly like the `winget` job above.
-    #
-    # Two things must exist before this can work, and neither can be created from here:
-    #   1. A SourceForge project (Account -> Create -> New Project) with the File Release
-    #      System enabled. Creating one needs no approval to use as a personal mirror.
-    #   2. An SSH key added to the SourceForge account (Account Settings -> SSH Settings) —
-    #      its PRIVATE half stored as the `SF_SSH_KEY` secret here, and the SourceForge
-    #      username as the `SF_USER` secret.
-    needs: release
-    if: needs.release.outputs.publish-sourceforge == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download release artefacts
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh release download ${{ github.ref_name }} --repo ${{ github.repository }} \
-            --dir dist --pattern '*.exe' --pattern 'SHA256SUMS'
-
-      - name: Upload to SourceForge
-        env:
-          SF_USER: ${{ secrets.SF_USER }}
-          SF_SSH_KEY: ${{ secrets.SF_SSH_KEY }}
-          VERSION: ${{ needs.release.outputs.version }}
-        run: |
-          mkdir -p ~/.ssh
-          printf '%s\n' "$SF_SSH_KEY" > ~/.ssh/sf_key
-          chmod 600 ~/.ssh/sf_key
-          ssh-keyscan -t rsa,ed25519 frs.sourceforge.net >> ~/.ssh/known_hosts 2>/dev/null
-          # frs.sourceforge.net is the published, documented upload endpoint for the File
-          # Release System — see https://sourceforge.net/p/forge/documentation/Release%20Files%20for%20Download/.
-          rsync -avP -e "ssh -i ~/.ssh/sf_key -o StrictHostKeyChecking=no" dist/ \
-            "$SF_USER@frs.sourceforge.net:/home/frs/project/wiradesk/$VERSION/"
+  # No `sourceforge` job here on purpose. SourceForge has its own native "GitHub Releases
+  # Integration" — a webhook on THIS repository (visible under Settings -> Webhooks, pointed at
+  # sourceforge.net/p/wira-desk/files-sf/github_webhook, firing on the `release` event) that
+  # SourceForge itself set up and that copies every new GitHub release into the project's File
+  # Release System with no help from this workflow. An earlier version of this file carried a
+  # hand-rolled `rsync`-over-SSH job doing the same thing, discovered redundant once the native
+  # integration existed and removed rather than kept as a second path to the same result — see
+  # `3p.md`'s 2026-08-30 entry for why.
