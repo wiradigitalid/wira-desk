@@ -7,8 +7,8 @@ updated: 2026-08-30
 realizes: [UC-4, UC-5, UC-6]
 binds: [AD-1, AD-5, AD-11, AD-11a, AD-12, AD-13]
 reviewed:
-  date: '2026-08-26'
-  sha: '79277c2'
+  date: '2026-08-30'
+  sha: 'd14c964'
   lenses: [structure, prose, edge-case-hunter]
 ---
 
