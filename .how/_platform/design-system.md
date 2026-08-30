@@ -86,9 +86,9 @@ Wira Desk adheres to native Windows 11 Fluent 2 Design and Mica Material design 
 ## Standard Component Specifications
 
 ### A. Frameless Window Shell & Custom Titlebar
-* **Window Mode**: Frameless (`egui::ViewportBuilder::default().with_decorations(false)`).
+* **Window Mode**: Frameless (`no-frame: true;` on the root `Window` in `ui/main_window.slint`).
 * **Titlebar Height**: `36 px` with ground `#15181E`.
-* **Window Dragging**: Left-click on drag area triggers native window repositioning (`ui.ctx().send_viewport_cmd(ViewportCommand::StartDrag)`).
+* **Window Dragging**: Left-click on the titlebar's drag area raises a `drag_requested()` callback, handled in `main.rs` by reaching the underlying winit window (`window().with_winit_window(...)`) and calling `drag_window()`.
 * **Caption Buttons**:
   - `Minimize` (`—`): Dimensions `30 × 24 px`, radius `4 px`, hover `#272C35`, dispatches `ViewportCommand::Minimized(true)`.
   - `Close` (`✕`): Dimensions `30 × 24 px`, radius `4 px`, hover `#C42B1C` (Windows caption red) with white glyph, dispatches `ViewportCommand::Close`.

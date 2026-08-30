@@ -76,6 +76,8 @@ The maximized state is bound to the monitor the window was maximized on. `SetWin
 
 Frame-inset compensation (`frame_insets`, `compensate_for_frame_insets` in `arrangement/win32.rs`) measures the gap between `GetWindowRect` and the extended frame bounds *before* the move, at the source monitor's scaling. On a move between monitors of different scaling the visible frame lands a few pixels off the planned rectangle. `DEC-007` accepts this and states why a two-pass placement was declined: the second pass would have to wait on Windows' own asynchronous DPI-change reflow, which nothing in this codebase currently waits on.
 
+That "a few pixels off" outcome depends on the border clamp in `Win32WindowMover::apply` resolving its monitor from the *planned* (destination) rect rather than from the window, which is still on the source monitor when `apply` runs. Resolving from the window would clamp the compensated rect against the wrong monitor's bounds; a compensated rect that touches a different-DPI monitor is what Windows itself uses as the cue to relocate and rescale the window — turning the small edge inset into the window landing somewhere nobody planned. `DEC-010` records the correction and why it is measured, not argued.
+
 ## Evidence
 
 `[MISSING]` — no part of this flow exists in code yet. `arrangement/monitor.rs` and the `EnumDisplayMonitors` path in `context/spatial.rs` are both planned by this pass. The hook, ring buffer, worker dispatch, and `SetWindowPos` application steps are `[PARTIAL]`: those mechanisms exist and are exercised by the four current arrangement commands (`crates/daemon/src/hook.rs`, `ring.rs`, `worker.rs`, `arrangement/win32.rs`), and only the new command's arms are absent.

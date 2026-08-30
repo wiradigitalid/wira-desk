@@ -15,3 +15,11 @@ risks:
   pivot_trigger: The log-opening mechanism changes again. It has already moved once in documentation only
     -- the corpus described `ShellExecuteW(L"explore", ...)` against code that never did that -- and an
     untested path is exactly where that kind of drift survives.
+- id: RISK-4
+  impact: medium
+  likelihood: medium
+  owner: repo owner
+  status: open
+  pivot_trigger: Narrator, or a UIA client, reports a missing name, role, value, or listening state on
+    any Settings control. That is the same trigger RISK-3 used, carried over because the underlying gap
+    -- no automated check behind FR-20/FR-21 -- is unchanged by which toolkit renders the window.

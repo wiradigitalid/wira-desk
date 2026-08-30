@@ -96,22 +96,22 @@ The paradigm maps to the execution units:
 - **Prevents:** Tray icon permanently disappearing after `explorer.exe` crash/restart.
 - **Rule:** The Daemon's message loop listens for the `TaskbarCreated` broadcast message and re-registers the tray icon upon receiving it.
 
-### AD-11 — Settings Binary: egui + ShellExecute Launch
+### AD-11 — Settings Binary: Slint + ShellExecute Launch
 
 - **Binds:** CAP-5
 - **Prevents:** GUI framework bloating the daemon's RAM; complex de-elevation logic adding attack surface.
-- **Rule:** `wiradesk-settings.exe` uses `egui` for its GUI. The Daemon launches it via `ShellExecute` (inheriting Administrator elevation). De-elevation is not required — the settings binary only edits `config.toml` in `%APPDATA%`.
+- **Rule:** `wiradesk-settings.exe` uses `Slint` for its GUI, with `ui/main_window.slint` compiled by `slint-build` in `build.rs` and rendered through `i-slint-backend-winit`. The Daemon launches it via `ShellExecute` (inheriting Administrator elevation). De-elevation is not required — the settings binary only edits `config.toml` in `%APPDATA%`.
 - **First run:** when no `config.toml` exists, the Daemon launches the same binary with the frozen `--onboarding` flag (`shared::ONBOARDING_FLAG`). The flag lives in `shared` because both sides use it — a typo must be a compile error, not an onboarding screen that silently never appears.
 
-### AD-11a — Settings Accessibility Mechanism: AccessKit
+### AD-11a — Settings Accessibility Mechanism: Slint's `accessibility` feature
 
 - **Binds:** FR-20, FR-21, CAP-5
-- **Prevents:** A Settings window that looks correct but exposes nothing to a screen reader. `accesskit` is not an eframe default feature; without it the UI Automation tree is never published and every accessibility criterion fails silently.
-- **Rule:** `wiradesk-settings.exe` depends on `eframe` with `accesskit` enabled and `egui`. The AccessKit-backed Windows adapter is the accepted accessibility mechanism.
-- **Version coupling:** `eframe` and `egui` MUST be raised together and MUST end on the same minor version. Raising one alone leaves two `egui` versions in the graph, and `eframe::egui::Context` and `egui::Context` then stop being the same type — a compile error, not a subtle bug.
-- **Evidence does not travel:** the UI Automation surface — role, name, value, and listening state — was confirmed against one adapter version, and no automated test stands behind FR-20 or FR-21. A version change therefore obliges re-verifying that surface before the release carrying it.
-- **Typography:** Segoe UI is loaded from system fonts (`C:\Windows\Fonts\segoeui.ttf`), falling back to Tahoma, then to egui's bundled face.
-- **Theme:** Focus treatment is applied to both light and dark styles via `all_styles_mut` so the focus indicator remains consistent across OS theme switches.
+- **Prevents:** A Settings window that looks correct but exposes nothing to a screen reader. `accessibility` is not a default `slint` feature (the crate is declared with `default-features = false`); without it explicitly listed, the UI Automation tree is never published and every accessibility criterion fails silently.
+- **Rule:** `wiradesk-settings.exe` depends on `slint` with the `accessibility` feature enabled. Slint's own Windows adapter publishes the UI Automation tree — backed by AccessKit internally — and is the accepted accessibility mechanism. Each interactive element states its role and label explicitly via `accessible-role`/`accessible-label` in the `.slint` source, rather than relying on inferred roles.
+- **Version coupling:** `slint`, `slint-build`, and `i-slint-backend-winit` MUST be raised together and MUST end on the same version (all pinned to the same line in `Cargo.toml`). Raising one alone risks the generated window code and the runtime crate disagreeing about generated types — a compile error, not a subtle bug.
+- **Evidence does not travel:** the UI Automation surface — role, name, value, and listening state — was confirmed against one `slint` version, and no automated test stands behind FR-20 or FR-21. A version change therefore obliges re-verifying that surface before the release carrying it.
+- **Typography:** Segoe UI is loaded from system fonts (`C:\Windows\Fonts\segoeui.ttf`), falling back to Tahoma, then to `LoadedFont::Bundled` — the renderer's own default face — when neither is found.
+- **Theme:** OS theme detection (`AppsUseLightTheme`) sets `is_dark` on the `Palette` global (`ui/theme.slint`) once at startup; every component reads its colors from that global, including focus-outline color, so the focus indicator stays consistent with the detected OS theme without per-style overrides. Theme is not re-read while the window is open — a mid-session OS theme change takes effect only after a restart.
 
 ### AD-12 — Cargo Workspace: Three Crates
 
@@ -164,7 +164,7 @@ graph TD
 | --- | --- |
 | Rust (stable) | 2021 edition |
 | `windows-sys` | 0.52.x |
-| `egui` + `eframe` (settings only) | 0.36.x (with AccessKit) |
+| `slint` + `slint-build` + `i-slint-backend-winit` (settings only) | 1.17.x (with `accessibility` feature) |
 | `toml` + `serde` (shared) | 1.1.x / 1.0.x |
 | Target platform | Windows 10+ (x86_64-pc-windows-msvc) |
 | Build profile (release) | `lto = true`, `opt-level = "z"`, `strip = true`, `panic = "abort"` |
@@ -219,4 +219,4 @@ graph LR
 | --- | --- | --- |
 | `wiradesk.exe` (daemon, runtime) | < 2MB | < 10MB |
 | `wiradesk.exe` (binary size on disk) | 250KB–400KB | < 500KB |
-| `wiradesk-settings.exe` (runtime) | Unconstrained | Reasonable (~20-50MB with egui) |
+| `wiradesk-settings.exe` (runtime) | Unconstrained | Reasonable (episodic process; not remeasured since the Slint migration — [NEEDS CONFIRMATION]) |

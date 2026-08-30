@@ -14,9 +14,9 @@ created: 2026-08-21
 
 ## Responsibility
 
-`LC-settings-shell` is the egui/eframe presentation layer for `wiradesk-settings.exe`. It owns:
+`LC-settings-shell` is the Slint presentation layer for `wiradesk-settings.exe`: the declared UI in `ui/*.slint` (compiled by `slint-build`) plus the Rust-side application state and model it binds to. It owns:
 
-1. Application frameless shell (`with_decorations(false)`), navigation tabs (General, Shortcuts, Layout & Snapping, VM & Exceptions, About), and adaptive light/dark theming (FR-19, AD-11a).
+1. Application frameless shell (`no-frame: true`), navigation tabs (General, Shortcuts, Layout & Snapping, VM & Exceptions, About), and adaptive light/dark theming (FR-19, AD-11a).
 2. Wiring shortcut fields to `LC-shortcut-capturer` listening mode (FR-18).
 3. Tab order across all interactive controls (FR-20, LBR-ST-5).
 4. First-run onboarding panels when launched with `--onboarding` (FR-17, UC-5).
@@ -26,11 +26,12 @@ The shell never writes `config.toml` directly; all persistence goes through `LC-
 
 ## Depends on
 
-- `crates/settings/src/app.rs` — egui application state and panels.
+- `crates/settings/ui/main_window.slint` and the pane/component `.slint` files — declared window, panes, and controls.
+- `crates/settings/src/app.rs` — application model state (`SettingsModel`, `CaptureState`, focus order).
 - `crates/settings/src/theme.rs` — system theme detection and Segoe UI tokens.
 - `LC-shortcut-capturer` — capture state for shortcut fields.
 - `LC-config-writer` — save, reload signal, auto-start toggle.
-- eframe with `accesskit` feature (AD-11a).
+- `slint` with the `accessibility` feature (AD-11a).
 
 ## Interface
 
@@ -53,4 +54,4 @@ The shell never writes `config.toml` directly; all persistence goes through `LC-
 
 - **Window size boundary:** The window is frameless, transparent, and laid out at a fixed size, so a frame larger than the layout leaves an invisible region that still owns its hit-test area and swallows mouse clicks. A size change imposed from outside the process is clamped at the window’s own message boundary; a size the layout itself declares legal is not (LBR-ST-13, DEC-006).
 - **Accessibility:** Toggle and capture states must expose UI Automation values, not color alone (FR-21, LBR-ST-6).
-- **Evidence:** [PARTIAL] `crates/settings/src/app.rs`, `crates/settings/src/theme.rs`.
+- **Evidence:** [PARTIAL] `crates/settings/src/app.rs`, `crates/settings/src/theme.rs`, `crates/settings/ui/main_window.slint`.

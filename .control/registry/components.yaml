@@ -75,7 +75,7 @@ logical_components:
     type: ui-composite
     component: settings
     container: settings
-    description: egui settings dialog, theme, and navigation shell.
+    description: Slint settings dialog, theme, and navigation shell.
 
   - id: LC-config-writer
     type: service

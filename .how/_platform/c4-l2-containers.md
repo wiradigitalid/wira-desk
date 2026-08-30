@@ -3,7 +3,7 @@
 | Container | Binary | Product Components Served | Technology | Responsibilities |
 | --- | --- | --- | --- | --- |
 | **daemon** | `wiradesk.exe` | `window-management` | Rust, `windows-sys`, Win32 API | Installs global `WH_KEYBOARD_LL` hook, maintains lock-free command ring buffer, executes stateless Z-order window cycling and DPI-aware snapping, manages tray icon / context menu, monitors hook health (10s heartbeat). Runs elevated (`requireAdministrator`). |
-| **settings** | `wiradesk-settings.exe` | `settings` | Rust, `egui`, `eframe` + `accesskit` | Provides accessible GUI for editing shortcut bindings, VM bypass list, snapping preferences, and auto-start. Hosts first-run onboarding tutorial. Writes `config.toml` atomically and dispatches `WM_APP_RELOAD_CONFIG` to daemon. |
+| **settings** | `wiradesk-settings.exe` | `settings` | Rust, `slint` (`accessibility` feature), `i-slint-backend-winit` | Provides accessible GUI for editing shortcut bindings, VM bypass list, snapping preferences, and auto-start. Hosts first-run onboarding tutorial. Writes `config.toml` atomically and dispatches `WM_APP_RELOAD_CONFIG` to daemon. |
 | **shared** | (library crate) | `_platform` | Rust, `serde`, `toml` | Single source of truth for config schema, default bindings, `u8` command enum, IPC message IDs, APPDATA paths, and legacy WinTick migration logic. |
 
 ```mermaid
@@ -20,7 +20,7 @@ graph TB
             MainThread -. "Supervise hook / Heartbeat" .-> HookThread
         end
 
-        subgraph SettingsContainer["settings (wiradesk-settings.exe) [Container: Rust / egui]"]
+        subgraph SettingsContainer["settings (wiradesk-settings.exe) [Container: Rust / Slint]"]
             SettingsUI["Settings GUI & Accessibility<br/>(General, Switcher, Snap, Bypass, About)"]
             OnboardingUI["First-Run Onboarding<br/>(--onboarding simulation)"]
             ConfigWriter["Config Writer<br/>(Atomic save to temp + rename)"]

@@ -30,7 +30,8 @@ See `.what/settings/03-domain/state-machines.md` — `Idle` ↔ `Listening`.
 
 - `crates/settings/src/app.rs` — field focus and capture UI.
 - `shared::shortcut::{validate_shortcut, ShortcutError}`.
-- egui input pipeline (low-level key events, not `TextEdit` for chords).
+- `crates/settings/src/hookbridge.rs` — the daemon's hook-observed chord, drained by a 20ms `slint::Timer` on the UI thread; the source of truth while a field is `Listening` (`DEC-004`).
+- Slint's `key-pressed` event on `ui/main_window.slint`'s `key_handler` (low-level key events, not a text-entry control) — kept only as the fallback path for when no daemon is running.
 
 ## Interface
 
@@ -42,4 +43,4 @@ See `.what/settings/03-domain/state-machines.md` — `Idle` ↔ `Listening`.
 
 ## Notes
 
-- **Evidence:** [PARTIAL] `crates/shared/src/shortcut.rs`, settings UI capture handlers in `app.rs`.
+- **Evidence:** [PARTIAL] `crates/shared/src/shortcut.rs`, settings UI capture handlers in `app.rs`, `crates/settings/src/hookbridge.rs`, `crates/settings/ui/main_window.slint`.

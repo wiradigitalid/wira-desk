@@ -45,7 +45,7 @@ Configuration customization and user onboarding are episodic, UI-intensive tasks
 - Must draw the Shortcuts pane, order keyboard focus within it, and resolve collision precedence from **one** declared sequence of editable actions, never from a second independent list (LBR-ST-14, LBR-ST-5).
 - Must provide complete keyboard navigation (Tab/Shift+Tab, arrow keys, Escape/Enter) across all interactive dialogs (FR-20).
 - Must expose full UI Automation properties (names, roles, states, shortcut values) to assistive technologies via AccessKit (FR-21, AD-11a).
-- Must render UI in pure native Rust (`egui`/`eframe`) without webview wrappers or heavy runtime frameworks (AD-11).
+- Must render UI in pure native Rust (`Slint`) without webview wrappers or heavy runtime frameworks (AD-11).
 
 ## Non-Goals
 
@@ -66,7 +66,7 @@ A user customizes a shortcut combination in Settings, saves preferences, and imm
 ## Assumptions, Risks, and To Be Confirmed
 
 ### Assumptions
-- AccessKit integration in `eframe` satisfies screen reader accessibility compliance (Windows Narrator) across target Windows 10 and 11 builds.
+- AccessKit integration in `Slint` satisfies screen reader accessibility compliance (Windows Narrator) across target Windows 10 and 11 builds.
 - Windows Task Scheduler `ONLOGON` tasks for `%USERNAME%` execute reliably without triggering repeated UAC prompts.
 
 ### Risks

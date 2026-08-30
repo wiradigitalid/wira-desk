@@ -66,3 +66,25 @@ risks:
       The log-opening mechanism changes again. It has already moved once in documentation only
       -- the corpus described `ShellExecuteW(L"explore", ...)` against code that never did that
       -- and an untested path is exactly where that kind of drift survives.
+  - id: RISK-4
+    risk: >-
+      `crates/settings` has since migrated its entire UI from `eframe`/`egui` to `slint` (confirmed
+      via `crates/settings/Cargo.toml`) -- a full framework replacement, not a version bump.
+      RISK-3's closure evidence (a UIA pass on 2026-08-22) verified FR-20 and FR-21 against the
+      `eframe` 0.35→0.36.1 AccessKit adapter, which no longer exists in the dependency graph.
+      Nothing automated stands behind FR-20/FR-21 today (same gap RISK-3's residual already
+      named), and RISK-3's own pivot_trigger anticipated exactly this shape of change ("the
+      manual pass has then failed once and will be repeated on every future egui release") --
+      a full toolkit swap is a stronger case for repeating it than a minor-version bump was.
+      Slint's `accessibility` feature is enabled and elements declare `accessible-role`/
+      `accessible-label` explicitly (AD-11a), but that has not been walked pane-by-pane and
+      confirmed against a live UIA client the way RISK-3's closure was.
+    impact: medium
+    likelihood: medium
+    owner: repo owner
+    status: open
+    pivot_trigger: >-
+      Narrator, or a UIA client, reports a missing name, role, value, or listening state on any
+      Settings control. That is the same trigger RISK-3 used, carried over because the
+      underlying gap -- no automated check behind FR-20/FR-21 -- is unchanged by which toolkit
+      renders the window.

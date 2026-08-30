@@ -2,7 +2,7 @@
 topic: window-management component depth
 artifact: .what/window-management/SRS-window-management.md
 skill: wdi-component intents behaviour + design
-updated: 2026-08-26T22:10
+updated: 2026-08-30T12:25
 ---
 
 - (change) behaviour: UC-2 widened to all four halves (satisfies FR-14 + FR-22, title now 'Snap the active window to half the screen'); UC-7 written for the monitor move; SCN-03 written for the duplicate-chord condition; LBR-WM-7 (monitor-move semantics) and LBR-WM-8 (deterministic half division) added; four invariants added to domain-model.md.
@@ -12,3 +12,4 @@ updated: 2026-08-26T22:10
 - (override) Ordering deviation: this artifact was written while DEC-007, DEC-008, and DEC-009 stood at draft. The owner commissioned the whole batch in one instruction. DEC-006's precedent holds documents until the decision is ratified, and that remains the better order; recorded rather than hidden. All three ratified by the Product Owner in session and raised to applied on 2026-08-26.
 - (event) W4 closed 2026-08-26 at release 0.4.0. Six stories landed, 391 to 438 tests. Two method deviations on the owner's explicit instruction: no isolated worktree (worked on main in the shared checkout) and no dispatched workers or code-review panel (the coordinator wrote the code), so cross-model review independence was not obtained. DEC-010 opened and applied mid-wave from a defect found by reading arrangement/win32.rs: the border clamp resolved its monitor from the window, which would have collapsed every monitor-move placement.
 - (event) Story 4's guard was seen failing before being trusted, per the repo rule: breaking it turned exactly five asserting tests red and restoring it turned them green. The intermediate reading that said 'still red after restore' was wrong — Copy-Item preserved the backup timestamp so cargo served the broken build.
+- (change) wdi-decision apply: landed DEC-010's substance (border clamp resolves the destination monitor, not the window's current one, so a cross-DPI monitor-move doesn't get relocated by Windows) into all 5 files its touches: already named but which wdi-reconcile found carried zero trace of it -- LC-arrangement-engine.md, SDD-window-management.md, rules-window-management.md (LBR-WM-7), UC-7-move-window-next-monitor.md (Failure Flows), flow-monitor-move.md. Also landed DEC-006 (arrangement never targets a Wira Desk window) into the 1 of its 6 touches files missing it, UC-2-snap-window-half.md (Alternate Flows). Both decisions' own files were not edited -- their touches: lists were already correct, only the citations in the target documents were missing. Regenerated .control/generated/ via validate.py --generate; no new validator findings.

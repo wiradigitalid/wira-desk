@@ -18,9 +18,9 @@ This document catalogues all graphical user interface surfaces, dialogs, menus, 
 
 | Screen / Dialog | ID | Owner | Container | Entry Point | Technology | Description |
 | --- | --- | --- | --- | --- | --- | --- |
-| **Settings Dialog** | `SCR-SETTINGS` | `settings` | `settings` (`wiradesk-settings.exe`) | Tray Menu → "Settings", or manual CLI launch | Rust, `eframe` / `egui` + `accesskit` | Tabbed/modular configuration UI: General (auto-start), Switcher shortcuts, Snapping bindings, VM/RDP bypass lists, About & typography display. |
-| **First-Run Onboarding** | `SCR-ONBOARDING` | `settings` | `settings` (`wiradesk-settings.exe`) | Daemon launch with `--onboarding` on first run (no `config.toml`) | Rust, `eframe` / `egui` + `accesskit` | Interactive multi-step tutorial featuring dummy test windows to practice same-app cycling and snapping before entering production usage. |
-| **About Dialog / View** | `SCR-ABOUT` | `settings` | `settings` (`wiradesk-settings.exe`) | Settings UI tab or Tray Menu → "About" | Rust, `egui` | Version info, licensing notice, website link, and active typography resolution (Segoe UI vs fallback). |
+| **Settings Dialog** | `SCR-SETTINGS` | `settings` | `settings` (`wiradesk-settings.exe`) | Tray Menu → "Settings", or manual CLI launch | Rust, `slint` (`accessibility` feature) | Tabbed/modular configuration UI: General (auto-start), Switcher shortcuts, Snapping bindings, VM/RDP bypass lists, About & typography display. |
+| **First-Run Onboarding** | `SCR-ONBOARDING` | `settings` | `settings` (`wiradesk-settings.exe`) | Daemon launch with `--onboarding` on first run (no `config.toml`) | Rust, `slint` (`accessibility` feature) | Interactive multi-step tutorial featuring dummy test windows to practice same-app cycling and snapping before entering production usage. |
+| **About Dialog / View** | `SCR-ABOUT` | `settings` | `settings` (`wiradesk-settings.exe`) | Settings UI tab or Tray Menu → "About" | Rust, `slint` | Version info, licensing notice, website link, and active typography resolution (Segoe UI vs fallback). |
 | **Startup Error Dialog** | `SCR-FATAL-POPUP` | `window-management` | `daemon` (`wiradesk.exe`) | Tier 1 fatal startup failure (e.g. hook initialization failed after 5 retries) | Win32 `MessageBoxW` | Modal native message box with Error icon. Closes process immediately on dismissal. |
 
 ## Shell & System Surfaces
