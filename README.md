@@ -1,17 +1,20 @@
 # Wira Desk
 
-Windows has neither macOS's `⌘+\`` same-app window cycling nor Ubuntu's one-keystroke window
-snapping and move-to-monitor. Wira Desk brings both to Windows 11 as one lightweight,
-keyboard-driven tray daemon.
+Windows doesn't have macOS's `⌘+\`` same-app window cycling — Alt+Tab piles every app's windows
+together instead. Wira Desk adds that, plus fast one-key window snapping and arranging, to
+Windows 11 as one lightweight, keyboard-driven tray daemon.
 
 ## Why
 
-- **Alt+Tab treats every window from every app as one pile.** With a dozen windows open, finding
-  the one you want becomes a small tax on your attention, every time.
-- **Windows has no built-in one-keystroke window snapping or move-to-monitor.** Dragging to the
-  screen edge works, but it is not fast and does not scale past two monitors.
-- The one third-party tool that came close to solving this had been unmaintained for years, so
-  this exists to fill that gap.
+- **Alt+Tab treats every window from every app as one pile.** With a dozen windows open, cycling
+  to the one you want becomes a small tax on your attention, every time. Windows has no built-in
+  way to cycle only the windows of the app you're currently using — that's what `Win + \`` does
+  here.
+- **Fast, one-key window snapping and arranging.** Windows already has window snapping; this is
+  about speed and consistency — snap left/right/top/bottom, maximize, move to another monitor, or
+  stack three windows, each with one dedicated keyboard shortcut instead of a mouse drag or menu.
+- The one third-party tool that came close to same-app window cycling had been unmaintained for
+  years, so this exists to fill that specific gap.
 
 ## Default shortcuts
 
@@ -19,7 +22,7 @@ All of these are remappable from the Settings app.
 
 | Shortcut | Action |
 |---|---|
-| `Win + \`` | Cycle windows of the app you're currently using (e.g. Chrome window 1 → Chrome window 2 → ...) |
+| `` Win + ` `` | Cycle windows of the app you're currently using (e.g. Chrome window 1 → Chrome window 2 → ...) |
 | `Ctrl+Alt+Left/Right/Up/Down` | Snap the window to that half of the screen (50%) |
 | `Ctrl+Alt+Enter` | Maximize the window to full screen |
 | `Ctrl+Alt+Shift+Enter` | Move the window to the next monitor (multi-monitor setups) |
@@ -27,10 +30,11 @@ All of these are remappable from the Settings app.
 
 ## About
 
-Wira Desk began as **WinTick**, a private personal project born from the same itch: moving from a
-MacBook to Windows meant losing `⌘+\``, and time on Ubuntu meant missing one-keystroke window
-snapping and move-between-monitors too. The source is now published under the Wira Desk name as
-its first public release.
+Wira Desk began as **WinTick**, a private personal project born from missing macOS's `⌘+\``
+same-app window cycling after moving to Windows — Alt+Tab doesn't do that job. It also bundles
+fast, one-key window snapping and arranging: quick left/right/top/bottom snap, maximize, and
+move-to-monitor, each on its own dedicated shortcut instead of a drag or a menu. The source is now
+published under the Wira Desk name as its first public release.
 
 **Wira Digital Indonesia** is the studio brand behind this project; it is still being established.
 Wira Desk is built and maintained by [@kodesh87](https://github.com/kodesh87) - the studio name
