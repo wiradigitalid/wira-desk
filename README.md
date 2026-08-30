@@ -30,10 +30,10 @@ Through winget:
 winget install WiraDigitalIndonesia.WiraDesk
 ```
 
-Or download `WiraDesk-<version>-x64-setup.exe` from the [releases page](https://github.com/wiradigitalid/wira-desk/releases) and run it. Verify it against the published `SHA256SUMS` first:
+Or download `WiraDesk-<version>-x64-setup.exe` from the [releases page](https://github.com/wiradigitalid/wira-desk/releases) (mirrored on [SourceForge](https://sourceforge.net/projects/wira-desk/files/latest/download) too) and run it. Verify it against the published `SHA256SUMS` first:
 
 ```powershell
-Get-FileHash .\WiraDesk-0.1.0-x64-setup.exe -Algorithm SHA256
+Get-FileHash .\WiraDesk-0.1.4-x64-setup.exe -Algorithm SHA256
 ```
 
 The installer needs Administrator, installs to `%ProgramFiles%\Wira Desk`, and offers no per-user location. That is deliberate rather than an omission - auto-start runs the daemon elevated at every logon with no prompt, so a directory only administrators can write is the whole thing protecting it. See `SECURITY.md`.
@@ -84,13 +84,17 @@ Migration from a prior WinTick install is triggered by the **presence** of the l
 
 ## Status
 
-Pre-release (`0.1.0`). Behavior and packaging may change.
+Pre-release (`0.1.4`). Behavior and packaging may change.
 
 ## Built with Slint
 
 [![#MadeWithSlint](https://raw.githubusercontent.com/slint-ui/slint/master/logo/MadeWithSlint-logo-light.svg)](https://slint.dev)
 
 The Settings window is built with [Slint](https://slint.dev). Slint is offered under a choice of licences, and Wira Desk uses it under the **Slint Royalty-free License 2.0** - which requires that this use be disclosed on a public page where the binaries can be found. That is what this section is, so it belongs to the licence rather than to courtesy: it is not decoration to be tidied away.
+
+## Contributing
+
+Contributions are welcome via pull request - see [CONTRIBUTING.md](CONTRIBUTING.md) for the checks CI runs and the conventions this repository follows.
 
 ## License
 
