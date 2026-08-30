@@ -14,44 +14,33 @@ does not come back — that is the piece that should wait for a signed certifica
 
 ## Status
 
-| Channel | Manifest/script ready | The one human step | Then |
+| Channel | State (2026-08-30) | What's left | Then |
 |---|---|---|---|
-| winget | Yes — `packaging/winget/` | Fork `microsoft/winget-pkgs`, get a classic PAT, run `wingetcreate submit` once | `release.yml`'s `winget` job updates it forever |
-| Scoop | Yes — `packaging/scoop-bucket/` | Create the `wiradigitalid/scoop-wiradesk` GitHub repo and push this folder to it once | `excavator.yml` (already in that folder) updates it forever, on its own schedule |
-| SourceForge | Yes — `release.yml`'s `sourceforge` job | Create a SourceForge project + SSH key, store `SF_USER`/`SF_SSH_KEY` as repo secrets once | Every tag mirrors there automatically, same as winget |
+| winget | **PR open**: [microsoft/winget-pkgs#426321](https://github.com/microsoft/winget-pkgs/pull/426321) | Wait for community review/merge; separately, set the `WINGET_TOKEN` repo secret so future releases update automatically | `release.yml`'s `winget` job takes over on the next tag |
+| Scoop | **Live**: [wiradigitalid/scoop-wiradesk](https://github.com/wiradigitalid/scoop-wiradesk) | Nothing — `excavator.yml` is already polling on its own schedule | Updates itself forever, no action needed |
+| SourceForge | **Not started** — no account exists yet | Create a SourceForge account/project + SSH key, store `SF_USER`/`SF_SSH_KEY` as repo secrets (see below) — this one genuinely needs a human, it is a separate identity from GitHub | `release.yml`'s `sourceforge` job takes over on the next tag |
 
-Nothing in this table has happened yet. All three are still "prepared", not "live" — check
-`3p.md`'s Progress entries for the date any of these actually flips.
+Check `3p.md`'s Progress entries for the running account of what changed and when.
 
 ## winget
 
-See `packaging/winget/README.md` for the full one-time bootstrap and the regeneration script.
-Short version: `scripts/generate-winget-manifest.ps1 -Version X.Y.Z` writes the manifest from
-the real GitHub release, `wingetcreate submit` opens the PR. Do this once; `release.yml`
-already carries the automation for every release after the first is accepted.
+See `packaging/winget/README.md` for the full history, including a real `wingetcreate` schema-
+version gotcha hit while submitting. Short version: the 0.1.4 manifest was submitted
+2026-08-30 as [microsoft/winget-pkgs#426321](https://github.com/microsoft/winget-pkgs/pull/426321).
+`wingetcreate` forked `microsoft/winget-pkgs` under whichever GitHub account owned the
+submitting token, not necessarily `wiradigitalid` — the PR itself names which. Once that PR
+merges, set the `WINGET_TOKEN` repo secret and `release.yml`'s existing `winget` job carries
+every release after.
 
 ## Scoop
 
-See `packaging/scoop-bucket/README.md`. Short version: this project needs its own bucket
-rather than a submission to Scoop's `extras` bucket, because the installer requires
-Administrator and installs to `%ProgramFiles%` — `extras` expects portable, user-scoped
-packages, and this is neither.
-
-To go live:
-
-```powershell
-gh repo create wiradigitalid/scoop-wiradesk --public --description "Scoop bucket for Wira Desk"
-git -C packaging/scoop-bucket init
-git -C packaging/scoop-bucket add -A
-git -C packaging/scoop-bucket commit -m "Initial bucket"
-git -C packaging/scoop-bucket remote add origin https://github.com/wiradigitalid/scoop-wiradesk.git
-git -C packaging/scoop-bucket push -u origin main
-```
-
-This creates a public repository under the `wiradigitalid` account — an external, visible
-action, so it is written out here rather than run automatically. After it exists,
-`.github/workflows/excavator.yml` in that repo needs no further attention: it polls wira-desk's
-GitHub releases every four hours and bumps the manifest itself.
+Live at [wiradigitalid/scoop-wiradesk](https://github.com/wiradigitalid/scoop-wiradesk), pushed
+2026-08-30. This is its own bucket rather than a submission to Scoop's `extras` bucket, because
+the installer requires Administrator and installs to `%ProgramFiles%` — `extras` expects
+portable, user-scoped packages, and this is neither. `.github/workflows/excavator.yml` in that
+repo needs no further attention: it polls wira-desk's GitHub releases every four hours and bumps
+the manifest itself. `packaging/scoop-bucket/` in this repo remains the source of truth if the
+bucket ever needs to be regenerated or re-pushed.
 
 ## SourceForge
 

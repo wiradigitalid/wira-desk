@@ -58,16 +58,16 @@ $outDir = Join-Path $repoRoot "packaging\winget\manifests\w\WiraDigitalIndonesia
 New-Item -ItemType Directory -Force $outDir | Out-Null
 
 @"
-# yaml-language-server: `$schema=https://aka.ms/winget-manifest.version.1.28.0.schema.json
+# yaml-language-server: `$schema=https://aka.ms/winget-manifest.version.1.10.0.schema.json
 PackageIdentifier: $identifier
 PackageVersion: $Version
 DefaultLocale: en-US
 ManifestType: version
-ManifestVersion: 1.28.0
+ManifestVersion: 1.10.0
 "@ | Set-Content -Encoding utf8 (Join-Path $outDir "$identifier.yaml")
 
 @"
-# yaml-language-server: `$schema=https://aka.ms/winget-manifest.installer.1.28.0.schema.json
+# yaml-language-server: `$schema=https://aka.ms/winget-manifest.installer.1.10.0.schema.json
 PackageIdentifier: $identifier
 PackageVersion: $Version
 InstallerType: inno
@@ -81,11 +81,11 @@ Installers:
     InstallerUrl: $url
     InstallerSha256: $sha256
 ManifestType: installer
-ManifestVersion: 1.28.0
+ManifestVersion: 1.10.0
 "@ | Set-Content -Encoding utf8 (Join-Path $outDir "$identifier.installer.yaml")
 
 @"
-# yaml-language-server: `$schema=https://aka.ms/winget-manifest.defaultLocale.1.28.0.schema.json
+# yaml-language-server: `$schema=https://aka.ms/winget-manifest.defaultLocale.1.10.0.schema.json
 PackageIdentifier: $identifier
 PackageVersion: $Version
 PackageLocale: en-US
@@ -115,7 +115,7 @@ Tags:
   - tray
   - hotkeys
 ManifestType: defaultLocale
-ManifestVersion: 1.28.0
+ManifestVersion: 1.10.0
 "@ | Set-Content -Encoding utf8 (Join-Path $outDir "$identifier.locale.en-US.yaml")
 
 Write-Host "Wrote $outDir"
