@@ -1,6 +1,6 @@
 # Wira Desk
 
-Windows doesn't have macOS's `⌘+\`` same-app window cycling — Alt+Tab piles every app's windows
+Windows doesn't have macOS's `` ⌘+` `` same-app window cycling — Alt+Tab piles every app's windows
 together instead. Wira Desk adds that, plus fast one-key window snapping and arranging, to
 Windows 11 as one lightweight, keyboard-driven tray daemon.
 
@@ -8,7 +8,7 @@ Windows 11 as one lightweight, keyboard-driven tray daemon.
 
 - **Alt+Tab treats every window from every app as one pile.** With a dozen windows open, cycling
   to the one you want becomes a small tax on your attention, every time. Windows has no built-in
-  way to cycle only the windows of the app you're currently using — that's what `Win + \`` does
+  way to cycle only the windows of the app you're currently using — that's what `` Win + ` `` does
   here.
 - **Fast, one-key window snapping and arranging.** Windows already has window snapping; this is
   about speed and consistency — snap left/right/top/bottom, maximize, move to another monitor, or
@@ -30,7 +30,7 @@ All of these are remappable from the Settings app.
 
 ## About
 
-Wira Desk began as **WinTick**, a private personal project born from missing macOS's `⌘+\``
+Wira Desk began as **WinTick**, a private personal project born from missing macOS's `` ⌘+` ``
 same-app window cycling after moving to Windows — Alt+Tab doesn't do that job. It also bundles
 fast, one-key window snapping and arranging: quick left/right/top/bottom snap, maximize, and
 move-to-monitor, each on its own dedicated shortcut instead of a drag or a menu. The source is now
