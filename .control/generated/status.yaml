@@ -34,7 +34,7 @@ validators_skipped:
     be moved here just to give the room content
 open_questions:
   blocking: 0
-  assumptions: 21
+  assumptions: 22
   external: 0
   answered: 2
   blocking_budget: 6
