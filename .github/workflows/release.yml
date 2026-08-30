@@ -244,8 +244,8 @@ jobs:
         env:
           WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
         run: |
-          $has = if ($env:WINGET_TOKEN) { 'true' } else { 'false' }
-          "winget=$has" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          $winget = if ($env:WINGET_TOKEN) { 'true' } else { 'false' }
+          "winget=$winget" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
 
   winget:
     # Submits a manifest pull request to microsoft/winget-pkgs, which is what makes
@@ -271,3 +271,12 @@ jobs:
           installers-regex: '-x64-setup\.exe$'
           release-tag: ${{ github.ref_name }}
           token: ${{ secrets.WINGET_TOKEN }}
+
+  # No `sourceforge` job here on purpose. SourceForge has its own native "GitHub Releases
+  # Integration" — a webhook on THIS repository (visible under Settings -> Webhooks, pointed at
+  # sourceforge.net/p/wira-desk/files-sf/github_webhook, firing on the `release` event) that
+  # SourceForge itself set up and that copies every new GitHub release into the project's File
+  # Release System with no help from this workflow. An earlier version of this file carried a
+  # hand-rolled `rsync`-over-SSH job doing the same thing, discovered redundant once the native
+  # integration existed and removed rather than kept as a second path to the same result — see
+  # `3p.md`'s 2026-08-30 entry for why.

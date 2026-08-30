@@ -1,0 +1,31 @@
+name: Excavator
+
+# Runs on a schedule, reads each manifest's `checkver`, and when it finds a newer GitHub release
+# than the manifest's own `version`, bumps `version`/`url`/`hash` from `autoupdate` and commits
+# the change. This is the ENTIRE update mechanism for this bucket: nothing in wira-desk's own
+# release.yml needs to push anything here, because this workflow polls wira-desk's own GitHub
+# releases on its own schedule instead. Copied verbatim from ScoopInstaller/BucketTemplate,
+# which is the standard every third-party Scoop bucket uses for this.
+#
+# Needs no repository secret beyond the default GITHUB_TOKEN, because `permissions: contents:
+# write` below lets it commit directly to this repo.
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '20 */4 * * *'
+
+permissions:
+  contents: write
+
+jobs:
+  excavate:
+    name: Excavate
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Excavate
+        uses: ScoopInstaller/GithubActions@v3.0.0
+        env:
+          SKIP_UPDATED: 1
