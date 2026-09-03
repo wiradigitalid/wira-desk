@@ -53,11 +53,7 @@ Keyboard focus and active window state transfer immediately to the next same-app
 
 ## Business Rules
 
-- `BR-1` (Settings persistence and IPC reload)
-- `BR-2` (Single-instance mutual exclusion)
-- `BR-3` (UIPI bypass and elevated execution)
-- `BR-4` (Stateless live Z-order enumeration)
-- `BR-5` (Virtual machine and remote desktop passthrough)
+- `BR-1` (Explicit IPC configuration reload)
 - `LBR-WM-1` (Exact shortcut matching only)
 - `LBR-WM-2` (Live candidate filtering and UX honesty)
 - `LBR-WM-3` (Non-blocking kernel API sterilization)

@@ -53,8 +53,7 @@ The active window is cleanly resized and positioned to exactly half of the activ
 
 ## Business Rules
 
-- `BR-1` (Settings persistence and IPC reload)
-- `BR-3` (UIPI bypass and elevated execution)
+- `BR-1` (Explicit IPC configuration reload)
 - `LBR-WM-1` (Exact shortcut matching only)
 - `LBR-WM-3` (Non-blocking kernel API sterilization)
 - `LBR-WM-4` (Lock-free drop-on-saturation policy)

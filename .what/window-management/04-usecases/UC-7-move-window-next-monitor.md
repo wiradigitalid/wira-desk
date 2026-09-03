@@ -56,7 +56,6 @@ The active window sits on the next attached monitor, occupying the same share of
 
 ## Business Rules
 
-- `BR-3` (UIPI bypass and elevated execution)
 - `BR-6` (One chord, one action)
 - `LBR-WM-1` (Exact shortcut matching only)
 - `LBR-WM-3` (Non-blocking kernel API sterilization)

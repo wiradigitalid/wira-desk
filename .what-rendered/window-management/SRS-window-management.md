@@ -85,18 +85,38 @@ Paired SDD: `.how/window-management/SDD-window-management.md`. Binds invariants 
 
 ### `rules-window-management.md`
 
-### Local Business Rules — window-management
+### Business Rules — window-management
 
-| ID | Rule | Scope / Enforcing Boundary | Rationale |
-| --- | --- | --- | --- |
-| LBR-WM-1 | **Exact shortcut matching only**: modifier superset or extra key chords (e.g. `Win+Ctrl+\`` when configured for `Win+\``) must not trigger cycling or snapping actions, and must pass through unmodified via `CallNextHookEx`. | `LC-hook-thread` (`daemon/hook.rs`) | Prevents colliding with OS or IDE chord shortcuts and protects user typing flow. |
-| LBR-WM-2 | **Live candidate filtering**: Minimized (`IsIconic`), cloaked (`DwmGetWindowAttribute(DWMWA_CLOAKED)`), tool windows (`WS_EX_TOOLWINDOW`), shell surfaces (`Shell_TrayWnd`, `Progman`, `WorkerW`), and ghost windows (`Ghost`) are excluded from window cycling. Unresponsive ("Not Responding") normal windows remain eligible. | `LC-worker-thread` (`daemon/cycling/eligibility.rs`) | Guarantees focus moves only to genuine application windows while upholding UX honesty by not hiding hung apps. |
-| LBR-WM-3 | **Non-blocking kernel API sterilization**: Window enumeration and candidate inspection must use only non-blocking kernel and desktop APIs (`EnumWindows`, `IsWindowVisible`, `GetWindowLongPtrW`, `GetClassNameW`, `QueryFullProcessImageNameW`). Blocking cross-process APIs (`SendMessage`, synchronous `GetWindowText`) are strictly prohibited. | `LC-worker-thread` (`daemon/cycling/source.rs`) | Prevents worker thread deadlock when a target process message queue is blocked or unresponsive. |
-| LBR-WM-4 | **Lock-free drop-on-saturation policy**: The Hook-to-Worker ring buffer maintains a fixed static capacity of 16 slots. If full, newly intercepted commands are dropped immediately by the Hook thread without blocking the input stream. | `LC-hook-thread` (`daemon/hook.rs`, `daemon/ring.rs`) | Keeps hook callback duration well under the 10 ms budget (NFR-3) and prevents OS `LowLevelHooksTimeout` unhooking. |
-| LBR-WM-5 | **One-shot Tier-3 notification latch**: When hook failure reaches threshold (`HOOK_CHECK_FAIL_THRESHOLD = 3`), exactly one Windows Toast Notification is dispatched per failure episode. Further notifications remain suppressed until hook health is restored. | `LC-tray-controller` (`daemon/tray.rs`) | Complies with AD-7 to avoid notification spam while guaranteeing critical system state is visible to the user. |
-| LBR-WM-6 | **Arrangement target eligibility**: A window belonging to Wira Desk itself — the settings executable's window, including its onboarding modal, or the daemon's own — must never be an arrangement target. The chord stays claimed and consumed: nothing moves, nothing is retargeted, and no popup is raised. Ownership is decided from the target process's image basename and by comparison against the daemon's own process id, never from window class or window title. | `LC-arrangement-engine` (`daemon/arrangement/win32.rs`) | The settings window is frameless, transparent, and fixed-size, so an external resize leaves an invisible region that still owns its hit-test area and swallows mouse clicks. Passing the chord back to Windows instead would fire its own virtual-desktop action, which `DEC-006` refuses. |
-| LBR-WM-7 | **Monitor-move semantics**: A monitor-move command visits monitors in the order `EnumDisplayMonitors` reports them, sampled fresh per invocation, wrapping from the last back to the first. The destination rectangle is derived from the window's **share** of its source work area mapped onto the destination work area, never from copying its pixel width and height. A window Windows still considers maximized must be restored to its normal state before it is placed, because the maximized state is bound to the monitor it was maximized on and the window otherwise springs back. With exactly one monitor attached the command is a successful no-op: nothing moves, nothing is shown, nothing is logged. The virtual desktop is never changed. The placement's border clamp resolves against the **destination** monitor, never the one the window is still on when the move applies — resolving from the window would clamp a rect planned for the destination against the source's bounds instead. | `LC-arrangement-engine` (`daemon/arrangement/monitor.rs`), `LC-worker-thread` (`daemon/worker.rs`) | Coordinate ordering is undefined for vertically stacked or L-shaped arrangements, and named monitors need an identity Windows does not offer cheaply (`DEC-007`). Proportional mapping is what makes an arrangement survive a move between monitors of different size or scaling. Clamping to the wrong monitor does not just shave pixels: a compensated rect touching a different-DPI monitor is what makes Windows itself relocate and rescale the window (`DEC-010`). |
-| LBR-WM-8 | **Deterministic half division**: A half-screen snap divides the work area at one boundary computed once, and both halves are derived from that single boundary — so the two halves tile the work area with neither a one-pixel gap nor a one-pixel overlap. An odd extent gives the floor to the first half (left, or top) and the remainder to the second. The division is recomputed from the work area on every press and never remembered, so repeating a chord never shifts the window. A half that would be empty is refused as a planning failure rather than emitted as a zero-extent placement. | `LC-arrangement-engine` (`daemon/arrangement/snap.rs`) | Both halves being computed from one boundary makes "the halves exactly tile the work area" true by construction rather than by an off-by-one convention every reader has to remember. Stated for both axes because the vertical division added at FR-22 has to inherit the same guarantee rather than reinvent it. |
+Local component business rules binding the `window-management` Product Component. Global cross-component rules (`BR-1` through `BR-7`) live in `.what/business-rules.md`.
+
+#### Rules
+
+| id | Rule | Binds | Source | Status |
+| --- | --- | --- | --- | --- |
+| LBR-WM-1 | A modifier superset or an extra key chord beyond what is configured (e.g. `Win+Ctrl+\`` when only `Win+\`` is configured) must not trigger cycling or snapping, and the keystroke must reach the rest of the system unaffected. | `window-management` | FR-6 | active |
+| LBR-WM-2 | A minimized, cloaked, tool, shell-surface, or ghost window is excluded from cycling candidates; an unresponsive ("Not Responding") normal window remains eligible. | `window-management` | FR-4, FR-5 | active |
+| LBR-WM-3 | Window enumeration and candidate inspection must use only non-blocking queries; a blocking cross-process call must never be used on the path that serves a keypress. | `window-management` | NFR-4, AD-2 | active |
+| LBR-WM-4 | When the hook-to-worker command channel is full, a newly intercepted command is dropped immediately rather than blocking the input stream. | `window-management` | NFR-3, AD-2 | active |
+| LBR-WM-5 | When hook failure reaches the escalation threshold, exactly one toast notification is dispatched per failure episode; further notifications stay suppressed until hook health is restored. | `window-management` | AD-7 | active |
+| LBR-WM-6 | A window belonging to Wira Desk itself must never be an arrangement target; the chord is consumed and nothing moves, is retargeted, or raises a popup. | `window-management` | DEC-006 | active |
+| LBR-WM-7 | A monitor-move command visits monitors in one fixed order, sampled fresh per invocation, wrapping from the last back to the first; the destination is derived from the window's share of its source work area, never from copying pixel dimensions; a maximized window is restored before being placed; with one monitor attached the command is a successful no-op; the virtual desktop never changes as a side effect. | `window-management` | FR-23, DEC-007, AD-14 | active |
+| LBR-WM-8 | A half-screen snap divides the work area at one boundary computed fresh on every press, so the two halves exactly tile the work area with neither a gap nor an overlap; an odd extent gives the floor to the first half; a half that would be empty is refused rather than emitted as a zero-extent placement. | `window-management` | FR-14, FR-22 | active |
+
+#### Rationale — LBR-WM-6
+
+The settings window is frameless, transparent, and fixed-size, so an external resize can leave an invisible region that still owns its hit-test area and would otherwise swallow mouse clicks. Passing the chord back to Windows instead of consuming it would fire its own virtual-desktop action, which `DEC-006` refuses.
+
+#### Rationale — LBR-WM-7
+
+Coordinate ordering is undefined for vertically stacked or L-shaped arrangements, and a named monitor needs an identity Windows does not offer cheaply (`DEC-007`). Proportional mapping is what makes an arrangement survive a move between monitors of different size or scaling. Where the destination placement's clamp resolves against belongs to `DEC-010`, not to this rule — this rule states only the promise the user sees.
+
+#### Rationale — LBR-WM-8
+
+Both halves being derived from one boundary makes "the halves exactly tile the work area" true by construction rather than by an off-by-one convention every reader has to remember, and it holds for both axes so the vertical division added at FR-22 inherits the same guarantee rather than reinventing it.
+
+#### Retired
+
+*(No retired local rules)*
 
 
 ## Domain — `03-domain/`
@@ -298,11 +318,7 @@ Keyboard focus and active window state transfer immediately to the next same-app
 
 #### Business Rules
 
-- `BR-1` (Settings persistence and IPC reload)
-- `BR-2` (Single-instance mutual exclusion)
-- `BR-3` (UIPI bypass and elevated execution)
-- `BR-4` (Stateless live Z-order enumeration)
-- `BR-5` (Virtual machine and remote desktop passthrough)
+- `BR-1` (Explicit IPC configuration reload)
 - `LBR-WM-1` (Exact shortcut matching only)
 - `LBR-WM-2` (Live candidate filtering and UX honesty)
 - `LBR-WM-3` (Non-blocking kernel API sterilization)
@@ -356,8 +372,7 @@ The active window is cleanly resized and positioned to exactly half of the activ
 
 #### Business Rules
 
-- `BR-1` (Settings persistence and IPC reload)
-- `BR-3` (UIPI bypass and elevated execution)
+- `BR-1` (Explicit IPC configuration reload)
 - `LBR-WM-1` (Exact shortcut matching only)
 - `LBR-WM-3` (Non-blocking kernel API sterilization)
 - `LBR-WM-4` (Lock-free drop-on-saturation policy)
@@ -408,7 +423,7 @@ The Wira Desk system tray resident icon and context menu are fully restored foll
 
 #### Business Rules
 
-- `BR-2` (Single-instance mutual exclusion)
+- `BR-5` (Single responsibility for diagnostic log access)
 - `LBR-WM-5` (One-shot Tier-3 notification latch)
 
 
@@ -463,7 +478,6 @@ The active window sits on the next attached monitor, occupying the same share of
 
 #### Business Rules
 
-- `BR-3` (UIPI bypass and elevated execution)
 - `BR-6` (One chord, one action)
 - `LBR-WM-1` (Exact shortcut matching only)
 - `LBR-WM-3` (Non-blocking kernel API sterilization)

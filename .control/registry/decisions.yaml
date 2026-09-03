@@ -129,3 +129,15 @@ decisions:
       - .what/settings/SRS-settings.md
       - .what/settings/04-usecases/EXPERIENCE.md
       - .how/settings/05-model/data-model.md
+
+  - id: DEC-010
+    title: The border clamp resolves its monitor from the planned rect, not from the window
+    status: applied
+    file: decisions/DEC-010-the-border-clamp-follows-the-planned-rect-not-the-window.md
+    created: '2026-08-26'
+    touches:
+      - .how/window-management/04-components/LC-arrangement-engine.md
+      - .how/window-management/SDD-window-management.md
+      - .what/window-management/02-rules/rules-window-management.md
+      - .what/window-management/04-usecases/UC-7-move-window-next-monitor.md
+      - .how/window-management/06-flows/flow-monitor-move.md

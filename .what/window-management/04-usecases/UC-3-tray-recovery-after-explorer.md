@@ -48,5 +48,5 @@ The Wira Desk system tray resident icon and context menu are fully restored foll
 
 ## Business Rules
 
-- `BR-2` (Single-instance mutual exclusion)
+- `BR-5` (Single responsibility for diagnostic log access)
 - `LBR-WM-5` (One-shot Tier-3 notification latch)
