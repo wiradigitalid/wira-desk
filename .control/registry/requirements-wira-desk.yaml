@@ -1,0 +1,324 @@
+# requirements-wira-desk.yaml — SSOT for CAP · FR · NFR · UJ, initiative `wira-desk`
+
+capabilities:
+  - id: CAP-1
+    goal: BG-1
+    text: Cycle focus among visible windows of the active application via a precise global shortcut.
+  - id: CAP-2
+    goal: BG-3
+    text: Snap and resize the active window with keyboard shortcuts, DPI-aware per monitor.
+  - id: CAP-3
+    goal: BG-2
+    text: Load user preferences from a local TOML file in a writable user directory.
+  - id: CAP-4
+    goal: BG-1
+    text: Operate on elevated windows by running the daemon with Administrator privileges.
+  - id: CAP-5
+    goal: BG-2
+    text: Provide on-demand settings and first-run onboarding via a separate settings binary.
+  - id: CAP-6
+    goal: BG-2
+    text: Alert the user when the keyboard hook dies at runtime via tray state and one toast.
+  - id: CAP-7
+    goal: BG-1
+    text: Restrict cycling to the same physical monitor and virtual desktop as the active window.
+  - id: CAP-8
+    goal: BG-1
+    text: Pass shortcuts through unchanged when the foreground window is a VM or RDP client.
+  - id: CAP-9
+    goal: BG-2
+    text: Recover the tray icon after explorer.exe restarts and follow the three-tier error protocol.
+  - id: CAP-10
+    goal: BG-2
+    text: Launch the daemon silently at logon via a scheduled task without repeated UAC prompts.
+  - id: CAP-11
+    goal: BG-2
+    text: Expose runtime diagnostic logs from the tray context menu.
+  - id: CAP-12
+    goal: BG-3
+    text: Move the active window to another physical monitor from the keyboard, keeping its share of the work area.
+
+functional:
+  - id: FR-1
+    capability: CAP-1
+    component: window-management
+    text: Cycle only among windows of the same application identity (exe name), not global Alt+Tab.
+    statement: >-
+      The system can cycle focus strictly among windows sharing the same executable identity
+      (process path and name) as the current foreground window upon detecting the cycling shortcut.
+      Realizes UJ-1.
+    proof: >-
+      Pressing the cycling shortcut while an application with multiple windows is focused advances
+      focus sequentially only among windows of that exact application, never switching to unrelated
+      applications.
+  - id: FR-2
+    capability: CAP-7
+    component: window-management
+    text: Lock cycling to the same physical monitor and virtual desktop as the active window.
+    statement: >-
+      The system can restrict same-application cycling to windows positioned on the same physical
+      monitor and virtual desktop as the active foreground window. Realizes UJ-1.
+    proof: >-
+      Pressing the cycling shortcut repeatedly on a multi-monitor setup cycles only through the
+      windows on the active monitor without moving focus or cursor to any other display.
+  - id: FR-3
+    capability: CAP-8
+    component: window-management
+    text: Bypass interception when the foreground window is a known VM or Remote Desktop client.
+    statement: >-
+      The system can detect if the active foreground window belongs to a configured virtual machine
+      or remote desktop client and pass cycling shortcuts through to the guest OS without
+      interception.
+    proof: >-
+      Pressing `Win + \`` while focused inside a Remote Desktop (`mstsc.exe`) or VMware session
+      transmits the raw keystroke directly to the remote session without cycling host windows.
+  - id: FR-4
+    capability: CAP-1
+    component: window-management
+    text: Bring Not Responding windows to the foreground instead of hiding them during a cycle.
+    statement: >-
+      The system can bring "Not Responding" application windows to the foreground during a cycle
+      rather than silently skipping them. Realizes UJ-2.
+    proof: >-
+      Pressing the cycling shortcut when an unresponsive same-app window is next in Z-order brings
+      that hung window directly to the front so the user sees its frozen state.
+  - id: FR-5
+    capability: CAP-1
+    component: window-management
+    text: Skip minimized, ghost, and tool-window overlays; cycle only visibly open windows.
+    statement: >-
+      The system can filter out minimized windows, hidden system windows, tool windows
+      (`WS_EX_TOOLWINDOW`), and ghost overlays during window enumeration. Realizes UJ-1.
+    proof: >-
+      Minimized windows and background utility windows are omitted from the cycling sequence,
+      allowing focus to shift only among visibly rendered desktop windows.
+  - id: FR-6
+    capability: CAP-1
+    component: window-management
+    text: Require an exact shortcut match; extra modifiers must not trigger cycling.
+    statement: >-
+      The system can intercept the cycling action only when the exact configured key combination is
+      pressed, ignoring key events with extraneous modifier keys. Realizes UJ-1.
+    proof: >-
+      Pressing an unconfigured combination such as `Win + Shift + \`` when only `Win + \`` is
+      registered passes the keystroke to the operating system without triggering window cycling.
+  - id: FR-7
+    capability: CAP-3
+    component: settings
+    text: Allow configurable primary and fallback cycling shortcuts via config.toml.
+    statement: >-
+      The system can read and apply primary (`Win + \``) and fallback (`Alt + \``) shortcut
+      configurations from `%APPDATA%\WiraDesk\config.toml`.
+    proof: >-
+      Modifying the shortcut key in `config.toml` updates the active cycling shortcut immediately
+      after configuration reload.
+  - id: FR-8
+    capability: CAP-4
+    component: window-management
+    no_uc: Elevated manifest at daemon startup; not a user-triggered use case.
+    text: Run the daemon elevated so UIPI does not block focus on administrator windows.
+    statement: >-
+      The system can execute with elevated Administrator privileges via an embedded application
+      manifest to shift focus seamlessly to elevated target windows. Realizes UJ-3.
+    proof: >-
+      Pressing the cycling shortcut successfully shifts focus into an Administrator Command Prompt
+      or Task Manager window without operating system denial.
+  - id: FR-9
+    capability: CAP-9
+    component: window-management
+    no_uc: Architectural constraint on daemon binary composition.
+    text: Run tray-resident using native Win32 APIs without a third-party GUI framework in the daemon.
+    statement: >-
+      The system can maintain its background execution lifecycle exclusively through native Win32
+      APIs and an `ITaskbarList` tray icon without linking external third-party GUI frameworks.
+    proof: >-
+      The background daemon runs with an active system tray icon while consuming under 2 MB of
+      static RAM.
+  - id: FR-10
+    capability: CAP-9
+    component: window-management
+    text: Re-create the tray icon when TaskbarCreated is broadcast after explorer restarts.
+    statement: >-
+      The system can intercept the `TaskbarCreated` window message and recreate the system tray
+      notification icon whenever `explorer.exe` restarts.
+    proof: >-
+      Terminating and restarting `explorer.exe` via Task Manager automatically restores the Wira
+      Desk tray icon without restarting the daemon.
+  - id: FR-11
+    capability: CAP-9
+    component: window-management
+    text: Apply the three-tier error protocol for startup fatal, runtime warning, and hook-dead critical.
+    statement: >-
+      The system can execute a structured error protocol: Tier 1 (fatal startup displays ≤1 message
+      box and exits), Tier 2 (runtime warning logs silently and adds red dot to tray icon), and
+      Tier 3 (runtime hook death renders red cross on tray icon and delivers exactly one
+      notification toast).
+    proof: >-
+      If the keyboard hook is terminated by the OS, the tray icon displays a red cross indicator and
+      delivers a single desktop toast alert.
+  - id: FR-12
+    capability: CAP-11
+    component: window-management
+    text: Provide View Logs in the tray menu opening the silent log file location.
+    statement: >-
+      The system can open the local silent log file location in File Explorer when the user selects
+      "View Logs" from the tray context menu.
+    proof: >-
+      Clicking "View Logs" in the tray menu opens the Wira Desk diagnostic log file in a plain-text
+      viewer, creating an empty log first if none exists yet.
+  - id: FR-13
+    capability: CAP-10
+    component: settings
+    text: Toggle auto-start via a logon scheduled task with highest privileges for the active user.
+    statement: >-
+      The system can create or delete a Windows scheduled task (`WiraDesk`) configured to launch the
+      daemon with highest privileges upon user logon (`ONLOGON`).
+    proof: >-
+      Toggling the Auto-Start option in the tray menu creates a scheduled task that launches Wira
+      Desk silently upon next reboot without prompting for UAC credentials.
+  - id: FR-14
+    capability: CAP-2
+    component: window-management
+    text: Snap the active window to the left or right half and maximize it with Ctrl+Alt shortcuts, DPI-aware.
+    statement: >-
+      The system can snap and resize the active window to half-screen left/right or maximized
+      layouts using dedicated keyboard shortcuts (`Ctrl + Alt + Left/Right`, `Ctrl + Alt + Enter`),
+      scaled to the target monitor's DPI.
+    proof: >-
+      Pressing `Ctrl + Alt + Left` resizes and aligns the active window to exactly 50% of the
+      working area of the current monitor, taking display scaling into account.
+  - id: FR-15
+    capability: CAP-2
+    component: window-management
+    no_uc: Covered by arrangement engine; optional P2 layout variant of snap (FR-14).
+    text: Apply overlapping stack layout on small monitors with up to three half-width windows.
+    statement: >-
+      The system can arrange up to three same-application windows in an overlapping 50%-width stack
+      with offset horizontal edges on small screens, triggered by `Ctrl + Alt + Shift + Down`.
+    proof: >-
+      Triggering the stack layout command positions up to three windows at 50% screen width each
+      with visible exposed borders allowing mouse selection.
+  - id: FR-16
+    capability: CAP-5
+    component: settings
+    no_uc: Tray menu structure; items exercised by UC-4, UC-6, and View Logs action.
+    text: Tray menu order Settings, View Logs, Auto-Start toggle, updates, About, Exit.
+    statement: >-
+      The system can present a right-click tray context menu structured in exact order: Settings...,
+      View Logs, Auto-Start (toggle), [separator], Check for Updates..., About, [separator], Exit.
+    proof: >-
+      Right-clicking the tray icon displays the context menu matching the exact specified ordering
+      and separator placement.
+  - id: FR-17
+    capability: CAP-5
+    component: settings
+    text: First-run interactive tutorial with dummy window practice and Skip Tutorial.
+    statement: >-
+      The system can launch an interactive onboarding simulation upon initial installation with
+      dummy windows to practice the cycling shortcut, including an accessible "Skip Tutorial" option.
+    proof: >-
+      Launching the application for the first time opens an onboarding window where users can
+      practice cycling through mock windows or click "Skip Tutorial".
+  - id: FR-18
+    capability: CAP-5
+    component: settings
+    text: Shortcut fields use listening mode capturing physical key combinations.
+    statement: >-
+      The system can capture physical keyboard combinations in real time within the settings
+      shortcut input fields instead of accepting standard typed text strings.
+    proof: >-
+      Clicking into the shortcut input box and pressing `Alt + \`` captures the key combination
+      directly as the new shortcut binding.
+  - id: FR-19
+    capability: CAP-5
+    component: settings
+    no_uc: Visual property applied to every settings and onboarding screen.
+    text: Settings UI follows OS light or dark theme automatically.
+    statement: >-
+      The system can detect Windows system theme changes and adapt the settings UI colors
+      automatically between light and dark modes.
+    proof: >-
+      Toggling the Windows display theme between Light and Dark immediately updates the background
+      and text palette of the settings window.
+  - id: FR-20
+    capability: CAP-5
+    component: settings
+    no_uc: Cross-cutting accessibility requirement on all settings controls.
+    text: All interactive settings controls are fully keyboard-navigable.
+    statement: >-
+      The system can support complete keyboard navigation across all interactive settings dialogs
+      and controls via logical Tab order and shortcut keys.
+    proof: >-
+      A user can configure all settings, test shortcuts, and exit the settings UI using only the
+      keyboard without mouse interaction.
+  - id: FR-21
+    capability: CAP-5
+    component: settings
+    no_uc: Cross-cutting accessibility requirement on all settings controls.
+    text: Toggles and shortcut fields expose state clearly to screen readers via UI Automation.
+    statement: >-
+      The system can expose state, roles, names, and shortcut values across all settings controls to
+      assistive screen readers via Windows UI Automation.
+    proof: >-
+      Windows Narrator accurately reads aloud the state of the Auto-Start toggle and the captured
+      shortcut keys in the settings window.
+  - id: FR-22
+    capability: CAP-2
+    component: window-management
+    text: Snap the active window to the top or bottom half of the current monitor, DPI-aware.
+    statement: >-
+      The system can snap and resize the active window to the top or bottom half of the current
+      monitor's working area using dedicated keyboard shortcuts (`Ctrl + Alt + Up`, `Ctrl + Alt +
+      Down`), scaled to the target monitor's DPI. Realizes UJ-4.
+    proof: >-
+      Pressing `Ctrl + Alt + Up` resizes and aligns the active window to the upper 50% of the
+      working area of the current monitor, leaving the taskbar uncovered.
+  - id: FR-23
+    capability: CAP-12
+    component: window-management
+    text: Move the active window to the next physical monitor at the same proportion of the work area, same virtual desktop.
+    statement: >-
+      The system can move the active window to the next physical monitor using a dedicated keyboard
+      shortcut (`Ctrl + Alt + Shift + Enter`), placing it on the same share of the destination
+      monitor's working area that it occupied on the monitor it left, and leaving it on the same
+      virtual desktop. Realizes UJ-4.
+    proof: >-
+      A window occupying the left half of one monitor's working area, moved with the shortcut,
+      occupies the left half of the next monitor's working area — including when the two monitors
+      differ in resolution or display scaling.
+
+nonfunctional:
+  - id: NFR-1
+    goal: BG-2
+    enforced_by: release profile and windows-sys crate choice
+    text: Daemon static RAM under 2 MB; hard ceiling 10 MB.
+  - id: NFR-2
+    goal: BG-2
+    enforced_by: hook thread priority and worker separation
+    text: Hook callback completes within 10 ms; perceived focus change sub-millisecond target.
+  - id: NFR-3
+    goal: BG-2
+    enforced_by: lock-free u8 ring buffer (16 slots)
+    text: Cross-thread commands use zero heap allocation in the hot path.
+  - id: NFR-4
+    goal: BG-2
+    enforced_by: EnumWindows callback policy
+    text: Window filtering uses only non-blocking kernel APIs in the worker thread.
+  - id: NFR-5
+    goal: BG-2
+    enforced_by: cargo release profile
+    text: Release binary size target 250–400 KB, ceiling 500 KB.
+  - id: NFR-6
+    goal: BG-2
+    enforced_by: single-instance mutex and hook retry loop
+    text: Daemon tolerates logon race and refuses a second instance per session.
+
+journeys:
+  - id: UJ-1
+    text: Developer cycles Word documents on one monitor without focus jumping to another monitor.
+  - id: UJ-2
+    text: Designer encounters a hung Chrome window during cycling and sees the honest Not Responding state.
+  - id: UJ-3
+    text: Sysadmin cycles between normal and elevated CMD windows without OS refusal.
+  - id: UJ-4
+    text: Technical writer stacks two windows as top and bottom halves on a short laptop screen, then moves one to a larger external display and it keeps the same share of the screen.

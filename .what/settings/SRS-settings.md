@@ -30,11 +30,7 @@ Configuration customization and user onboarding are episodic, UI-intensive tasks
 
 ## UC Catalogue
 
-| id | Use case | Actor | Satisfies | critical |
-| --- | --- | --- | --- | --- |
-| UC-4 | Change a keyboard shortcut in Settings | Power User | FR-7, FR-18 | no |
-| UC-5 | Complete or skip the first-run tutorial | New User | FR-17 | no |
-| UC-6 | Turn auto-start on boot on or off | Power User | FR-13 | no |
+UC Catalogue — see `.control/registry/usecases.yaml`, rows where `component: settings`.
 
 ## Constraints
 

@@ -18,8 +18,16 @@
 # repo no matter which file holds it — that is what lets a ticket say `satisfies: [FR-12]` without
 # also naming the PRD. `id-allocated-once` fails when two files declare the same id.
 
-goals: []
-# - id: BG-1
-#   title: "one line, the outcome the product exists for"
-#   measure: "how you would know it held"
-#   why: "only when the reason is not already carried by the brief's The Problem"
+goals:
+  - id: BG-1
+    text: >-
+      Give Windows users macOS-style same-application window cycling that feels
+      instant and stays on the current monitor and virtual desktop.
+  - id: BG-2
+    text: >-
+      Run as an invisible background utility with near-zero idle CPU and a
+      static RAM footprint under 2 MB for the daemon.
+  - id: BG-3
+    text: >-
+      Offer optional keyboard-driven window snapping without turning the product
+      into a full window manager overlay.
