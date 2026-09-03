@@ -7,7 +7,7 @@ updated: 2026-08-25
 satisfies: [FR-7, FR-13, FR-16, FR-17, FR-18, FR-19, FR-20, FR-21, FR-25]
 reviewed:
   date: '2026-09-03'
-  sha: '1ee9673'
+  sha: '8ec65d7'
   lenses: [structure, prose]
 ---
 

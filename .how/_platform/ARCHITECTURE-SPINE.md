@@ -5,8 +5,8 @@ status: reviewed
 created: 2026-07-06
 updated: 2026-08-21
 reviewed:
-  date: '2026-08-30'
-  sha: 'd14c964'
+  date: '2026-09-03'
+  sha: '67d9fb5'
   lenses: [structure, prose]
 provenance: >-
   Harvested and updated from _bmad-output/planning-artifacts/architecture/architecture-WinTick-2026-07-06/ARCHITECTURE-SPINE.md

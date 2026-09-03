@@ -14,9 +14,6 @@ validators_red: []
 validators_skipped:
   custom-room-declared: the `.constitution/project/` room is empty, and that is a valid state — a generic
     rule MUST NOT be moved here just to give the room content
-  review-trace: 'advisory — trace stale, re-run before the next gate or spec close: .how/_platform/ARCHITECTURE-SPINE.md
-    (changed at 67d9fb5, reviewed at d14c964), .how/window-management/SDD-window-management.md (changed
-    at c35aba0, reviewed at 1ee9673)'
   uc-scheduled: no spec yet, so no ticket yet — every unscheduled UC is the correct state. Full catalogue
     coverage is checked at G5
 open_questions:
