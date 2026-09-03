@@ -7,7 +7,7 @@ promise_progress: 0%
 rtm_rows:
   green: 0
   counted: 16
-  excluded_no_uc: 7
+  excluded_no_uc: 9
 work_progress: []
 gate_readiness: 100%
 validators_red: []

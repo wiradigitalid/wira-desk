@@ -37,6 +37,9 @@ capabilities:
   - id: CAP-12
     goal: BG-3
     text: Move the active window to another physical monitor from the keyboard, keeping its share of the work area.
+  - id: CAP-13
+    goal: BG-2
+    text: Check whether a newer release is available, on a schedule and on request, without any other network activity or identifying payload.
 
 functional:
   - id: FR-1
@@ -202,13 +205,16 @@ functional:
     capability: CAP-5
     component: settings
     no_uc: Tray menu structure; items exercised by UC-4, UC-6, and View Logs action.
-    text: Tray menu order Settings, View Logs, Auto-Start toggle, updates, About, Exit.
+    text: Tray menu order Settings, View Logs, Auto-Start toggle, About, Exit, with an update item shown only when one is available.
     statement: >-
-      The system can present a right-click tray context menu structured in exact order: Settings...,
-      View Logs, Auto-Start (toggle), [separator], Check for Updates..., About, [separator], Exit.
+      The system can present a right-click tray context menu in fixed order — Settings..., View
+      Logs, Auto-Start (toggle), [separator], About, [separator], Exit — and, only while a newer
+      release is available, an additional "Update to <version>..." item ahead of Settings,
+      followed by a separator.
     proof: >-
-      Right-clicking the tray icon displays the context menu matching the exact specified ordering
-      and separator placement.
+      Right-clicking the tray icon with no update available shows Settings, View Logs, Auto-Start,
+      About, Exit in that order; with an update available it additionally shows "Update to
+      <version>..." as the first item, followed by a separator.
   - id: FR-17
     capability: CAP-5
     component: settings
@@ -286,6 +292,33 @@ functional:
       A window occupying the left half of one monitor's working area, moved with the shortcut,
       occupies the left half of the next monitor's working area — including when the two monitors
       differ in resolution or display scaling.
+  - id: FR-24
+    capability: CAP-13
+    component: window-management
+    no_uc: Periodic background check with no user trigger; not a user-initiated use case.
+    text: Periodically check over HTTPS whether a newer release exists, on by default and toggleable, with no payload beyond the request itself.
+    statement: >-
+      The daemon can periodically check, over an HTTPS request carrying no payload beyond the
+      request itself, whether a newer release exists, enabled by default and toggleable from
+      Settings, and surface a found update in the tray menu.
+    proof: >-
+      With the check enabled and a newer release published, the tray context menu shows an
+      "Update to <version>..." item within one check interval, and the request sent carries no
+      version, machine, user, or configuration data.
+  - id: FR-25
+    capability: CAP-13
+    component: settings
+    no_uc: User-triggered from the About pane; UC not yet written, pending wdi-component.
+    text: Let the user check for updates on demand, and on confirmation, download, verify, and launch the installer.
+    statement: >-
+      The user can request an update check at any time from the About pane; when a newer release
+      exists, the system downloads its installer over HTTPS, verifies the download's checksum
+      against the published hash, and launches it elevated only on a match, discarding the file
+      on any mismatch.
+    proof: >-
+      Clicking "Check for Updates" with a newer release published downloads the installer,
+      verifies it against the published hash, and offers to launch it; a corrupted or tampered
+      download is deleted and never launched.
 
 nonfunctional:
   - id: NFR-1

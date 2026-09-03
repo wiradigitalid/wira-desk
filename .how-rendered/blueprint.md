@@ -155,6 +155,7 @@ Conceptual domain model for the `window-management` component. Represents domain
 | BR-5 | System tray "View Logs" action opens the diagnostic log file itself in a plain-text viewer; the settings UI does not duplicate log inspection or file handling interfaces. | `window-management`, `settings` | FR-12, CAP-11, AD-1 | active |
 | BR-6 | Two actions configured to the same chord is a defined condition, and the two components answer it differently on purpose. The settings process refuses to save a configuration containing one, naming both fields. The daemon, which has no such veto over a file it did not write, keeps the chord for whichever field comes first in the fixed precedence order, leaves the later field unbound, and emits exactly one Tier-2 warning naming both — except on an explicit reload, where a last-known-good configuration exists and the whole candidate is refused instead. | `settings`, `window-management` | FR-7, FR-18, DEC-001, DEC-009 | active |
 | BR-7 | The auto-start task's stored executable path must track the running daemon rather than the daemon's location at the moment auto-start was switched on, and the safety of that location must be reported to the user without ever being enforced against them. | `window-management`, `settings` | FR-13, CAP-10, AD-13, AD-7 | active |
+| BR-8 | The update-check request, made by either component, is the only network activity the product ever performs. It carries no payload beyond the request itself — no version, machine name, user name, configuration, or identifier — and nothing else in either component may make a network call. | `window-management`, `settings` | FR-24, FR-25, CAP-13 | active |
 
 
 ## Invariants — the spine
@@ -302,7 +303,7 @@ Wira Desk does not use an RDBMS or embedded SQL database. All persistence uses l
 
 ### API & IPC Inventory
 
-Wira Desk contains no HTTP, REST, GraphQL, or RPC network APIs. All inter-process and inter-thread boundaries use Win32 IPC, OS messages, and in-memory lock-free channels.
+Wira Desk contains no HTTP, REST, GraphQL, or RPC network APIs of its own — it exposes none, and consumes exactly one, outbound: an HTTPS `GET` for the release-check descriptor (`crates/shared/src/https.rs`, `crates/shared/src/update.rs`), and the installer download it can trigger (`crates/settings/src/update.rs`). Both are host- and path-pinned to the product's own release channel; see `BR-8` for what the request does and does not carry. Every other inter-process and inter-thread boundary uses Win32 IPC, OS messages, and in-memory lock-free channels, listed below.
 
 #### IPC & Message Interfaces
 

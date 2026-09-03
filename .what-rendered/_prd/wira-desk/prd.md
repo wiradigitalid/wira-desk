@@ -278,11 +278,11 @@ The system can create or delete a Windows scheduled task (`WiraDesk`) configured
 
 **Description:** Delivers an on-demand, standalone settings and interactive onboarding application (`wiradesk-settings.exe`) with native theme adaptation and full keyboard/screen-reader accessibility.
 
-#### FR-16 — Tray menu order Settings, View Logs, Auto-Start toggle, updates, About, Exit.
+#### FR-16 — Tray menu order Settings, View Logs, Auto-Start toggle, About, Exit, with an update item shown only when one is available.
 
-The system can present a right-click tray context menu structured in exact order: Settings..., View Logs, Auto-Start (toggle), [separator], Check for Updates..., About, [separator], Exit.
+The system can present a right-click tray context menu in fixed order — Settings..., View Logs, Auto-Start (toggle), [separator], About, [separator], Exit — and, only while a newer release is available, an additional "Update to <version>..." item ahead of Settings, followed by a separator.
 
-**Proof of done:** Right-clicking the tray icon displays the context menu matching the exact specified ordering and separator placement.  
+**Proof of done:** Right-clicking the tray icon with no update available shows Settings, View Logs, Auto-Start, About, Exit in that order; with an update available it additionally shows "Update to <version>..." as the first item, followed by a separator.  
 **Capability:** `CAP-5`  
 **Component:** `settings`
 
@@ -346,6 +346,30 @@ The system can move the active window to the next physical monitor using a dedic
 
 ---
 
+### 3.12 Update Checking
+
+**Capability:** CAP-13 — serves BG-2.
+
+**Description:** Tells the user when a newer release exists, without touching the network for anything else. The daemon checks on its own schedule and surfaces a found update in the tray menu; the settings application lets the user check on demand and, on confirmation, fetches and verifies the installer before offering to run it. Both paths share one property: nothing about how the product is used ever leaves the machine.
+
+#### FR-24 — Periodically check over HTTPS whether a newer release exists, on by default and toggleable, with no payload beyond the request itself.
+
+The daemon can periodically check, over an HTTPS request carrying no payload beyond the request itself, whether a newer release exists, enabled by default and toggleable from Settings, and surface a found update in the tray menu.
+
+**Proof of done:** With the check enabled and a newer release published, the tray context menu shows an "Update to <version>..." item within one check interval, and the request sent carries no version, machine, user, or configuration data.  
+**Capability:** `CAP-13`  
+**Component:** `window-management`
+
+#### FR-25 — Let the user check for updates on demand, and on confirmation, download, verify, and launch the installer.
+
+The user can request an update check at any time from the About pane; when a newer release exists, the system downloads its installer over HTTPS, verifies the download's checksum against the published hash, and launches it elevated only on a match, discarding the file on any mismatch.
+
+**Proof of done:** Clicking "Check for Updates" with a newer release published downloads the installer, verifies it against the published hash, and offers to launch it; a corrupted or tampered download is deleted and never launched.  
+**Capability:** `CAP-13`  
+**Component:** `settings`
+
+---
+
 ### Capabilities
 
 | id | Serves | Capability | Priority | Release | Depends on |
@@ -362,6 +386,7 @@ The system can move the active window to the next physical monitor using a dedic
 | `CAP-10` | `BG-2` | Launch the daemon silently at logon via a scheduled task without repeated UAC prompts. | — | — | — |
 | `CAP-11` | `BG-2` | Expose runtime diagnostic logs from the tray context menu. | — | — | — |
 | `CAP-12` | `BG-3` | Move the active window to another physical monitor from the keyboard, keeping its share of the work area. | — | — | — |
+| `CAP-13` | `BG-2` | Check whether a newer release is available, on a schedule and on request, without any other network activity or identifying payload. | — | — | — |
 
 ### User journeys
 
@@ -454,7 +479,7 @@ The system can move the active window to the next physical monitor using a dedic
 - **Delta Beyond Brief:** None beyond the Product Brief (`.what/_product-brief/brief.md`).
 - **Platform Constraint:** Strictly targets 64-bit Windows 10 (1809+) and Windows 11 desktop environments; no legacy Windows 7/8 or non-Windows platforms.
 - **Elevation Requirement:** Daemon requires Administrator privileges to ensure UIPI bypass across all target windows.
-- **Privacy & Telemetry:** Absolute zero telemetry, remote analytics, network connections, or cloud syncing; all logs and configurations are strictly local to `%APPDATA%\WiraDesk`.
+- **Privacy & Telemetry:** Zero telemetry, remote analytics, or cloud syncing; all logs and configurations are strictly local to `%APPDATA%\WiraDesk`. The one exception is the update check (CAP-13): an optional, toggleable HTTPS request carrying no payload beyond the request itself and no identifying data. Nothing else in the product ever touches the network.
 - **Architectural Separation:** Dual-binary model (`wiradesk.exe` headless tray daemon vs `wiradesk-settings.exe` on-demand UI) to guarantee UI rendering overhead never degrades input hook responsiveness.
 
 ## Experience — `settings`
@@ -518,4 +543,5 @@ Release-specific exclusions are under **MVP Scope → Out of Scope for MVP** abo
 | 2026-07-10 | Finalized core architecture constraints, snapping scope (P2), and UX honesty protocol | Elicitation review rounds (A1–A6) and performance budget locking | v1.0.0 |
 | 2026-08-21 | Rebranded to Wira Desk and structured into WDI Method corpus format with explicit proof-of-done criteria | Migration from BMAD planning output to WDI repository standard | v1.0.0 |
 | 2026-08-26 | Snapping now covers the top and bottom halves of a screen, not only the left and right; moving the active window to another monitor became something Wira Desk does itself instead of leaving to Windows; and every shipped arrangement shortcut moved to the Ctrl+Alt family | The owner asked for vertical halves and a deliberate monitor move. The shortcut family moved because the previous default, `Ctrl+Win+Left/Right`, silently took over Windows' own shortcut for switching virtual desktops — a promise this product had already made not to break. Monitor movement was previously delegated to Windows' `Win+Shift+Arrow`, which discards whatever arrangement the user had just applied, so the two features never composed | v0.4.0 |
+| 2026-09-03 | Added Update Checking (CAP-13, FR-24, FR-25): the product already shipped an optional, toggleable HTTPS check for a newer release, disclosed in `PRIVACY.md` but never promised here; §7's Constraints corrected to state the one exception instead of an absolute zero; FR-16's tray menu order corrected to match what ships (an "Update to \<version\>..." item only when one is available, not an always-present "Check for Updates...") | `wdi-reconcile` traced the shipped code against the corpus and found the update-check subsystem — real, deliberate, already privacy-documented — had no promise anywhere in `.what/`, and that FR-16's proof no longer matched the running menu | v0.4.0 |
 

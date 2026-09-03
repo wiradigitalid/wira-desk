@@ -6,7 +6,7 @@ derived_from: code
 
 # API & IPC Inventory
 
-Wira Desk contains no HTTP, REST, GraphQL, or RPC network APIs. All inter-process and inter-thread boundaries use Win32 IPC, OS messages, and in-memory lock-free channels.
+Wira Desk contains no HTTP, REST, GraphQL, or RPC network APIs of its own — it exposes none, and consumes exactly one, outbound: an HTTPS `GET` for the release-check descriptor (`crates/shared/src/https.rs`, `crates/shared/src/update.rs`), and the installer download it can trigger (`crates/settings/src/update.rs`). Both are host- and path-pinned to the product's own release channel; see `BR-8` for what the request does and does not carry. Every other inter-process and inter-thread boundary uses Win32 IPC, OS messages, and in-memory lock-free channels, listed below.
 
 ## IPC & Message Interfaces
 

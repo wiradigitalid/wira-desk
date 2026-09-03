@@ -207,6 +207,32 @@ rtm:
   green: false
   exempt: false
   broken_at: ticket
+- BG: BG-2
+  CAP: CAP-13
+  FR: FR-24
+  DEC: []
+  UC: ''
+  ticket: ''
+  spec: ''
+  release: ''
+  test: []
+  status: ''
+  green: false
+  exempt: true
+  broken_at: no_uc
+- BG: BG-2
+  CAP: CAP-13
+  FR: FR-25
+  DEC: []
+  UC: ''
+  ticket: ''
+  spec: ''
+  release: ''
+  test: []
+  status: ''
+  green: false
+  exempt: true
+  broken_at: no_uc
 - BG: BG-1
   CAP: CAP-8
   FR: FR-3

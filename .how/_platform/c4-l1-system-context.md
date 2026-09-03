@@ -20,6 +20,10 @@ graph TD
         AppData[("%APPDATA% / WiraDesk<br/>config.toml & wiradesk.log")]
     end
 
+    subgraph GitHubReleases["GitHub Releases<br/>[External System]"]
+        ReleaseFile["Release descriptor + installer<br/>(static, HTTPS)"]
+    end
+
     User -- "Global key shortcuts<br/>(Win+`, Ctrl+Win+Arrows)" --> WinHook
     WinHook -- "Hook events" --> WD
     User -- "Tray menu click / Configuration" --> WD
@@ -29,6 +33,7 @@ graph TD
     WD -- "Shell_NotifyIcon, TaskbarCreated listener" --> WinTray
     WD -- "schtasks /Create, /Query, /Delete" --> WinTS
     WD -- "Read / Write configuration & log diagnostics" --> AppData
+    WD -- "HTTPS GET, no payload beyond the request (BR-8)" --> GitHubReleases
 ```
 
 ### System Boundaries & Description
@@ -41,4 +46,5 @@ graph TD
   - **System Tray & Toast**: Native Win32 notification icon, context menu, and critical error toast notifications.
   - **Windows Task Scheduler**: Elevation-preserving logon trigger executing silently without repetitive UAC prompts.
   - **Local Filesystem**: Non-volatile storage for user configuration (`%APPDATA%\WiraDesk\config.toml`) and append-only diagnostic log (`%APPDATA%\WiraDesk\wiradesk.log`).
-- **Network Boundaries**: None. Wira Desk operates 100% offline with zero outbound/inbound network traffic.
+  - **GitHub Releases**: Hosts the release descriptor the daemon polls and the installer settings can download on confirmation (CAP-13). The only external system Wira Desk ever talks to.
+- **Network Boundaries**: One outbound path — the update check (`BR-8`). An HTTPS `GET` to GitHub Releases, host- and path-pinned, carrying no payload beyond the request itself and no identifying data; toggleable from Settings. Nothing else in the product makes a network connection.

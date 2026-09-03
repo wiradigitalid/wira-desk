@@ -20,6 +20,7 @@ provenance: >-
 | 2026-07-10 | Finalized core architecture constraints, snapping scope (P2), and UX honesty protocol | Elicitation review rounds (A1–A6) and performance budget locking | v1.0.0 |
 | 2026-08-21 | Rebranded to Wira Desk and structured into WDI Method corpus format with explicit proof-of-done criteria | Migration from BMAD planning output to WDI repository standard | v1.0.0 |
 | 2026-08-26 | Snapping now covers the top and bottom halves of a screen, not only the left and right; moving the active window to another monitor became something Wira Desk does itself instead of leaving to Windows; and every shipped arrangement shortcut moved to the Ctrl+Alt family | The owner asked for vertical halves and a deliberate monitor move. The shortcut family moved because the previous default, `Ctrl+Win+Left/Right`, silently took over Windows' own shortcut for switching virtual desktops — a promise this product had already made not to break. Monitor movement was previously delegated to Windows' `Win+Shift+Arrow`, which discards whatever arrangement the user had just applied, so the two features never composed | v0.4.0 |
+| 2026-09-03 | Added Update Checking (CAP-13, FR-24, FR-25): the product already shipped an optional, toggleable HTTPS check for a newer release, disclosed in `PRIVACY.md` but never promised here; §7's Constraints corrected to state the one exception instead of an absolute zero; FR-16's tray menu order corrected to match what ships (an "Update to \<version\>..." item only when one is available, not an always-present "Check for Updates...") | `wdi-reconcile` traced the shipped code against the corpus and found the update-check subsystem — real, deliberate, already privacy-documented — had no promise anywhere in `.what/`, and that FR-16's proof no longer matched the running menu | v0.4.0 |
 
 ## 1. Why This Initiative
 
@@ -197,6 +198,16 @@ Windows already moves windows between monitors with `Win + Shift + Arrow`, and W
 
 ---
 
+### 3.12 Update Checking
+
+**Capability:** CAP-13 — serves BG-2.
+
+**Description:** Tells the user when a newer release exists, without touching the network for anything else. The daemon checks on its own schedule and surfaces a found update in the tray menu; the settings application lets the user check on demand and, on confirmation, fetches and verifies the installer before offering to run it. Both paths share one property: nothing about how the product is used ever leaves the machine.
+
+**Realizes:** FR-24, FR-25
+
+---
+
 ## 4. MVP Scope
 
 ### 4.1 In Scope
@@ -247,6 +258,6 @@ Windows already moves windows between monitors with `Win + Shift + Arrow`, and W
 - **Delta Beyond Brief:** None beyond the Product Brief (`.what/_product-brief/brief.md`).
 - **Platform Constraint:** Strictly targets 64-bit Windows 10 (1809+) and Windows 11 desktop environments; no legacy Windows 7/8 or non-Windows platforms.
 - **Elevation Requirement:** Daemon requires Administrator privileges to ensure UIPI bypass across all target windows.
-- **Privacy & Telemetry:** Absolute zero telemetry, remote analytics, network connections, or cloud syncing; all logs and configurations are strictly local to `%APPDATA%\WiraDesk`.
+- **Privacy & Telemetry:** Zero telemetry, remote analytics, or cloud syncing; all logs and configurations are strictly local to `%APPDATA%\WiraDesk`. The one exception is the update check (CAP-13): an optional, toggleable HTTPS request carrying no payload beyond the request itself and no identifying data. Nothing else in the product ever touches the network.
 - **Architectural Separation:** Dual-binary model (`wiradesk.exe` headless tray daemon vs `wiradesk-settings.exe` on-demand UI) to guarantee UI rendering overhead never degrades input hook responsiveness.
 

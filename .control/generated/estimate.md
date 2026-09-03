@@ -18,7 +18,7 @@
 | Toggle auto-start via a logon scheduled task with highest privileges for the active user. | `FR-13` | `settings` | `deep` | `medium` — Writes local configuration, spawns elevated settings proces… | — | — | — | — |
 | Snap the active window to the left or right half and maximize it with Ctrl+Alt shortcuts, DPI-aware. | `FR-14` | `window-management` | `deep` | `medium` — Global low-level keyboard hook, Administrator elevation, UI… | — | — | — | — |
 | Apply overlapping stack layout on small monitors with up to three half-width windows. | `FR-15` | `window-management` | `deep` | `medium` — Global low-level keyboard hook, Administrator elevation, UI… | — | — | — | — |
-| Tray menu order Settings, View Logs, Auto-Start toggle, updates, About, Exit. | `FR-16` | `settings` | `deep` | `medium` — Writes local configuration, spawns elevated settings proces… | — | — | — | — |
+| Tray menu order Settings, View Logs, Auto-Start toggle, About, Exit, with an update item shown only when one… | `FR-16` | `settings` | `deep` | `medium` — Writes local configuration, spawns elevated settings proces… | — | — | — | — |
 | First-run interactive tutorial with dummy window practice and Skip Tutorial. | `FR-17` | `settings` | `deep` | `medium` — Writes local configuration, spawns elevated settings proces… | — | — | — | — |
 | Shortcut fields use listening mode capturing physical key combinations. | `FR-18` | `settings` | `deep` | `medium` — Writes local configuration, spawns elevated settings proces… | — | — | — | — |
 | Settings UI follows OS light or dark theme automatically. | `FR-19` | `settings` | `deep` | `medium` — Writes local configuration, spawns elevated settings proces… | — | — | — | — |
@@ -27,6 +27,8 @@
 | Toggles and shortcut fields expose state clearly to screen readers via UI Automation. | `FR-21` | `settings` | `deep` | `medium` — Writes local configuration, spawns elevated settings proces… | — | — | — | — |
 | Snap the active window to the top or bottom half of the current monitor, DPI-aware. | `FR-22` | `window-management` | `deep` | `medium` — Global low-level keyboard hook, Administrator elevation, UI… | — | — | — | — |
 | Move the active window to the next physical monitor at the same proportion of the work area, same virtual des… | `FR-23` | `window-management` | `deep` | `medium` — Global low-level keyboard hook, Administrator elevation, UI… | — | — | — | — |
+| Periodically check over HTTPS whether a newer release exists, on by default and toggleable, with no payload b… | `FR-24` | `window-management` | `deep` | `medium` — Global low-level keyboard hook, Administrator elevation, UI… | — | — | — | — |
+| Let the user check for updates on demand, and on confirmation, download, verify, and launch the installer. | `FR-25` | `settings` | `deep` | `medium` — Writes local configuration, spawns elevated settings proces… | — | — | — | — |
 | Bypass interception when the foreground window is a known VM or Remote Desktop client. | `FR-3` | `window-management` | `deep` | `medium` — Global low-level keyboard hook, Administrator elevation, UI… | — | — | — | — |
 | Bring Not Responding windows to the foreground instead of hiding them during a cycle. | `FR-4` | `window-management` | `deep` | `medium` — Global low-level keyboard hook, Administrator elevation, UI… | — | — | — | — |
 | Skip minimized, ghost, and tool-window overlays; cycle only visibly open windows. | `FR-5` | `window-management` | `deep` | `medium` — Global low-level keyboard hook, Administrator elevation, UI… | — | — | — | — |
