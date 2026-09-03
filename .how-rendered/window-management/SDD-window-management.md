@@ -238,7 +238,7 @@ Every architectural claim and boundary behaviour is verified against source code
 | Live stateless `EnumWindows` Z-order traversal | Verified | `crates/daemon/src/worker.rs`, `crates/daemon/src/cycling/source.rs` | Verified: Stateless traversal on every cycle; no internal Z-order caching. |
 | Same-application grouping by executable basename | Verified | `crates/daemon/src/cycling/eligibility.rs` | Verified: Compares normalized process image basename from `QueryFullProcessImageNameW`; ignores PID. |
 | Allocation-free VM/RDP bypass evaluation | Verified | `crates/daemon/src/context/vm_bypass.rs` | Verified: Uses reusable `[u16; 256]` and `[u16; 260]` stack buffers with zero heap allocation in hook path. |
-| `IVirtualDesktopManager` COM isolation on worker | Verified | `crates/daemon/src/context/virtual_desktop.rs` | Verified: Custom vtable layout with `!Send`/`!Sync` adapter bound exclusively to Worker thread. |
+| `IVirtualDesktopManager` COM isolation on worker | [PARTIAL] | `crates/daemon/src/context/virtual_desktop.rs` | [PARTIAL]: vtable layout, offsets, and the `!Send`/`!Sync` adapter are verified at compile time and by test; the live COM call itself has never executed against a real elevated desktop (`OQ-35`). |
 | 10 s hook health heartbeat and retry threshold | Verified | `crates/daemon/src/health.rs`, `crates/daemon/src/hook.rs` | Verified: `HOOK_HEARTBEAT_SECS = 10`, `HOOK_CHECK_FAIL_THRESHOLD = 3`, `HOOK_RETRY_MAX = 5`. |
 | Explorer crash recovery via `TaskbarCreated` | Verified | `crates/daemon/src/tray.rs` | Verified: Handles `RegisterWindowMessageW("TaskbarCreated")` and invokes `Shell_NotifyIconW(NIM_ADD)`. |
 | 3-Tier error protocol & single-shot toast guard | Verified | `crates/daemon/src/tray.rs`, `crates/daemon/src/error.rs` | Verified: Tier 1 `MessageBoxW`, Tier 2 Red Dot tray overlay, Tier 3 Red X + `hook_dead_toast_sent` single-shot toast. |
@@ -342,11 +342,11 @@ The engine never installs hooks, never writes configuration, and never calls blo
 
 - `crates/daemon/src/arrangement/mod.rs` — public planning API.
 - `crates/daemon/src/arrangement/snap.rs` — half-screen and maximize math, both axes.
-- `crates/daemon/src/arrangement/monitor.rs` — next-monitor selection and proportional remapping. `[MISSING]` — not yet written; planned by this pass. It is deliberately a separate module because every function in `snap.rs` takes exactly one `WorkArea`, and this operation needs two plus a monitor list (DEC-007).
+- `crates/daemon/src/arrangement/monitor.rs` — next-monitor selection and proportional remapping. Deliberately a separate module because every function in `snap.rs` takes exactly one `WorkArea`, and this operation needs two plus a monitor list (DEC-007).
 - `crates/daemon/src/arrangement/stack.rs` — three-window cascade geometry.
 - `crates/daemon/src/arrangement/win32.rs` — `SetWindowPos` application.
-- `crates/daemon/src/context/spatial.rs` — monitor work area, DPI, and the live monitor set. `[PARTIAL]` — today it resolves only `MonitorFromWindow`; enumeration via `EnumDisplayMonitors` is `[MISSING]`.
-- `shared::Command` — `SnapLeft`, `SnapRight`, `SnapMaximize`, `OverlappingStack` opcodes, plus `SnapTop`, `SnapBottom`, `MoveToNextMonitor` at wire values 6, 7, and 8. `[MISSING]` — the three new variants are planned, not present (AD-2).
+- `crates/daemon/src/context/spatial.rs` — monitor work area, DPI, and the live monitor set (`enumerate_monitors()`, `EnumDisplayMonitors`, fresh per invocation).
+- `shared::Command` — `SnapLeft`, `SnapRight`, `SnapMaximize`, `OverlappingStack` opcodes, plus `SnapTop`, `SnapBottom`, `MoveToNextMonitor` at wire values 6, 7, and 8 (AD-2).
 
 #### Interface
 
@@ -375,7 +375,7 @@ The engine never installs hooks, never writes configuration, and never calls blo
 - **Cross-monitor DPI, known limitation:** frame-inset compensation is measured on the source monitor before the move, so on a move between monitors of different scaling the visible frame lands a few pixels off. `DEC-007` accepts this rather than specifying a two-pass placement, and states why. That small inset — rather than Windows relocating the window outright — depends on `Win32WindowMover::apply` clamping against the *destination* monitor (the planned rect's monitor), not the monitor the window is still on when `apply` runs (`DEC-010`).
 - **Monitor set:** never cached. Enumerated fresh per invocation, because an `HMONITOR` is a handle rather than an identity and a cached list survives an unplug the handle does not (AD-14).
 - **Single monitor:** `plan_move_next_monitor` returns an empty plan, which is a successful no-op rather than a failure — the same convention the stack planner already uses when it is disabled.
-- **Evidence:** [PARTIAL] `crates/daemon/src/arrangement/`, `crates/daemon/src/context/spatial.rs`.
+- **Evidence:** Verified against `crates/daemon/src/arrangement/`, `crates/daemon/src/context/spatial.rs`.
 
 
 ### `LC-hook-thread.md`
@@ -392,6 +392,7 @@ The engine never installs hooks, never writes configuration, and never calls blo
 5. Translating valid, non-bypassed shortcut matches into atomic `u8` wire command bytes (`shared::Command`).
 6. Enqueuing command bytes to the lock-free static 16-slot ring buffer (`ring::push(u8)`) and posting an asynchronous wake-up message (`WM_APP_COMMAND_READY`) to the worker thread.
 7. Responding to periodic heartbeat checks (`WM_APP_HOOK_CHECK`) from `health::heartbeat` and managing hook re-registration and failure escalation.
+8. Deciding, per keystroke, whether an armed capture lease (`DEC-004`) applies — and if so, reporting the observed chord back to Settings (`observe`), or reporting and additionally swallowing it (`record`) — fail-closed to no-op whenever Settings does not currently hold the foreground window.
 
 `LC-hook-thread` never performs heap allocations during keypress processing, never invokes blocking kernel or COM APIs, never executes window enumeration, and never waits for worker thread execution.
 
@@ -408,18 +409,21 @@ The engine never installs hooks, never writes configuration, and never calls blo
 - `WM_APP_HOOK_CHECK` (from `health::heartbeat`): Triggers `refresh_hook_on_hook_thread()`.
 - `WM_APP_CONFIG_SNAPSHOT` (from `LC-tray-controller`): Atomically collects a staged `HookSnapshot` (`PENDING_SNAPSHOT`) updating shortcut definitions and VM/RDP bypass policies.
 - `WM_APP_HOOK_SHUTDOWN` (from `LC-tray-controller`): Unhooks `WH_KEYBOARD_LL` and posts `WM_QUIT` to terminate the thread loop.
+- `WM_APP_HOOK_LEASE` (from `LC-tray-controller`, relaying `WM_APP_CAPTURE_LEASE` from Settings): Updates the stored capture-lease level and holder process id (`DEC-004`).
 
 ##### Outbound Signals
-- `ring::push(u8)`: Pushes `Command` opcode (`Cycle = 1`, `SnapLeft = 2`, `SnapRight = 3`, `SnapMaximize = 4`, `OverlappingStack = 5`) into the lock-free ring buffer.
+- `ring::push(u8)`: Pushes `Command` opcode (`Cycle = 1`, `SnapLeft = 2`, `SnapRight = 3`, `SnapMaximize = 4`, `OverlappingStack = 5`, `SnapTop = 6`, `SnapBottom = 7`, `MoveToNextMonitor = 8`) into the lock-free ring buffer.
 - `PostMessageW(worker_hwnd, WM_APP_COMMAND_READY, 0, 0)`: Signals the worker thread that commands are ready for draining.
 - `PostMessageW(worker_hwnd, WM_APP_HOOK_READY, thread_id, 0)`: Notifies startup readiness with the hook thread ID.
 - `PostMessageW(worker_hwnd, WM_APP_HOOK_INIT_FAILED, 0, 0)`: Signals fatal hook installation failure.
 - `PostMessageW(worker_hwnd, WM_APP_HOOK_REFRESH_OK, 0, 0)`: Signals successful hook refresh after heartbeat verification.
 - `PostMessageW(worker_hwnd, WM_APP_HOOK_DEAD, 0, 0)`: Signals 3 consecutive hook refresh failures to trigger Tier-3 Critical error escalation.
+- `PostMessageW(settings_hwnd, WM_APP_RECORDED_CHORD, vk, packed_modifiers)`: While an observe or record lease is armed, reports the chord the hook actually observed back to Settings' hidden receiver window (`report_recorded_chord`). A no-op when no receiver window has been resolved.
 
 #### Notes
 
 - **Sticky Modifier Prevention:** Swallowing `Win` key releases causes Windows to believe `Win` is permanently pressed, corrupting subsequent input. `LC-hook-thread` specifically passes all modifier `key_up` events (`VK_LWIN`, `VK_RWIN`, `VK_LCONTROL`, `VK_LMENU`, `VK_LSHIFT`) to `CallNextHookEx`, while swallowing only the main chord key down/up events (`VK_BACKTICK` or configured key).
+- **Capture lease (`DEC-004`):** The lease decision (`lease_action`) is pure and fails closed — a lease armed at level `observe` or `record` does nothing unless Settings currently holds the foreground window, checked fresh on every keystroke it reaches. `record` additionally swallows the chord; `observe` only reports it. The heartbeat thread, never the callback, reaps a lease whose holder process has exited (`lease_holder_alive`) — `OQ-17` records this narrows rather than closes the process-id-reuse window, since a recycled pid can still pass the liveness check.
 - **Pointer Provenance & Soundness:** The Hook thread's runtime address is published to a static `AtomicPtr<HookRuntime>` using `&raw mut` without creating mutable aliases. Windows guarantees callback delivery on the hook thread during message retrieval, preventing concurrent access and data races.
 - **Evidence:** Verified against `crates/daemon/src/hook.rs`, `crates/daemon/src/ring.rs`, and `crates/daemon/src/context/vm_bypass.rs`.
 
@@ -434,10 +438,11 @@ The engine never installs hooks, never writes configuration, and never calls blo
 
 1. Registering and maintaining the notification area icon (`Shell_NotifyIconW` with `NIM_ADD` / `NIM_MODIFY` / `NIM_DELETE`).
 2. Rendering the three-tier visual health protocol (AD-7): normal icon, warning dot overlay (Tier 2), and critical X overlay (Tier 3).
-3. Building and displaying the tray context menu in the order mandated by FR-16: Settings, View Logs, Auto-Start, Check for Updates, About, Exit.
+3. Building and displaying the tray context menu in the order mandated by FR-16: an "Update to `<version>`..." item shown only when `updatecheck::snapshot()` reports one is available, then Settings, View Logs, Auto-Start, About, Exit. Clicking either the update item or Settings launches Settings, which is where the update is actually read about and installed.
 4. Listening for the shell broadcast `TaskbarCreated` and re-registering the icon without user action (AD-10, UC-3).
 5. Showing exactly one balloon toast when hook death escalates to Tier 3; latching `toast_sent` so repeats are suppressed.
 6. Launching `wiradesk-settings.exe` via `ShellExecute` and opening the log directory for View Logs (BR-5).
+7. Showing an unconditional "Now running / Listening for shortcuts" toast on every daemon start (`WM_APP_HOOK_READY`), not only the first — a fourth, always-informational notification class alongside the three-tier error protocol.
 
 `LC-tray-controller` never blocks on configuration I/O, never installs hooks, and never performs window enumeration.
 
@@ -446,6 +451,7 @@ The engine never installs hooks, never writes configuration, and never calls blo
 - `crates/daemon/src/tray.rs` — icon lifecycle, overlay states, `TaskbarCreated` handler.
 - `crates/daemon/src/menu.rs` — menu item construction and command routing.
 - `crates/daemon/src/health.rs` — Tier-2/Tier-3 escalation signals from hook heartbeat failures.
+- `crates/daemon/src/updatecheck.rs` — `snapshot()`, read to decide whether the menu shows an update item (CAP-13).
 - `shared::constants` — window class/title for settings launch coordination.
 - Windows Shell APIs: `Shell_NotifyIconW`, `TrackPopupMenu`, `ShellExecuteW`.
 
@@ -458,21 +464,24 @@ The engine never installs hooks, never writes configuration, and never calls blo
 | `WM_APP_TRAY_ICON` | Shell | Route menu commands |
 | `WM_TASKBARCREATED` | Explorer restart | Re-register icon (UC-3) |
 | `set_tray_tier(Tier)` | `health.rs` / worker | Update overlay + optional toast |
+| `WM_APP_UPDATE_STATE` | `updatecheck::spawn` | New update-check result to reflect next time the menu opens |
 | Startup | `main.rs` | Initial `NIM_ADD` |
 
 ##### Outbound
 
 | Action | Target | Realizes |
 | --- | --- | --- |
-| `ShellExecuteW(settings.exe)` | User | FR-16 Settings item |
+| `ShellExecuteW(settings.exe)` | User | FR-16 Settings item, and the update item (both launch Settings) |
 | `ShellExecuteW(explorer.exe, log_dir)` | User | FR-12 View Logs |
 | `PostQuitMessage` | Process | Exit menu item |
 | Balloon notification | User | AD-7 Tier 3 |
+| "Now running" toast | User | Every start (`WM_APP_HOOK_READY`), not tied to any FR |
 
 #### Notes
 
 - **Explorer death:** When `explorer.exe` restarts, the tray handle is invalid until `TaskbarCreated` arrives; the daemon must not crash—UC-3 covers recovery.
-- **Evidence:** [PARTIAL] `crates/daemon/src/tray.rs`, `crates/daemon/src/menu.rs`, `crates/daemon/src/health.rs`.
+- **Update menu item, deliberately not "Check for Updates":** a menu closes on click, so a check started from it would have nowhere to report to; an announcement shown only when there is something to say costs the menu nothing on the days there is nothing (almost all of them). The manual check lives in Settings' About pane instead (FR-25).
+- **Evidence:** [PARTIAL] `crates/daemon/src/tray.rs`, `crates/daemon/src/menu.rs`, `crates/daemon/src/health.rs`, `crates/daemon/src/updatecheck.rs`.
 
 
 ### `LC-worker-thread.md`
@@ -482,21 +491,21 @@ The engine never installs hooks, never writes configuration, and never calls blo
 #### Responsibility
 
 `LC-worker-thread` is the core execution actor running on the daemon's main thread. It is responsible for:
-1. Draining atomic `u8` wire command bytes (`shared::Command`: `Cycle`, `SnapLeft`, `SnapRight`, `SnapMaximize`, `OverlappingStack`) from the static 16-slot lock-free ring buffer (`ring::pop()`) upon receiving `WM_APP_COMMAND_READY` wake-up messages.
+1. Draining atomic `u8` wire command bytes (`shared::Command`: `Cycle`, `SnapLeft`, `SnapRight`, `SnapMaximize`, `OverlappingStack`, `SnapTop`, `SnapBottom`, `MoveToNextMonitor`) from the static 16-slot lock-free ring buffer (`ring::pop()`) upon receiving `WM_APP_COMMAND_READY` wake-up messages.
 2. Executing stateless live Z-order window enumeration via Win32 `EnumWindows` (`crates/daemon/src/cycling/source.rs`, AD-3) without maintaining internal window caches or trees.
 3. Evaluating candidate window eligibility against frozen rules (`crates/daemon/src/cycling/eligibility.rs`): excluding hidden windows, shell surfaces (`Shell_TrayWnd`, `Shell_SecondaryTrayWnd`, `Progman`, `WorkerW`), cloaked compositor windows (`DwmGetWindowAttribute`), iconic/minimized windows, `WS_EX_TOOLWINDOW`, ghost windows (`Ghost`), and processes not matching the active application's executable basename (`QueryFullProcessImageNameW`, AD-4).
 4. Enforcing multi-monitor and virtual desktop spatial containment (`crates/daemon/src/context/`): querying `IVirtualDesktopManager::IsWindowOnCurrentVirtualDesktop` (AD-9) and restricting candidates to the active foreground monitor, failing closed when COM is unavailable.
 5. Selecting target windows using least-recently-used (LRU) reversal order (`cycle_order`) across the live Z-order, preventing 2-window oscillation loops on 3+ window stacks.
-6. Activating chosen windows via `SetForegroundWindow` (`Win32Activator`) with confirmation polling.
+6. Activating chosen windows (`Win32Activator`) via `SetForegroundWindow`, confirmed by polling for up to ~20 ms; when refused, attaching this thread's input queue to the actual foreground thread (not the target — the reverse attachment an earlier revision made) and retrying once, ~40 ms worst case. One activation attempt per target either way — no responsiveness probe, restore, or per-target retry loop, so a hung window gets the same treatment as a healthy one.
 7. Injecting unassigned `VK_NONAME` (`suppress_start_menu()`) while the `Win` key is held, preventing the Windows Start Menu from popping upon key release without swallowing modifier key-ups (preventing sticky-modifier bugs).
-8. Dispatching snap and stack layout commands to `LC-arrangement-engine` (`snap::plan_snap_*`, `stack::plan_stack`), applying computed placements via `Win32WindowMover` (`SetWindowPos` with `SWP_NOACTIVATE | SWP_NOZORDER`).
+8. Dispatching snap and stack layout commands to `LC-arrangement-engine` (`snap::plan_snap_*`, `stack::plan_stack`, `monitor::plan_move_to_monitor`), applying computed placements via `Win32WindowMover` (`SetWindowPos` with `SWP_NOACTIVATE | SWP_NOZORDER`). A maximize command first tries a native `ShowWindowAsync(SW_MAXIMIZE)` and falls back to the geometric plan only when the window's style forbids maximizing.
 9. Managing Worker configuration snapshots (`WorkerSnapshot`) installed via `WM_APP_RELOAD_CONFIG`.
 
 #### Depends on
 
 - `LC-arrangement-engine` — geometry planning for half-screen snaps and overlapping cascade stacks.
 - `crates/daemon/src/ring.rs` — lock-free static 16-slot ring buffer for polling command bytes.
-- `crates/daemon/src/cycling/` (`source.rs`, `eligibility.rs`, `selection.rs`, `activation.rs`) — window candidate enumeration, filtering, LRU ordering, and foreground activation.
+- `crates/daemon/src/cycling/` (`source.rs`, `eligibility.rs`, `selection.rs`, `activation.rs`) — window candidate enumeration, filtering, LRU ordering, and foreground activation (direct call plus one `AttachThreadInput` retry).
 - `crates/daemon/src/context/` (`virtual_desktop.rs`, `spatial.rs`) — `IVirtualDesktopManager` COM isolation and monitor work area resolution.
 - `shared::Command`, `shared::Config`, `shared::config::LayoutConfig` — shared command opcodes and configuration structures.
 - Windows Subsystems: User32 (`EnumWindows`, `GetForegroundWindow`, `SetForegroundWindow`, `GetWindowLongPtrW`, `IsWindowVisible`, `GetWindowPlacement`, `SendInput`, `GetAsyncKeyState`), Shell32 (`IVirtualDesktopManager`), DWM (`DwmGetWindowAttribute`), Kernel32 (`OpenProcess`, `QueryFullProcessImageNameW`, `CloseHandle`).
@@ -508,13 +517,17 @@ The engine never installs hooks, never writes configuration, and never calls blo
 - `install_config_snapshot(snapshot: WorkerSnapshot)`: Updates thread-local `WORKER_CONFIG` upon configuration reload (`WM_APP_RELOAD_CONFIG`).
 
 ##### Execution Methods
-- `drain_commands()`: Drains the static ring buffer and dispatches to `execute_cycle()`, `execute_snap()`, or `execute_stack()`.
+- `drain_commands()`: Drains the static ring buffer and dispatches to `execute_cycle()`, `execute_snap()`, `execute_stack()`, or `execute_monitor_move()`.
 - `execute_cycle()`: Captures active context & spatial bounds, drives `run_context_safe_cycle()`, activates target, and suppresses Start menu.
-- `execute_snap(command)`: Resolves monitor context and applies single-window snap geometry (`PlacementPlan`).
+- `execute_snap(command)`: Resolves monitor context and applies single-window snap geometry (`PlacementPlan`); `SnapMaximize` tries a native maximize first, falling back to the geometric plan.
 - `execute_stack()`: Plans and applies overlapping cascade stack for up to 3 live same-app windows on the origin monitor.
+- `execute_monitor_move()`: Enumerates the live monitor set, maps the window's share of its source work area onto the destination, and applies the plan — an empty plan on a single-monitor machine is a successful no-op (`LBR-WM-7`, `DEC-007`, `DEC-010`).
 
 ##### Outbound Win32 Calls
 - `SetForegroundWindow(hwnd)`: Transitions focus to target window.
+- `AttachThreadInput(current, foreground, TRUE/FALSE)` + retry `SetForegroundWindow`: Fallback path when the direct call is refused — attaches to the actual foreground thread's input queue, retries once, then detaches.
+- `SetFocus(hwnd)`: Best-effort call after a successful `AttachThreadInput` retry.
+- `ShowWindowAsync(hwnd, SW_MAXIMIZE)`: Native maximize, tried before the geometric plan for `SnapMaximize`.
 - `SetWindowPos(hwnd, 0, x, y, cx, cy, SWP_NOACTIVATE | SWP_NOZORDER)`: Updates window geometry without focus disruption.
 - `SendInput(...)` with `VK_NONAME`: Injects neutral keystroke to prevent Start menu activation.
 
@@ -522,7 +535,8 @@ The engine never installs hooks, never writes configuration, and never calls blo
 
 - **LRU Z-Order Traversal:** Naive "next in Z-order" (first candidate below foreground) causes a ping-pong bug between top 2 windows in a 3+ window stack because raising a window puts it at top. Reversing the rotated slice (`cycle_order`) ensures deterministic full-cycle rotation.
 - **Worker-Thread COM Apartment:** `VirtualDesktopManager` is wrapped in `thread_local!` to guarantee COM apartment ownership and single-threaded initialization once per worker lifecycle, avoiding ~19 ms overhead per keystroke.
-- **Evidence:** Verified against `crates/daemon/src/worker.rs`, `crates/daemon/src/cycling/`, `crates/daemon/src/context/`, and `crates/daemon/src/arrangement/win32.rs`.
+- **Activation retry, and why it exists:** `SetForegroundWindow` is refused by Windows unless the caller already owns the foreground or is otherwise privileged, so a direct call alone silently fails roughly every other cycle. The fallback attaches this thread's input queue to the thread that *owns* the foreground window and retries once — attaching to the target thread instead, an earlier revision's mistake, leaves the caller with no rights at all. Every wait in this path (~20 ms per attempt, ~40 ms worst case across both) is on Windows applying the focus change, never on the target application responding, which is what keeps a hung window's treatment identical to a responsive one's.
+- **Evidence:** Verified against `crates/daemon/src/worker.rs`, `crates/daemon/src/cycling/` (including `activation.rs`), `crates/daemon/src/context/`, and `crates/daemon/src/arrangement/` (`win32.rs`, `monitor.rs`).
 
 
 ## Data model — `05-model/`

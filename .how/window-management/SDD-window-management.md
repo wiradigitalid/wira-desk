@@ -68,7 +68,7 @@ The following Architectural Decisions from `ARCHITECTURE-SPINE.md` bind the desi
 | AD | How it lands here |
 | --- | --- |
 | **AD-1** | Hook thread, worker thread, and tray message loop never share mutable state or mutexes. All inter-thread communication uses single-direction ring buffers or Win32 message queues. |
-| **AD-2** | `crates/daemon/src/hook.rs` tracks QPC timestamps and discards chords occurring within 50 ms. Only validated chords are translated to `Command` (`u8`) and pushed to the ring buffer. `[MISSING]` — values 6, 7, and 8 are not yet present in `crates/shared/src/commands.rs`; they are planned by this pass. |
+| **AD-2** | `crates/daemon/src/hook.rs` tracks QPC timestamps and discards chords occurring within 50 ms. Only validated chords are translated to `Command` (`u8`) and pushed to the ring buffer. Values 6 (`SnapTop`), 7 (`SnapBottom`), and 8 (`MoveToNextMonitor`) are present in `crates/shared/src/commands.rs` and wired end-to-end (`hook.rs`'s `Chords`, `worker.rs`'s dispatch), covered by `frozen_command_wire_values` — the `[MISSING]` this row once carried is resolved. |
 | **AD-3** | `crates/daemon/src/cycling/source.rs` performs a fresh `EnumWindows` call on every cycle request using non-blocking APIs (`IsWindowVisible`, `GetWindowLongPtrW`). |
 | **AD-4** | Window grouping inspects process image paths via `QueryFullProcessImageNameW` and extracts the basename. Multi-process architectures (e.g. Chrome/Electron) cycle correctly regardless of differing PIDs. |
 | **AD-5** | The daemon hidden window listens for `WM_APP_RELOAD_CONFIG` (0x8001), re-reads `config.toml`, and sends an immutable `HookSnapshot` to `LC-hook-thread` via `WM_APP_CONFIG_SNAPSHOT`. |
@@ -76,7 +76,7 @@ The following Architectural Decisions from `ARCHITECTURE-SPINE.md` bind the desi
 | **AD-7** | `crates/daemon/src/tray.rs` and `error.rs` implement the 3-Tier visual protocol. Red dot overlay signals warnings; Red X overlay and single toast signal dead hook. |
 | **AD-8** | `crates/daemon/src/health.rs` ticks every 10 s (`HOOK_HEARTBEAT_SECS`). `LC-hook-thread` tracks consecutive refresh failures and posts `WM_APP_HOOK_DEAD` upon reaching threshold 3. |
 | **AD-9** | `crates/daemon/src/context/virtual_desktop.rs` encapsulates COM apartment initialization and vtable calls on the Worker actor. Any failure fails closed (skips candidate). |
-| **AD-14** | `crates/daemon/src/context/spatial.rs` will resolve the monitor set per invocation and hand it to `LC-arrangement-engine`, which holds nothing between calls. `[PARTIAL]` — the no-cache property already holds trivially, because `spatial.rs` performs only `MonitorFromWindow` and stores nothing; the enumeration this rule governs is `[MISSING]`. |
+| **AD-14** | `crates/daemon/src/context/spatial.rs::enumerate_monitors()` calls `EnumDisplayMonitors` fresh on every invocation and hands the result to `LC-arrangement-engine`, which holds nothing between calls — the `[MISSING]` this row once carried is resolved. |
 | **AD-10** | `crates/daemon/src/tray.rs` registers `TaskbarCreated` via `RegisterWindowMessageW` and recreates `NOTIFYICONDATAW` when Explorer crashes and restarts. |
 
 ## Failure Behaviour
@@ -217,7 +217,7 @@ Every architectural claim and boundary behaviour is verified against source code
 | Live stateless `EnumWindows` Z-order traversal | Verified | `crates/daemon/src/worker.rs`, `crates/daemon/src/cycling/source.rs` | Verified: Stateless traversal on every cycle; no internal Z-order caching. |
 | Same-application grouping by executable basename | Verified | `crates/daemon/src/cycling/eligibility.rs` | Verified: Compares normalized process image basename from `QueryFullProcessImageNameW`; ignores PID. |
 | Allocation-free VM/RDP bypass evaluation | Verified | `crates/daemon/src/context/vm_bypass.rs` | Verified: Uses reusable `[u16; 256]` and `[u16; 260]` stack buffers with zero heap allocation in hook path. |
-| `IVirtualDesktopManager` COM isolation on worker | Verified | `crates/daemon/src/context/virtual_desktop.rs` | Verified: Custom vtable layout with `!Send`/`!Sync` adapter bound exclusively to Worker thread. |
+| `IVirtualDesktopManager` COM isolation on worker | [PARTIAL] | `crates/daemon/src/context/virtual_desktop.rs` | [PARTIAL]: vtable layout, offsets, and the `!Send`/`!Sync` adapter are verified at compile time and by test; the live COM call itself has never executed against a real elevated desktop (`OQ-35`). |
 | 10 s hook health heartbeat and retry threshold | Verified | `crates/daemon/src/health.rs`, `crates/daemon/src/hook.rs` | Verified: `HOOK_HEARTBEAT_SECS = 10`, `HOOK_CHECK_FAIL_THRESHOLD = 3`, `HOOK_RETRY_MAX = 5`. |
 | Explorer crash recovery via `TaskbarCreated` | Verified | `crates/daemon/src/tray.rs` | Verified: Handles `RegisterWindowMessageW("TaskbarCreated")` and invokes `Shell_NotifyIconW(NIM_ADD)`. |
 | 3-Tier error protocol & single-shot toast guard | Verified | `crates/daemon/src/tray.rs`, `crates/daemon/src/error.rs` | Verified: Tier 1 `MessageBoxW`, Tier 2 Red Dot tray overlay, Tier 3 Red X + `hook_dead_toast_sent` single-shot toast. |
@@ -226,4 +226,4 @@ Every architectural claim and boundary behaviour is verified against source code
 
 ## Open Items
 
-None. All technical mechanisms, invariants (AD-1..10, AD-12), and Win32 failure boundaries are verified against the codebase and ratified.
+`[NEEDS CONFIRMATION]` — the `IVirtualDesktopManager` COM path (AD-9) is verified at compile time — vtable layout and offsets match the documented interface, and the isolation tests pass — but has never actually executed against a live elevated desktop; the module's own header comment states this directly. Filed as `OQ-35`. All other technical mechanisms, invariants (AD-1..10, AD-12), and Win32 failure boundaries are verified against the codebase and ratified.
