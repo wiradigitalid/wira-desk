@@ -18,12 +18,22 @@ owner decides.
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [0.1.5] - 2026-09-03
+
 ### Changed
 
 - License changed from MIT to GPL-3.0-only, across the project and all three workspace crates.
   Slint (the Settings UI toolkit) is now consumed under its own GPL-3.0-only branch rather than
   the Slint Royalty-free License 2.0, so the mandatory royalty-free-tier disclosure no longer
   applies. See `LICENSE`, `NOTICE`, and `README.md`.
+
+### Fixed
+
+- The Key Check pane in Settings now tells a chord swallowed by another program's keyboard hook
+  apart from the daemon actually being stopped. Previously both showed "Daemon Not Running,"
+  which pointed you at restarting a daemon that was never the problem.
 
 ## [0.1.4] - 2026-08-29
 
