@@ -186,3 +186,41 @@ defects:
       exit and the next heartbeat tick; disarm-on-every-exit-path plus
       heartbeat reaping narrows it, and it is carried as a known residual
       rather than described as closed.
+
+  - id: DEF-4
+    title: KeyCheckVerdict::Intercepted is declared but never constructed — a chord swallowed by another hook reads as "Daemon Not Running"
+    status: open
+    severity: low
+    component: settings
+    root_cause: incomplete implementation
+    violates: [DEC-005]
+    found_in: "0.4.0"
+    found_by: >-
+      wdi-reconcile code-vs-doc trace, 2026-09-03; confirmed as a real gap rather than an
+      accepted simplification by the product owner the same day (`OQ-36`).
+    summary: >-
+      `DEC-005` and `KeyCheckVerdict` (`crates/settings/src/app.rs`) declare four outcomes for
+      the Key Check pane. `record_key` only ever produces three: `Received` (hook and window
+      both correlate), `ClaimedByOtherApp` (window event arrived, no correlating hook report,
+      within a grace timeout), and `DaemonNotRunning` — assigned identically whether the daemon
+      is genuinely absent, or the daemon is running but no hook report ever correlates because
+      an earlier third-party keyboard hook swallowed the chord before Wira Desk's own hook saw
+      it. `KeyCheckVerdict::Intercepted`, meant for exactly that second case, is declared with a
+      doc comment ("Intercepted by external LL hook / swallowed, chord dead") and never
+      constructed by any code path.
+    impact: >-
+      A user whose daemon is running normally, testing a chord that another running program's
+      keyboard hook consumes first, is told "Daemon Not Running" — the wrong diagnosis. The
+      correct fix is local: it points them at restarting a daemon that was never the problem,
+      rather than at the actual external hook. No keystrokes or shortcuts are lost; this is a
+      diagnostic-message defect, not a functional one, which is why severity is low despite the
+      wrong-diagnosis cost.
+    fix_direction: >-
+      In `record_key`, when `daemon_running` is true and no hook report correlates within the
+      observation window, construct `Intercepted` instead of reusing `DaemonNotRunning`. The
+      `daemon_running` flag already distinguishes the two root causes; the fix is using it on
+      this branch rather than only on the true-absence branch. `DEC-005`'s own boundary
+      paragraph in `SDD-settings.md` already states the honest-silence stance this closes one
+      more gap in — no design change needed, only wiring the fourth outcome the decision
+      already named.
+    owner: repo owner
