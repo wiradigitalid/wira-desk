@@ -189,7 +189,7 @@ defects:
 
   - id: DEF-4
     title: KeyCheckVerdict::Intercepted is declared but never constructed — a chord swallowed by another hook reads as "Daemon Not Running"
-    status: open
+    status: fixed
     severity: low
     component: settings
     root_cause: incomplete implementation
@@ -224,3 +224,19 @@ defects:
       more gap in — no design change needed, only wiring the fourth outcome the decision
       already named.
     owner: repo owner
+    fixed_in: fastpath (no FR/UC/AD-N/domain-model touched, one ticket, no third party)
+    fixed_by: >-
+      `crates/settings/src/app.rs::record_key` — the branch that reused `DaemonNotRunning` for
+      "daemon running, nothing correlated" now constructs `KeyCheckVerdict::Intercepted`
+      instead, matching the row `DEC-005`'s table and the enum's own doc comment already named.
+      The pre-existing test `a_window_event_with_no_hook_report_reports_daemon_not_running` was
+      itself asserting the bug (it passed `daemon_running: true` and expected
+      `DaemonNotRunning`); renamed to
+      `a_window_event_with_no_hook_report_while_the_daemon_runs_reports_intercepted` and its
+      assertion corrected. Added
+      `a_window_event_with_the_daemon_absent_reports_daemon_not_running`
+      (`daemon_running: false`) — the genuine daemon-absent path had no test at all before this.
+      Verified: the renamed test seen failing first (`left: DaemonNotRunning, right:
+      Intercepted`) before the fix, green after. `cargo test --workspace`
+      (`WIRADESK_SKIP_MANIFEST=1`) exits 0, 491 passing across `daemon`/`settings`/`shared`;
+      `cargo clippy --workspace --all-targets -- -D warnings` clean; `cargo fmt --all` clean.

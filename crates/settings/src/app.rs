@@ -565,11 +565,13 @@ impl KeyCheckState {
             // Row 4: the daemon is not running.
             KeyCheckVerdict::DaemonNotRunning
         } else {
-            // Row 4's other half: the daemon is running but no hook report
-            // correlates with this window event (the hook is dead, or this
-            // specific chord's report has not arrived within the same
-            // observation). DEC-005's table gives both halves one verdict.
-            KeyCheckVerdict::DaemonNotRunning
+            // Row 3: the daemon is running but no hook report correlates
+            // with this window event — an earlier third-party LL hook
+            // swallowed the chord before Wira Desk's own hook saw it.
+            // DEF-4: this used to reuse `DaemonNotRunning`, telling a user
+            // with a healthy daemon to restart the one thing that was never
+            // the problem.
+            KeyCheckVerdict::Intercepted
         };
         self.beat = true;
     }
@@ -1833,12 +1835,29 @@ mod tests {
     }
 
     #[test]
-    fn a_window_event_with_no_hook_report_reports_daemon_not_running() {
+    fn a_window_event_with_no_hook_report_while_the_daemon_runs_reports_intercepted() {
+        // DEF-4: the daemon is running (third arg `true`) but no hook report
+        // ever correlated — an earlier third-party LL hook swallowed the
+        // chord before Wira Desk's own hook saw it. DEC-005 names this
+        // `Intercepted`, distinct from the daemon genuinely being absent.
         let mut kc = KeyCheckState::default();
         kc.record_key(
             "Alt + 1",
             "alt+1",
             true,
+            (false, false, true, false),
+            Some(0x31),
+        );
+        assert_eq!(kc.verdict, KeyCheckVerdict::Intercepted);
+    }
+
+    #[test]
+    fn a_window_event_with_the_daemon_absent_reports_daemon_not_running() {
+        let mut kc = KeyCheckState::default();
+        kc.record_key(
+            "Alt + 1",
+            "alt+1",
+            false,
             (false, false, true, false),
             Some(0x31),
         );
