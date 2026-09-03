@@ -43,3 +43,102 @@ This table survives the retirement of `_bmad-output/planning-artifacts/prds/prd-
 ## Commercial Redactions
 
 - Marketing strategy, target monetization models, and private cost breakdowns from the internal WinTick PRD remain excluded from the public corpus.
+
+## Technical how — testable consequences per FR
+
+### FR-1 — Same-Application Identity Cycling
+- Pressing `Win + \`` with three Chrome windows and two Word windows open cycles focus only through the three Chrome windows if Chrome is active.
+- Window cycling operates dynamically in real time without caching Z-order state between keystrokes.
+
+### FR-4 — UX Honesty for Unresponsive Windows
+- An application window marked as "Not Responding" by Windows OS receives focus when reached in the cycling sequence.
+- Cycling past the unresponsive window on the next shortcut press completes without delay or hang.
+
+### FR-5 — Minimized and Ghost Window Exclusion
+- A minimized same-application window remains minimized in the taskbar and is not restored during cycling.
+- System tray background helper windows and tooltips are ignored by the enumeration filter.
+
+### FR-6 — Exact Shortcut Matching
+- Shortcut recognition evaluates exact modifier state masks (Ctrl, Alt, Shift, Win).
+- Extra modifier combinations are passed transparently to downstream window hooks.
+
+### FR-2 — Physical Monitor and Virtual Desktop Boundary Locking
+- Windows of the same application residing on secondary monitors are excluded from the active cycling list.
+- Windows residing on other Windows Virtual Desktops are excluded from the active cycling list.
+
+### FR-3 — VM and Remote Desktop Shortcut Passthrough
+- Detection recognizes standard VM and RDP process names (`mstsc.exe`, `vmconnect.exe`, `MobaXterm`, `VMwareUnityWindow`).
+- Passthrough list is configurable via `config.toml`.
+
+### FR-8 — Elevated Execution for UIPI Focus Control
+- Daemon executable embeds a `requireAdministrator` execution level manifest.
+- Focus transitions into high-integrity processes succeed without error dialogs or silent focus loss.
+
+### FR-14 — DPI-Aware Window Snapping Shortcuts
+- Half-screen snap calculates bounds from `GetDpiForMonitor` and monitor work area (excluding taskbars).
+- Maximize shortcut restores or maximizes window state cleanly.
+- The shipped default shortcuts are the `Ctrl + Alt` family, and `Win + Ctrl + Left/Right` can no longer be configured for any action because Windows uses it to switch virtual desktops. Realizes DEC-008.
+
+### FR-15 — Overlapping Stack Layout for Compact Monitors
+- Windows are positioned at Left, Center, and Right horizontal offsets.
+- Window geometry calculations adjust proportionally according to monitor DPI.
+
+### FR-22 — Top and Bottom Half Snapping
+- The top and bottom halves together cover the working area exactly, with no overlapping row and no uncovered row between them.
+- An odd number of pixels in height is divided the same way every time, so repeating the shortcut never shifts the window by a pixel.
+- Snapping is confined to the monitor hosting the active window; no other monitor is touched.
+
+### FR-7 — Configurable Cycling Shortcuts and Fallback
+- Configuration parses standard key names and modifier flags from TOML format.
+- Daemon reloads configuration upon receiving the `WM_APP_RELOAD_CONFIG` message from the settings process.
+
+### FR-9 — Pure Win32 Tray-Resident Daemon
+- Binary links against pure Win32 C-FFI (`windows-sys`).
+- No heavy UI runtimes (Electron, .NET, COM GUI frameworks) are loaded into the daemon process.
+
+### FR-10 — Tray Icon Auto-Recovery on Explorer Restart
+- Daemon registers `RegisterWindowMessageW("TaskbarCreated")`.
+- Icon state is re-added via `Shell_NotifyIconW(NIM_ADD)` upon receiving the broadcast.
+
+### FR-11 — Three-Tier Error Handling Protocol
+- Non-fatal operational errors produce zero intrusive modal popups.
+- Hook heartbeat monitor triggers Tier 3 visual indicators upon hook dropout.
+
+### FR-12 — Diagnostic Log Inspection from Tray Menu
+- Menu action opens `%APPDATA%\WiraDesk\logs\` in Windows Explorer.
+- Diagnostic logging writes structured operational events without sensitive keystroke data.
+
+### FR-13 — Elevated Logon Auto-Start Scheduled Task
+- Scheduled task action targets the absolute path of `wiradesk.exe` with an empty working directory to mitigate DLL hijacking.
+- Task configuration specifies `/RL HIGHEST` for the active `%USERNAME%`.
+
+### FR-16 — Structured Tray Context Menu
+- Menu items correctly reflect current state (e.g. checkmark on Auto-Start when enabled).
+- Selecting Exit terminates the background daemon cleanly.
+
+### FR-17 — Interactive First-Run Tutorial Simulation
+- First-run flag persists in `config.toml` after tutorial completion or skip.
+- Tutorial demonstrates the spatial preservation concept clearly.
+
+### FR-18 — Physical Shortcut Capturing Listening Mode
+- Listening mode processes raw virtual key codes and modifiers.
+- Invalid or reserved system combinations (e.g., `Ctrl + Alt + Del`) are flagged with validation warnings.
+
+### FR-19 — Adaptive System Light and Dark Theming
+- UI listens for `WM_SETTINGCHANGE` / theme registry updates.
+- High-contrast mode styling is respected when enabled.
+
+### FR-20 — Full Keyboard Navigation Accessibility
+- Tab order follows intuitive visual flow across all controls.
+- Focus indicators remain clearly visible on active interactive elements.
+
+### FR-21 — Screen Reader Accessibility via UI Automation
+- Controls implement UI Automation provider interfaces.
+- Toggles communicate checked/unchecked state transitions immediately to accessibility listeners.
+
+### FR-23 — Move the Active Window to the Next Monitor
+- Monitors are visited in one fixed order that wraps from the last back to the first, so repeating the shortcut returns the window to where it started.
+- With one monitor attached, the shortcut does nothing: no movement, no message, and no error.
+- The window remains on the virtual desktop it was on; moving it never changes which desktop shows it.
+- The destination placement is derived from proportion, never from copying the window's pixel width and height.
+- No other window on either monitor is moved or resized.

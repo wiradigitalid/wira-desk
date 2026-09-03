@@ -21,11 +21,11 @@ provenance: >-
 | 2026-08-21 | Rebranded to Wira Desk and structured into WDI Method corpus format with explicit proof-of-done criteria | Migration from BMAD planning output to WDI repository standard | v1.0.0 |
 | 2026-08-26 | Snapping now covers the top and bottom halves of a screen, not only the left and right; moving the active window to another monitor became something Wira Desk does itself instead of leaving to Windows; and every shipped arrangement shortcut moved to the Ctrl+Alt family | The owner asked for vertical halves and a deliberate monitor move. The shortcut family moved because the previous default, `Ctrl+Win+Left/Right`, silently took over Windows' own shortcut for switching virtual desktops — a promise this product had already made not to break. Monitor movement was previously delegated to Windows' `Win+Shift+Arrow`, which discards whatever arrangement the user had just applied, so the two features never composed | v0.4.0 |
 
-## 0. Document Purpose
+## 1. Why This Initiative
 
-This Product Requirements Document (PRD) defines the user promises, functional capabilities, and cross-cutting quality constraints for Wira Desk. It serves product management, architects, developers, and quality assurance engineers as the canonical specification of what the product delivers to end users. Terminology in this document is anchored in the Product Glossary; functional requirements are nested under user-facing capabilities and linked to business goals; and all implementation assumptions are recorded and indexed for verification.
-
-## 1. Vision
+<!-- New shape wants a delta against the brief's `Why`, not a restatement. No sentence below is
+     word-for-word identical to brief.md's `Why`, so none was removed — deciding which paraphrases
+     are copies is the owner's call, not this migration's. -->
 
 Wira Desk brings the seamless same-application window cycling experience of macOS (`Cmd + \``) to the Windows desktop ecosystem (`Win + \``). Windows natively lacks any mechanism to cycle strictly among windows belonging to the current foreground application, forcing users into noisy `Alt + Tab` switchers or taskbar hunting that breaks focus, disrupts spatial memory, and creates severe friction across multi-monitor workstations.
 
@@ -80,325 +80,112 @@ Operating as an ultra-lightweight, invisible background tray utility written in 
 - **Resolution:** Sari works across both screens with a layout she assembled from the keyboard in a few seconds, and rebuilds it the same way whenever she docks.
 - **Edge case:** With only the laptop screen attached, the move shortcut does nothing at all — no window jump, no message, no error. On a screen too short to divide, the snap declines rather than producing a window with no height.
 
-## 3. Glossary
+## 3. Features
 
-- **Ghost window** — A hidden, utility, or surrogate window (such as `WS_EX_TOOLWINDOW` or system shell wrappers) that is excluded from the cycling loop.
-- **Hook thread** — A dedicated Windows thread running at `THREAD_PRIORITY_TIME_CRITICAL` executing the `WH_KEYBOARD_LL` low-level keyboard hook; must complete callbacks within 10 ms.
-- **LowLevelHooksTimeout** — The Windows OS threshold (~300 ms) after which an unresponsive low-level keyboard hook is silently unhooked by the operating system.
-- **Product Component** — A user-named capability boundary in the architecture (`window-management`, `settings`).
-- **Ring buffer** — A lock-free, fixed-size 16-slot circular queue of `u8` command bytes bridging the hook thread to the worker thread with zero heap allocation.
-- **Spatial preservation** — The core UX guarantee that window cycling and snapping remain strictly confined to the physical monitor and virtual desktop hosting the active window.
-- **UIPI** — User Interface Privilege Isolation, the Windows security subsystem preventing lower-integrity processes from controlling or sending messages to higher-integrity windows.
-- **UX honesty** — The design principle requiring unresponsive ("Not Responding") windows to be focused rather than hidden, providing transparent feedback to the user.
-- **Worker thread** — The background daemon thread executing window enumeration, spatial filtering, and focus manipulation off the critical input path.
-- **Z-order** — The front-to-back stacking order of overlapping windows maintained dynamically by the Windows Desktop Window Manager.
-
-## 4. Features
-
-### 4.1 Same-Application Window Cycling
+### 3.1 Same-Application Window Cycling
 
 **Capability:** CAP-1 — serves BG-1.
 
 **Description:** Provides instantaneous, overlay-free cycling among visible windows belonging exclusively to the active application process. Triggered via a global keyboard shortcut, the cycling engine identifies the executable identity of the active foreground window and shifts focus to the next window in Z-order. Realizes UJ-1, UJ-2, and UJ-3.
 
-**Functional Requirements:**
-
-#### FR-1: Same-Application Identity Cycling
-The system can cycle focus strictly among windows sharing the same executable identity (process path and name) as the current foreground window upon detecting the cycling shortcut. Realizes UJ-1.
-
-**Proof of done:** Pressing the cycling shortcut while an application with multiple windows is focused advances focus sequentially only among windows of that exact application, never switching to unrelated applications.
-
-**Consequences (testable):**
-- Pressing `Win + \`` with three Chrome windows and two Word windows open cycles focus only through the three Chrome windows if Chrome is active.
-- Window cycling operates dynamically in real time without caching Z-order state between keystrokes.
-
-#### FR-4: UX Honesty for Unresponsive Windows
-The system can bring "Not Responding" application windows to the foreground during a cycle rather than silently skipping them. Realizes UJ-2.
-
-**Proof of done:** Pressing the cycling shortcut when an unresponsive same-app window is next in Z-order brings that hung window directly to the front so the user sees its frozen state.
-
-**Consequences (testable):**
-- An application window marked as "Not Responding" by Windows OS receives focus when reached in the cycling sequence.
-- Cycling past the unresponsive window on the next shortcut press completes without delay or hang.
-
-#### FR-5: Minimized and Ghost Window Exclusion
-The system can filter out minimized windows, hidden system windows, tool windows (`WS_EX_TOOLWINDOW`), and ghost overlays during window enumeration. Realizes UJ-1.
-
-**Proof of done:** Minimized windows and background utility windows are omitted from the cycling sequence, allowing focus to shift only among visibly rendered desktop windows.
-
-**Consequences (testable):**
-- A minimized same-application window remains minimized in the taskbar and is not restored during cycling.
-- System tray background helper windows and tooltips are ignored by the enumeration filter.
-
-#### FR-6: Exact Shortcut Matching
-The system can intercept the cycling action only when the exact configured key combination is pressed, ignoring key events with extraneous modifier keys. Realizes UJ-1.
-
-**Proof of done:** Pressing an unconfigured combination such as `Win + Shift + \`` when only `Win + \`` is registered passes the keystroke to the operating system without triggering window cycling.
-
-**Consequences (testable):**
-- Shortcut recognition evaluates exact modifier state masks (Ctrl, Alt, Shift, Win).
-- Extra modifier combinations are passed transparently to downstream window hooks.
+**Realizes:** FR-1, FR-4, FR-5, FR-6
 
 **Out of Scope:**
 - Rendering graphical thumbnail previews or on-screen switcher HUD overlays during cycling.
 
 ---
 
-### 4.2 Spatial Layout Preservation
+### 3.2 Spatial Layout Preservation
 
 **Capability:** CAP-7 — serves BG-1.
 
 **Description:** Restricts window cycling boundaries strictly to the physical display monitor and active virtual desktop of the currently focused window, eliminating unexpected multi-monitor focus jumps. Realizes UJ-1.
 
-**Functional Requirements:**
-
-#### FR-2: Physical Monitor and Virtual Desktop Boundary Locking
-The system can restrict same-application cycling to windows positioned on the same physical monitor and virtual desktop as the active foreground window. Realizes UJ-1.
-
-**Proof of done:** Pressing the cycling shortcut repeatedly on a multi-monitor setup cycles only through the windows on the active monitor without moving focus or cursor to any other display.
-
-**Consequences (testable):**
-- Windows of the same application residing on secondary monitors are excluded from the active cycling list.
-- Windows residing on other Windows Virtual Desktops are excluded from the active cycling list.
+**Realizes:** FR-2
 
 ---
 
-### 4.3 Virtual Machine and Remote Desktop Passthrough
+### 3.3 Virtual Machine and Remote Desktop Passthrough
 
 **Capability:** CAP-8 — serves BG-1.
 
 **Description:** Automatically bypasses shortcut interception when the foreground window is a known virtual machine console or remote desktop client, allowing guest operating systems to receive shortcuts natively.
 
-**Functional Requirements:**
-
-#### FR-3: VM and Remote Desktop Shortcut Passthrough
-The system can detect if the active foreground window belongs to a configured virtual machine or remote desktop client and pass cycling shortcuts through to the guest OS without interception.
-
-**Proof of done:** Pressing `Win + \`` while focused inside a Remote Desktop (`mstsc.exe`) or VMware session transmits the raw keystroke directly to the remote session without cycling host windows.
-
-**Consequences (testable):**
-- Detection recognizes standard VM and RDP process names (`mstsc.exe`, `vmconnect.exe`, `MobaXterm`, `VMwareUnityWindow`).
-- Passthrough list is configurable via `config.toml`.
+**Realizes:** FR-3
 
 ---
 
-### 4.4 Elevated Window Management and UIPI Bypass
+### 3.4 Elevated Window Management and UIPI Bypass
 
 **Capability:** CAP-4 — serves BG-1.
 
 **Description:** Executes the core daemon with Administrator privileges to navigate User Interface Privilege Isolation (UIPI) boundaries, enabling reliable focus switching across elevated and standard application windows. Realizes UJ-3.
 
-**Functional Requirements:**
-
-#### FR-8: Elevated Execution for UIPI Focus Control
-The system can execute with elevated Administrator privileges via an embedded application manifest to shift focus seamlessly to elevated target windows. Realizes UJ-3.
-
-**Proof of done:** Pressing the cycling shortcut successfully shifts focus into an Administrator Command Prompt or Task Manager window without operating system denial.
-
-**Consequences (testable):**
-- Daemon executable embeds a `requireAdministrator` execution level manifest.
-- Focus transitions into high-integrity processes succeed without error dialogs or silent focus loss.
+**Realizes:** FR-8
 
 ---
 
-### 4.5 DPI-Aware Window Snapping and Overlapping Stack
+### 3.5 DPI-Aware Window Snapping and Overlapping Stack
 
 **Capability:** CAP-2 — serves BG-3.
 
 **Description:** Provides optional keyboard-driven window arrangement shortcuts that snap the active window to either half of the screen — left, right, top, or bottom — maximize it, and arrange several windows as an overlapping stack, all with per-monitor DPI awareness.
 
-**Functional Requirements:**
-
-#### FR-14: DPI-Aware Window Snapping Shortcuts
-The system can snap and resize the active window to half-screen left/right or maximized layouts using dedicated keyboard shortcuts (`Ctrl + Alt + Left/Right`, `Ctrl + Alt + Enter`), scaled to the target monitor's DPI.
-
-**Proof of done:** Pressing `Ctrl + Alt + Left` resizes and aligns the active window to exactly 50% of the working area of the current monitor, taking display scaling into account.
-
-**Consequences (testable):**
-- Half-screen snap calculates bounds from `GetDpiForMonitor` and monitor work area (excluding taskbars).
-- Maximize shortcut restores or maximizes window state cleanly.
-- The shipped default shortcuts are the `Ctrl + Alt` family, and `Win + Ctrl + Left/Right` can no longer be configured for any action because Windows uses it to switch virtual desktops. Realizes DEC-008.
-
-#### FR-15: Overlapping Stack Layout for Compact Monitors
-The system can arrange up to three same-application windows in an overlapping 50%-width stack with offset horizontal edges on small screens, triggered by `Ctrl + Alt + Shift + Down`.
-
-**Proof of done:** Triggering the stack layout command positions up to three windows at 50% screen width each with visible exposed borders allowing mouse selection.
-
-**Consequences (testable):**
-- Windows are positioned at Left, Center, and Right horizontal offsets.
-- Window geometry calculations adjust proportionally according to monitor DPI.
-
-#### FR-22: Top and Bottom Half Snapping
-The system can snap and resize the active window to the top or bottom half of the current monitor's working area using dedicated keyboard shortcuts (`Ctrl + Alt + Up`, `Ctrl + Alt + Down`), scaled to the target monitor's DPI. Realizes UJ-4.
-
-**Proof of done:** Pressing `Ctrl + Alt + Up` resizes and aligns the active window to the upper 50% of the working area of the current monitor, leaving the taskbar uncovered.
-
-**Consequences (testable):**
-- The top and bottom halves together cover the working area exactly, with no overlapping row and no uncovered row between them.
-- An odd number of pixels in height is divided the same way every time, so repeating the shortcut never shifts the window by a pixel.
-- Snapping is confined to the monitor hosting the active window; no other monitor is touched.
+**Realizes:** FR-14, FR-15, FR-22
 
 ---
 
-### 4.6 Local Configuration Persistence
+### 3.6 Local Configuration Persistence
 
 **Capability:** CAP-3 — serves BG-2.
 
 **Description:** Manages user preferences, custom shortcut bindings, and passthrough lists using a local TOML configuration file stored in the user's roaming AppData directory.
 
-**Functional Requirements:**
-
-#### FR-7: Configurable Cycling Shortcuts and Fallback
-The system can read and apply primary (`Win + \``) and fallback (`Alt + \``) shortcut configurations from `%APPDATA%\WiraDesk\config.toml`.
-
-**Proof of done:** Modifying the shortcut key in `config.toml` updates the active cycling shortcut immediately after configuration reload.
-
-**Consequences (testable):**
-- Configuration parses standard key names and modifier flags from TOML format.
-- Daemon reloads configuration upon receiving the `WM_APP_RELOAD_CONFIG` message from the settings process.
+**Realizes:** FR-7
 
 ---
 
-### 4.7 Native System Tray Lifecycle and Error Protocol
+### 3.7 Native System Tray Lifecycle and Error Protocol
 
 **Capability:** CAP-9 & CAP-6 — serves BG-2.
 
 **Description:** Runs as an invisible, native Win32 system tray daemon with automatic recovery following Explorer shell restarts and a structured three-tier error handling protocol.
 
-**Functional Requirements:**
-
-#### FR-9: Pure Win32 Tray-Resident Daemon
-The system can maintain its background execution lifecycle exclusively through native Win32 APIs and an `ITaskbarList` tray icon without linking external third-party GUI frameworks.
-
-**Proof of done:** The background daemon runs with an active system tray icon while consuming under 2 MB of static RAM.
-
-**Consequences (testable):**
-- Binary links against pure Win32 C-FFI (`windows-sys`).
-- No heavy UI runtimes (Electron, .NET, COM GUI frameworks) are loaded into the daemon process.
-
-#### FR-10: Tray Icon Auto-Recovery on Explorer Restart
-The system can intercept the `TaskbarCreated` window message and recreate the system tray notification icon whenever `explorer.exe` restarts.
-
-**Proof of done:** Terminating and restarting `explorer.exe` via Task Manager automatically restores the Wira Desk tray icon without restarting the daemon.
-
-**Consequences (testable):**
-- Daemon registers `RegisterWindowMessageW("TaskbarCreated")`.
-- Icon state is re-added via `Shell_NotifyIconW(NIM_ADD)` upon receiving the broadcast.
-
-#### FR-11: Three-Tier Error Handling Protocol
-The system can execute a structured error protocol: Tier 1 (fatal startup displays ≤1 message box and exits), Tier 2 (runtime warning logs silently and adds red dot to tray icon), and Tier 3 (runtime hook death renders red cross on tray icon and delivers exactly one notification toast).
-
-**Proof of done:** If the keyboard hook is terminated by the OS, the tray icon displays a red cross indicator and delivers a single desktop toast alert.
-
-**Consequences (testable):**
-- Non-fatal operational errors produce zero intrusive modal popups.
-- Hook heartbeat monitor triggers Tier 3 visual indicators upon hook dropout.
+**Realizes:** FR-9, FR-10, FR-11
 
 ---
 
-### 4.8 Diagnostic Log Access
+### 3.8 Diagnostic Log Access
 
 **Capability:** CAP-11 — serves BG-2.
 
 **Description:** Provides quick access to local silent runtime diagnostic logs directly from the system tray context menu.
 
-**Functional Requirements:**
-
-#### FR-12: Diagnostic Log Inspection from Tray Menu
-The system can open the local silent log file location in File Explorer when the user selects "View Logs" from the tray context menu.
-
-**Proof of done:** Clicking "View Logs" in the tray menu opens the Wira Desk diagnostic log file in a plain-text viewer, creating an empty log first if none exists yet.
-
-**Consequences (testable):**
-- Menu action opens `%APPDATA%\WiraDesk\logs\` in Windows Explorer.
-- Diagnostic logging writes structured operational events without sensitive keystroke data.
+**Realizes:** FR-12
 
 ---
 
-### 4.9 Silent Auto-Start at Logon
+### 3.9 Silent Auto-Start at Logon
 
 **Capability:** CAP-10 — serves BG-2.
 
 **Description:** Configures seamless, elevated background auto-start upon user logon via the Windows Task Scheduler, avoiding repeated UAC elevation prompts.
 
-**Functional Requirements:**
-
-#### FR-13: Elevated Logon Auto-Start Scheduled Task
-The system can create or delete a Windows scheduled task (`WiraDesk`) configured to launch the daemon with highest privileges upon user logon (`ONLOGON`).
-
-**Proof of done:** Toggling the Auto-Start option in the tray menu creates a scheduled task that launches Wira Desk silently upon next reboot without prompting for UAC credentials.
-
-**Consequences (testable):**
-- Scheduled task action targets the absolute path of `wiradesk.exe` with an empty working directory to mitigate DLL hijacking.
-- Task configuration specifies `/RL HIGHEST` for the active `%USERNAME%`.
+**Realizes:** FR-13
 
 ---
 
-### 4.10 Onboarding, Settings UI, and Accessibility
+### 3.10 Onboarding, Settings UI, and Accessibility
 
 **Capability:** CAP-5 — serves BG-2.
 
 **Description:** Delivers an on-demand, standalone settings and interactive onboarding application (`wiradesk-settings.exe`) with native theme adaptation and full keyboard/screen-reader accessibility.
 
-**Functional Requirements:**
-
-#### FR-16: Structured Tray Context Menu
-The system can present a right-click tray context menu structured in exact order: Settings..., View Logs, Auto-Start (toggle), [separator], Check for Updates..., About, [separator], Exit.
-
-**Proof of done:** Right-clicking the tray icon displays the context menu matching the exact specified ordering and separator placement.
-
-**Consequences (testable):**
-- Menu items correctly reflect current state (e.g. checkmark on Auto-Start when enabled).
-- Selecting Exit terminates the background daemon cleanly.
-
-#### FR-17: Interactive First-Run Tutorial Simulation
-The system can launch an interactive onboarding simulation upon initial installation with dummy windows to practice the cycling shortcut, including an accessible "Skip Tutorial" option.
-
-**Proof of done:** Launching the application for the first time opens an onboarding window where users can practice cycling through mock windows or click "Skip Tutorial".
-
-**Consequences (testable):**
-- First-run flag persists in `config.toml` after tutorial completion or skip.
-- Tutorial demonstrates the spatial preservation concept clearly.
-
-#### FR-18: Physical Shortcut Capturing Listening Mode
-The system can capture physical keyboard combinations in real time within the settings shortcut input fields instead of accepting standard typed text strings.
-
-**Proof of done:** Clicking into the shortcut input box and pressing `Alt + \`` captures the key combination directly as the new shortcut binding.
-
-**Consequences (testable):**
-- Listening mode processes raw virtual key codes and modifiers.
-- Invalid or reserved system combinations (e.g., `Ctrl + Alt + Del`) are flagged with validation warnings.
-
-#### FR-19: Adaptive System Light and Dark Theming
-The system can detect Windows system theme changes and adapt the settings UI colors automatically between light and dark modes.
-
-**Proof of done:** Toggling the Windows display theme between Light and Dark immediately updates the background and text palette of the settings window.
-
-**Consequences (testable):**
-- UI listens for `WM_SETTINGCHANGE` / theme registry updates.
-- High-contrast mode styling is respected when enabled.
-
-#### FR-20: Full Keyboard Navigation Accessibility
-The system can support complete keyboard navigation across all interactive settings dialogs and controls via logical Tab order and shortcut keys.
-
-**Proof of done:** A user can configure all settings, test shortcuts, and exit the settings UI using only the keyboard without mouse interaction.
-
-**Consequences (testable):**
-- Tab order follows intuitive visual flow across all controls.
-- Focus indicators remain clearly visible on active interactive elements.
-
-#### FR-21: Screen Reader Accessibility via UI Automation
-The system can expose state, roles, names, and shortcut values across all settings controls to assistive screen readers via Windows UI Automation.
-
-**Proof of done:** Windows Narrator accurately reads aloud the state of the Auto-Start toggle and the captured shortcut keys in the settings window.
-
-**Consequences (testable):**
-- Controls implement UI Automation provider interfaces.
-- Toggles communicate checked/unchecked state transitions immediately to accessibility listeners.
+**Realizes:** FR-16, FR-17, FR-18, FR-19, FR-20, FR-21
 
 ---
 
-### 4.11 Deliberate Movement Between Monitors
+### 3.11 Deliberate Movement Between Monitors
 
 **Capability:** CAP-12 — serves BG-3.
 
@@ -406,51 +193,13 @@ The system can expose state, roles, names, and shortcut values across all settin
 
 Windows already moves windows between monitors with `Win + Shift + Arrow`, and Wira Desk deliberately left that job to Windows until now. It is taken back here because the Windows shortcut re-decides the window's state on arrival, discarding a snap the user applied a moment earlier — so the two features never combined into one layout. Realizes DEC-007.
 
-**Functional Requirements:**
-
-#### FR-23: Move the Active Window to the Next Monitor
-The system can move the active window to the next physical monitor using a dedicated keyboard shortcut (`Ctrl + Alt + Shift + Enter`), placing it on the same share of the destination monitor's working area that it occupied on the monitor it left, and leaving it on the same virtual desktop. Realizes UJ-4.
-
-**Proof of done:** A window occupying the left half of one monitor's working area, moved with the shortcut, occupies the left half of the next monitor's working area — including when the two monitors differ in resolution or display scaling.
-
-**Consequences (testable):**
-- Monitors are visited in one fixed order that wraps from the last back to the first, so repeating the shortcut returns the window to where it started.
-- With one monitor attached, the shortcut does nothing: no movement, no message, and no error.
-- The window remains on the virtual desktop it was on; moving it never changes which desktop shows it.
-- The destination placement is derived from proportion, never from copying the window's pixel width and height.
-- No other window on either monitor is moved or resized.
+**Realizes:** FR-23
 
 ---
 
-## 5. Cross-Cutting NFRs
+## 4. MVP Scope
 
-| ID | Requirement | Target | Enforced by |
-|---|---|---|---|
-| **NFR-1** | Daemon Static RAM Footprint | < 2 MB idle (hard ceiling < 10 MB) | `windows-sys` crate, absence of managed runtimes, and aggressive release compilation |
-| **NFR-2** | Hook Callback Execution Time | < 10 ms callback duration (sub-millisecond perceived focus change) | Dedicated `TIME_CRITICAL` hook thread, asynchronous worker handoff, and avoiding COM/heavy APIs in hook |
-| **NFR-3** | Hot Path Heap Allocations | Zero dynamic heap allocations in hook→worker path | 16-slot lock-free static `u8` ring buffer with Copy primitives |
-| **NFR-4** | Non-Blocking Kernel Filtering | Zero synchronous inter-process calls in window enumerator | Strict `EnumWindows` policy using non-blocking kernel reads (`IsWindowVisible`, `GetWindowLong`, `SetWindowPos`) |
-| **NFR-5** | Release Executable Binary Size | 250 KB – 400 KB typical (< 500 KB hard ceiling) | Cargo release profile (`opt-level = "z"`, `lto = true`, `strip = true`, `panic = "abort"`) |
-| **NFR-6** | Single Instance & Startup Resilience | Exactly one instance per user session; robust hook retry on logon | Named session mutex (`Local\WiraDeskSingleInstance`) and startup retry loop handling logon races |
-
-## 6. Constraints and Guardrails
-
-- **Delta Beyond Brief:** None beyond the Product Brief (`.what/_product-brief/brief.md`).
-- **Platform Constraint:** Strictly targets 64-bit Windows 10 (1809+) and Windows 11 desktop environments; no legacy Windows 7/8 or non-Windows platforms.
-- **Elevation Requirement:** Daemon requires Administrator privileges to ensure UIPI bypass across all target windows.
-- **Privacy & Telemetry:** Absolute zero telemetry, remote analytics, network connections, or cloud syncing; all logs and configurations are strictly local to `%APPDATA%\WiraDesk`.
-- **Architectural Separation:** Dual-binary model (`wiradesk.exe` headless tray daemon vs `wiradesk-settings.exe` on-demand UI) to guarantee UI rendering overhead never degrades input hook responsiveness.
-
-## 7. Non-Goals (Explicit)
-
-- **No Visual Switcher HUD:** Wira Desk will not render graphical window switcher menus, overlays, or task thumbnails. Switching is strictly invisible.
-- **No Cloud Synchronization:** Configuration will not sync across accounts or remote servers.
-- **No Independent Virtual Desktop Snap Profiles in v1:** Window snap geometry applies uniformly across all virtual desktops.
-- **No Automatic Tiling Window Management:** Wira Desk is a lightweight cycling and snapping utility, not an automated tiling window manager (e.g. Komorebi/i3).
-
-## 8. MVP Scope
-
-### 8.1 In Scope
+### 4.1 In Scope
 - Low-level keyboard hook capturing `Win + \`` and fallback `Alt + \``.
 - Same-application process window filtering with spatial preservation (per monitor and virtual desktop).
 - UIPI bypass via elevated daemon execution.
@@ -462,13 +211,13 @@ The system can move the active window to the next physical monitor using a dedic
 - Silent auto-start via Windows Task Scheduler.
 - Local TOML configuration parsing and logging.
 
-### 8.2 Out of Scope for MVP
+### 4.2 Out of Scope for MVP
 - Moving a window to a *named* monitor (primary, secondary) rather than the next one — the next-and-wrap shortcut needs no stable monitor identity, and Windows does not offer one cheaply. See DEC-007.
 - Per-virtual-desktop independent snap configuration layouts (deferred to future exploration).
 - Visual switcher preview overlays.
 - Cloud configuration sync or mobile companion apps.
 
-## 9. Success Metrics
+## 5. Success Metrics
 
 ### Primary Metrics
 - **SM-1: Focus Transfer Latency** — Perceived end-to-end focus transfer latency occurs in under 1 ms following keypress during standard desktop workloads. Validates FR-1, FR-2, FR-6, NFR-2.
@@ -482,16 +231,22 @@ The system can move the active window to the next physical monitor using a dedic
 - **SM-C2: Focus Speed vs UX Honesty** — Do not skip unresponsive windows to make cycling appear faster; UX honesty must be preserved. Counterbalances SM-1, validates FR-4.
 - **SM-C3: Hook Interception vs System Stability** — Do not hold the low-level hook callback open to perform complex window logic; all enumeration must occur on the worker thread. Counterbalances SM-1, validates NFR-2, NFR-3.
 
-## 10. Open Questions
+## 6. Cross-Cutting NFRs
 
-1. Should future versions support customizable process exclusion lists in the settings UI for games and full-screen graphical applications? (Currently handled via manual TOML editing).
-2. Should independent snap layouts per virtual desktop be introduced in v2 following user feedback?
-3. Should moving a window to a named monitor (primary, secondary) be offered alongside next-and-wrap, once a monitor identity that survives unplug and sleep is available?
+| ID | Requirement | Target | Enforced by |
+|---|---|---|---|
+| **NFR-1** | Daemon Static RAM Footprint | < 2 MB idle (hard ceiling < 10 MB) | `windows-sys` crate, absence of managed runtimes, and aggressive release compilation |
+| **NFR-2** | Hook Callback Execution Time | < 10 ms callback duration (sub-millisecond perceived focus change) | Dedicated `TIME_CRITICAL` hook thread, asynchronous worker handoff, and avoiding COM/heavy APIs in hook |
+| **NFR-3** | Hot Path Heap Allocations | Zero dynamic heap allocations in hook→worker path | 16-slot lock-free static `u8` ring buffer with Copy primitives |
+| **NFR-4** | Non-Blocking Kernel Filtering | Zero synchronous inter-process calls in window enumerator | Strict `EnumWindows` policy using non-blocking kernel reads (`IsWindowVisible`, `GetWindowLong`, `SetWindowPos`) |
+| **NFR-5** | Release Executable Binary Size | 250 KB – 400 KB typical (< 500 KB hard ceiling) | Cargo release profile (`opt-level = "z"`, `lto = true`, `strip = true`, `panic = "abort"`) |
+| **NFR-6** | Single Instance & Startup Resilience | Exactly one instance per user session; robust hook retry on logon | Named session mutex (`Local\WiraDeskSingleInstance`) and startup retry loop handling logon races |
 
-## 11. Assumptions Index
+## 7. Constraints and Guardrails
 
-- `[ASSUMPTION: §2.1]` Users are willing to grant initial Administrator elevation to allow seamless window switching across administrative consoles and Task Manager.
-- `[ASSUMPTION: §4.3]` Standard virtual machine and remote desktop clients expose predictable process and window class names (`mstsc.exe`, `vmconnect.exe`) suitable for passthrough filtering.
-- `[ASSUMPTION: §4.9]` Windows Task Scheduler `ONLOGON` tasks with highest privileges provide a reliable, silent auto-start mechanism across diverse Windows 10 and 11 configurations.
-- `[ASSUMPTION: §4.5]` The `Ctrl + Alt + Arrow` shortcuts remain reachable on most machines despite graphics-driver control panels binding screen rotation to the same combination, because Wira Desk's keyboard hook usually receives the keypress before the driver's does. Filed as `OQ-20` in `.control/questions/assumptions.md`; recorded as a cost in DEC-008.
-- `[ASSUMPTION: §4.11]` The order in which Windows reports attached monitors matches how users have physically arranged them closely enough that "next monitor" is not surprising. Filed as `OQ-21` in `.control/questions/assumptions.md`; recorded as a reversal trigger in DEC-007.
+- **Delta Beyond Brief:** None beyond the Product Brief (`.what/_product-brief/brief.md`).
+- **Platform Constraint:** Strictly targets 64-bit Windows 10 (1809+) and Windows 11 desktop environments; no legacy Windows 7/8 or non-Windows platforms.
+- **Elevation Requirement:** Daemon requires Administrator privileges to ensure UIPI bypass across all target windows.
+- **Privacy & Telemetry:** Absolute zero telemetry, remote analytics, network connections, or cloud syncing; all logs and configurations are strictly local to `%APPDATA%\WiraDesk`.
+- **Architectural Separation:** Dual-binary model (`wiradesk.exe` headless tray daemon vs `wiradesk-settings.exe` on-demand UI) to guarantee UI rendering overhead never degrades input hook responsiveness.
+

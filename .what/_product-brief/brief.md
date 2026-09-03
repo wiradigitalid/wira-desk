@@ -1,10 +1,12 @@
 # Product Brief: Wira Desk
 
-## Executive Summary
+## Why
 
 Wira Desk is a lightweight, background Windows productivity utility that brings the intuitive same-application window cycling behavior of macOS (`Command + ~`) to Windows 11 and 10 via a dedicated keyboard shortcut (`Win + backtick`). Windows natively lacks any mechanism to cycle strictly among windows belonging to the current foreground process, forcing users into multi-app `Alt + Tab` switchers or taskbar hunting that breaks focus and disrupts spatial workflows across multi-monitor setups. Existing third-party commercial utilities have been abandoned since 2022, leaving power users without a reliable, active solution.
 
 Built in Rust with pure Win32 bindings (`windows-sys`), Wira Desk runs as an elevated tray daemon with an uncompromising resource budget of under 2 MB idle RAM and near-zero CPU usage. It performs instantaneous, overlay-free window cycling while preserving monitor boundaries and spatial context. Companion settings and onboarding operations are isolated into a separate process, ensuring the core input interception loop remains lightweight, rock-solid, and responsive.
+
+Wira Desk establishes itself as the essential, invisible window navigation companion for power users on Windows—delivering the effortless elegance of macOS same-application switching while honoring the speed, stability, and resource constraints demanded by modern high-performance desktop environments.
 
 ## The Problem
 
@@ -46,9 +48,7 @@ Shared goal across all roles: Window focus transitions feel immediate, predictab
 
 ## Goals
 
-- **BG-1** — Deliver trustworthy same-application window cycling on Windows with spatial preservation.
-- **BG-2** — Stay resident in the system tray with near-zero idle cost and a hard RAM budget of under 2 MB for the core daemon.
-- **BG-3** — Offer optional snapping shortcuts without a graphical window switcher overlay.
+Goals — see `.control/registry/goals.yaml` → `goals:`.
 
 ## Success Criteria
 
@@ -74,6 +74,7 @@ Shared goal across all roles: Window focus transitions feel immediate, predictab
 - Cloud synchronization, background telemetry, or remote telemetry collection.
 - Per-virtual-desktop isolated snap configurations.
 - Direct distribution pipelines within public continuous integration (local verified builds only).
+- Automatic tiling window management (e.g. Komorebi/i3).
 
 ## Constraints
 
@@ -81,18 +82,3 @@ Shared goal across all roles: Window focus transitions feel immediate, predictab
 - **Elevated Execution Required:** Must run with elevated administrator privileges to interact with elevated target windows across User Interface Privilege Isolation (UIPI) boundaries.
 - **Low-Level Keyboard Hook (`WH_KEYBOARD_LL`):** Core input interception relies on a low-level OS keyboard hook rather than `RegisterHotKey`, requiring transparent user communication regarding system hook usage.
 - **No Background Telemetry:** All configuration, logging, and error tracing must remain entirely local to the host machine.
-
-## Assumptions
-
-- Target power users are willing to grant administrator elevation to enable seamless window control across all running applications.
-- A dual-binary architecture (lean tray daemon plus separate on-demand settings binary) prevents UI overhead from degrading input hook performance.
-- Windows desktop APIs provide adequate window enumeration and thread-process mapping without needing invasive kernel drivers or DLL injection.
-
-## Prerequisites
-
-- Standard Rust toolchain with MSVC ABI and Windows SDK installed on the build environment.
-- Execution of local packaging and verification scripts prior to release distribution.
-
-## Vision
-
-Wira Desk establishes itself as the essential, invisible window navigation companion for power users on Windows—delivering the effortless elegance of macOS same-application switching while honoring the speed, stability, and resource constraints demanded by modern high-performance desktop environments.

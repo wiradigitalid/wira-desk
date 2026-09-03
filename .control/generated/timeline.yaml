@@ -1,4 +1,4 @@
-asof: '2026-08-21'
+asof: '2026-09-03'
 capabilities:
 - id: CAP-1
   text: Cycle focus among visible windows of the active application via a precise global shortcut.
@@ -9,39 +9,35 @@ capabilities:
   planned_start: ''
   planned_end: ''
   estimate_mandays: 0
-  actual_start: '2026-08-21'
-  actual_end: '2026-08-21'
+  actual_start: ''
+  actual_end: ''
   delta_days: null
-  state: done
+  state: not-started
   children:
   - id: FR-1
     text: Cycle only among windows of the same application identity (exe name), not global Alt+Tab.
-    stories:
-    - S1
-    actual_start: '2026-08-21'
-    actual_end: '2026-08-21'
-    state: done
+    tickets: []
+    actual_start: ''
+    actual_end: ''
+    state: not-started
   - id: FR-4
     text: Bring Not Responding windows to the foreground instead of hiding them during a cycle.
-    stories:
-    - S1
-    actual_start: '2026-08-21'
-    actual_end: '2026-08-21'
-    state: done
+    tickets: []
+    actual_start: ''
+    actual_end: ''
+    state: not-started
   - id: FR-5
     text: Skip minimized, ghost, and tool-window overlays; cycle only visibly open windows.
-    stories:
-    - S1
-    actual_start: '2026-08-21'
-    actual_end: '2026-08-21'
-    state: done
+    tickets: []
+    actual_start: ''
+    actual_end: ''
+    state: not-started
   - id: FR-6
     text: Require an exact shortcut match; extra modifiers must not trigger cycling.
-    stories:
-    - S1
-    actual_start: '2026-08-21'
-    actual_end: '2026-08-21'
-    state: done
+    tickets: []
+    actual_start: ''
+    actual_end: ''
+    state: not-started
   waiting_on: []
 - id: CAP-10
   text: Launch the daemon silently at logon via a scheduled task without repeated UAC prompts.
@@ -52,18 +48,17 @@ capabilities:
   planned_start: ''
   planned_end: ''
   estimate_mandays: 0
-  actual_start: '2026-08-21'
-  actual_end: '2026-08-21'
+  actual_start: ''
+  actual_end: ''
   delta_days: null
-  state: done
+  state: not-started
   children:
   - id: FR-13
     text: Toggle auto-start via a logon scheduled task with highest privileges for the active user.
-    stories:
-    - S6
-    actual_start: '2026-08-21'
-    actual_end: '2026-08-21'
-    state: done
+    tickets: []
+    actual_start: ''
+    actual_end: ''
+    state: not-started
   waiting_on: []
 - id: CAP-11
   text: Expose runtime diagnostic logs from the tray context menu.
@@ -74,18 +69,40 @@ capabilities:
   planned_start: ''
   planned_end: ''
   estimate_mandays: 0
-  actual_start: '2026-08-21'
-  actual_end: '2026-08-21'
+  actual_start: ''
+  actual_end: ''
   delta_days: null
-  state: done
+  state: not-started
   children:
   - id: FR-12
     text: Provide View Logs in the tray menu opening the silent log file location.
-    stories:
-    - S3
-    actual_start: '2026-08-21'
-    actual_end: '2026-08-21'
-    state: done
+    tickets: []
+    actual_start: ''
+    actual_end: ''
+    state: not-started
+  waiting_on: []
+- id: CAP-12
+  text: Move the active window to another physical monitor from the keyboard, keeping its share of the
+    work area.
+  size: ''
+  priority: ''
+  owner: ''
+  target_release: ''
+  planned_start: ''
+  planned_end: ''
+  estimate_mandays: 0
+  actual_start: ''
+  actual_end: ''
+  delta_days: null
+  state: not-started
+  children:
+  - id: FR-23
+    text: Move the active window to the next physical monitor at the same proportion of the work area,
+      same virtual desktop.
+    tickets: []
+    actual_start: ''
+    actual_end: ''
+    state: not-started
   waiting_on: []
 - id: CAP-2
   text: Snap and resize the active window with keyboard shortcuts, DPI-aware per monitor.
@@ -96,21 +113,26 @@ capabilities:
   planned_start: ''
   planned_end: ''
   estimate_mandays: 0
-  actual_start: '2026-08-21'
-  actual_end: '2026-08-21'
+  actual_start: ''
+  actual_end: ''
   delta_days: null
-  state: done
+  state: not-started
   children:
   - id: FR-14
-    text: Snap the active window with Ctrl+Win+arrow and fullscreen shortcuts, DPI-aware.
-    stories:
-    - S2
-    actual_start: '2026-08-21'
-    actual_end: '2026-08-21'
-    state: done
+    text: Snap the active window to the left or right half and maximize it with Ctrl+Alt shortcuts, DPI-aware.
+    tickets: []
+    actual_start: ''
+    actual_end: ''
+    state: not-started
   - id: FR-15
     text: Apply overlapping stack layout on small monitors with up to three half-width windows.
-    stories: []
+    tickets: []
+    actual_start: ''
+    actual_end: ''
+    state: not-started
+  - id: FR-22
+    text: Snap the active window to the top or bottom half of the current monitor, DPI-aware.
+    tickets: []
     actual_start: ''
     actual_end: ''
     state: not-started
@@ -124,18 +146,17 @@ capabilities:
   planned_start: ''
   planned_end: ''
   estimate_mandays: 0
-  actual_start: '2026-08-21'
-  actual_end: '2026-08-21'
+  actual_start: ''
+  actual_end: ''
   delta_days: null
-  state: done
+  state: not-started
   children:
   - id: FR-7
     text: Allow configurable primary and fallback cycling shortcuts via config.toml.
-    stories:
-    - S4
-    actual_start: '2026-08-21'
-    actual_end: '2026-08-21'
-    state: done
+    tickets: []
+    actual_start: ''
+    actual_end: ''
+    state: not-started
   waiting_on: []
 - id: CAP-4
   text: Operate on elevated windows by running the daemon with Administrator privileges.
@@ -153,7 +174,7 @@ capabilities:
   children:
   - id: FR-8
     text: Run the daemon elevated so UIPI does not block focus on administrator windows.
-    stories: []
+    tickets: []
     actual_start: ''
     actual_end: ''
     state: not-started
@@ -167,46 +188,44 @@ capabilities:
   planned_start: ''
   planned_end: ''
   estimate_mandays: 0
-  actual_start: '2026-08-21'
-  actual_end: '2026-08-21'
+  actual_start: ''
+  actual_end: ''
   delta_days: null
-  state: done
+  state: not-started
   children:
   - id: FR-16
     text: Tray menu order Settings, View Logs, Auto-Start toggle, updates, About, Exit.
-    stories: []
+    tickets: []
     actual_start: ''
     actual_end: ''
     state: not-started
   - id: FR-17
     text: First-run interactive tutorial with dummy window practice and Skip Tutorial.
-    stories:
-    - S5
-    actual_start: '2026-08-21'
-    actual_end: '2026-08-21'
-    state: done
+    tickets: []
+    actual_start: ''
+    actual_end: ''
+    state: not-started
   - id: FR-18
     text: Shortcut fields use listening mode capturing physical key combinations.
-    stories:
-    - S4
-    actual_start: '2026-08-21'
-    actual_end: '2026-08-21'
-    state: done
+    tickets: []
+    actual_start: ''
+    actual_end: ''
+    state: not-started
   - id: FR-19
     text: Settings UI follows OS light or dark theme automatically.
-    stories: []
+    tickets: []
     actual_start: ''
     actual_end: ''
     state: not-started
   - id: FR-20
     text: All interactive settings controls are fully keyboard-navigable.
-    stories: []
+    tickets: []
     actual_start: ''
     actual_end: ''
     state: not-started
   - id: FR-21
     text: Toggles and shortcut fields expose state clearly to screen readers via UI Automation.
-    stories: []
+    tickets: []
     actual_start: ''
     actual_end: ''
     state: not-started
@@ -235,18 +254,17 @@ capabilities:
   planned_start: ''
   planned_end: ''
   estimate_mandays: 0
-  actual_start: '2026-08-21'
-  actual_end: '2026-08-21'
+  actual_start: ''
+  actual_end: ''
   delta_days: null
-  state: done
+  state: not-started
   children:
   - id: FR-2
     text: Lock cycling to the same physical monitor and virtual desktop as the active window.
-    stories:
-    - S1
-    actual_start: '2026-08-21'
-    actual_end: '2026-08-21'
-    state: done
+    tickets: []
+    actual_start: ''
+    actual_end: ''
+    state: not-started
   waiting_on: []
 - id: CAP-8
   text: Pass shortcuts through unchanged when the foreground window is a VM or RDP client.
@@ -257,18 +275,17 @@ capabilities:
   planned_start: ''
   planned_end: ''
   estimate_mandays: 0
-  actual_start: '2026-08-21'
-  actual_end: '2026-08-21'
+  actual_start: ''
+  actual_end: ''
   delta_days: null
-  state: done
+  state: not-started
   children:
   - id: FR-3
     text: Bypass interception when the foreground window is a known VM or Remote Desktop client.
-    stories:
-    - S1
-    actual_start: '2026-08-21'
-    actual_end: '2026-08-21'
-    state: done
+    tickets: []
+    actual_start: ''
+    actual_end: ''
+    state: not-started
   waiting_on: []
 - id: CAP-9
   text: Recover the tray icon after explorer.exe restarts and follow the three-tier error protocol.
@@ -279,30 +296,28 @@ capabilities:
   planned_start: ''
   planned_end: ''
   estimate_mandays: 0
-  actual_start: '2026-08-21'
-  actual_end: '2026-08-21'
+  actual_start: ''
+  actual_end: ''
   delta_days: null
-  state: done
+  state: not-started
   children:
   - id: FR-10
     text: Re-create the tray icon when TaskbarCreated is broadcast after explorer restarts.
-    stories:
-    - S3
-    actual_start: '2026-08-21'
-    actual_end: '2026-08-21'
-    state: done
+    tickets: []
+    actual_start: ''
+    actual_end: ''
+    state: not-started
   - id: FR-11
     text: Apply the three-tier error protocol for startup fatal, runtime warning, and hook-dead critical.
-    stories:
-    - S3
-    actual_start: '2026-08-21'
-    actual_end: '2026-08-21'
-    state: done
+    tickets: []
+    actual_start: ''
+    actual_end: ''
+    state: not-started
   - id: FR-9
     text: Run tray-resident using native Win32 APIs without a third-party GUI framework in the daemon.
-    stories: []
+    tickets: []
     actual_start: ''
     actual_end: ''
     state: not-started
   waiting_on: []
-uncommitted_stories: []
+uncommitted_tickets: []

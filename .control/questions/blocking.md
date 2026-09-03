@@ -16,6 +16,6 @@ Failing all three → `assumptions.md`. A question MUST NOT be filed here "to be
 
 ## Open
 
-| id | Question | Blocks | Owner | Before |
-|---|---|---|---|---|
-| — | — | — | — | — |
+| id | Question | Blocks | Whose | Owner | Before |
+|---|---|---|---|---|---|
+| — | — | — | — | — | — |

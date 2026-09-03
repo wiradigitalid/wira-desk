@@ -31,12 +31,7 @@ Users manage multiple windows within the same application (multiple browser sess
 
 ## UC Catalogue
 
-| id | Use case | Actor | Satisfies | critical |
-| --- | --- | --- | --- | --- |
-| UC-1 | Cycle to the next window of the same app on this monitor | Power User | FR-1, FR-2, FR-3, FR-4, FR-5, FR-6 | no |
-| UC-2 | Snap the active window to half the screen | Power User | FR-14, FR-22 | no |
-| UC-3 | See the tray icon return after Windows Explorer restarts | Power User | FR-10, FR-11, FR-12 | no |
-| UC-7 | Move the active window to the next monitor | Power User | FR-23 | no |
+UC Catalogue — see `.control/registry/usecases.yaml`, rows where `component: window-management`.
 
 ## Constraints
 
