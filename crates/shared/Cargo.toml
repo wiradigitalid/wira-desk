@@ -3,7 +3,7 @@ name = "shared"
 version.workspace = true
 edition = "2021"
 description = "Shared types and constants for Wira Desk"
-license = "MIT"
+license = "GPL-3.0-only"
 repository = "https://github.com/wiradigitalid/wira-desk"
 publish = false
 

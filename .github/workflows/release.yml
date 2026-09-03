@@ -229,10 +229,9 @@ jobs:
             'UAC prompt will show an unverified publisher. See SECURITY.md for what that',
             'does and does not tell you.',
             '',
-            'Made with Slint (https://slint.dev), used under the Slint Royalty-free',
-            'License 2.0. That licence requires this disclosure on the page the binaries',
-            'are downloaded from, which is this one -- so these two lines are a licence',
-            'term, not a credit. See deny.toml for which branch of the licence applies.'
+            'Made with Slint (https://slint.dev), used under GPL-3.0-only -- the same',
+            'licence this project is released under. See LICENSE and deny.toml for which',
+            'branch of Slint''s tri-licence applies.'
           ) -join "`n"
           gh release create $env:GITHUB_REF_NAME `
             (Get-ChildItem dist\*.exe | ForEach-Object { $_.FullName }) dist\SHA256SUMS dist\latest.json `

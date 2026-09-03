@@ -132,9 +132,8 @@ SmartScreen and the UAC prompt will show an unverified publisher warning - verif
 [![#MadeWithSlint](https://raw.githubusercontent.com/slint-ui/slint/master/logo/MadeWithSlint-logo-light.svg)](https://slint.dev)
 
 The Settings window is built with [Slint](https://slint.dev). Slint is offered under a choice of
-licences, and Wira Desk uses it under the **Slint Royalty-free License 2.0** - which requires that
-this use be disclosed on a public page where the binaries can be found. That is what this section
-is, so it belongs to the licence rather than to courtesy: it is not decoration to be tidied away.
+licences, and Wira Desk uses it under **GPL-3.0-only** - the same licence this project's own code
+carries, so no separate disclosure obligation applies the way the royalty-free tier's did.
 
 ## Contributing
 
@@ -143,5 +142,5 @@ CI runs and the conventions this repository follows.
 
 ## License
 
-MIT - see [LICENSE](LICENSE). Third-party dependency licences are listed in [NOTICE](NOTICE),
+GPL-3.0-only - see [LICENSE](LICENSE). Third-party dependency licences are listed in [NOTICE](NOTICE),
 generated from `cargo metadata`.

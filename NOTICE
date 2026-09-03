@@ -16,9 +16,9 @@ aho-corasick 1.1.5 - Unlicense OR MIT
 aligned 0.4.3 - MIT OR Apache-2.0
 aligned-vec 0.6.4 - MIT
 allocator-api2 0.2.21 - MIT OR Apache-2.0
-android_system_properties 0.1.5 - MIT/Apache-2.0
 android-activity 0.6.1 - MIT OR Apache-2.0
 android-properties 0.2.2 - MIT
+android_system_properties 0.1.5 - MIT/Apache-2.0
 annotate-snippets 0.12.16 - MIT OR Apache-2.0
 anstyle 1.0.14 - MIT OR Apache-2.0
 anyhow 1.0.104 - MIT OR Apache-2.0
@@ -44,9 +44,9 @@ atspi-common 0.13.0 - Apache-2.0 OR MIT
 atspi-proxies 0.13.0 - Apache-2.0 OR MIT
 auto_enums 0.8.10 - Apache-2.0 OR MIT
 autocfg 1.5.1 - Apache-2.0 OR MIT
+av-scenechange 0.14.1 - MIT
 av1-grain 0.2.5 - BSD-2-Clause
 avif-serialize 0.8.9 - BSD-3-Clause
-av-scenechange 0.14.1 - MIT
 base64 0.22.1 - MIT OR Apache-2.0
 bincode 2.0.1 - MIT
 bindgen 0.72.1 - BSD-3-Clause
@@ -71,8 +71,8 @@ calloop-wayland-source 0.3.0 - MIT
 calloop-wayland-source 0.4.1 - MIT
 cc 1.2.66 - MIT OR Apache-2.0
 cexpr 0.6.0 - Apache-2.0/MIT
-cfg_aliases 0.2.2 - MIT
 cfg-if 1.0.4 - MIT OR Apache-2.0
+cfg_aliases 0.2.2 - MIT
 cgl 0.3.2 - MIT / Apache-2.0
 chrono 0.4.45 - MIT OR Apache-2.0
 clang-sys 1.9.1 - Apache-2.0
@@ -85,11 +85,11 @@ const-field-offset 0.2.1 - MIT OR Apache-2.0
 const-field-offset-macro 0.2.1 - MIT OR Apache-2.0
 convert_case 0.10.0 - MIT
 copypasta 0.10.2 - MIT / Apache-2.0
-core_maths 0.1.1 - MIT
 core-foundation 0.9.4 - MIT OR Apache-2.0
 core-foundation-sys 0.8.7 - MIT OR Apache-2.0
 core-graphics 0.23.2 - MIT OR Apache-2.0
 core-graphics-types 0.1.3 - MIT OR Apache-2.0
+core_maths 0.1.1 - MIT
 countme 3.0.1 - MIT OR Apache-2.0
 crc32fast 1.5.0 - MIT OR Apache-2.0
 critical-section 1.2.0 - MIT OR Apache-2.0
@@ -100,7 +100,7 @@ crossbeam-utils 0.8.22 - MIT OR Apache-2.0
 crunchy 0.2.4 - MIT
 ctor 0.10.1 - Apache-2.0 OR MIT
 cursor-icon 1.2.0 - MIT OR Apache-2.0 OR Zlib
-daemon 0.1.0 - MIT
+daemon 0.1.4 - GPL-3.0-only
 data-url 0.3.2 - MIT OR Apache-2.0
 derive_more 2.1.1 - MIT
 derive_more-impl 2.1.1 - MIT
@@ -133,19 +133,17 @@ exr 1.74.2 - BSD-3-Clause
 fastrand 2.4.1 - Apache-2.0 OR MIT
 fax 0.2.7 - MIT
 fdeflate 0.3.7 - MIT OR Apache-2.0
-femtovg 0.25.1 - MIT OR Apache-2.0
 field-offset 0.3.6 - MIT OR Apache-2.0
 filetime 0.2.29 - MIT/Apache-2.0
 find-msvc-tools 0.1.9 - MIT OR Apache-2.0
 fixed_decimal 0.7.2 - Unicode-3.0
 flate2 1.1.9 - MIT OR Apache-2.0
 float-cmp 0.9.0 - MIT
-fnv 1.0.7 - Apache-2.0 / MIT
 foldhash 0.2.0 - Zlib
-fontdb 0.23.0 - MIT
-fontique 0.10.0 - Apache-2.0 OR MIT
 font-types 0.11.3 - MIT OR Apache-2.0
 font-types 0.12.4 - MIT OR Apache-2.0
+fontdb 0.23.0 - MIT
+fontique 0.10.0 - Apache-2.0 OR MIT
 foreign-types 0.5.0 - MIT/Apache-2.0
 foreign-types-macros 0.2.3 - MIT/Apache-2.0
 foreign-types-shared 0.3.1 - MIT/Apache-2.0
@@ -171,10 +169,10 @@ gl_generator 0.14.0 - Apache-2.0
 glob 0.3.4 - MIT OR Apache-2.0
 glow 0.17.0 - MIT OR Apache-2.0 OR Zlib
 glutin 0.32.3 - Apache-2.0
+glutin-winit 0.5.0 - MIT
 glutin_egl_sys 0.7.1 - Apache-2.0
 glutin_glx_sys 0.6.1 - Apache-2.0
 glutin_wgl_sys 0.6.1 - Apache-2.0
-glutin-winit 0.5.0 - MIT
 grid 1.0.1 - MIT
 half 2.7.1 - MIT OR Apache-2.0
 harfrust 0.8.4 - MIT
@@ -186,6 +184,16 @@ hermit-abi 0.3.9 - MIT OR Apache-2.0
 hermit-abi 0.5.2 - MIT OR Apache-2.0
 hex 0.4.3 - MIT OR Apache-2.0
 htmlparser 0.2.1 - MIT OR Apache-2.0
+i-slint-backend-linuxkms 1.17.1 - GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0
+i-slint-backend-selector 1.17.1 - GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0
+i-slint-backend-testing 1.17.1 - GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0
+i-slint-backend-winit 1.17.1 - GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0
+i-slint-common 1.17.1 - GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0
+i-slint-compiler 1.17.1 - GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0
+i-slint-core 1.17.1 - GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0
+i-slint-core-macros 1.17.1 - GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0
+i-slint-renderer-skia 1.17.1 - GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0
+i-slint-renderer-software 1.17.1 - GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0
 iana-time-zone 0.1.65 - MIT OR Apache-2.0
 iana-time-zone-haiku 0.1.2 - MIT OR Apache-2.0
 icu_collections 2.2.0 - Unicode-3.0
@@ -206,8 +214,8 @@ icu_segmenter_data 2.2.0 - Unicode-3.0
 idna 1.1.0 - MIT OR Apache-2.0
 idna_adapter 1.2.2 - Apache-2.0 OR MIT
 image 0.25.10 - MIT OR Apache-2.0
-imagesize 0.14.0 - MIT
 image-webp 0.2.4 - MIT OR Apache-2.0
+imagesize 0.14.0 - MIT
 imgref 1.12.2 - CC0-1.0 OR Apache-2.0
 indexmap 2.14.0 - Apache-2.0 OR MIT
 input 0.10.0 - MIT
@@ -215,17 +223,6 @@ input-sys 1.19.0 - MIT
 integer-sqrt 0.1.5 - Apache-2.0/MIT
 interpolate_name 0.2.4 - MIT
 io-lifetimes 1.0.11 - Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT
-i-slint-backend-linuxkms 1.17.1 - GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0
-i-slint-backend-selector 1.17.1 - GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0
-i-slint-backend-testing 1.17.1 - GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0
-i-slint-backend-winit 1.17.1 - GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0
-i-slint-common 1.17.1 - GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0
-i-slint-compiler 1.17.1 - GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0
-i-slint-core 1.17.1 - GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0
-i-slint-core-macros 1.17.1 - GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0
-i-slint-renderer-femtovg 1.17.1 - GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0
-i-slint-renderer-skia 1.17.1 - GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0
-i-slint-renderer-software 1.17.1 - GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0
 itertools 0.13.0 - MIT OR Apache-2.0
 itertools 0.14.0 - MIT OR Apache-2.0
 itoa 1.0.18 - MIT OR Apache-2.0
@@ -238,7 +235,6 @@ jobserver 0.1.35 - MIT OR Apache-2.0
 js-sys 0.3.103 - MIT OR Apache-2.0
 keyboard-types 0.7.0 - MIT OR Apache-2.0
 khronos_api 3.1.0 - Apache-2.0
-ksni 0.3.6 - Unlicense
 kurbo 0.13.1 - Apache-2.0 OR MIT
 lazy_static 1.5.0 - MIT OR Apache-2.0
 lebe 0.5.3 - BSD-3-Clause
@@ -249,8 +245,8 @@ libm 0.2.16 - MIT
 libredox 0.1.18 - MIT
 libudev-sys 0.1.4 - MIT
 linebender_resource_handle 0.1.1 - Apache-2.0 OR MIT
-linked_hash_set 0.1.6 - Apache-2.0
 linked-hash-map 0.5.6 - MIT/Apache-2.0
+linked_hash_set 0.1.6 - Apache-2.0
 linux-raw-sys 0.12.1 - Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT
 linux-raw-sys 0.4.15 - Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT
 linux-raw-sys 0.9.4 - Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT
@@ -279,14 +275,15 @@ no_std_io2 0.9.4 - Apache-2.0 OR MIT
 nom 7.1.3 - MIT
 nom 8.0.0 - MIT
 noop_proc_macro 0.3.0 - MIT
-num_enum 0.7.6 - BSD-3-Clause OR MIT OR Apache-2.0
-num_enum_derive 0.7.6 - BSD-3-Clause OR MIT OR Apache-2.0
 num-bigint 0.4.8 - MIT OR Apache-2.0
 num-complex 0.4.6 - MIT OR Apache-2.0
 num-derive 0.4.2 - MIT OR Apache-2.0
 num-integer 0.1.47 - MIT OR Apache-2.0
 num-rational 0.4.2 - MIT OR Apache-2.0
 num-traits 0.2.19 - MIT OR Apache-2.0
+num_enum 0.7.6 - BSD-3-Clause OR MIT OR Apache-2.0
+num_enum_derive 0.7.6 - BSD-3-Clause OR MIT OR Apache-2.0
+objc-sys 0.3.5 - MIT
 objc2 0.5.2 - MIT
 objc2 0.6.4 - MIT
 objc2-app-kit 0.2.2 - MIT
@@ -317,7 +314,6 @@ objc2-ui-kit 0.2.2 - MIT
 objc2-ui-kit 0.3.2 - Zlib OR Apache-2.0 OR MIT
 objc2-uniform-type-identifiers 0.2.2 - MIT
 objc2-user-notifications 0.2.2 - MIT
-objc-sys 0.3.5 - MIT
 once_cell 1.21.4 - MIT OR Apache-2.0
 orbclient 0.3.55 - MIT
 ordered-stream 0.2.0 - MIT OR Apache-2.0
@@ -328,7 +324,6 @@ parley 0.10.0 - Apache-2.0 OR MIT
 parley_data 0.10.0 - Apache-2.0 OR MIT
 paste 1.0.15 - MIT OR Apache-2.0
 pastey 0.1.1 - MIT OR Apache-2.0
-pastey 0.2.3 - MIT OR Apache-2.0
 percent-encoding 2.3.2 - MIT OR Apache-2.0
 phf 0.13.1 - MIT
 phf_generator 0.13.1 - MIT
@@ -350,8 +345,8 @@ portable-atomic 1.14.0 - Apache-2.0 OR MIT
 potential_utf 0.1.5 - Unicode-3.0
 ppv-lite86 0.2.21 - MIT OR Apache-2.0
 prettyplease 0.2.37 - MIT OR Apache-2.0
-proc-macro2 1.0.106 - MIT OR Apache-2.0
 proc-macro-crate 3.5.0 - MIT OR Apache-2.0
+proc-macro2 1.0.106 - MIT OR Apache-2.0
 profiling 1.0.18 - MIT OR Apache-2.0
 profiling-procmacros 1.0.18 - MIT OR Apache-2.0
 pulldown-cmark 0.13.4 - MIT
@@ -363,6 +358,8 @@ qoi 0.4.1 - MIT/Apache-2.0
 quick-error 2.0.1 - MIT/Apache-2.0
 quick-xml 0.39.4 - MIT
 quote 1.0.46 - MIT OR Apache-2.0
+r-efi 5.3.0 - MIT OR Apache-2.0 OR LGPL-2.1-or-later
+r-efi 6.0.0 - MIT OR Apache-2.0 OR LGPL-2.1-or-later
 rand 0.9.5 - MIT OR Apache-2.0
 rand_chacha 0.9.0 - MIT OR Apache-2.0
 rand_core 0.9.5 - MIT OR Apache-2.0
@@ -379,8 +376,6 @@ reborrow 0.5.5 - MIT
 redox_syscall 0.4.1 - MIT
 redox_syscall 0.5.18 - MIT
 redox_syscall 0.9.0 - MIT
-r-efi 5.3.0 - MIT OR Apache-2.0 OR LGPL-2.1-or-later
-r-efi 6.0.0 - MIT OR Apache-2.0 OR LGPL-2.1-or-later
 regex 1.13.1 - MIT OR Apache-2.0
 regex-automata 0.4.18 - MIT OR Apache-2.0
 regex-syntax 0.8.11 - MIT OR Apache-2.0
@@ -389,9 +384,9 @@ rgb 0.8.53 - MIT
 rowan 0.16.1 - MIT OR Apache-2.0
 roxmltree 0.21.1 - MIT OR Apache-2.0
 rspolib 0.1.2 - MIT
-rustc_version 0.4.1 - MIT OR Apache-2.0
 rustc-hash 1.1.0 - Apache-2.0/MIT
 rustc-hash 2.1.3 - Apache-2.0 OR MIT
+rustc_version 0.4.1 - MIT OR Apache-2.0
 rustix 0.38.44 - Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT
 rustix 1.1.4 - Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT
 rustversion 1.0.23 - MIT OR Apache-2.0
@@ -408,14 +403,14 @@ serde_derive 1.0.229 - MIT OR Apache-2.0
 serde_json 1.0.151 - MIT OR Apache-2.0
 serde_repr 0.1.20 - MIT OR Apache-2.0
 serde_spanned 1.1.1 - MIT OR Apache-2.0
-settings 0.1.0 - MIT
-shared 0.1.0 - MIT
+settings 0.1.4 - GPL-3.0-only
+shared 0.1.4 - GPL-3.0-only
 shlex 1.3.0 - MIT OR Apache-2.0
 shlex 2.0.1 - MIT OR Apache-2.0
 signal-hook-registry 1.4.8 - MIT OR Apache-2.0
+simd-adler32 0.3.9 - MIT
 simd_cesu8 1.1.1 - Apache-2.0 OR MIT
 simd_helpers 0.1.0 - MIT
-simd-adler32 0.3.9 - MIT
 simdutf8 0.1.5 - MIT OR Apache-2.0
 simplecss 0.2.2 - Apache-2.0 OR MIT
 siphasher 1.0.3 - MIT/Apache-2.0
@@ -451,7 +446,6 @@ synstructure 0.13.2 - MIT
 sys-locale 0.3.2 - MIT OR Apache-2.0
 taffy 0.10.1 - MIT
 tar 0.4.46 - MIT OR Apache-2.0
-task-local 0.1.1 - MIT OR Apache-2.0
 tempfile 3.27.0 - MIT OR Apache-2.0
 text-size 1.1.1 - MIT OR Apache-2.0
 thiserror 1.0.69 - MIT OR Apache-2.0
@@ -463,10 +457,10 @@ tiny-skia 0.11.4 - BSD-3-Clause
 tiny-skia 0.12.0 - BSD-3-Clause
 tiny-skia-path 0.11.4 - BSD-3-Clause
 tiny-skia-path 0.12.0 - BSD-3-Clause
+tiny-xlib 0.2.5 - MIT OR Apache-2.0 OR Zlib
 tinystr 0.8.3 - Unicode-3.0
 tinyvec 1.12.0 - Zlib OR Apache-2.0 OR MIT
 tinyvec_macros 0.1.1 - MIT OR Apache-2.0 OR Zlib
-tiny-xlib 0.2.5 - MIT OR Apache-2.0 OR Zlib
 toml 1.1.4+spec-1.1.0 - MIT OR Apache-2.0
 toml_datetime 1.1.1+spec-1.1.0 - MIT OR Apache-2.0
 toml_edit 0.25.12+spec-1.1.0 - MIT OR Apache-2.0
@@ -520,27 +514,12 @@ wayland-protocols-plasma 0.3.12 - MIT
 wayland-protocols-wlr 0.3.12 - MIT
 wayland-scanner 0.31.10 - MIT
 wayland-sys 0.31.11 - MIT
-webbrowser 1.2.4 - MIT OR Apache-2.0
 web-sys 0.3.103 - MIT OR Apache-2.0
 web-time 1.1.0 - MIT OR Apache-2.0
+webbrowser 1.2.4 - MIT OR Apache-2.0
 weezl 0.1.12 - MIT OR Apache-2.0
 winapi-util 0.1.11 - Unlicense OR MIT
 windows 0.62.2 - MIT OR Apache-2.0
-windows_aarch64_gnullvm 0.48.5 - MIT OR Apache-2.0
-windows_aarch64_gnullvm 0.52.6 - MIT OR Apache-2.0
-windows_aarch64_msvc 0.48.5 - MIT OR Apache-2.0
-windows_aarch64_msvc 0.52.6 - MIT OR Apache-2.0
-windows_i686_gnu 0.48.5 - MIT OR Apache-2.0
-windows_i686_gnu 0.52.6 - MIT OR Apache-2.0
-windows_i686_gnullvm 0.52.6 - MIT OR Apache-2.0
-windows_i686_msvc 0.48.5 - MIT OR Apache-2.0
-windows_i686_msvc 0.52.6 - MIT OR Apache-2.0
-windows_x86_64_gnu 0.48.5 - MIT OR Apache-2.0
-windows_x86_64_gnu 0.52.6 - MIT OR Apache-2.0
-windows_x86_64_gnullvm 0.48.5 - MIT OR Apache-2.0
-windows_x86_64_gnullvm 0.52.6 - MIT OR Apache-2.0
-windows_x86_64_msvc 0.48.5 - MIT OR Apache-2.0
-windows_x86_64_msvc 0.52.6 - MIT OR Apache-2.0
 windows-collections 0.3.2 - MIT OR Apache-2.0
 windows-core 0.62.2 - MIT OR Apache-2.0
 windows-future 0.3.2 - MIT OR Apache-2.0
@@ -557,12 +536,27 @@ windows-sys 0.61.2 - MIT OR Apache-2.0
 windows-targets 0.48.5 - MIT OR Apache-2.0
 windows-targets 0.52.6 - MIT OR Apache-2.0
 windows-threading 0.2.1 - MIT OR Apache-2.0
+windows_aarch64_gnullvm 0.48.5 - MIT OR Apache-2.0
+windows_aarch64_gnullvm 0.52.6 - MIT OR Apache-2.0
+windows_aarch64_msvc 0.48.5 - MIT OR Apache-2.0
+windows_aarch64_msvc 0.52.6 - MIT OR Apache-2.0
+windows_i686_gnu 0.48.5 - MIT OR Apache-2.0
+windows_i686_gnu 0.52.6 - MIT OR Apache-2.0
+windows_i686_gnullvm 0.52.6 - MIT OR Apache-2.0
+windows_i686_msvc 0.48.5 - MIT OR Apache-2.0
+windows_i686_msvc 0.52.6 - MIT OR Apache-2.0
+windows_x86_64_gnu 0.48.5 - MIT OR Apache-2.0
+windows_x86_64_gnu 0.52.6 - MIT OR Apache-2.0
+windows_x86_64_gnullvm 0.48.5 - MIT OR Apache-2.0
+windows_x86_64_gnullvm 0.52.6 - MIT OR Apache-2.0
+windows_x86_64_msvc 0.48.5 - MIT OR Apache-2.0
+windows_x86_64_msvc 0.52.6 - MIT OR Apache-2.0
 winit 0.30.13 - Apache-2.0
 winnow 1.0.3 - MIT
 winreg 0.55.0 - MIT
 wit-bindgen 0.57.1 - Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT
-writeable 0.6.3 - Unicode-3.0
 write-fonts 0.48.1 - MIT OR Apache-2.0
+writeable 0.6.3 - Unicode-3.0
 x11-clipboard 0.9.3 - MIT
 x11-dl 2.21.0 - MIT
 x11rb 0.13.2 - MIT OR Apache-2.0
@@ -580,11 +574,11 @@ yeslogic-fontconfig-sys 6.0.1 - MIT
 yoke 0.8.3 - Unicode-3.0
 yoke-derive 0.8.2 - Unicode-3.0
 zbus 5.18.0 - MIT
+zbus-lockstep 0.5.2 - MIT
+zbus-lockstep-macros 0.5.2 - MIT
 zbus_macros 5.18.0 - MIT
 zbus_names 4.3.4 - MIT
 zbus_xml 5.2.1 - MIT
-zbus-lockstep 0.5.2 - MIT
-zbus-lockstep-macros 0.5.2 - MIT
 zeno 0.3.3 - Apache-2.0 OR MIT
 zerocopy 0.8.53 - BSD-2-Clause OR Apache-2.0 OR MIT
 zerocopy-derive 0.8.53 - BSD-2-Clause OR Apache-2.0 OR MIT
