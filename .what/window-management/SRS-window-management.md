@@ -6,9 +6,9 @@ created: 2026-08-21
 updated: 2026-08-26
 satisfies: [FR-1, FR-2, FR-3, FR-4, FR-5, FR-6, FR-8, FR-9, FR-10, FR-11, FR-12, FR-14, FR-15, FR-22, FR-23]
 reviewed:
-  date: '2026-08-26'
-  sha: '79277c2'
-  lenses: [structure, prose, edge-case-hunter]
+  date: '2026-09-03'
+  sha: '1ee9673'
+  lenses: [structure, prose]
 ---
 
 # SRS — window-management

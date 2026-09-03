@@ -7,9 +7,9 @@ updated: 2026-08-21
 realizes: [UC-1, UC-2, UC-3]
 binds: [AD-1, AD-2, AD-3, AD-4, AD-5, AD-6, AD-7, AD-8, AD-9, AD-10, AD-12]
 reviewed:
-  date: '2026-08-30'
-  sha: 'd14c964'
-  lenses: [structure, prose, edge-case-hunter]
+  date: '2026-09-03'
+  sha: '1ee9673'
+  lenses: [structure, prose]
 ---
 
 # SDD — window-management
