@@ -18,7 +18,12 @@ owner decides.
 
 ## [Unreleased]
 
-Nothing yet.
+### Changed
+
+- License changed from MIT to GPL-3.0-only, across the project and all three workspace crates.
+  Slint (the Settings UI toolkit) is now consumed under its own GPL-3.0-only branch rather than
+  the Slint Royalty-free License 2.0, so the mandatory royalty-free-tier disclosure no longer
+  applies. See `LICENSE`, `NOTICE`, and `README.md`.
 
 ## [0.1.4] - 2026-08-29
 
