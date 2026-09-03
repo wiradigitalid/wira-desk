@@ -160,6 +160,15 @@ $checkVocabulary = @{
         # The pattern itself is untouched, and product source is still enforced. If this
         # rule ever fires on `crates/`, `docs/`, or a root document, that is a real finding.
         if ($file -like '.what/*' -or $file -like '.how/*' -or $file -like '.control/*') { return $true }
+        #
+        # `.what-rendered/` and `.how-rendered/` are `validate.py --generate`'s output --
+        # the same `.what/`/`.how/` content, assembled into one page per `corpus-guide.md`.
+        # They are a sibling top-level directory, not nested under `.what/`/`.how/`, so the
+        # two patterns above never matched them: this gate went red the moment the rendered
+        # views were first committed, and nobody was watching the `ci` workflow (a separate
+        # run from `release.yml`) to notice across roughly fifteen commits. Same file, same
+        # meaning, same exemption -- the omission was the sibling directory, not the rule.
+        if ($file -like '.what-rendered/*' -or $file -like '.how-rendered/*') { return $true }
         return $false
     }
 }
@@ -194,6 +203,10 @@ $checkClaims = @{
         # would become promises to a reader. That split is the whole rule; it is not widened
         # here, only told where the requirement documents now live.
         if ($file -like '.what/*' -or $file -like '.how/*' -or $file -like '.control/*') { return $true }
+        # Same sibling-directory gap as `checkVocabulary` above: `.what-rendered/` and
+        # `.how-rendered/` are the rendered projection of the same exempted content, not
+        # nested under the paths already exempted.
+        if ($file -like '.what-rendered/*' -or $file -like '.how-rendered/*') { return $true }
         return $false
     }
 }
