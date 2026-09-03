@@ -33,6 +33,7 @@ Rendered from `usecases.yaml`.
 | `UC-4` | Change a keyboard shortcut in Settings | `settings` | `FR-7`, `FR-18` | no |
 | `UC-5` | Complete or skip the first-run tutorial | `settings` | `FR-17` | no |
 | `UC-6` | Turn auto-start on boot on or off | `settings` | `FR-13` | no |
+| `UC-8` | Check for updates from the About pane | `settings` | `FR-25` | no |
 
 
 ## Constraints
@@ -80,7 +81,7 @@ Paired SDD: `.how/settings/SDD-settings.md`. UX Design: `.how/settings/01-ux/DES
 
 ### Business Rules — settings
 
-Local component business rules binding the `settings` Product Component. Global cross-component rules (`BR-1` through `BR-5`) live in `.what/business-rules.md`.
+Local component business rules binding the `settings` Product Component. Global cross-component rules (`BR-1` through `BR-8`) live in `.what/business-rules.md`.
 
 #### Rules
 
@@ -100,6 +101,8 @@ Local component business rules binding the `settings` Product Component. Global 
 | LBR-ST-12 | The key check must state only what was observed, correlating the daemon's report against what the settings window received, and must never predict whether a chord nobody has pressed is available. With no daemon report available it must say so and stop diagnosing. | `settings` | FR-18, DEC-002, DEC-005 | active |
 | LBR-ST-13 | The settings window’s painted size is its Win32 size: a size change imposed from outside the process must be clamped at the window’s own message boundary before the toolkit sees it, while position changes pass through untouched. A size the window itself currently declares legal — the onboarding modal growing into the settings shell — must still be honoured. | `settings` | DEC-006 | active |
 | LBR-ST-14 | Every action whose chord a user may edit appears as exactly **one** row in the Shortcuts pane, and one declared sequence is the single source of the pane's draw order, its keyboard focus order, and the precedence order that resolves a chord collision. A second, independently maintained list of the same actions must not exist. Grouping the rows under headings must not reorder them relative to that sequence. | `settings`, `window-management` | FR-18, LBR-ST-5, BR-6, DEC-009 | active |
+| LBR-ST-15 | Settings must not open without a running daemon — everything it does changes something only the daemon acts on — and must close itself, once, the moment the daemon it opened against goes away. A daemon that starts later does not reopen a window that already refused or closed. | `settings` | FR-25, DEC-004 | active |
+| LBR-ST-16 | A chord tested against the reserved-catalogue refusal must, when refused, be offered a deterministic alternative — the same modifier ladder tried in the same order every time — or no alternative at all when none of the ladder clears the catalogue and the current draft. | `settings` | FR-18, DEC-003, DEC-008 | active |
 
 #### Rationale — LBR-ST-14
 
@@ -108,6 +111,10 @@ The list of editable actions grew from six to nine in one pass, and it will grow
 The rule also makes the collision precedence order (`BR-6`, `DEC-009`) inspectable. Precedence is arbitrary by nature; what makes it defensible is that a reader can verify it against one declared sequence in a few seconds, and that the pane they are looking at is drawn from that same sequence.
 
 Grouping is explicitly permitted and explicitly constrained. Nine undifferentiated rows are hard to scan, so headings earn their place — but a heading that reorders rows relative to the declared sequence would put the visible order and the precedence order back into disagreement, which is the whole thing this rule exists to stop.
+
+#### Rationale — LBR-ST-15
+
+Everything Settings does is a change to something only the daemon acts on — shortcuts, arrangement, auto-start, the live key check. Without the daemon, every one of those is either inert or actively misleading: the Shortcuts pane would show fields that record nothing, and the key check would report "not running" for every chord no matter what was pressed. A Settings window left behind after the daemon exits is not a degraded window — it is a lying one, so the rule is refuse-to-open plus auto-close rather than a degraded read-only mode. Firing once, rather than reopening if the daemon comes back, keeps the rule simple: the window that closed already told the user what to do about it.
 
 #### Retired
 
@@ -366,6 +373,7 @@ User selects a shortcut field in Settings to customize its key combination.
 | Step 2 | The Shortcuts pane is visible and Settings holds the foreground window | The daemon withholds its own shortcut actions and reports each observed chord to Settings, so a chord pressed to test it neither switches windows nor is taken from Windows (LBR-ST-11). |
 | Step 3 | Field is listening and Settings holds the foreground window | The daemon additionally withholds the chord from Windows for the duration of the recording, so the shell cannot act on it and steal the foreground before the capture completes (LBR-ST-11). |
 | Step 3 | The captured chord is `Win + Ctrl + Left` or `Win + Ctrl + Right` | System refuses it and names what Windows uses it for — switching between virtual desktops. These two entered the reserved catalogue with `DEC-008`; before that they were accepted, and were the shipped snap defaults. |
+| Step 3, when the just-captured chord displaces another field's existing chord | User offers Swap on the displaced field | System gives the displaced field back the chord the capture just took from it, restoring both fields to what they held before the capture collided them. Only the field the capture actually displaced can be swapped this way — offered on any other field it is a no-op — and the draft is not re-checked for a new collision after the swap; the pane re-evaluates on the next frame regardless. |
 
 #### Failure Flows
 
@@ -496,6 +504,52 @@ Windows Task Scheduler is configured to launch Wira Desk silently at user logon 
 - `BR-4`
 - `BR-7`
 - `LBR-ST-4`
+
+
+### `UC-8-check-for-updates.md`
+
+### UC-8 — Check for updates from the About pane
+
+#### Trigger
+
+User clicks "Check for updates" in the About pane.
+
+#### Precondition
+
+- Settings is open and the daemon is running (`daemon_watch`).
+- The "Check for updates automatically" toggle governs only the periodic background check (CAP-13); the manual button in this use case is always available regardless of the toggle's state.
+
+#### Main Flow
+
+1. User opens the About pane and clicks "Check for updates". The button shows "Checking…" and disables itself.
+2. System requests the release descriptor over HTTPS, carrying no payload beyond the request itself (BR-8).
+3. System compares the descriptor's version against the running version and validates the descriptor (checksum shape, release URL pinned to this product's own channel).
+4. A newer, valid release exists: the About pane shows the new version and an "Install" action.
+5. User clicks "Install". System downloads the installer to a fresh, unpredictable temporary directory.
+6. System verifies the download's SHA-256 checksum against the one the descriptor published.
+7. On a match, system launches the verified installer elevated and Settings exits — the installer stops the daemon and replaces `wiradesk-settings.exe`, which cannot happen while it is running.
+
+#### Alternate Flows
+
+| From step | Condition | What happens |
+| --- | --- | --- |
+| Step 3 | No newer release exists | About pane shows the product is up to date; no further action offered. |
+
+#### Failure Flows
+
+| From step | Failure | What the system does | What the user is left with |
+| --- | --- | --- | --- |
+| Step 2 | Request fails (network, non-HTTPS target, oversized or unreadable response) | System shows a specific, worded reason (not a generic "update failed") | Button re-enables; user may try again |
+| Step 3 | The descriptor names an unusable version, a malformed checksum, or a download URL not pinned to this product's own release channel | System refuses the release and reports why, offering nothing to install | No install offered; the descriptor is treated as untrustworthy, not as "no update" |
+| Step 6 | Downloaded file's checksum does not match the published hash | System deletes the file and never launches it | Nothing is installed; user is told the verification failed |
+
+#### Outcome
+
+The user learns whether a newer release exists and, on confirmation, ends up running it — with every step verified before anything installed runs, and nothing sent over the network but the request itself.
+
+#### Business Rules
+
+- `BR-8`
 
 
 ## Scenarios — `05-scenarios/`

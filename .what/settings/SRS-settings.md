@@ -4,7 +4,7 @@ component: settings
 status: reviewed
 created: 2026-08-21
 updated: 2026-08-25
-satisfies: [FR-7, FR-13, FR-16, FR-17, FR-18, FR-19, FR-20, FR-21]
+satisfies: [FR-7, FR-13, FR-16, FR-17, FR-18, FR-19, FR-20, FR-21, FR-25]
 reviewed:
   date: '2026-09-03'
   sha: '1ee9673'
@@ -73,7 +73,7 @@ A user customizes a shortcut combination in Settings, saves preferences, and imm
 
 ## Gate Checklist · [G3]
 
-- ★ Every functional requirement (FR-7, FR-13, FR-16..21) mapped to a usecase or carries explicit `no_uc:` justification? Yes.
+- ★ Every functional requirement (FR-7, FR-13, FR-16..21, FR-25) mapped to a usecase or carries explicit `no_uc:` justification? Yes.
 - ★ All use case titles phrased as natural user sentences? Yes.
 - ★ Actor Register complete and aligned with PRD journeys? Yes.
 - ★ Invariants AD-1, AD-5, AD-11, AD-11a, AD-12, AD-13 and cross-component business rules BR-1..6 respected? Yes.
@@ -89,7 +89,7 @@ Paired SDD: `.how/settings/SDD-settings.md`. UX Design: `.how/settings/01-ux/DES
 - `02-rules/rules-settings.md`: Local component rules (LBR-ST-1..14).
 - `03-domain/domain-model.md`: Conceptual domain entities (`user-shortcut-preference`, `onboarding-completion`, `auto-start-preference`).
 - `03-domain/state-machines.md`: First-run tutorial progression and shortcut capture listening state machine.
-- `04-usecases/`: Detailed step-by-step flows (`UC-4-change-shortcut.md`, `UC-5-first-run-tutorial.md`, `UC-6-toggle-auto-start.md`).
+- `04-usecases/`: Detailed step-by-step flows (`UC-4-change-shortcut.md`, `UC-5-first-run-tutorial.md`, `UC-6-toggle-auto-start.md`, `UC-8-check-for-updates.md`).
 - `05-scenarios/`: Edge-case branching scenarios (`SCN-01-invalid-shortcut-rejected.md`, `SCN-02-autostart-task-create-fails.md`).
 
 ## Open Items

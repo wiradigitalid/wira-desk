@@ -229,15 +229,15 @@ rtm:
   CAP: CAP-13
   FR: FR-25
   DEC: []
-  UC: ''
+  UC: UC-8
   ticket: ''
   spec: ''
   release: ''
   test: []
   status: ''
   green: false
-  exempt: true
-  broken_at: no_uc
+  exempt: false
+  broken_at: ticket
 - BG: BG-1
   CAP: CAP-8
   FR: FR-3

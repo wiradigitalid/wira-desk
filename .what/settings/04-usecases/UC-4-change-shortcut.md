@@ -40,6 +40,7 @@ User selects a shortcut field in Settings to customize its key combination.
 | Step 2 | The Shortcuts pane is visible and Settings holds the foreground window | The daemon withholds its own shortcut actions and reports each observed chord to Settings, so a chord pressed to test it neither switches windows nor is taken from Windows (LBR-ST-11). |
 | Step 3 | Field is listening and Settings holds the foreground window | The daemon additionally withholds the chord from Windows for the duration of the recording, so the shell cannot act on it and steal the foreground before the capture completes (LBR-ST-11). |
 | Step 3 | The captured chord is `Win + Ctrl + Left` or `Win + Ctrl + Right` | System refuses it and names what Windows uses it for — switching between virtual desktops. These two entered the reserved catalogue with `DEC-008`; before that they were accepted, and were the shipped snap defaults. |
+| Step 3, when the just-captured chord displaces another field's existing chord | User offers Swap on the displaced field | System gives the displaced field back the chord the capture just took from it, restoring both fields to what they held before the capture collided them. Only the field the capture actually displaced can be swapped this way — offered on any other field it is a no-op — and the draft is not re-checked for a new collision after the swap; the pane re-evaluates on the next frame regardless. |
 
 ## Failure Flows
 

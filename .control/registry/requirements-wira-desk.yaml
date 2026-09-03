@@ -308,7 +308,6 @@ functional:
   - id: FR-25
     capability: CAP-13
     component: settings
-    no_uc: User-triggered from the About pane; UC not yet written, pending wdi-component.
     text: Let the user check for updates on demand, and on confirmation, download, verify, and launch the installer.
     statement: >-
       The user can request an update check at any time from the About pane; when a newer release

@@ -8,7 +8,7 @@ This is what the owner reads at **G3 Blueprint** — one page, every one of the 
 
 ## Use case catalogue
 
-**7 use cases**, 0 marked `critical`. Rendered from `usecases.yaml`.
+**8 use cases**, 0 marked `critical`. Rendered from `usecases.yaml`.
 
 | id | Use case | Component | Satisfies | critical |
 | --- | --- | --- | --- | --- |
@@ -19,6 +19,7 @@ This is what the owner reads at **G3 Blueprint** — one page, every one of the 
 | `UC-5` | Complete or skip the first-run tutorial | `settings` | `FR-17` | no |
 | `UC-6` | Turn auto-start on boot on or off | `settings` | `FR-13` | no |
 | `UC-7` | Move the active window to the next monitor | `window-management` | `FR-23` | no |
+| `UC-8` | Check for updates from the About pane | `settings` | `FR-25` | no |
 
 
 ## Actor list

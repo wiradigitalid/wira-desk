@@ -4,12 +4,12 @@ scope: component
 component: settings
 status: reviewed
 created: '2026-08-21'
-updated: '2026-08-26'
+updated: '2026-09-03'
 ---
 
 # Business Rules — settings
 
-Local component business rules binding the `settings` Product Component. Global cross-component rules (`BR-1` through `BR-5`) live in `.what/business-rules.md`.
+Local component business rules binding the `settings` Product Component. Global cross-component rules (`BR-1` through `BR-8`) live in `.what/business-rules.md`.
 
 ## Rules
 
@@ -29,6 +29,8 @@ Local component business rules binding the `settings` Product Component. Global 
 | LBR-ST-12 | The key check must state only what was observed, correlating the daemon's report against what the settings window received, and must never predict whether a chord nobody has pressed is available. With no daemon report available it must say so and stop diagnosing. | `settings` | FR-18, DEC-002, DEC-005 | active |
 | LBR-ST-13 | The settings window’s painted size is its Win32 size: a size change imposed from outside the process must be clamped at the window’s own message boundary before the toolkit sees it, while position changes pass through untouched. A size the window itself currently declares legal — the onboarding modal growing into the settings shell — must still be honoured. | `settings` | DEC-006 | active |
 | LBR-ST-14 | Every action whose chord a user may edit appears as exactly **one** row in the Shortcuts pane, and one declared sequence is the single source of the pane's draw order, its keyboard focus order, and the precedence order that resolves a chord collision. A second, independently maintained list of the same actions must not exist. Grouping the rows under headings must not reorder them relative to that sequence. | `settings`, `window-management` | FR-18, LBR-ST-5, BR-6, DEC-009 | active |
+| LBR-ST-15 | Settings must not open without a running daemon — everything it does changes something only the daemon acts on — and must close itself, once, the moment the daemon it opened against goes away. A daemon that starts later does not reopen a window that already refused or closed. | `settings` | FR-25, DEC-004 | active |
+| LBR-ST-16 | A chord tested against the reserved-catalogue refusal must, when refused, be offered a deterministic alternative — the same modifier ladder tried in the same order every time — or no alternative at all when none of the ladder clears the catalogue and the current draft. | `settings` | FR-18, DEC-003, DEC-008 | active |
 
 ## Rationale — LBR-ST-14
 
@@ -37,6 +39,10 @@ The list of editable actions grew from six to nine in one pass, and it will grow
 The rule also makes the collision precedence order (`BR-6`, `DEC-009`) inspectable. Precedence is arbitrary by nature; what makes it defensible is that a reader can verify it against one declared sequence in a few seconds, and that the pane they are looking at is drawn from that same sequence.
 
 Grouping is explicitly permitted and explicitly constrained. Nine undifferentiated rows are hard to scan, so headings earn their place — but a heading that reorders rows relative to the declared sequence would put the visible order and the precedence order back into disagreement, which is the whole thing this rule exists to stop.
+
+## Rationale — LBR-ST-15
+
+Everything Settings does is a change to something only the daemon acts on — shortcuts, arrangement, auto-start, the live key check. Without the daemon, every one of those is either inert or actively misleading: the Shortcuts pane would show fields that record nothing, and the key check would report "not running" for every chord no matter what was pressed. A Settings window left behind after the daemon exits is not a degraded window — it is a lying one, so the rule is refuse-to-open plus auto-close rather than a degraded read-only mode. Firing once, rather than reopening if the daemon comes back, keeps the rule simple: the window that closed already told the user what to do about it.
 
 ## Retired
 

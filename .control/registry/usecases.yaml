@@ -49,3 +49,10 @@ usecases:
     actor: Power User
     satisfies: [FR-23]
     critical: false
+
+  - id: UC-8
+    component: settings
+    title: Check for updates from the About pane
+    actor: Power User
+    satisfies: [FR-25]
+    critical: false
