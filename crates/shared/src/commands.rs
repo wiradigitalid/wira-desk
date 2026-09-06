@@ -126,5 +126,8 @@ mod tests {
         assert_eq!(Command::SnapPercentRight.as_u8(), 10);
         assert_eq!(Command::SnapPercentTop.as_u8(), 11);
         assert_eq!(Command::SnapPercentBottom.as_u8(), 12);
+        assert_eq!(Command::SnapThirdLeft.as_u8(), 13);
+        assert_eq!(Command::SnapThirdMiddle.as_u8(), 14);
+        assert_eq!(Command::SnapThirdRight.as_u8(), 15);
     }
 }

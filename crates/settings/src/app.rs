@@ -1326,6 +1326,10 @@ mod tests {
         assert_eq!(ShortcutField::SnapThirdLeft as usize, 7);
         assert_eq!(ShortcutField::SnapThirdMiddle as usize, 8);
         assert_eq!(ShortcutField::SnapThirdRight as usize, 9);
+        assert!((ShortcutField::SnapMaximize as usize) < (ShortcutField::SnapThirdLeft as usize));
+        assert!(
+            (ShortcutField::SnapThirdRight as usize) < (ShortcutField::MoveNextMonitor as usize)
+        );
     }
 
     #[test]

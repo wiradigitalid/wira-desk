@@ -308,15 +308,15 @@ mod tests {
     #[test]
     fn third_snap_fields_roundtrip_through_toml() {
         let mut cfg = Config::default();
-        cfg.snapping.snap_third_left = "ctrl+alt+1".to_string();
-        cfg.snapping.snap_third_middle = "ctrl+alt+2".to_string();
-        cfg.snapping.snap_third_right = "ctrl+alt+3".to_string();
+        cfg.snapping.snap_third_left = "ctrl+alt+shift+1".to_string();
+        cfg.snapping.snap_third_middle = "ctrl+alt+shift+2".to_string();
+        cfg.snapping.snap_third_right = "ctrl+alt+shift+3".to_string();
 
         let toml = cfg.to_toml_string().unwrap();
         let parsed = Config::from_toml_str(&toml).unwrap();
-        assert_eq!(parsed.snapping.snap_third_left, "ctrl+alt+1");
-        assert_eq!(parsed.snapping.snap_third_middle, "ctrl+alt+2");
-        assert_eq!(parsed.snapping.snap_third_right, "ctrl+alt+3");
+        assert_eq!(parsed.snapping.snap_third_left, "ctrl+alt+shift+1");
+        assert_eq!(parsed.snapping.snap_third_middle, "ctrl+alt+shift+2");
+        assert_eq!(parsed.snapping.snap_third_right, "ctrl+alt+shift+3");
     }
 
     // ── frozen extension contract ─────────────────────────────────

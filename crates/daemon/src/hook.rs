@@ -1598,6 +1598,9 @@ mod tests {
             chords.snap_top,
             chords.snap_bottom,
             chords.snap_maximize,
+            chords.snap_third_left,
+            chords.snap_third_middle,
+            chords.snap_third_right,
             chords.move_next_monitor,
             chords.snap_percent_left,
             chords.snap_percent_right,
@@ -1606,11 +1609,11 @@ mod tests {
             chords.stack,
         ];
         let collisions = unbind_duplicates(&mut resolved);
-        assert_eq!(collisions, vec![(11, 12)]);
-        assert!(resolved[11].is_some());
-        assert_eq!(resolved[12], None);
+        assert_eq!(collisions, vec![(14, 15)]);
+        assert!(resolved[14].is_some());
+        assert_eq!(resolved[15], None);
 
-        chords.stack = resolved[12];
+        chords.stack = resolved[15];
         let clash = chords.snap_percent_bottom.unwrap();
         assert_eq!(
             match_shortcut(&chords, mods_of(clash), clash.vk),

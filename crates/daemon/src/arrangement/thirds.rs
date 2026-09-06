@@ -168,4 +168,83 @@ pub mod tests {
 
         assert_eq!(left.width() + middle.width() + right.width(), 1920);
     }
+
+    #[test]
+    fn thirds_stay_inside_the_work_area() {
+        for work in [
+            primary_work_area(),
+            negative_origin_work_area(),
+            odd_width_work_area(),
+        ] {
+            assert!(plan_snap_third(&work, W, ThirdColumn::Left)
+                .unwrap()
+                .fits_within(&work.rect));
+            assert!(plan_snap_third(&work, W, ThirdColumn::Middle)
+                .unwrap()
+                .fits_within(&work.rect));
+            assert!(plan_snap_third(&work, W, ThirdColumn::Right)
+                .unwrap()
+                .fits_within(&work.rect));
+        }
+    }
+
+    #[test]
+    fn identical_geometry_yields_identical_plans_at_every_dpi() {
+        let mut seen: Option<(Rect, Rect, Rect)> = None;
+        for work in dpi_variants() {
+            let triple = (
+                only(&plan_snap_third(&work, W, ThirdColumn::Left).unwrap()),
+                only(&plan_snap_third(&work, W, ThirdColumn::Middle).unwrap()),
+                only(&plan_snap_third(&work, W, ThirdColumn::Right).unwrap()),
+            );
+            match &seen {
+                None => seen = Some(triple),
+                Some(prev) => assert_eq!(
+                    *prev, triple,
+                    "DPI {} changed the plan; coordinates were scaled twice",
+                    work.dpi
+                ),
+            }
+        }
+    }
+
+    #[test]
+    fn empty_work_area_fails_without_placement() {
+        let empty = WorkArea {
+            rect: Rect {
+                left: 0,
+                top: 0,
+                right: 0,
+                bottom: 1040,
+            },
+            dpi: 96,
+        };
+        for result in [
+            plan_snap_third(&empty, W, ThirdColumn::Left),
+            plan_snap_third(&empty, W, ThirdColumn::Middle),
+            plan_snap_third(&empty, W, ThirdColumn::Right),
+        ] {
+            assert_eq!(result, Err(PlanError::EmptyOrInvertedWorkArea));
+        }
+    }
+
+    #[test]
+    fn inverted_work_area_fails_without_placement() {
+        let inverted = WorkArea {
+            rect: Rect {
+                left: 100,
+                top: 0,
+                right: 10,
+                bottom: 100,
+            },
+            dpi: 96,
+        };
+        for result in [
+            plan_snap_third(&inverted, W, ThirdColumn::Left),
+            plan_snap_third(&inverted, W, ThirdColumn::Middle),
+            plan_snap_third(&inverted, W, ThirdColumn::Right),
+        ] {
+            assert_eq!(result, Err(PlanError::EmptyOrInvertedWorkArea));
+        }
+    }
 }
