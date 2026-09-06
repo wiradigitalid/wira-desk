@@ -55,11 +55,11 @@ date: 2026-09-06
   `status: done`, `commit: 1d15f5c`.
 - Blocked: —
 - Parked: —
-- In flight: claude-byok dispatched for `SPEC-1-02` (Snap to thirds) — no blocking edge with `SPEC-1-01`,
-  dispatched sequentially anyway per this run's own concurrency rule.
-- Next: once that job is confirmed finished via `TaskOutput` — independently verify, dispatch a separate
-  re-review, and on clean close `SPEC-1-02`. Once both tickets are done, close `SPEC-1`, push the run
-  branch, open the one draft PR, watch CI.
+- In flight: harness background job `bn4pbwgw7` — claude-byok building `SPEC-1-02` (Snap to thirds). No
+  blocking edge with `SPEC-1-01`, dispatched sequentially anyway per this run's own concurrency rule.
+- Next: once `bn4pbwgw7` is confirmed finished via `TaskOutput(block:false)` — independently verify
+  (fmt/clippy/full suite, gate), dispatch a separate re-review, and on clean close `SPEC-1-02`. Once both
+  tickets are done, close `SPEC-1`, push the run branch, open the one draft PR, watch CI.
 
 ## Decisions
 
