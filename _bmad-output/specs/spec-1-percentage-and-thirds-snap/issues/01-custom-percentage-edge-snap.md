@@ -3,7 +3,7 @@ id: SPEC-1-01
 component: window-management
 satisfies: [UC-9, FR-26]
 blocked_by: []
-status: ready-for-agent
+status: ready-for-review
 tests:
   - arrangement::snap::tests::snap_percent_returns_configured_width_from_the_named_edge
   - arrangement::snap::tests::snap_percent_refuses_a_zero_or_negative_extent
@@ -54,7 +54,7 @@ the new fields are declared first.
       list of editable actions — the same list already driving that pane's draw order, focus order, and
       chord-collision precedence — with the new fields declared ahead of the Overlapping Stack field in
       that list.
-- [ ] An out-of-range percentage entered in Settings is refused before save, with a message the user can
+- [x] An out-of-range percentage entered in Settings is refused before save, with a message the user can
       act on, the same way an invalid shortcut chord is refused today — not silently clamped, not accepted
       and refused later.
 

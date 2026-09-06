@@ -493,8 +493,9 @@ fn main() -> Result<(), slint::PlatformError> {
         main_window.on_percent_changed(move |idx, val| {
             let mut m = model_rc.borrow_mut();
             let field = ShortcutField::from_index(idx);
-            if field.has_percent() && val >= 0 {
-                m.set_percent(field, val as u32);
+            if field.has_percent() {
+                let uval = if val < 0 { 0 } else { val as u32 };
+                m.set_percent(field, uval);
             }
             if let Some(w) = window_weak.upgrade() {
                 sync_model_to_ui(&w, &m);

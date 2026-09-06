@@ -149,7 +149,7 @@ export component ShortcutRow inherits Rectangle {
 
                             accepted => {
                                 if self.text.is-float() {
-                                    root.percent_changed(Math.clamp(Math.round(self.text.to-float()), 1, 99));
+                                    root.percent_changed(Math.round(self.text.to-float()));
                                 } else {
                                     self.text = "\{root.percent}";
                                 }
@@ -158,7 +158,7 @@ export component ShortcutRow inherits Rectangle {
                             changed has-focus => {
                                 if !self.has-focus {
                                     if self.text.is-float() {
-                                        root.percent_changed(Math.clamp(Math.round(self.text.to-float()), 1, 99));
+                                        root.percent_changed(Math.round(self.text.to-float()));
                                     } else {
                                         self.text = "\{root.percent}";
                                     }
