@@ -8,16 +8,20 @@ date: 2026-09-06
 
 ## Resume
 
-- Iteration: 15
+- Iteration: 16
 - Run branch: `autopilot/DEC-012`, worktree at `../wira-desk-autopilot` relative to the main checkout (`git
-  worktree list` finds its actual path), HEAD `fc7f8ca`. PR: not opened yet (opens at first spec close, per
-  mandate).
-- Stopped at: capacity — `SPEC-1-02` code committed (`f3f0135`, `fc7f8ca`) and independently verified green
-  (fmt/clippy/full suite, export gate unchanged at `OQ-37` only). Step 3 review dispatched as two parallel
-  agents (`a735dbca9baa9e6c5` Standards, `af5d9691d7170a0b2` Spec). Cannot be waited on synchronously.
+  worktree list` finds its actual path), HEAD `f1a65f2`. PR: not opened yet — opens now, at this spec close.
+- Stopped at: capacity — both `SPEC-1` tickets closed, drift reconciled, review-trace stamped fresh, every
+  `FR` in scope (`FR-26`, `FR-27`) closed and no other spec open (`W1`-`W4`, `SPEC-1` all `closed` per
+  generated status). This is § Finish. Smoke test dispatched to claude-byok (job `ba3b8dciw`, per the
+  mandate's `smoke_test: agent` delegation) — cannot be waited on synchronously.
 - Blocked: —
 - Parked: —
-- Next: once both review agents report — adjudicate from the artifact, not their self-description; on
+- Next: once `ba3b8dciw` completes — read its report honestly (it may report parts as not verifiable from a
+  headless session, e.g. real elevation/keypress simulation; record exactly what it says, don't round up to
+  "verified"). Then: `validate.py --generate`, raise `DEC-012` to `applied` with `touches` naming this
+  ledger, push the run branch, open the one draft PR, watch CI, mark it ready for review only if green,
+  cancel the cron loop, write the Finish report.
   clean, close `SPEC-1-02` (`status: done`). That closes `SPEC-1` (both its tickets done) — then push the
   run branch, open the one draft PR, watch CI, and this mandate's remaining scope is empty (§ Finish: run
   the smoke test via claude-byok, then wrap up).
@@ -47,3 +51,8 @@ date: 2026-09-06
 | Iter 11 | Close `SPEC-1-01` | Re-review traced the actual validation call chain and a passing test, not just claude-byok's report; closed `status: done` | Closing on the fix commit's own self-review claim | Reopen if a later finding contradicts it | ticket file, `commit: 1d15f5c` |
 | Iter 15 | `## Resume` had grown into a decision narrative | Rewrote it back to the compact form this section is supposed to be (position + next step only) — the running history of what happened is what `## Decisions` is for, and it already had it all | Continuing to append a paragraph per iteration, which is exactly the "second home for decisions" anti-pattern this skill's own guide warns against | None — no information lost, `## Decisions` already carried everything | This file |
 | Iter 15 | `SPEC-1-02` build + self-review | claude-byok's own report claims 512 tests passing and 3 self-found-and-fixed findings (test-only-checked-defaults, unpinned wire values, missing boundary tests) across two commits — independently verified via fmt/clippy/full suite (chain exit 0) and the export gate (unchanged) before trusting any of it; dispatched a genuinely separate two-axis review rather than accepting the self-review | Accepting the report as sufficient (self-review by construction, per `wdi-build`) | Re-verify if the separate review contradicts the self-review's claims | `f3f0135`, `fc7f8ca`, `a735dbca9baa9e6c5`, `af5d9691d7170a0b2` |
+| Iter 16 | Close `SPEC-1-02` / `SPEC-1` | Both review agents clean (no must-fix on either axis); closed the ticket (`status: done`) and the spec (`specs.yaml` → `closed`) | Trusting claude-byok's self-review alone | Reopen if a later finding contradicts it | ticket file, `specs.yaml` |
+| Iter 16 | Reconcile drift after spec close | `wdi-reconcile` over window-management found real, load-bearing staleness SPEC-1 left behind — `[MISSING]` markers in `LC-arrangement-engine.md` and `SDD-window-management.md` on now-implemented planners/UCs/command values, a stale `Command enum (0..=5)` row in `inventory-api.md` (already stale pre-mandate from W4, worse now), and one stale cell in `SDD-settings.md`. Fixed all four; left two unrelated pre-existing `[MISSING]` tags (`B-DisplaySet`, `E-MonitorSet`) alone as out of scope | Treating documentation drift as someone else's problem since claude-byok didn't cause all of it | A reader trusting "not yet implemented" for a feature that shipped | `LC-arrangement-engine.md`, `inventory-api.md`, `SDD-window-management.md`, `SDD-settings.md`, `dd5c8cd` |
+| Iter 16 | Review-trace refresh | Ran `wdi-review` (structure+prose, medium risk, re-review not first/pre-gate) on the three files `review-trace` flagged stale; SDD-window-management.md and SDD-settings.md needed no changes beyond the reconcile fixes already made, SRS-window-management.md needed none. Stamped all three at `dd5c8cd` | Leaving the advisory unaddressed since it doesn't fail the gate | Next reconcile pass re-flags if actually stale | three files, `f1a65f2` |
+| Iter 16 | SRS `satisfies:` frontmatter noted, not changed | `SRS-window-management.md`'s frontmatter `satisfies:` list omits `FR-26`/`FR-27` even though its own body checklist (line 84) already says they're mapped, and the authoritative `usecases.yaml`/`requirements-wira-desk.yaml` registries already carry the real mapping. Left alone — this looks like a deliberate precedent (the `window-management.md` memlog explicitly scoped an earlier update to "the checklist line" only), not an oversight I'm confident enough to correct | Editing the frontmatter to add `FR-26, FR-27` on my own judgment of an ambiguous convention | If wrong, a one-line frontmatter edit fixes it | This row |
+| Iter 16 | § Finish reached | Every `FR` in scope closed (`FR-26`, `FR-27`), no other spec open (`W1`-`W4` and `SPEC-1` all `closed`) — dispatched the smoke test to claude-byok (`ba3b8dciw`) per `smoke_test: agent` | — | — | This row |
