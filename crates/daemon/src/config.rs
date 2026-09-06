@@ -145,6 +145,12 @@ pub fn validate(text: &str) -> Result<(Config, HookSnapshot, WorkerSnapshot), Re
         Shortcut::parse(&cfg.snapping.snap_half_bottom).ok_or(RejectReason::InvalidShortcut)?;
     let snap_maximize =
         Shortcut::parse(&cfg.snapping.snap_maximize).ok_or(RejectReason::InvalidShortcut)?;
+    let snap_third_left =
+        Shortcut::parse(&cfg.snapping.snap_third_left).ok_or(RejectReason::InvalidShortcut)?;
+    let snap_third_middle =
+        Shortcut::parse(&cfg.snapping.snap_third_middle).ok_or(RejectReason::InvalidShortcut)?;
+    let snap_third_right =
+        Shortcut::parse(&cfg.snapping.snap_third_right).ok_or(RejectReason::InvalidShortcut)?;
     let move_next_monitor = Shortcut::parse(&cfg.layout.move_next_monitor_shortcut)
         .ok_or(RejectReason::InvalidShortcut)?;
     let snap_percent_left =
@@ -178,6 +184,9 @@ pub fn validate(text: &str) -> Result<(Config, HookSnapshot, WorkerSnapshot), Re
         snap_top: Some(snap_top),
         snap_bottom: Some(snap_bottom),
         snap_maximize: Some(snap_maximize),
+        snap_third_left: Some(snap_third_left),
+        snap_third_middle: Some(snap_third_middle),
+        snap_third_right: Some(snap_third_right),
         move_next_monitor: Some(move_next_monitor),
         snap_percent_left: Some(snap_percent_left),
         snap_percent_right: Some(snap_percent_right),

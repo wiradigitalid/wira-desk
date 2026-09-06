@@ -34,6 +34,12 @@ pub enum Command {
     SnapPercentTop = 11,
     /// Snap the active window against the bottom edge at a configured percentage.
     SnapPercentBottom = 12,
+    /// Snap the active window to the left third of the screen.
+    SnapThirdLeft = 13,
+    /// Snap the active window to the middle third of the screen.
+    SnapThirdMiddle = 14,
+    /// Snap the active window to the right third of the screen.
+    SnapThirdRight = 15,
 }
 
 impl Command {
@@ -53,6 +59,9 @@ impl Command {
             10 => Command::SnapPercentRight,
             11 => Command::SnapPercentTop,
             12 => Command::SnapPercentBottom,
+            13 => Command::SnapThirdLeft,
+            14 => Command::SnapThirdMiddle,
+            15 => Command::SnapThirdRight,
             _ => Command::Nop,
         }
     }
@@ -84,6 +93,9 @@ mod tests {
             Command::SnapPercentRight,
             Command::SnapPercentTop,
             Command::SnapPercentBottom,
+            Command::SnapThirdLeft,
+            Command::SnapThirdMiddle,
+            Command::SnapThirdRight,
         ] {
             assert_eq!(Command::from_u8(cmd.as_u8()), cmd);
         }
@@ -91,7 +103,7 @@ mod tests {
 
     #[test]
     fn unknown_values_map_to_nop() {
-        assert_eq!(Command::from_u8(13), Command::Nop);
+        assert_eq!(Command::from_u8(16), Command::Nop);
         assert_eq!(Command::from_u8(255), Command::Nop);
     }
 

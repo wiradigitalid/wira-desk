@@ -74,6 +74,12 @@ pub struct SnappingConfig {
     pub snap_percent_top: String,
     /// Custom percentage snap against the bottom edge.
     pub snap_percent_bottom: String,
+    /// Snap the active window to the left third of the work area.
+    pub snap_third_left: String,
+    /// Snap the active window to the middle third of the work area.
+    pub snap_third_middle: String,
+    /// Snap the active window to the right third of the work area.
+    pub snap_third_right: String,
     /// Percentage of work-area width for left-edge snap (default 50).
     pub percent_left: u32,
     /// Percentage of work-area width for right-edge snap (default 50).
@@ -148,6 +154,9 @@ impl Default for SnappingConfig {
             snap_percent_right: "ctrl+alt+shift+right".to_string(),
             snap_percent_top: "ctrl+alt+shift+up".to_string(),
             snap_percent_bottom: "ctrl+alt+shift+down".to_string(),
+            snap_third_left: "ctrl+alt+1".to_string(),
+            snap_third_middle: "ctrl+alt+2".to_string(),
+            snap_third_right: "ctrl+alt+3".to_string(),
             percent_left: crate::constants::DEFAULT_SNAP_PERCENT,
             percent_right: crate::constants::DEFAULT_SNAP_PERCENT,
             percent_top: crate::constants::DEFAULT_SNAP_PERCENT,
@@ -296,6 +305,20 @@ mod tests {
         assert_eq!(parsed.snapping.percent_bottom, 75);
     }
 
+    #[test]
+    fn third_snap_fields_roundtrip_through_toml() {
+        let mut cfg = Config::default();
+        cfg.snapping.snap_third_left = "ctrl+alt+1".to_string();
+        cfg.snapping.snap_third_middle = "ctrl+alt+2".to_string();
+        cfg.snapping.snap_third_right = "ctrl+alt+3".to_string();
+
+        let toml = cfg.to_toml_string().unwrap();
+        let parsed = Config::from_toml_str(&toml).unwrap();
+        assert_eq!(parsed.snapping.snap_third_left, "ctrl+alt+1");
+        assert_eq!(parsed.snapping.snap_third_middle, "ctrl+alt+2");
+        assert_eq!(parsed.snapping.snap_third_right, "ctrl+alt+3");
+    }
+
     // ── frozen extension contract ─────────────────────────────────
     // Epics 3, 4, and 5 consume these as sibling lanes. They may read them but
     // must not renumber or reinterpret them, so the values are pinned here.
@@ -317,6 +340,9 @@ mod tests {
         assert_eq!(cfg.snap_percent_right, "ctrl+alt+shift+right");
         assert_eq!(cfg.snap_percent_top, "ctrl+alt+shift+up");
         assert_eq!(cfg.snap_percent_bottom, "ctrl+alt+shift+down");
+        assert_eq!(cfg.snap_third_left, "ctrl+alt+1");
+        assert_eq!(cfg.snap_third_middle, "ctrl+alt+2");
+        assert_eq!(cfg.snap_third_right, "ctrl+alt+3");
         assert_eq!(cfg.percent_left, 50);
         assert_eq!(cfg.percent_right, 50);
         assert_eq!(cfg.percent_top, 50);
@@ -340,6 +366,9 @@ mod tests {
             &cfg.snapping.snap_percent_right,
             &cfg.snapping.snap_percent_top,
             &cfg.snapping.snap_percent_bottom,
+            &cfg.snapping.snap_third_left,
+            &cfg.snapping.snap_third_middle,
+            &cfg.snapping.snap_third_right,
             &cfg.layout.move_next_monitor_shortcut,
             &cfg.layout.stack_shortcut,
         ] {
@@ -371,6 +400,9 @@ mod tests {
             &cfg.snapping.snap_percent_right,
             &cfg.snapping.snap_percent_top,
             &cfg.snapping.snap_percent_bottom,
+            &cfg.snapping.snap_third_left,
+            &cfg.snapping.snap_third_middle,
+            &cfg.snapping.snap_third_right,
             &cfg.layout.move_next_monitor_shortcut,
             &cfg.layout.stack_shortcut,
         ];

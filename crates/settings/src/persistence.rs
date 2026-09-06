@@ -101,14 +101,14 @@ fn classify_parse_failure(input: &str) -> ShortcutError {
 /// Returns the offending field name and reason on the first failure, leaving
 /// the caller's active configuration untouched.
 pub fn validate_config(cfg: &Config) -> Result<(), (&'static str, ShortcutError)> {
-    // These thirteen paths must match `app::ShortcutField::key()` exactly, and in the same
+    // These sixteen paths must match `app::ShortcutField::key()` exactly, and in the same
     // ORDER: `describe()` maps a rejection reported here back to a human label through that
     // table, and the order decides which of two colliding fields is named as the first
     // holder. The two are kept as separate literals so this module has no dependency on the
     // UI-facing field enum — a coupling `LBR-ST-14` accepts in exchange for the layer
     // boundary, and which `app::tests::field_declaration_order_is_the_precedence_order`
     // guards from the other side.
-    let fields: [(&'static str, &str); 13] = [
+    let fields: [(&'static str, &str); 16] = [
         ("switcher.shortcut", &cfg.switcher.shortcut),
         (
             "switcher.fallback_shortcut",
@@ -119,6 +119,12 @@ pub fn validate_config(cfg: &Config) -> Result<(), (&'static str, ShortcutError)
         ("snapping.snap_half_top", &cfg.snapping.snap_half_top),
         ("snapping.snap_half_bottom", &cfg.snapping.snap_half_bottom),
         ("snapping.snap_maximize", &cfg.snapping.snap_maximize),
+        ("snapping.snap_third_left", &cfg.snapping.snap_third_left),
+        (
+            "snapping.snap_third_middle",
+            &cfg.snapping.snap_third_middle,
+        ),
+        ("snapping.snap_third_right", &cfg.snapping.snap_third_right),
         (
             "layout.move_next_monitor_shortcut",
             &cfg.layout.move_next_monitor_shortcut,

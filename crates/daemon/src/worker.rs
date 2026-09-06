@@ -6,7 +6,7 @@
 use shared::{Command, Config};
 
 use crate::arrangement::win32::{apply_plan, resolve_context, Win32WindowMover};
-use crate::arrangement::{monitor, snap, stack, PlacementPlan, PlanError};
+use crate::arrangement::{monitor, snap, stack, thirds, PlacementPlan, PlanError};
 use crate::context::spatial::{enumerate_monitors, index_of_window_monitor, Win32Monitors};
 use crate::context::virtual_desktop::VirtualDesktopManager;
 use crate::context::{
@@ -109,7 +109,10 @@ pub fn drain_commands() {
             | Command::SnapPercentLeft
             | Command::SnapPercentRight
             | Command::SnapPercentTop
-            | Command::SnapPercentBottom => {
+            | Command::SnapPercentBottom
+            | Command::SnapThirdLeft
+            | Command::SnapThirdMiddle
+            | Command::SnapThirdRight => {
                 execute_snap(Command::from_u8(raw));
             }
             Command::OverlappingStack => execute_stack(),
@@ -309,6 +312,9 @@ fn execute_snap(command: Command) {
         Command::SnapTop => snap::plan_snap_top(&ctx.work_area, ctx.target),
         Command::SnapBottom => snap::plan_snap_bottom(&ctx.work_area, ctx.target),
         Command::SnapMaximize => snap::plan_snap_maximize(&ctx.work_area, ctx.target),
+        Command::SnapThirdLeft => thirds::plan_snap_third_left(&ctx.work_area, ctx.target),
+        Command::SnapThirdMiddle => thirds::plan_snap_third_middle(&ctx.work_area, ctx.target),
+        Command::SnapThirdRight => thirds::plan_snap_third_right(&ctx.work_area, ctx.target),
         Command::SnapPercentLeft
         | Command::SnapPercentRight
         | Command::SnapPercentTop

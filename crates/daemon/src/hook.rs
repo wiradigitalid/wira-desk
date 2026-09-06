@@ -604,6 +604,9 @@ pub struct Chords {
     pub snap_top: Option<Shortcut>,
     pub snap_bottom: Option<Shortcut>,
     pub snap_maximize: Option<Shortcut>,
+    pub snap_third_left: Option<Shortcut>,
+    pub snap_third_middle: Option<Shortcut>,
+    pub snap_third_right: Option<Shortcut>,
     pub move_next_monitor: Option<Shortcut>,
     pub snap_percent_left: Option<Shortcut>,
     pub snap_percent_right: Option<Shortcut>,
@@ -625,7 +628,7 @@ impl Chords {
     /// It exists exactly once on purpose. The order is also the Settings pane's draw order
     /// and its keyboard focus order; three independently maintained copies of it is how the
     /// visible order and the precedence order start disagreeing with nothing detecting it.
-    pub fn in_declared_order(&self) -> [ChordSlot; 13] {
+    pub fn in_declared_order(&self) -> [ChordSlot; 16] {
         [
             ChordSlot {
                 chord: self.primary,
@@ -654,6 +657,18 @@ impl Chords {
             ChordSlot {
                 chord: self.snap_maximize,
                 command: Command::SnapMaximize.as_u8(),
+            },
+            ChordSlot {
+                chord: self.snap_third_left,
+                command: Command::SnapThirdLeft.as_u8(),
+            },
+            ChordSlot {
+                chord: self.snap_third_middle,
+                command: Command::SnapThirdMiddle.as_u8(),
+            },
+            ChordSlot {
+                chord: self.snap_third_right,
+                command: Command::SnapThirdRight.as_u8(),
             },
             ChordSlot {
                 chord: self.move_next_monitor,
@@ -916,7 +931,7 @@ fn load_shortcuts(worker_hwnd: HWND) -> Chords {
     // shipped default, and its diagnostic name appear together. The six hand-written
     // blocks this replaces each repeated that triple, and a new chord meant writing a
     // seventh block correctly rather than adding a row.
-    let rows: [(&str, &str, &str); 13] = [
+    let rows: [(&str, &str, &str); 16] = [
         (
             "switcher.shortcut",
             &cfg.switcher.shortcut,
@@ -953,6 +968,21 @@ fn load_shortcuts(worker_hwnd: HWND) -> Chords {
             &snap_defaults.snap_maximize,
         ),
         (
+            "snapping.snap_third_left",
+            &cfg.snapping.snap_third_left,
+            &snap_defaults.snap_third_left,
+        ),
+        (
+            "snapping.snap_third_middle",
+            &cfg.snapping.snap_third_middle,
+            &snap_defaults.snap_third_middle,
+        ),
+        (
+            "snapping.snap_third_right",
+            &cfg.snapping.snap_third_right,
+            &snap_defaults.snap_third_right,
+        ),
+        (
             "layout.move_next_monitor_shortcut",
             &cfg.layout.move_next_monitor_shortcut,
             &layout_defaults.move_next_monitor_shortcut,
@@ -984,7 +1014,7 @@ fn load_shortcuts(worker_hwnd: HWND) -> Chords {
         ),
     ];
 
-    let mut resolved: [Option<Shortcut>; 13] = [None; 13];
+    let mut resolved: [Option<Shortcut>; 16] = [None; 16];
     for (i, (field, configured, default)) in rows.iter().enumerate() {
         resolved[i] = Some(resolve_one(worker_hwnd, field, configured, default));
     }
@@ -1014,12 +1044,15 @@ fn load_shortcuts(worker_hwnd: HWND) -> Chords {
         snap_top: resolved[4],
         snap_bottom: resolved[5],
         snap_maximize: resolved[6],
-        move_next_monitor: resolved[7],
-        snap_percent_left: resolved[8],
-        snap_percent_right: resolved[9],
-        snap_percent_top: resolved[10],
-        snap_percent_bottom: resolved[11],
-        stack: resolved[12],
+        snap_third_left: resolved[7],
+        snap_third_middle: resolved[8],
+        snap_third_right: resolved[9],
+        move_next_monitor: resolved[10],
+        snap_percent_left: resolved[11],
+        snap_percent_right: resolved[12],
+        snap_percent_top: resolved[13],
+        snap_percent_bottom: resolved[14],
+        stack: resolved[15],
     }
 }
 
@@ -1432,6 +1465,9 @@ mod tests {
             snap_percent_right: Shortcut::parse(&cfg.snapping.snap_percent_right),
             snap_percent_top: Shortcut::parse(&cfg.snapping.snap_percent_top),
             snap_percent_bottom: Shortcut::parse(&cfg.snapping.snap_percent_bottom),
+            snap_third_left: Shortcut::parse(&cfg.snapping.snap_third_left),
+            snap_third_middle: Shortcut::parse(&cfg.snapping.snap_third_middle),
+            snap_third_right: Shortcut::parse(&cfg.snapping.snap_third_right),
             stack: Shortcut::parse(&cfg.layout.stack_shortcut),
         }
     }
@@ -1484,6 +1520,29 @@ mod tests {
         assert_eq!(
             match_shortcut(&chords, mods_of(bottom), bottom.vk),
             Some(Command::SnapPercentBottom.as_u8())
+        );
+    }
+
+    #[test]
+    fn exact_snap_third_matches() {
+        let chords = shipped_chords();
+
+        let left = chords.snap_third_left.expect("parses");
+        assert_eq!(
+            match_shortcut(&chords, mods_of(left), left.vk),
+            Some(Command::SnapThirdLeft.as_u8())
+        );
+
+        let middle = chords.snap_third_middle.expect("parses");
+        assert_eq!(
+            match_shortcut(&chords, mods_of(middle), middle.vk),
+            Some(Command::SnapThirdMiddle.as_u8())
+        );
+
+        let right = chords.snap_third_right.expect("parses");
+        assert_eq!(
+            match_shortcut(&chords, mods_of(right), right.vk),
+            Some(Command::SnapThirdRight.as_u8())
         );
     }
 
