@@ -4,7 +4,7 @@
 
 Decisions are no longer looked up through the memlog — the memlog goes back to being just a pass log.
 
-**11 decisions** — applied: 11.
+**12 decisions** — accepted: 1 · applied: 11.
 
 | id | Title | Status | Type | Touches | File |
 | --- | --- | --- | --- | --- | --- |
@@ -19,3 +19,4 @@ Decisions are no longer looked up through the memlog — the memlog goes back to
 | `DEC-009` | A duplicate chord unbinds the later action at startup, and refuses the whole reload | `applied` | — | `.what/business-rules.md`, `.control/product-glossary.md`, `.what/window-management/03-domain/domain-model.md`, `.what/window-management/05-scenarios/SCN-03-duplicate-chord-unbinds-later-action.md`, `.what/window-management/SRS-window-management.md`, `.how/window-management/SDD-window-management.md`, `.what/settings/02-rules/rules-settings.md`, `.what/settings/SRS-settings.md`, `.what/settings/04-usecases/EXPERIENCE.md`, `.how/settings/05-model/data-model.md` | `decisions/DEC-009-a-duplicate-chord-unbinds-the-later-action.md` |
 | `DEC-010` | The border clamp resolves its monitor from the planned rect, not from the window | `applied` | — | `.how/window-management/04-components/LC-arrangement-engine.md`, `.how/window-management/SDD-window-management.md`, `.what/window-management/02-rules/rules-window-management.md`, `.what/window-management/04-usecases/UC-7-move-window-next-monitor.md`, `.how/window-management/06-flows/flow-monitor-move.md` | `decisions/DEC-010-the-border-clamp-follows-the-planned-rect-not-the-window.md` |
 | `DEC-011` | Overlapping Stack's default shortcut moves from Ctrl+Alt+Shift+Down to Ctrl+Alt+Shift+S | `applied` | — | `.how/_platform/cross-cutting.md` | `decisions/DEC-011-overlapping-stack-moves-off-the-arrow-tier.md` |
+| `DEC-012` | Autopilot mandate for all open FR/ticket/spec delivery | `accepted` | — | — | `decisions/DEC-012-autopilot-mandate-for-open-fr-ticket-spec-delivery.md` |

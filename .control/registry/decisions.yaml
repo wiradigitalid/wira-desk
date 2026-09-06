@@ -149,3 +149,20 @@ decisions:
     created: '2026-09-06'
     touches:
       - .how/_platform/cross-cutting.md
+
+  - id: DEC-012
+    title: Autopilot mandate for all open FR/ticket/spec delivery
+    status: accepted
+    file: decisions/DEC-012-autopilot-mandate-for-open-fr-ticket-spec-delivery.md
+    created: '2026-09-06'
+    touches: []
+    mandate:
+      from_gate: G5
+      scope: all
+      parked: [ad-n]
+      smoke_test: agent  # claude-byok CLI only (CLAUDE_CONFIG_DIR=~/.claude-byok, headless), never the coordinator or the human owner
+      loop: 10m  # rides the owner's own cron job 00aa92cd, no second loop started
+      expires: '2026-09-13'
+      run_branch: autopilot/DEC-012
+      worktree: D:\Developer\wiradigital.id\wira-desk-autopilot
+      ledger: .control/memlog/autopilot-DEC-012.md
