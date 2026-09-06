@@ -282,7 +282,7 @@ rtm:
   - persistence::tests::an_out_of_range_percentage_is_rejected_before_save
   - app::tests::field_declaration_order_places_percent_snap_ahead_of_stack
   - commands::tests::roundtrip_all_commands
-  status: ready-for-review
+  status: ready-for-agent
   exempt: false
   green: false
   broken_at: status

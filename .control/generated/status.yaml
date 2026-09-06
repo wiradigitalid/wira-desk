@@ -40,11 +40,11 @@ validators_skipped:
     reviewed at 1ee9673)'
 open_questions:
   blocking: 0
-  assumptions: 31
+  assumptions: 32
   external: 2
   answered: 3
   open_by_whose:
-    owner: 8
+    owner: 9
     run: 1
     frozen: 0
     unstated: 22

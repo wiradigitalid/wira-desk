@@ -3,7 +3,7 @@ id: SPEC-1-01
 component: window-management
 satisfies: [UC-9, FR-26]
 blocked_by: []
-status: ready-for-review
+status: ready-for-agent
 tests:
   - arrangement::snap::tests::snap_percent_returns_configured_width_from_the_named_edge
   - arrangement::snap::tests::snap_percent_refuses_a_zero_or_negative_extent
@@ -54,9 +54,22 @@ the new fields are declared first.
       list of editable actions — the same list already driving that pane's draw order, focus order, and
       chord-collision precedence — with the new fields declared ahead of the Overlapping Stack field in
       that list.
-- [x] An out-of-range percentage entered in Settings is refused before save, with a message the user can
+- [ ] An out-of-range percentage entered in Settings is refused before save, with a message the user can
       act on, the same way an invalid shortcut chord is refused today — not silently clamped, not accepted
       and refused later.
+
+      **Return trip 1/2 (Step 3 review, coordinator, 2026-09-06):** `crates/settings/ui/components/shortcut_row.slint`'s
+      `TextInput` handlers (`accepted` and `changed has-focus`) call
+      `root.percent_changed(Math.clamp(Math.round(self.text.to-float()), 1, 99))` — typing `150` and
+      confirming silently becomes `99` in the UI, with no message ever shown. This is exactly what this
+      checklist line forbids ("not silently clamped, not accepted and refused later"). The backend rejection
+      (`ShortcutError::InvalidPercentage`, `RejectReason::InvalidPercentage`, and their tests) is real and
+      correct, but the shipped UI's `Math.clamp` never lets an out-of-range value reach it. Fix: the Slint
+      input must forward the raw out-of-range value (or otherwise let the existing backend
+      validate-before-save path see it) so an out-of-range percentage is refused with an actionable message,
+      not clamped in the UI. Do not touch the backend validation, its tests, or the `stack_width_percent`
+      control (out of this ticket's scope; if `stack_width_percent` has the identical clamping issue, report
+      it as a follow-up, don't fix it here).
 - [x] The existing declared-sequence/precedence-order test gains rows for the four new fields, including a
       row confirming each is declared ahead of the Overlapping Stack field.
 - [x] A window with an enforced minimum size larger than the requested percentage is positioned flush to

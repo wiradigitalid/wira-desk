@@ -164,5 +164,5 @@ decisions:
       loop: 10m  # rides the owner's own cron job 00aa92cd, no second loop started
       expires: '2026-09-13'
       run_branch: autopilot/DEC-012
-      worktree: D:\Developer\wiradigital.id\wira-desk-autopilot
+      worktree: ../wira-desk-autopilot  # sibling of this checkout; `git worktree list` from here finds its actual path
       ledger: .control/memlog/autopilot-DEC-012.md

@@ -9,8 +9,9 @@ date: 2026-09-06
 ## Resume
 
 - Iteration: 7
-- Run branch: `autopilot/DEC-012`, worktree `D:\Developer\wiradigital.id\wira-desk-autopilot`, HEAD
-  `b49204b`. PR: not opened yet (opens at first spec close, per mandate).
+- Run branch: `autopilot/DEC-012`, worktree at `../wira-desk-autopilot` relative to the main checkout (`git
+  worktree list` finds its actual path), HEAD `b49204b`. PR: not opened yet (opens at first spec close, per
+  mandate).
 - Stopped at: capacity — `SPEC-1-01`'s code is committed and independently verified green (fmt/clippy/501
   tests, 0 failed), Step 3 review dispatched as two parallel agents (`abb560804106a7f88` Standards,
   `a868fce8df0c9fc15` Spec). Cannot be waited on synchronously.
@@ -26,19 +27,29 @@ date: 2026-09-06
   independent test run (501 passed) still holds. Root cause and fix are in Decisions below — the practice
   going forward is `TaskOutput(block:false)` to check a job's real status, never inferring death from a
   redirected stderr line.
-- In flight: two review agents on `SPEC-1-01` (`ede6656`+`fa2eeeb` vs. `9216f4c`), Standards axis
-  `abb560804106a7f88` and Spec axis `a868fce8df0c9fc15`.
-- Next: once both review agents report — adjudicate any findings from the artifact (not from either
-  agent's self-description); on a clean or resolved review, `SPEC-1-01` closes (already on the run branch),
-  then dispatch claude-byok for `SPEC-1-02` next, sequentially, confirming via `TaskOutput` before
-  considering any prior job fully dead. Once both tickets are done, close `SPEC-1`, push the run branch,
-  open the one draft PR, watch CI.
+- Both review agents reported and were independently verified against the diff/gate, not trusted as
+  written. Two real findings: (1) Spec must-fix — Slint's percentage input silently clamps out-of-range
+  values instead of refusing them, contradicting the ticket's own checklist line; ticket amended with the
+  finding, status reset to `ready-for-agent` (return trip 1/2). (2) Standards must-fix on files *I* wrote
+  (not claude-byok's) — `verify-public-export.ps1` flagged 4 literal local-path hits in `DEC-012`/ledger/
+  `decisions.yaml`; fixed by rewording to `../wira-desk-autopilot` / "see decisions.yaml" instead of the
+  absolute path. A 5th/6th finding (maintainer-handle in `.control/decisions/*`) matches a pre-existing,
+  already-failing pattern (`DEC-011`, on `main` before this mandate) — filed as `OQ-37`, not decided
+  unilaterally. Three Standards *smells* (duplicated range-check logic, duplicated per-edge planner shape,
+  triple command dispatch) are follow-up-only, not must-fix — left unfixed, not returned to Step 2 for.
+- Blocked: —
+- Parked: —
+- Next: dispatch claude-byok for the `SPEC-1-01` fix round (Slint clamping only — do not widen scope to the
+  Standards smells or `stack_width_percent`), confirming via `TaskOutput(block:false)` before assuming any
+  prior job is dead. On that landing green and re-reviewed clean, `SPEC-1-01` closes, then `SPEC-1-02`
+  starts, sequentially. Once both tickets are done, close `SPEC-1`, push the run branch, open the one draft
+  PR, watch CI.
 
 ## Decisions
 
 | When | Where | Decided | Instead of | Cost if wrong | Landed in |
 |---|---|---|---|---|---|
-| Preflight, `9216f4c` | Engines: isolated worktree | Cut `autopilot/DEC-012` as a sibling worktree at `D:\Developer\wiradigital.id\wira-desk-autopilot` rather than working in the main checkout | Running the mandate against the shared main checkout | Delete the worktree, re-cut if the path is wrong | `git worktree add` |
+| Preflight, `9216f4c` | Engines: isolated worktree | Cut `autopilot/DEC-012` as a sibling worktree (`../wira-desk-autopilot`, see `decisions.yaml`) rather than working in the main checkout | Running the mandate against the shared main checkout | Delete the worktree, re-cut if the path is wrong | `git worktree add` |
 | Preflight | Settings: `smoke_test` | `agent`, delegated specifically to the `claude-byok` CLI profile (headless, `CLAUDE_CONFIG_DIR=~/.claude-byok`), never the coordinator or the human owner | Guide default of `owner` (no scriptable app launch named in `codebase-stack-guide.md`) | One setting changes via a superseding `DEC-` | `DEC-012` row, `decisions.yaml` |
 | Preflight | Settings: `loop` | Ride the owner's existing cron job `00aa92cd` (10m) rather than starting a second loop | A fresh `loop` skill invocation at the default 5m | Cancel one, keep the other | `decisions.yaml` mandate row |
 | Preflight | Runtime: build/test ownership | Coordinator never runs `cargo build`/`cargo test`/`./build.ps1` or launches the app in the shared worktree; claude-byok's own ticket-closing checklist covers it | Coordinator running the full suite itself between claude-byok invocations | A concurrent build race in the shared worktree | This ledger, `DEC-012` |
@@ -51,3 +62,6 @@ date: 2026-09-06
 | Iter 7 | Root cause: `b8nzz6xny` misjudged dead | A PowerShell `NativeCommandError` written to a redirected log by `*>` does not mean the underlying job died — `$ErrorActionPreference` was never `Stop`, so the background job kept running past that line. Confirmed via `TaskOutput`, which showed it still `running` for iterations 3-6 and only just completed | Assuming the visible error text meant termination, which is what let a second builder get dispatched into the same worktree while the first was still technically alive | Two concurrent claude-byok processes in one worktree, the exact race `DEC-012` exists to prevent — this time harmless (one small doc commit), not guaranteed next time | This row, `b49204b` |
 | Iter 7 | Fix: job-liveness check going forward | Every future "is this job still running" question is answered by `TaskOutput(task_id, block:false)`, never by reading a log's content and inferring state from it | Continuing to eyeball log files for signs of life or death | Repeating the same near-miss | This row, all iterations from here |
 | Iter 7 | Step 3 dispatch | Two parallel review agents, Standards axis and Spec axis, per `code-review`'s own process — genuinely separate from claude-byok (the builder) | A self-review, or trusting claude-byok's own internal `/code-review` pass (self-review by construction, doesn't satisfy Step 3 per `wdi-build`) | Re-dispatch if either agent's findings turn out unverifiable from the diff | This row, `abb560804106a7f88`, `a868fce8df0c9fc15` |
+| Iter 7 | Spec must-fix, verified | Confirmed by reading `shortcut_row.slint` directly: `Math.clamp` on both `TextInput` handlers silently clamps 1-99, contradicting the ticket's explicit "not silently clamped" line. Ticket amended (return trip 1/2), status reset to `ready-for-agent` | Accepting the reviewer's claim without reading the diff myself | A ticket closed with a real acceptance-criterion violation shipped | `01-custom-percentage-edge-snap.md` |
+| Iter 7 | Standards must-fix, my own files, fixed | Confirmed by running `verify-public-export.ps1` myself: 4 literal `D:\Developer\...` path hits in `DEC-012`, the ledger, and `decisions.yaml` — all mine, all fixed in place (still `accepted`, not `applied`, so editable) by rewording to a relative/registry-pointer form | Leaving the literal paths in, or widening the gate's pattern to suppress the finding (the exact failure mode the gate's own comment warns against) | Re-check with the gate again if any future ledger edit reintroduces a literal path | `DEC-012` file, ledger, `decisions.yaml` |
+| Iter 7 | Standards must-fix, corpus-wide, not decided | The remaining 2 gate findings (maintainer handle in `.control/decisions/*`, no `Allowed` entry there) match `DEC-011`'s pre-existing violation on `main` — a policy tension between `decision-guide.md`'s required `accepted_by` field and this product's own gate, predating this mandate. Filed as `OQ-37` for the owner rather than invented a fix | Silently widening the gate's `Allowed` list, or silently moving `accepted_by` out of the `DEC-` file against the method's own format | If wrong, the owner's answer supersedes `OQ-37` and this run (or a follow-up) applies it | `.control/questions/assumptions.md` `OQ-37` |

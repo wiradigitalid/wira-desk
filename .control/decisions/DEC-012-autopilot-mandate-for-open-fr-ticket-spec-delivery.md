@@ -22,8 +22,8 @@ parked row. Parameters live on this decision's row in `decisions.yaml` under `ma
 The owner wants the remaining work (currently `SPEC-1`: `FR-26`/`FR-27`, percentage/thirds snap on
 `window-management`) delivered unattended. Coding and smoke-testing are explicitly assigned to a separate
 `claude` CLI profile (`CLAUDE_CONFIG_DIR=~/.claude-byok`), invoked headlessly by the coordinator one call at
-a time inside the isolated worktree `D:\Developer\wiradigital.id\wira-desk-autopilot` (branch
-`autopilot/DEC-012`, cut from `main` at `9216f4c`) — so the coordinator's own review/doc/coordination work
+a time inside the run's isolated sibling worktree (see `worktree` on this decision's row in
+`decisions.yaml`; branch `autopilot/DEC-012`, cut from `main` at `9216f4c`) — so the coordinator's own review/doc/coordination work
 never races a build in that worktree. The coordinator does not run `cargo build`/`cargo test`/`./build.ps1`
 or launch the app there; those, and the smoke test itself, are claude-byok's alone. The mandate's own `loop`
 cadence rides the owner's already-running cron job (`00aa92cd`, every 10 minutes) rather than a second one.
