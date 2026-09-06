@@ -39,11 +39,14 @@ date: 2026-09-06
   triple command dispatch) are follow-up-only, not must-fix — left unfixed, not returned to Step 2 for.
 - Blocked: —
 - Parked: —
-- Next: dispatch claude-byok for the `SPEC-1-01` fix round (Slint clamping only — do not widen scope to the
-  Standards smells or `stack_width_percent`), confirming via `TaskOutput(block:false)` before assuming any
-  prior job is dead. On that landing green and re-reviewed clean, `SPEC-1-01` closes, then `SPEC-1-02`
-  starts, sequentially. Once both tickets are done, close `SPEC-1`, push the run branch, open the one draft
-  PR, watch CI.
+- In flight: harness background job `b4i44ijoi` — claude-byok fix round 1/2 for `SPEC-1-01` (Slint clamping
+  finding only, scope-limited by the prompt). Confirm via `TaskOutput(block:false)` before assuming it's
+  done — do not infer from log content alone (see the `b8nzz6xny` near-miss above).
+- Next: once `b4i44ijoi` is confirmed finished — independently verify (fmt/clippy/full suite), re-review the
+  fix specifically (not the whole ticket again), and on clean close `SPEC-1-01`. If this fix round itself
+  needs a second return trip, that's the cap (2 total) — a third failed fix escalates rather than retrying.
+  Then dispatch claude-byok for `SPEC-1-02`, sequentially. Once both tickets are done, close `SPEC-1`, push
+  the run branch, open the one draft PR, watch CI.
 
 ## Decisions
 
