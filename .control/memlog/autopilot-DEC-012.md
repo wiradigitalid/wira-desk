@@ -8,21 +8,28 @@ date: 2026-09-06
 
 ## Resume
 
-- Iteration: 20 — **run finished.**
-- Run branch: `autopilot/DEC-012`. PR: about to be opened (this iteration) as a draft from this branch.
-- Stopped at: **Done.** Every `FR` in scope closed (`FR-26`, `FR-27`), no other spec open, smoke test
-  completed and recorded, `DEC-012` raised to `applied`. Pushing the run branch and opening the one PR is
-  the only remaining action.
+- Iteration: 21.
+- Run branch: `autopilot/DEC-012`, HEAD `9326130`. **PR #16 opened as draft**:
+  https://github.com/wiradigitalid/wira-desk/pull/16.
+- Stopped at: capacity — CI running on `9326130` (4 checks: build, dependencies, publication-hygiene,
+  secrets), all `pending` as of this iteration. Cannot be waited on synchronously.
 - Blocked: —
 - Parked: —
+- Watch: `publication-hygiene` may fail — the known, already-filed `OQ-37` gate finding (maintainer handle
+  in `.control/decisions/DEC-011*`/`DEC-012*`, pre-existing on `main` before this mandate) could well be
+  what CI's own copy of `verify-public-export.ps1` catches. That is an expected, already-recorded, not-new
+  finding — do not "fix" it by widening the gate or by inventing a fix for the corpus-wide policy question
+  `OQ-37` already owns; report it as-is if CI fails on it.
 - Smoke test (claude-byok, job `ba3b8dciw`): release build PASS (fmt/clippy/512 tests, 0 failed, 2
   ignored), Settings GUI launch PASS. Live daemon launch / real keypress verification: **NOT VERIFIABLE
   FROM THIS SESSION** — headless session has no interactive UAC elevation and no keyboard-input-injection
   tooling; an existing elevated instance (PID 8896) was also already holding the single-instance mutex.
   FR-26 and FR-27 verdict: PASS at code/unit-test level (512 tests including the new suites), live E2E
   not run, by mandate.
-- Next: nothing — this mandate is closed. Any further work is a new mandate or a manual owner action
-  (merge the PR, or exercise the live UI test script in the Finish report).
+- Next: check CI on PR #16 via `gh pr checks 16`. If all green (or only the expected `OQ-37`-related
+  `publication-hygiene` finding, unrelated to this run's own code), mark the PR ready for review and write
+  the Finish report. If red for a different reason, keep the PR a draft, report red, do not patch to force
+  green.
 
 ## Decisions
 
