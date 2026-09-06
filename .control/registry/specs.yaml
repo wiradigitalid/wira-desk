@@ -37,6 +37,27 @@ specs:
       sha: '7a0d260'
       lenses: [structure, prose, edge-case-hunter]
     fr: [FR-1, FR-2, FR-3, FR-4, FR-5, FR-6, FR-7, FR-10, FR-11, FR-12, FR-13, FR-14, FR-17, FR-18]
+    # `tickets:` carries ONLY the window-management stories (S1-S3), added post-hoc (2026-09-06) so
+    # `uc-scheduled` can see UC-1/UC-2/UC-3 as already scheduled, now that SPEC-1 is the first spec
+    # to touch this component under the flat shape. Deliberately NOT extending this to S4-S6
+    # (settings): doing so would mark `settings` touched too and newly redden UC-8, which no spec
+    # schedules yet — a second gap traded for fixing this one. `epics`/`stories` below stay
+    # untouched as the frozen record; this is a parallel derived index of the same already-true
+    # facts, not a rewrite. Ticket files copied (not moved) from `stories/` to `issues/` so
+    # `ticket-status-one-home` can find them; `stories/` is unchanged.
+    tickets:
+      - id: W1-S1
+        component: window-management
+        satisfies: [UC-1]
+        tests: [cycling::tests::activates_next_window_of_same_application, cycling::tests::same_executable_different_pid_is_same_application, cycling::tests::multi_process_same_executable_groups_together, cycling::tests::excluded_windows_are_skipped, cycling::tests::invalid_target_continues_to_next_candidate]
+      - id: W1-S2
+        component: window-management
+        satisfies: [UC-2]
+        tests: [arrangement::snap::tests::snap_left_returns_left_half, arrangement::snap::tests::snap_right_returns_complementary_half, arrangement::snap::tests::halves_tile_the_work_area_without_gap_or_overlap]
+      - id: W1-S3
+        component: window-management
+        satisfies: [UC-3]
+        tests: [tray::tests::next_hook_check_state_escalates_after_threshold, tray::tests::next_hook_check_state_resets_on_success]
     epics:
       - id: E1
         title: Same-application cycling and spatial isolation proven on the shipped daemon

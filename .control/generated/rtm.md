@@ -9,53 +9,64 @@ rtm:
   FR: FR-1
   DEC: []
   UC: UC-1
-  ticket: ''
-  spec: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W1-S1
+  spec: W1
+  release: 0.1.0
+  test:
+  - cycling::tests::activates_next_window_of_same_application
+  - cycling::tests::same_executable_different_pid_is_same_application
+  - cycling::tests::multi_process_same_executable_groups_together
+  - cycling::tests::excluded_windows_are_skipped
+  - cycling::tests::invalid_target_continues_to_next_candidate
+  status: done
   exempt: false
-  broken_at: ticket
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-9
   FR: FR-10
   DEC: []
   UC: UC-3
-  ticket: ''
-  spec: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W1-S3
+  spec: W1
+  release: 0.1.0
+  test:
+  - tray::tests::next_hook_check_state_escalates_after_threshold
+  - tray::tests::next_hook_check_state_resets_on_success
+  status: done
   exempt: false
-  broken_at: ticket
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-9
   FR: FR-11
   DEC: []
   UC: UC-3
-  ticket: ''
-  spec: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W1-S3
+  spec: W1
+  release: 0.1.0
+  test:
+  - tray::tests::next_hook_check_state_escalates_after_threshold
+  - tray::tests::next_hook_check_state_resets_on_success
+  status: done
   exempt: false
-  broken_at: ticket
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-11
   FR: FR-12
   DEC: []
   UC: UC-3
-  ticket: ''
-  spec: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W1-S3
+  spec: W1
+  release: 0.1.0
+  test:
+  - tray::tests::next_hook_check_state_escalates_after_threshold
+  - tray::tests::next_hook_check_state_resets_on_success
+  status: done
   exempt: false
-  broken_at: ticket
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-10
   FR: FR-13
@@ -74,14 +85,17 @@ rtm:
   FR: FR-14
   DEC: []
   UC: UC-2
-  ticket: ''
-  spec: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W1-S2
+  spec: W1
+  release: 0.1.0
+  test:
+  - arrangement::snap::tests::snap_left_returns_left_half
+  - arrangement::snap::tests::snap_right_returns_complementary_half
+  - arrangement::snap::tests::halves_tile_the_work_area_without_gap_or_overlap
+  status: done
   exempt: false
-  broken_at: ticket
+  green: true
+  broken_at: ''
 - BG: BG-3
   CAP: CAP-2
   FR: FR-15
@@ -152,14 +166,19 @@ rtm:
   FR: FR-2
   DEC: []
   UC: UC-1
-  ticket: ''
-  spec: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W1-S1
+  spec: W1
+  release: 0.1.0
+  test:
+  - cycling::tests::activates_next_window_of_same_application
+  - cycling::tests::same_executable_different_pid_is_same_application
+  - cycling::tests::multi_process_same_executable_groups_together
+  - cycling::tests::excluded_windows_are_skipped
+  - cycling::tests::invalid_target_continues_to_next_candidate
+  status: done
   exempt: false
-  broken_at: ticket
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-5
   FR: FR-20
@@ -191,14 +210,17 @@ rtm:
   FR: FR-22
   DEC: []
   UC: UC-2
-  ticket: ''
-  spec: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W1-S2
+  spec: W1
+  release: 0.1.0
+  test:
+  - arrangement::snap::tests::snap_left_returns_left_half
+  - arrangement::snap::tests::snap_right_returns_complementary_half
+  - arrangement::snap::tests::halves_tile_the_work_area_without_gap_or_overlap
+  status: done
   exempt: false
-  broken_at: ticket
+  green: true
+  broken_at: ''
 - BG: BG-3
   CAP: CAP-12
   FR: FR-23
@@ -283,53 +305,73 @@ rtm:
   FR: FR-3
   DEC: []
   UC: UC-1
-  ticket: ''
-  spec: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W1-S1
+  spec: W1
+  release: 0.1.0
+  test:
+  - cycling::tests::activates_next_window_of_same_application
+  - cycling::tests::same_executable_different_pid_is_same_application
+  - cycling::tests::multi_process_same_executable_groups_together
+  - cycling::tests::excluded_windows_are_skipped
+  - cycling::tests::invalid_target_continues_to_next_candidate
+  status: done
   exempt: false
-  broken_at: ticket
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-1
   FR: FR-4
   DEC: []
   UC: UC-1
-  ticket: ''
-  spec: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W1-S1
+  spec: W1
+  release: 0.1.0
+  test:
+  - cycling::tests::activates_next_window_of_same_application
+  - cycling::tests::same_executable_different_pid_is_same_application
+  - cycling::tests::multi_process_same_executable_groups_together
+  - cycling::tests::excluded_windows_are_skipped
+  - cycling::tests::invalid_target_continues_to_next_candidate
+  status: done
   exempt: false
-  broken_at: ticket
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-1
   FR: FR-5
   DEC: []
   UC: UC-1
-  ticket: ''
-  spec: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W1-S1
+  spec: W1
+  release: 0.1.0
+  test:
+  - cycling::tests::activates_next_window_of_same_application
+  - cycling::tests::same_executable_different_pid_is_same_application
+  - cycling::tests::multi_process_same_executable_groups_together
+  - cycling::tests::excluded_windows_are_skipped
+  - cycling::tests::invalid_target_continues_to_next_candidate
+  status: done
   exempt: false
-  broken_at: ticket
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-1
   FR: FR-6
   DEC: []
   UC: UC-1
-  ticket: ''
-  spec: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W1-S1
+  spec: W1
+  release: 0.1.0
+  test:
+  - cycling::tests::activates_next_window_of_same_application
+  - cycling::tests::same_executable_different_pid_is_same_application
+  - cycling::tests::multi_process_same_executable_groups_together
+  - cycling::tests::excluded_windows_are_skipped
+  - cycling::tests::invalid_target_continues_to_next_candidate
+  status: done
   exempt: false
-  broken_at: ticket
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-3
   FR: FR-7
