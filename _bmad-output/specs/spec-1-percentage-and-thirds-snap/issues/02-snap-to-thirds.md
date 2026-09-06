@@ -3,7 +3,8 @@ id: SPEC-1-02
 component: window-management
 satisfies: [UC-10, FR-27]
 blocked_by: []
-status: ready-for-review
+status: done
+commit: fc7f8ca
 tests:
   - arrangement::thirds::tests::thirds_tile_the_work_area_without_gap_or_overlap
   - arrangement::thirds::tests::remainder_width_goes_to_the_middle_column

@@ -296,10 +296,10 @@ rtm:
   - config::tests::third_snap_fields_roundtrip_through_toml
   - app::tests::field_declaration_order_includes_third_snap_fields
   - commands::tests::roundtrip_all_commands
-  status: ready-for-review
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-8
   FR: FR-3
