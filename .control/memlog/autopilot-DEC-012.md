@@ -8,28 +8,25 @@ date: 2026-09-06
 
 ## Resume
 
-- Iteration: 24.
-- Run branch: `autopilot/DEC-012`, HEAD `1bee566` (the ledger-only Finish commit pushed on top of
-  `9326130`, which CI had already fully evaluated — that push started a **new** CI run, `34051968117`, on
-  `1bee566`). **PR #16, left as draft**: https://github.com/wiradigitalid/wira-desk/pull/16.
-- Stopped at: capacity — CI on `1bee566` (`34051968117`) just started: `secrets` PASS, `build`/
-  `dependencies`/`publication-hygiene` still `pending`. Cannot be waited on synchronously.
+- Iteration: 26 — **run finished, for real this time.**
+- Run branch: `autopilot/DEC-012`, HEAD `1bee566`. **PR #16, left as draft**:
+  https://github.com/wiradigitalid/wira-desk/pull/16.
+- Stopped at: **Done.** CI on `1bee566` (`34051968117`) concluded: `build` PASS (11m55s), `dependencies`
+  PASS, `secrets` PASS, `publication-hygiene` **FAIL** — identical to the prior run on `9326130`, confirming
+  determinism (same 2 `OQ-37` findings, nothing new, no code changed between the two heads). PR correctly
+  stays draft.
 - Blocked: —
 - Parked: **`OQ-37`** — the corpus-wide policy question (does `.control/decisions/*` get an `Allowed`
-  entry in `verify-public-export.ps1`, or does `accepted_by` move elsewhere) is the owner's to answer.
-  `publication-hygiene` failed on exactly this on the prior head (`9326130`) and is expected to fail
-  identically here since nothing about `OQ-37` changed — but it must be **confirmed** on `1bee566`, not
-  assumed from the prior run, before writing the Finish report.
-- Lesson for next time: a ledger-only commit pushed to the run branch still triggers a full CI run. Fold
-  the final ledger update into the same push as the last content commit where possible, rather than
-  pushing again after CI has already evaluated a head.
+  entry in `verify-public-export.ps1`, or does `accepted_by` move elsewhere) is the owner's to answer;
+  answering it and re-pushing is what would turn this last check green.
 - Smoke test (claude-byok, job `ba3b8dciw`): release build PASS (fmt/clippy/512 tests, 0 failed, 2
   ignored), Settings GUI launch PASS. Live daemon launch / real keypress verification: **NOT VERIFIABLE
   FROM THIS SESSION** — headless session has no interactive UAC elevation and no keyboard-input-injection
   tooling; an existing elevated instance (PID 8896) was also already holding the single-instance mutex.
   FR-26/FR-27 verdict: PASS at code/unit-test level, live E2E not run, by mandate.
-- Next: nothing — mandate closed. The owner merges after answering `OQ-37` (or after deciding the finding
-  doesn't block a merge) and running the live test script in the Finish report.
+- Next: nothing — mandate closed. The owner merges after answering `OQ-37` (or deciding the finding
+  doesn't block a merge) and running the live test script in the Finish report. **This is the last push
+  this run makes** — no further pushes, to avoid re-triggering CI on a head nothing further changes.
 
 ## Decisions
 
@@ -66,3 +63,4 @@ date: 2026-09-06
 | Iter 20 | Mandate raised to `applied` | `touches` names every file this mandate actually changed (code, config, corpus, registries) — filled from git history across the whole run, not guessed | Leaving `touches` empty or partial | `applied-dec-touches` validator would catch an empty one; a wrong list is harder to catch, so it was built from `git diff main...HEAD --stat` | `DEC-012` file, `decisions.yaml` |
 | Iter 22 | CI `publication-hygiene` red, PR stays draft | Read the actual job log rather than assume: exactly the 2 pre-existing `OQ-37` findings (`DEC-011`/`DEC-012` maintainer handle), nothing new from this mandate's code. Not patched at the door, per Red Flags — PR stays draft, reported red in Finish | Widening the gate's `Allowed` list or moving `accepted_by` to make CI pass | The owner's `OQ-37` answer fixes it properly later; forcing green now would be exactly the failure mode the gate's own comment warns against | CI run `34051075317`, job `101534692966` |
 | Iter 23 | Run closed | `build` PASS (11m45s), only `publication-hygiene` red on the known `OQ-37` finding — PR #16 left as draft, not merged, not forced green. `OQ-37` parked for the owner | Marking it ready anyway since the failure predates this mandate's own code | The owner merges only after deciding `OQ-37` (fix the gate, or accept the finding and merge over it) | PR #16, this ledger |
+| Iter 24-26 | Re-triggered CI, confirmed determinism, stopped pushing | A ledger-only push re-runs CI on the new head; rather than treat that as new information, confirmed the second run matched the first exactly (`build` PASS, `publication-hygiene` FAIL on the same 2 findings) before writing this final state. This commit is deliberately the **last** push this run makes | Re-checking a third time out of caution, or avoiding this commit entirely and leaving the ledger's `## Resume` stale relative to the real end state | None — the result is proven deterministic, a third check would spend a CI run for no new information | `9326130` vs `1bee566`, CI runs `34051075317`/`34051968117` |
