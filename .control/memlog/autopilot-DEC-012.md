@@ -8,18 +8,21 @@ date: 2026-09-06
 
 ## Resume
 
-- Iteration: 23 — **run finished.**
-- Run branch: `autopilot/DEC-012`, HEAD `9326130`. **PR #16, left as draft**:
-  https://github.com/wiradigitalid/wira-desk/pull/16.
-- Stopped at: **Done.** CI on `9326130`: `build` PASS (11m45s), `dependencies` PASS, `secrets` PASS,
-  `publication-hygiene` **FAIL** — confirmed via the actual job log to be exactly the 2 pre-existing,
-  already-filed `OQ-37` findings (`DEC-011`/`DEC-012` maintainer handle), nothing this mandate's code
-  introduced. Not patched at the door, per Red Flags. PR correctly left as draft — a red check is a red
-  check, whatever its cause.
+- Iteration: 24.
+- Run branch: `autopilot/DEC-012`, HEAD `1bee566` (the ledger-only Finish commit pushed on top of
+  `9326130`, which CI had already fully evaluated — that push started a **new** CI run, `34051968117`, on
+  `1bee566`). **PR #16, left as draft**: https://github.com/wiradigitalid/wira-desk/pull/16.
+- Stopped at: capacity — CI on `1bee566` (`34051968117`) just started: `secrets` PASS, `build`/
+  `dependencies`/`publication-hygiene` still `pending`. Cannot be waited on synchronously.
 - Blocked: —
 - Parked: **`OQ-37`** — the corpus-wide policy question (does `.control/decisions/*` get an `Allowed`
-  entry in `verify-public-export.ps1`, or does `accepted_by` move elsewhere) is the owner's to answer;
-  answering it and re-pushing would turn this last check green.
+  entry in `verify-public-export.ps1`, or does `accepted_by` move elsewhere) is the owner's to answer.
+  `publication-hygiene` failed on exactly this on the prior head (`9326130`) and is expected to fail
+  identically here since nothing about `OQ-37` changed — but it must be **confirmed** on `1bee566`, not
+  assumed from the prior run, before writing the Finish report.
+- Lesson for next time: a ledger-only commit pushed to the run branch still triggers a full CI run. Fold
+  the final ledger update into the same push as the last content commit where possible, rather than
+  pushing again after CI has already evaluated a head.
 - Smoke test (claude-byok, job `ba3b8dciw`): release build PASS (fmt/clippy/512 tests, 0 failed, 2
   ignored), Settings GUI launch PASS. Live daemon launch / real keypress verification: **NOT VERIFIABLE
   FROM THIS SESSION** — headless session has no interactive UAC elevation and no keyboard-input-injection
