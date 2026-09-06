@@ -39,14 +39,22 @@ date: 2026-09-06
   triple command dispatch) are follow-up-only, not must-fix — left unfixed, not returned to Step 2 for.
 - Blocked: —
 - Parked: —
-- In flight: harness background job `b4i44ijoi` — claude-byok fix round 1/2 for `SPEC-1-01` (Slint clamping
-  finding only, scope-limited by the prompt). Confirm via `TaskOutput(block:false)` before assuming it's
-  done — do not infer from log content alone (see the `b8nzz6xny` near-miss above).
-- Next: once `b4i44ijoi` is confirmed finished — independently verify (fmt/clippy/full suite), re-review the
-  fix specifically (not the whole ticket again), and on clean close `SPEC-1-01`. If this fix round itself
-  needs a second return trip, that's the cap (2 total) — a third failed fix escalates rather than retrying.
-  Then dispatch claude-byok for `SPEC-1-02`, sequentially. Once both tickets are done, close `SPEC-1`, push
-  the run branch, open the one draft PR, watch CI.
+- `b4i44ijoi` completed (confirmed via `TaskOutput`, not the log), commit `1d15f5c` — `Math.clamp` removed
+  from `shortcut_row.slint`, an out-of-range value now reaches backend validation. Independently verified:
+  fmt/clippy/full suite green (chain exit 0), `verify-public-export.ps1` unchanged at 2 findings (only the
+  already-filed `OQ-37`, nothing new). One incidental note: claude-byok's own commit also edited one word in
+  this ledger's Decisions table (replacing a literal path I'd left in a finding's own description with
+  "developer workstation path") — a real, correct fix, but technically not the coordinator's-only-write rule
+  being followed to the letter; recorded rather than silently accepted.
+- Blocked: —
+- Parked: —
+- In flight: independent re-review of just commit `1d15f5c` (agent `a6cedeca717fb4baa`) — genuinely separate
+  from claude-byok, since its own internal review is self-review by construction.
+- Next: once the re-review reports — on clean, close `SPEC-1-01` (ticket status already `ready-for-review`
+  from claude-byok; coordinator's own review is what actually closes it) and dispatch claude-byok for
+  `SPEC-1-02`, sequentially, confirming via `TaskOutput` throughout. If the re-review finds a real must-fix,
+  that would be return trip 2/2 (the cap) — a third failed fix escalates rather than retrying. Once both
+  tickets are done, close `SPEC-1`, push the run branch, open the one draft PR, watch CI.
 
 ## Decisions
 
@@ -68,3 +76,5 @@ date: 2026-09-06
 | Iter 7 | Spec must-fix, verified | Confirmed by reading `shortcut_row.slint` directly: `Math.clamp` on both `TextInput` handlers silently clamps 1-99, contradicting the ticket's explicit "not silently clamped" line. Ticket amended (return trip 1/2), status reset to `ready-for-agent` | Accepting the reviewer's claim without reading the diff myself | A ticket closed with a real acceptance-criterion violation shipped | `01-custom-percentage-edge-snap.md` |
 | Iter 7 | Standards must-fix, my own files, fixed | Confirmed by running `verify-public-export.ps1` myself: 4 literal developer workstation path hits in `DEC-012`, the ledger, and `decisions.yaml` — all mine, all fixed in place (still `accepted`, not `applied`, so editable) by rewording to a relative/registry-pointer form | Leaving the literal paths in, or widening the gate's pattern to suppress the finding (the exact failure mode the gate's own comment warns against) | Re-check with the gate again if any future ledger edit reintroduces a literal path | `DEC-012` file, ledger, `decisions.yaml` |
 | Iter 7 | Standards must-fix, corpus-wide, not decided | The remaining 2 gate findings (maintainer handle in `.control/decisions/*`, no `Allowed` entry there) match `DEC-011`'s pre-existing violation on `main` — a policy tension between `decision-guide.md`'s required `accepted_by` field and this product's own gate, predating this mandate. Filed as `OQ-37` for the owner rather than invented a fix | Silently widening the gate's `Allowed` list, or silently moving `accepted_by` out of the `DEC-` file against the method's own format | If wrong, the owner's answer supersedes `OQ-37` and this run (or a follow-up) applies it | `.control/questions/assumptions.md` `OQ-37` |
+| Iter 10 | Fix round 1/2 result | `1d15f5c` genuinely resolves the clamping finding — verified by reading the diff (removed `Math.clamp` in Slint, `main.rs` now floors a negative to 0 in Rust instead) and by independently re-running fmt/clippy/full suite and the export gate myself, not trusting claude-byok's own report | Accepting the "0 hard violations" self-review claim in its report | A ticket closed with a bug the self-review missed | `1d15f5c` |
+| Iter 10 | claude-byok touched the ledger | Its fix commit corrected one literal path fragment I'd left in a Decisions-table cell (via its own export-gate check) — recorded as a rule deviation worth noting, not reverted, since the correction itself is accurate | Reverting the correction to enforce "coordinator-only" strictly, which would reintroduce a real gate finding | None — content is correct either way | This row |
