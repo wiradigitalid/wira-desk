@@ -107,7 +107,7 @@ export component ShortcutRow inherits Rectangle {
                     }
                     pct_minus_touch := TouchArea {
                         clicked => {
-                            root.percent_changed(root.percent - 1);
+                            root.percent_changed(Math.clamp(root.percent - 1, 1, 99));
                         }
                     }
                 }
@@ -149,13 +149,19 @@ export component ShortcutRow inherits Rectangle {
 
                             accepted => {
                                 if self.text.is-float() {
-                                    root.percent_changed(Math.round(self.text.to-float()));
+                                    root.percent_changed(Math.clamp(Math.round(self.text.to-float()), 1, 99));
+                                } else {
+                                    self.text = "\{root.percent}";
                                 }
                                 self.clear-focus();
                             }
                             changed has-focus => {
-                                if !self.has-focus && self.text.is-float() {
-                                    root.percent_changed(Math.round(self.text.to-float()));
+                                if !self.has-focus {
+                                    if self.text.is-float() {
+                                        root.percent_changed(Math.clamp(Math.round(self.text.to-float()), 1, 99));
+                                    } else {
+                                        self.text = "\{root.percent}";
+                                    }
                                 }
                             }
                         }
@@ -193,7 +199,7 @@ export component ShortcutRow inherits Rectangle {
                     }
                     pct_plus_touch := TouchArea {
                         clicked => {
-                            root.percent_changed(root.percent + 1);
+                            root.percent_changed(Math.clamp(root.percent + 1, 1, 99));
                         }
                     }
                 }

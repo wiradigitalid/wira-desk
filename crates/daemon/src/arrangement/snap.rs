@@ -106,6 +106,14 @@ pub enum SnapEdge {
     Bottom,
 }
 
+fn calculate_extent(dimension: i32, percent: u32) -> Result<i32, PlanError> {
+    let extent = (dimension as i64 * percent as i64 / 100) as i32;
+    if extent <= 0 {
+        return Err(PlanError::EmptyOrInvertedWorkArea);
+    }
+    Ok(extent)
+}
+
 /// Snap against the named edge at `percent` percent of the work area.
 pub fn plan_snap_percent(
     work: &WorkArea,
@@ -115,7 +123,9 @@ pub fn plan_snap_percent(
 ) -> PlanResult {
     ensure_usable(work)?;
 
-    if percent == 0 || percent > 100 {
+    if !(shared::constants::MIN_SNAP_PERCENT..=shared::constants::MAX_SNAP_PERCENT)
+        .contains(&percent)
+    {
         return Err(PlanError::InvalidWidthPercent(percent));
     }
 
@@ -125,10 +135,7 @@ pub fn plan_snap_percent(
                 .rect
                 .checked_width()
                 .ok_or(PlanError::UnrepresentableGeometry)?;
-            let extent = (width as i64 * percent as i64 / 100) as i32;
-            if extent <= 0 {
-                return Err(PlanError::EmptyOrInvertedWorkArea);
-            }
+            let extent = calculate_extent(width, percent)?;
             let right = work
                 .rect
                 .left
@@ -141,10 +148,7 @@ pub fn plan_snap_percent(
                 .rect
                 .checked_width()
                 .ok_or(PlanError::UnrepresentableGeometry)?;
-            let extent = (width as i64 * percent as i64 / 100) as i32;
-            if extent <= 0 {
-                return Err(PlanError::EmptyOrInvertedWorkArea);
-            }
+            let extent = calculate_extent(width, percent)?;
             let left = work
                 .rect
                 .right
@@ -157,10 +161,7 @@ pub fn plan_snap_percent(
                 .rect
                 .checked_height()
                 .ok_or(PlanError::UnrepresentableGeometry)?;
-            let extent = (height as i64 * percent as i64 / 100) as i32;
-            if extent <= 0 {
-                return Err(PlanError::EmptyOrInvertedWorkArea);
-            }
+            let extent = calculate_extent(height, percent)?;
             let bottom = work
                 .rect
                 .top
@@ -173,10 +174,7 @@ pub fn plan_snap_percent(
                 .rect
                 .checked_height()
                 .ok_or(PlanError::UnrepresentableGeometry)?;
-            let extent = (height as i64 * percent as i64 / 100) as i32;
-            if extent <= 0 {
-                return Err(PlanError::EmptyOrInvertedWorkArea);
-            }
+            let extent = calculate_extent(height, percent)?;
             let top = work
                 .rect
                 .bottom
@@ -546,7 +544,9 @@ mod tests {
         assert!(plan_snap_percent(&work, W, SnapEdge::Left, 0).is_err());
         assert!(plan_snap_percent(&work, W, SnapEdge::Top, 0).is_err());
 
-        // Greater than 100% requested
+        // 100% and greater than 100% requested (valid is 1..=99 inclusive)
+        assert!(plan_snap_percent(&work, W, SnapEdge::Left, 100).is_err());
+        assert!(plan_snap_percent(&work, W, SnapEdge::Top, 100).is_err());
         assert!(plan_snap_percent(&work, W, SnapEdge::Left, 101).is_err());
 
         // Work area too narrow for requested percentage: 1px wide work area at 50% yields 0px extent
@@ -554,10 +554,18 @@ mod tests {
         assert!(plan_snap_percent(&sliver_w, W, SnapEdge::Left, 50).is_err());
         assert!(plan_snap_percent(&sliver_w, W, SnapEdge::Right, 50).is_err());
 
-        // 1px tall work area at 50% yields 0px extent
+        // But vertical percentage snap on a 1px-wide work area produces valid 1px-wide geometry
+        let sliver_w_top = only(&plan_snap_percent(&sliver_w, W, SnapEdge::Top, 50).unwrap());
+        assert_eq!(sliver_w_top, Rect::new(0, 0, 1, 50).unwrap());
+
+        // 1px tall work area at 50% yields 0px extent vertically
         let sliver_h = WorkArea::new(Rect::new(0, 0, 100, 1).unwrap(), 96).unwrap();
         assert!(plan_snap_percent(&sliver_h, W, SnapEdge::Top, 50).is_err());
         assert!(plan_snap_percent(&sliver_h, W, SnapEdge::Bottom, 50).is_err());
+
+        // But horizontal percentage snap on a 1px-tall work area produces valid 1px-tall geometry
+        let sliver_h_left = only(&plan_snap_percent(&sliver_h, W, SnapEdge::Left, 50).unwrap());
+        assert_eq!(sliver_h_left, Rect::new(0, 0, 50, 1).unwrap());
     }
 
     #[test]

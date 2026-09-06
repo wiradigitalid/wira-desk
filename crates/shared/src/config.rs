@@ -148,10 +148,10 @@ impl Default for SnappingConfig {
             snap_percent_right: "ctrl+alt+shift+right".to_string(),
             snap_percent_top: "ctrl+alt+shift+up".to_string(),
             snap_percent_bottom: "ctrl+alt+shift+down".to_string(),
-            percent_left: 50,
-            percent_right: 50,
-            percent_top: 50,
-            percent_bottom: 50,
+            percent_left: crate::constants::DEFAULT_SNAP_PERCENT,
+            percent_right: crate::constants::DEFAULT_SNAP_PERCENT,
+            percent_top: crate::constants::DEFAULT_SNAP_PERCENT,
+            percent_bottom: crate::constants::DEFAULT_SNAP_PERCENT,
         }
     }
 }

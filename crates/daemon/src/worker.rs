@@ -309,41 +309,19 @@ fn execute_snap(command: Command) {
         Command::SnapTop => snap::plan_snap_top(&ctx.work_area, ctx.target),
         Command::SnapBottom => snap::plan_snap_bottom(&ctx.work_area, ctx.target),
         Command::SnapMaximize => snap::plan_snap_maximize(&ctx.work_area, ctx.target),
-        Command::SnapPercentLeft => {
+        Command::SnapPercentLeft
+        | Command::SnapPercentRight
+        | Command::SnapPercentTop
+        | Command::SnapPercentBottom => {
             let snapping = snapping_config();
-            snap::plan_snap_percent(
-                &ctx.work_area,
-                ctx.target,
-                snap::SnapEdge::Left,
-                snapping.percent_left,
-            )
-        }
-        Command::SnapPercentRight => {
-            let snapping = snapping_config();
-            snap::plan_snap_percent(
-                &ctx.work_area,
-                ctx.target,
-                snap::SnapEdge::Right,
-                snapping.percent_right,
-            )
-        }
-        Command::SnapPercentTop => {
-            let snapping = snapping_config();
-            snap::plan_snap_percent(
-                &ctx.work_area,
-                ctx.target,
-                snap::SnapEdge::Top,
-                snapping.percent_top,
-            )
-        }
-        Command::SnapPercentBottom => {
-            let snapping = snapping_config();
-            snap::plan_snap_percent(
-                &ctx.work_area,
-                ctx.target,
-                snap::SnapEdge::Bottom,
-                snapping.percent_bottom,
-            )
+            let (edge, pct) = match command {
+                Command::SnapPercentLeft => (snap::SnapEdge::Left, snapping.percent_left),
+                Command::SnapPercentRight => (snap::SnapEdge::Right, snapping.percent_right),
+                Command::SnapPercentTop => (snap::SnapEdge::Top, snapping.percent_top),
+                Command::SnapPercentBottom => (snap::SnapEdge::Bottom, snapping.percent_bottom),
+                _ => unreachable!(),
+            };
+            snap::plan_snap_percent(&ctx.work_area, ctx.target, edge, pct)
         }
         _ => return,
     };

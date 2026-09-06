@@ -174,7 +174,9 @@ fn sync_model_to_ui(window: &MainWindow, model: &SettingsModel) {
             ),
             can_swap: model.can_swap(field),
             has_percent: field.has_percent(),
-            percent: field.percent(&model.draft).unwrap_or(50) as i32,
+            percent: field
+                .percent(&model.draft)
+                .unwrap_or(shared::constants::DEFAULT_SNAP_PERCENT) as i32,
         };
         let group_rows = |heading: &str| -> slint::ModelRc<ShortcutRowData> {
             let rows: Vec<ShortcutRowData> = ShortcutField::ALL

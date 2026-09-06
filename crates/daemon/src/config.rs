@@ -163,7 +163,9 @@ pub fn validate(text: &str) -> Result<(Config, HookSnapshot, WorkerSnapshot), Re
         cfg.snapping.percent_top,
         cfg.snapping.percent_bottom,
     ] {
-        if pct == 0 || pct >= 100 {
+        if !(shared::constants::MIN_SNAP_PERCENT..=shared::constants::MAX_SNAP_PERCENT)
+            .contains(&pct)
+        {
             return Err(RejectReason::InvalidPercentage);
         }
     }

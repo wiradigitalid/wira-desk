@@ -1459,6 +1459,35 @@ mod tests {
     }
 
     #[test]
+    fn exact_snap_percent_matches() {
+        let chords = shipped_chords();
+
+        let left = chords.snap_percent_left.expect("parses");
+        assert_eq!(
+            match_shortcut(&chords, mods_of(left), left.vk),
+            Some(Command::SnapPercentLeft.as_u8())
+        );
+
+        let right = chords.snap_percent_right.expect("parses");
+        assert_eq!(
+            match_shortcut(&chords, mods_of(right), right.vk),
+            Some(Command::SnapPercentRight.as_u8())
+        );
+
+        let top = chords.snap_percent_top.expect("parses");
+        assert_eq!(
+            match_shortcut(&chords, mods_of(top), top.vk),
+            Some(Command::SnapPercentTop.as_u8())
+        );
+
+        let bottom = chords.snap_percent_bottom.expect("parses");
+        assert_eq!(
+            match_shortcut(&chords, mods_of(bottom), bottom.vk),
+            Some(Command::SnapPercentBottom.as_u8())
+        );
+    }
+
+    #[test]
     fn extra_modifier_is_non_match() {
         let mods = ModifierState {
             win: true,
@@ -1493,6 +1522,41 @@ mod tests {
         assert_eq!(resolved[0], Shortcut::parse("win+backtick"));
         assert_eq!(resolved[2], Shortcut::parse("ctrl+alt+left"));
         assert_eq!(resolved[6], Shortcut::parse("ctrl+alt+enter"));
+    }
+
+    #[test]
+    fn dec_011_collision_favors_percent_snap_bottom_over_legacy_stack_default() {
+        // DEC-011: An install carrying legacy `ctrl+alt+shift+down` on stack collides with
+        // `snap_percent_bottom`. Because `snap_percent_bottom` is declared ahead of `stack`,
+        // `snap_percent_bottom` keeps the chord and `stack` is unbound.
+        let mut chords = shipped_chords();
+        chords.stack = Shortcut::parse("ctrl+alt+shift+down");
+        let mut resolved = [
+            chords.primary,
+            chords.fallback,
+            chords.snap_left,
+            chords.snap_right,
+            chords.snap_top,
+            chords.snap_bottom,
+            chords.snap_maximize,
+            chords.move_next_monitor,
+            chords.snap_percent_left,
+            chords.snap_percent_right,
+            chords.snap_percent_top,
+            chords.snap_percent_bottom,
+            chords.stack,
+        ];
+        let collisions = unbind_duplicates(&mut resolved);
+        assert_eq!(collisions, vec![(11, 12)]);
+        assert!(resolved[11].is_some());
+        assert_eq!(resolved[12], None);
+
+        chords.stack = resolved[12];
+        let clash = chords.snap_percent_bottom.unwrap();
+        assert_eq!(
+            match_shortcut(&chords, mods_of(clash), clash.vk),
+            Some(Command::SnapPercentBottom.as_u8())
+        );
     }
 
     #[test]

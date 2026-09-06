@@ -220,3 +220,12 @@ pub const HOOK_RETRY_DELAY_SECS: u64 = 1;
 /// Critical tray state. Unlike `HOOK_RETRY_MAX`, this counts runtime refresh
 /// failures per heartbeat (10 seconds between ticks), not blocking startup retries.
 pub const HOOK_CHECK_FAIL_THRESHOLD: u32 = 3;
+
+/// Default percentage for custom-percentage edge snap (50%).
+pub const DEFAULT_SNAP_PERCENT: u32 = 50;
+
+/// Minimum allowed percentage for custom-percentage edge snap (1%).
+pub const MIN_SNAP_PERCENT: u32 = 1;
+
+/// Maximum allowed percentage for custom-percentage edge snap (99%).
+pub const MAX_SNAP_PERCENT: u32 = 99;

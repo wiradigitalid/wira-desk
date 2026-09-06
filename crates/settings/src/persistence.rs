@@ -154,7 +154,9 @@ pub fn validate_config(cfg: &Config) -> Result<(), (&'static str, ShortcutError)
         ("snapping.percent_top", cfg.snapping.percent_top),
         ("snapping.percent_bottom", cfg.snapping.percent_bottom),
     ] {
-        if val == 0 || val >= 100 {
+        if !(shared::constants::MIN_SNAP_PERCENT..=shared::constants::MAX_SNAP_PERCENT)
+            .contains(&val)
+        {
             return Err((name, ShortcutError::InvalidPercentage(val)));
         }
     }
