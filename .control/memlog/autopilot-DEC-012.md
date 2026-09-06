@@ -8,23 +8,21 @@ date: 2026-09-06
 
 ## Resume
 
-- Iteration: 16
-- Run branch: `autopilot/DEC-012`, worktree at `../wira-desk-autopilot` relative to the main checkout (`git
-  worktree list` finds its actual path), HEAD `f1a65f2`. PR: not opened yet — opens now, at this spec close.
-- Stopped at: capacity — both `SPEC-1` tickets closed, drift reconciled, review-trace stamped fresh, every
-  `FR` in scope (`FR-26`, `FR-27`) closed and no other spec open (`W1`-`W4`, `SPEC-1` all `closed` per
-  generated status). This is § Finish. Smoke test dispatched to claude-byok (job `ba3b8dciw`, per the
-  mandate's `smoke_test: agent` delegation) — cannot be waited on synchronously.
+- Iteration: 20 — **run finished.**
+- Run branch: `autopilot/DEC-012`. PR: about to be opened (this iteration) as a draft from this branch.
+- Stopped at: **Done.** Every `FR` in scope closed (`FR-26`, `FR-27`), no other spec open, smoke test
+  completed and recorded, `DEC-012` raised to `applied`. Pushing the run branch and opening the one PR is
+  the only remaining action.
 - Blocked: —
 - Parked: —
-- Next: once `ba3b8dciw` completes — read its report honestly (it may report parts as not verifiable from a
-  headless session, e.g. real elevation/keypress simulation; record exactly what it says, don't round up to
-  "verified"). Then: `validate.py --generate`, raise `DEC-012` to `applied` with `touches` naming this
-  ledger, push the run branch, open the one draft PR, watch CI, mark it ready for review only if green,
-  cancel the cron loop, write the Finish report.
-  clean, close `SPEC-1-02` (`status: done`). That closes `SPEC-1` (both its tickets done) — then push the
-  run branch, open the one draft PR, watch CI, and this mandate's remaining scope is empty (§ Finish: run
-  the smoke test via claude-byok, then wrap up).
+- Smoke test (claude-byok, job `ba3b8dciw`): release build PASS (fmt/clippy/512 tests, 0 failed, 2
+  ignored), Settings GUI launch PASS. Live daemon launch / real keypress verification: **NOT VERIFIABLE
+  FROM THIS SESSION** — headless session has no interactive UAC elevation and no keyboard-input-injection
+  tooling; an existing elevated instance (PID 8896) was also already holding the single-instance mutex.
+  FR-26 and FR-27 verdict: PASS at code/unit-test level (512 tests including the new suites), live E2E
+  not run, by mandate.
+- Next: nothing — this mandate is closed. Any further work is a new mandate or a manual owner action
+  (merge the PR, or exercise the live UI test script in the Finish report).
 
 ## Decisions
 
@@ -57,3 +55,5 @@ date: 2026-09-06
 | Iter 16 | SRS `satisfies:` frontmatter noted, not changed | `SRS-window-management.md`'s frontmatter `satisfies:` list omits `FR-26`/`FR-27` even though its own body checklist (line 84) already says they're mapped, and the authoritative `usecases.yaml`/`requirements-wira-desk.yaml` registries already carry the real mapping. Left alone — this looks like a deliberate precedent (the `window-management.md` memlog explicitly scoped an earlier update to "the checklist line" only), not an oversight I'm confident enough to correct | Editing the frontmatter to add `FR-26, FR-27` on my own judgment of an ambiguous convention | If wrong, a one-line frontmatter edit fixes it | This row |
 | Iter 16 | § Finish reached | Every `FR` in scope closed (`FR-26`, `FR-27`), no other spec open (`W1`-`W4` and `SPEC-1` all `closed`) — dispatched the smoke test to claude-byok (`ba3b8dciw`) per `smoke_test: agent` | — | — | This row |
 | Iter 17 | Own mistake, caught and fixed | `dd5c8cd`/`f1a65f2`'s `git add` was scoped to `.how .what .control/generated`, missing the separate `.how-rendered/` output directory — the actual regenerated content (from the reconcile fixes) sat uncommitted for a full iteration. Caught by `git status` before push, committed as `d5be009`, no content lost | Scoping `git add` broadly enough to catch every generated-output directory the first time | None once caught — would have been a rendered doc quietly out of sync with its source if it had reached the PR unnoticed | `d5be009` |
+| Iter 20 | Smoke test recorded honestly | claude-byok's report was accepted as-is: PASS at code/build level, explicitly NOT VERIFIABLE for live daemon launch (headless session, no interactive UAC, an existing elevated instance already held the mutex) or real keypress simulation (no input-injection tooling). Not rounded up to "verified" | Treating "the code is tested" as equivalent to "the feature was smoke-tested live" | The owner runs the live test script in the Finish report to close this gap | `ba3b8dciw`, this ledger |
+| Iter 20 | Mandate raised to `applied` | `touches` names every file this mandate actually changed (code, config, corpus, registries) — filled from git history across the whole run, not guessed | Leaving `touches` empty or partial | `applied-dec-touches` validator would catch an empty one; a wrong list is harder to catch, so it was built from `git diff main...HEAD --stat` | `DEC-012` file, `decisions.yaml` |

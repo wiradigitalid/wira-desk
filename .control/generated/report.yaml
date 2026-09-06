@@ -1,18 +1,358 @@
-asof: '2026-09-03'
+asof: '2026-09-07'
 since: ''
 since_report: ''
-sha: fdae5ed5a758feb6548c88ef928237529ad2fee5
-registry_dirty: true
+sha: 2d5a3e6a5bdce0227c5c7aa8aa7a9e6bb473323a
+registry_dirty: false
 uncommitted_tickets: []
-promise_progress: 0%
+promise_progress: 74%
 rtm_rows:
-  green: 0
-  counted: 16
-  excluded_no_uc: 7
-work_progress: []
+  green: 14
+  counted: 19
+  excluded_no_uc: 8
+work_progress:
+- spec: SPEC-1
+  status: closed
+  tickets_done: 2
+  tickets_total: 2
+  work_progress: 100%
+- spec: W1
+  status: closed
+  tickets_done: 3
+  tickets_total: 3
+  work_progress: 100%
+- spec: W2
+  status: closed
+  tickets_done: 0
+  tickets_total: 0
+  work_progress: n/a
+- spec: W3
+  status: closed
+  tickets_done: 0
+  tickets_total: 0
+  work_progress: n/a
+- spec: W4
+  status: closed
+  tickets_done: 1
+  tickets_total: 1
+  work_progress: 100%
 gate_readiness: 100%
-proven: []
-moved: []
+proven:
+- FR: FR-1
+  UC: UC-1
+  ticket: W1-S1
+  test:
+  - cycling::tests::activates_next_window_of_same_application
+  - cycling::tests::same_executable_different_pid_is_same_application
+  - cycling::tests::multi_process_same_executable_groups_together
+  - cycling::tests::excluded_windows_are_skipped
+  - cycling::tests::invalid_target_continues_to_next_candidate
+  closed: '2026-09-06'
+- FR: FR-2
+  UC: UC-1
+  ticket: W1-S1
+  test:
+  - cycling::tests::activates_next_window_of_same_application
+  - cycling::tests::same_executable_different_pid_is_same_application
+  - cycling::tests::multi_process_same_executable_groups_together
+  - cycling::tests::excluded_windows_are_skipped
+  - cycling::tests::invalid_target_continues_to_next_candidate
+  closed: '2026-09-06'
+- FR: FR-3
+  UC: UC-1
+  ticket: W1-S1
+  test:
+  - cycling::tests::activates_next_window_of_same_application
+  - cycling::tests::same_executable_different_pid_is_same_application
+  - cycling::tests::multi_process_same_executable_groups_together
+  - cycling::tests::excluded_windows_are_skipped
+  - cycling::tests::invalid_target_continues_to_next_candidate
+  closed: '2026-09-06'
+- FR: FR-4
+  UC: UC-1
+  ticket: W1-S1
+  test:
+  - cycling::tests::activates_next_window_of_same_application
+  - cycling::tests::same_executable_different_pid_is_same_application
+  - cycling::tests::multi_process_same_executable_groups_together
+  - cycling::tests::excluded_windows_are_skipped
+  - cycling::tests::invalid_target_continues_to_next_candidate
+  closed: '2026-09-06'
+- FR: FR-5
+  UC: UC-1
+  ticket: W1-S1
+  test:
+  - cycling::tests::activates_next_window_of_same_application
+  - cycling::tests::same_executable_different_pid_is_same_application
+  - cycling::tests::multi_process_same_executable_groups_together
+  - cycling::tests::excluded_windows_are_skipped
+  - cycling::tests::invalid_target_continues_to_next_candidate
+  closed: '2026-09-06'
+- FR: FR-6
+  UC: UC-1
+  ticket: W1-S1
+  test:
+  - cycling::tests::activates_next_window_of_same_application
+  - cycling::tests::same_executable_different_pid_is_same_application
+  - cycling::tests::multi_process_same_executable_groups_together
+  - cycling::tests::excluded_windows_are_skipped
+  - cycling::tests::invalid_target_continues_to_next_candidate
+  closed: '2026-09-06'
+- FR: FR-14
+  UC: UC-2
+  ticket: W1-S2
+  test:
+  - arrangement::snap::tests::snap_left_returns_left_half
+  - arrangement::snap::tests::snap_right_returns_complementary_half
+  - arrangement::snap::tests::halves_tile_the_work_area_without_gap_or_overlap
+  closed: '2026-09-06'
+- FR: FR-22
+  UC: UC-2
+  ticket: W1-S2
+  test:
+  - arrangement::snap::tests::snap_left_returns_left_half
+  - arrangement::snap::tests::snap_right_returns_complementary_half
+  - arrangement::snap::tests::halves_tile_the_work_area_without_gap_or_overlap
+  closed: '2026-09-06'
+- FR: FR-10
+  UC: UC-3
+  ticket: W1-S3
+  test:
+  - tray::tests::next_hook_check_state_escalates_after_threshold
+  - tray::tests::next_hook_check_state_resets_on_success
+  closed: '2026-09-06'
+- FR: FR-11
+  UC: UC-3
+  ticket: W1-S3
+  test:
+  - tray::tests::next_hook_check_state_escalates_after_threshold
+  - tray::tests::next_hook_check_state_resets_on_success
+  closed: '2026-09-06'
+- FR: FR-12
+  UC: UC-3
+  ticket: W1-S3
+  test:
+  - tray::tests::next_hook_check_state_escalates_after_threshold
+  - tray::tests::next_hook_check_state_resets_on_success
+  closed: '2026-09-06'
+- FR: FR-23
+  UC: UC-7
+  ticket: W4-S3
+  test:
+  - arrangement::monitor::tests::single_monitor_yields_an_empty_plan
+  - arrangement::monitor::tests::next_monitor_wraps_from_last_to_first
+  - arrangement::monitor::tests::a_left_half_stays_a_left_half_across_monitors
+  - arrangement::monitor::tests::proportional_mapping_survives_a_resolution_difference
+  - arrangement::monitor::tests::empty_destination_work_area_is_rejected
+  closed: '2026-09-06'
+- FR: FR-26
+  UC: UC-9
+  ticket: SPEC-1-01
+  test:
+  - arrangement::snap::tests::snap_percent_returns_configured_width_from_the_named_edge
+  - arrangement::snap::tests::snap_percent_refuses_a_zero_or_negative_extent
+  - arrangement::snap::tests::percent_edges_are_independent_of_each_other
+  - config::tests::percent_snap_fields_roundtrip_through_toml
+  - config::tests::frozen_snapping_defaults
+  - persistence::tests::an_out_of_range_percentage_is_rejected_before_save
+  - app::tests::field_declaration_order_places_percent_snap_ahead_of_stack
+  - commands::tests::roundtrip_all_commands
+  closed: '2026-09-07'
+- FR: FR-27
+  UC: UC-10
+  ticket: SPEC-1-02
+  test:
+  - arrangement::thirds::tests::thirds_tile_the_work_area_without_gap_or_overlap
+  - arrangement::thirds::tests::remainder_width_goes_to_the_middle_column
+  - arrangement::thirds::tests::narrow_work_area_is_refused
+  - config::tests::third_snap_fields_roundtrip_through_toml
+  - app::tests::field_declaration_order_includes_third_snap_fields
+  - commands::tests::roundtrip_all_commands
+  closed: '2026-09-07'
+moved:
+- id: CAP-1
+  kind: CAP
+  event: closed
+  date: '2026-09-06'
+- id: CAP-1
+  kind: CAP
+  event: started
+  date: '2026-09-06'
+- id: CAP-11
+  kind: CAP
+  event: closed
+  date: '2026-09-06'
+- id: CAP-11
+  kind: CAP
+  event: started
+  date: '2026-09-06'
+- id: CAP-12
+  kind: CAP
+  event: closed
+  date: '2026-09-06'
+- id: CAP-12
+  kind: CAP
+  event: started
+  date: '2026-09-06'
+- id: CAP-14
+  kind: CAP
+  event: started
+  date: '2026-09-06'
+- id: CAP-2
+  kind: CAP
+  event: closed
+  date: '2026-09-06'
+- id: CAP-2
+  kind: CAP
+  event: started
+  date: '2026-09-06'
+- id: CAP-7
+  kind: CAP
+  event: closed
+  date: '2026-09-06'
+- id: CAP-7
+  kind: CAP
+  event: started
+  date: '2026-09-06'
+- id: CAP-8
+  kind: CAP
+  event: closed
+  date: '2026-09-06'
+- id: CAP-8
+  kind: CAP
+  event: started
+  date: '2026-09-06'
+- id: CAP-9
+  kind: CAP
+  event: closed
+  date: '2026-09-06'
+- id: CAP-9
+  kind: CAP
+  event: started
+  date: '2026-09-06'
+- id: FR-1
+  kind: FR
+  event: closed
+  date: '2026-09-06'
+- id: FR-1
+  kind: FR
+  event: started
+  date: '2026-09-06'
+- id: FR-10
+  kind: FR
+  event: closed
+  date: '2026-09-06'
+- id: FR-10
+  kind: FR
+  event: started
+  date: '2026-09-06'
+- id: FR-11
+  kind: FR
+  event: closed
+  date: '2026-09-06'
+- id: FR-11
+  kind: FR
+  event: started
+  date: '2026-09-06'
+- id: FR-12
+  kind: FR
+  event: closed
+  date: '2026-09-06'
+- id: FR-12
+  kind: FR
+  event: started
+  date: '2026-09-06'
+- id: FR-14
+  kind: FR
+  event: closed
+  date: '2026-09-06'
+- id: FR-14
+  kind: FR
+  event: started
+  date: '2026-09-06'
+- id: FR-2
+  kind: FR
+  event: closed
+  date: '2026-09-06'
+- id: FR-2
+  kind: FR
+  event: started
+  date: '2026-09-06'
+- id: FR-22
+  kind: FR
+  event: closed
+  date: '2026-09-06'
+- id: FR-22
+  kind: FR
+  event: started
+  date: '2026-09-06'
+- id: FR-23
+  kind: FR
+  event: closed
+  date: '2026-09-06'
+- id: FR-23
+  kind: FR
+  event: started
+  date: '2026-09-06'
+- id: FR-26
+  kind: FR
+  event: started
+  date: '2026-09-06'
+- id: FR-3
+  kind: FR
+  event: closed
+  date: '2026-09-06'
+- id: FR-3
+  kind: FR
+  event: started
+  date: '2026-09-06'
+- id: FR-4
+  kind: FR
+  event: closed
+  date: '2026-09-06'
+- id: FR-4
+  kind: FR
+  event: started
+  date: '2026-09-06'
+- id: FR-5
+  kind: FR
+  event: closed
+  date: '2026-09-06'
+- id: FR-5
+  kind: FR
+  event: started
+  date: '2026-09-06'
+- id: FR-6
+  kind: FR
+  event: closed
+  date: '2026-09-06'
+- id: FR-6
+  kind: FR
+  event: started
+  date: '2026-09-06'
+- id: CAP-14
+  kind: CAP
+  event: closed
+  date: '2026-09-07'
+- id: CAP-15
+  kind: CAP
+  event: closed
+  date: '2026-09-07'
+- id: CAP-15
+  kind: CAP
+  event: started
+  date: '2026-09-07'
+- id: FR-26
+  kind: FR
+  event: closed
+  date: '2026-09-07'
+- id: FR-27
+  kind: FR
+  event: closed
+  date: '2026-09-07'
+- id: FR-27
+  kind: FR
+  event: started
+  date: '2026-09-07'
 late: []
 defects:
   opened: []
@@ -36,12 +376,21 @@ defects:
     - UC-4
     - FR-7
     closed: '2026-08-26'
+  - id: DEF-4
+    title: KeyCheckVerdict::Intercepted is declared but never constructed — a chord swallowed by another
+      hook reads as "Daemon Not Running"
+    root_cause: incomplete implementation
+    violates:
+    - DEC-005
+    closed: '2026-09-03'
   closed_by_root_cause:
     '?':
     - DEF-1
     - DEF-2
     architecture:
     - DEF-3
+    incomplete implementation:
+    - DEF-4
   undiagnosed: []
 gates:
 - gate: G1
