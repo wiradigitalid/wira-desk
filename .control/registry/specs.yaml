@@ -264,7 +264,7 @@ specs:
     # same reasoning as W1: adding it would mark `settings` touched and newly redden UC-5/UC-6/UC-8.
     spec_reviewed:
       date: '2026-09-06'
-      sha: 'PENDING-COMMIT'
+      sha: 'b0dea3e'
       lenses: [edge-case-hunter]
     tickets:
       - id: W4-S3
