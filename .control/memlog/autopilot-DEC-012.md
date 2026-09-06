@@ -8,18 +8,19 @@ date: 2026-09-06
 
 ## Resume
 
-- Iteration: 21.
-- Run branch: `autopilot/DEC-012`, HEAD `9326130`. **PR #16 opened as draft**:
+- Iteration: 22.
+- Run branch: `autopilot/DEC-012`, HEAD `9326130`. **PR #16 open as draft**:
   https://github.com/wiradigitalid/wira-desk/pull/16.
-- Stopped at: capacity — CI running on `9326130` (4 checks: build, dependencies, publication-hygiene,
-  secrets), all `pending` as of this iteration. Cannot be waited on synchronously.
+- Stopped at: capacity — CI on `9326130`: `dependencies` PASS, `secrets` PASS, **`publication-hygiene`
+  FAIL** (confirmed via the actual job log: exactly the 2 pre-existing `OQ-37` maintainer-handle findings
+  on `DEC-011`/`DEC-012`, nothing new — not fixed, per Red Flags: no patching a gate at the door), `build`
+  still `pending`. Cannot be waited on synchronously.
 - Blocked: —
 - Parked: —
-- Watch: `publication-hygiene` may fail — the known, already-filed `OQ-37` gate finding (maintainer handle
-  in `.control/decisions/DEC-011*`/`DEC-012*`, pre-existing on `main` before this mandate) could well be
-  what CI's own copy of `verify-public-export.ps1` catches. That is an expected, already-recorded, not-new
-  finding — do not "fix" it by widening the gate or by inventing a fix for the corpus-wide policy question
-  `OQ-37` already owns; report it as-is if CI fails on it.
+- Since `publication-hygiene` is confirmed failing on a pre-existing, already-filed, non-code finding, the
+  PR **stays a draft** regardless of `build`'s outcome — but `build`'s own result still matters (a real
+  code regression `build` catches would be a different, more serious kind of red needing investigation,
+  not just a report). Wait for it before writing the Finish report.
 - Smoke test (claude-byok, job `ba3b8dciw`): release build PASS (fmt/clippy/512 tests, 0 failed, 2
   ignored), Settings GUI launch PASS. Live daemon launch / real keypress verification: **NOT VERIFIABLE
   FROM THIS SESSION** — headless session has no interactive UAC elevation and no keyboard-input-injection
@@ -64,3 +65,4 @@ date: 2026-09-06
 | Iter 17 | Own mistake, caught and fixed | `dd5c8cd`/`f1a65f2`'s `git add` was scoped to `.how .what .control/generated`, missing the separate `.how-rendered/` output directory — the actual regenerated content (from the reconcile fixes) sat uncommitted for a full iteration. Caught by `git status` before push, committed as `d5be009`, no content lost | Scoping `git add` broadly enough to catch every generated-output directory the first time | None once caught — would have been a rendered doc quietly out of sync with its source if it had reached the PR unnoticed | `d5be009` |
 | Iter 20 | Smoke test recorded honestly | claude-byok's report was accepted as-is: PASS at code/build level, explicitly NOT VERIFIABLE for live daemon launch (headless session, no interactive UAC, an existing elevated instance already held the mutex) or real keypress simulation (no input-injection tooling). Not rounded up to "verified" | Treating "the code is tested" as equivalent to "the feature was smoke-tested live" | The owner runs the live test script in the Finish report to close this gap | `ba3b8dciw`, this ledger |
 | Iter 20 | Mandate raised to `applied` | `touches` names every file this mandate actually changed (code, config, corpus, registries) — filled from git history across the whole run, not guessed | Leaving `touches` empty or partial | `applied-dec-touches` validator would catch an empty one; a wrong list is harder to catch, so it was built from `git diff main...HEAD --stat` | `DEC-012` file, `decisions.yaml` |
+| Iter 22 | CI `publication-hygiene` red, PR stays draft | Read the actual job log rather than assume: exactly the 2 pre-existing `OQ-37` findings (`DEC-011`/`DEC-012` maintainer handle), nothing new from this mandate's code. Not patched at the door, per Red Flags — PR stays draft, reported red in Finish | Widening the gate's `Allowed` list or moving `accepted_by` to make CI pass | The owner's `OQ-37` answer fixes it properly later; forcing green now would be exactly the failure mode the gate's own comment warns against | CI run `34051075317`, job `101534692966` |
