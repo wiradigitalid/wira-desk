@@ -66,6 +66,22 @@ pub struct SnappingConfig {
     /// Bottom half, the complement of `snap_half_top`.
     pub snap_half_bottom: String,
     pub snap_maximize: String,
+    /// Custom percentage snap against the left edge.
+    pub snap_percent_left: String,
+    /// Custom percentage snap against the right edge.
+    pub snap_percent_right: String,
+    /// Custom percentage snap against the top edge.
+    pub snap_percent_top: String,
+    /// Custom percentage snap against the bottom edge.
+    pub snap_percent_bottom: String,
+    /// Percentage of work-area width for left-edge snap (default 50).
+    pub percent_left: u32,
+    /// Percentage of work-area width for right-edge snap (default 50).
+    pub percent_right: u32,
+    /// Percentage of work-area height for top-edge snap (default 50).
+    pub percent_top: u32,
+    /// Percentage of work-area height for bottom-edge snap (default 50).
+    pub percent_bottom: u32,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -87,8 +103,8 @@ pub struct LayoutConfig {
     /// Width of each window as a percentage of screen width (default 50).
     pub stack_width_percent: u32,
     /// Overlapping stack shortcut. The field name is part of the frozen contract and must
-    /// not be renumbered or reinterpreted; its *default* moved to `ctrl+alt+shift+down` when
-    /// the chord family moved, because `ctrl+alt+down` became the bottom-half snap.
+    /// not be renumbered or reinterpreted; its *default* moved to `ctrl+alt+shift+s` (DEC-011)
+    /// to free the arrow tier for custom-percentage edge snaps.
     pub stack_shortcut: String,
     /// Move the active window to the next monitor. Lives in `[layout]` rather than
     /// `[snapping]` because it arranges *across* screens rather than dividing one, which
@@ -128,6 +144,14 @@ impl Default for SnappingConfig {
             snap_half_top: "ctrl+alt+up".to_string(),
             snap_half_bottom: "ctrl+alt+down".to_string(),
             snap_maximize: "ctrl+alt+enter".to_string(),
+            snap_percent_left: "ctrl+alt+shift+left".to_string(),
+            snap_percent_right: "ctrl+alt+shift+right".to_string(),
+            snap_percent_top: "ctrl+alt+shift+up".to_string(),
+            snap_percent_bottom: "ctrl+alt+shift+down".to_string(),
+            percent_left: 50,
+            percent_right: 50,
+            percent_top: 50,
+            percent_bottom: 50,
         }
     }
 }
@@ -137,7 +161,7 @@ impl Default for LayoutConfig {
         Self {
             enable_overlapping_stack: true,
             stack_width_percent: 50,
-            stack_shortcut: "ctrl+alt+shift+down".to_string(),
+            stack_shortcut: "ctrl+alt+shift+s".to_string(),
             move_next_monitor_shortcut: "ctrl+alt+shift+enter".to_string(),
         }
     }
@@ -248,6 +272,30 @@ mod tests {
         assert_eq!(cfg, Config::default());
     }
 
+    #[test]
+    fn percent_snap_fields_roundtrip_through_toml() {
+        let mut cfg = Config::default();
+        cfg.snapping.snap_percent_left = "ctrl+alt+shift+left".to_string();
+        cfg.snapping.snap_percent_right = "ctrl+alt+shift+right".to_string();
+        cfg.snapping.snap_percent_top = "ctrl+alt+shift+up".to_string();
+        cfg.snapping.snap_percent_bottom = "ctrl+alt+shift+down".to_string();
+        cfg.snapping.percent_left = 70;
+        cfg.snapping.percent_right = 30;
+        cfg.snapping.percent_top = 25;
+        cfg.snapping.percent_bottom = 75;
+
+        let toml = cfg.to_toml_string().unwrap();
+        let parsed = Config::from_toml_str(&toml).unwrap();
+        assert_eq!(parsed.snapping.snap_percent_left, "ctrl+alt+shift+left");
+        assert_eq!(parsed.snapping.snap_percent_right, "ctrl+alt+shift+right");
+        assert_eq!(parsed.snapping.snap_percent_top, "ctrl+alt+shift+up");
+        assert_eq!(parsed.snapping.snap_percent_bottom, "ctrl+alt+shift+down");
+        assert_eq!(parsed.snapping.percent_left, 70);
+        assert_eq!(parsed.snapping.percent_right, 30);
+        assert_eq!(parsed.snapping.percent_top, 25);
+        assert_eq!(parsed.snapping.percent_bottom, 75);
+    }
+
     // ── frozen extension contract ─────────────────────────────────
     // Epics 3, 4, and 5 consume these as sibling lanes. They may read them but
     // must not renumber or reinterpret them, so the values are pinned here.
@@ -265,6 +313,14 @@ mod tests {
         assert_eq!(cfg.snap_half_top, "ctrl+alt+up");
         assert_eq!(cfg.snap_half_bottom, "ctrl+alt+down");
         assert_eq!(cfg.snap_maximize, "ctrl+alt+enter");
+        assert_eq!(cfg.snap_percent_left, "ctrl+alt+shift+left");
+        assert_eq!(cfg.snap_percent_right, "ctrl+alt+shift+right");
+        assert_eq!(cfg.snap_percent_top, "ctrl+alt+shift+up");
+        assert_eq!(cfg.snap_percent_bottom, "ctrl+alt+shift+down");
+        assert_eq!(cfg.percent_left, 50);
+        assert_eq!(cfg.percent_right, 50);
+        assert_eq!(cfg.percent_top, 50);
+        assert_eq!(cfg.percent_bottom, 50);
     }
 
     #[test]
@@ -280,6 +336,10 @@ mod tests {
             &cfg.snapping.snap_half_top,
             &cfg.snapping.snap_half_bottom,
             &cfg.snapping.snap_maximize,
+            &cfg.snapping.snap_percent_left,
+            &cfg.snapping.snap_percent_right,
+            &cfg.snapping.snap_percent_top,
+            &cfg.snapping.snap_percent_bottom,
             &cfg.layout.move_next_monitor_shortcut,
             &cfg.layout.stack_shortcut,
         ] {
@@ -307,6 +367,10 @@ mod tests {
             &cfg.snapping.snap_half_top,
             &cfg.snapping.snap_half_bottom,
             &cfg.snapping.snap_maximize,
+            &cfg.snapping.snap_percent_left,
+            &cfg.snapping.snap_percent_right,
+            &cfg.snapping.snap_percent_top,
+            &cfg.snapping.snap_percent_bottom,
             &cfg.layout.move_next_monitor_shortcut,
             &cfg.layout.stack_shortcut,
         ];
@@ -339,10 +403,7 @@ mod tests {
 
     #[test]
     fn frozen_stack_shortcut_default() {
-        assert_eq!(
-            LayoutConfig::default().stack_shortcut,
-            "ctrl+alt+shift+down"
-        );
+        assert_eq!(LayoutConfig::default().stack_shortcut, "ctrl+alt+shift+s");
         assert_eq!(
             LayoutConfig::default().move_next_monitor_shortcut,
             "ctrl+alt+shift+enter"
@@ -395,7 +456,7 @@ mod tests {
         "#;
         let cfg = Config::from_toml_str(toml).unwrap();
         assert_eq!(cfg.layout.stack_width_percent, 70);
-        assert_eq!(cfg.layout.stack_shortcut, "ctrl+alt+shift+down");
+        assert_eq!(cfg.layout.stack_shortcut, "ctrl+alt+shift+s");
         assert_eq!(
             cfg.layout.move_next_monitor_shortcut,
             "ctrl+alt+shift+enter"

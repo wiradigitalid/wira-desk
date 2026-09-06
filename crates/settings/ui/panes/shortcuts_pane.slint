@@ -16,6 +16,8 @@ export struct ShortcutRowData {
     shortcut: string,
     conflict_name: string,
     can_swap: bool,
+    has_percent: bool,
+    percent: int,
 }
 
 // A labelled group of rows: one card, one heading.
@@ -26,6 +28,7 @@ component ShortcutGroup inherits VerticalLayout {
 
     callback capture(int);
     callback swap(int);
+    callback percent_changed(int, int);
 
     spacing: 6px;
 
@@ -50,11 +53,16 @@ component ShortcutGroup inherits VerticalLayout {
                     is_listening: root.listening_field == row.index;
                     conflict_name: row.conflict_name;
                     can_swap: row.can_swap;
+                    has_percent: row.has_percent;
+                    percent: row.percent;
                     capture_clicked => {
                         root.capture(row.index);
                     }
                     swap_clicked => {
                         root.swap(row.index);
+                    }
+                    percent_changed(val) => {
+                        root.percent_changed(row.index, val);
                     }
                 }
             }
@@ -79,6 +87,7 @@ export component ShortcutsPane inherits VerticalLayout {
 
     callback start_capture(int);
     callback swap_shortcuts(int);
+    callback percent_changed(int, int);
 
     spacing: 14px;
     alignment: start;
@@ -126,6 +135,9 @@ export component ShortcutsPane inherits VerticalLayout {
         swap(i) => {
             root.swap_shortcuts(i);
         }
+        percent_changed(i, val) => {
+            root.percent_changed(i, val);
+        }
     }
 
     ShortcutGroup {
@@ -138,6 +150,9 @@ export component ShortcutsPane inherits VerticalLayout {
         swap(i) => {
             root.swap_shortcuts(i);
         }
+        percent_changed(i, val) => {
+            root.percent_changed(i, val);
+        }
     }
 
     ShortcutGroup {
@@ -149,6 +164,9 @@ export component ShortcutsPane inherits VerticalLayout {
         }
         swap(i) => {
             root.swap_shortcuts(i);
+        }
+        percent_changed(i, val) => {
+            root.percent_changed(i, val);
         }
     }
 }

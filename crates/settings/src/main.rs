@@ -173,6 +173,8 @@ fn sync_model_to_ui(window: &MainWindow, model: &SettingsModel) {
                 model.find_conflict(field).map(|f| f.label()).unwrap_or(""),
             ),
             can_swap: model.can_swap(field),
+            has_percent: field.has_percent(),
+            percent: field.percent(&model.draft).unwrap_or(50) as i32,
         };
         let group_rows = |heading: &str| -> slint::ModelRc<ShortcutRowData> {
             let rows: Vec<ShortcutRowData> = ShortcutField::ALL
@@ -477,6 +479,20 @@ fn main() -> Result<(), slint::PlatformError> {
             let field = ShortcutField::from_index(idx);
             if let Some(conf) = m.find_conflict(field) {
                 m.swap_shortcuts(field, conf);
+            }
+            if let Some(w) = window_weak.upgrade() {
+                sync_model_to_ui(&w, &m);
+            }
+        });
+    }
+    {
+        let model_rc = Rc::clone(&model);
+        let window_weak = main_window.as_weak();
+        main_window.on_percent_changed(move |idx, val| {
+            let mut m = model_rc.borrow_mut();
+            let field = ShortcutField::from_index(idx);
+            if field.has_percent() && val >= 0 {
+                m.set_percent(field, val as u32);
             }
             if let Some(w) = window_weak.upgrade() {
                 sync_model_to_ui(&w, &m);

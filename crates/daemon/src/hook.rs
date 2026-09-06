@@ -605,6 +605,10 @@ pub struct Chords {
     pub snap_bottom: Option<Shortcut>,
     pub snap_maximize: Option<Shortcut>,
     pub move_next_monitor: Option<Shortcut>,
+    pub snap_percent_left: Option<Shortcut>,
+    pub snap_percent_right: Option<Shortcut>,
+    pub snap_percent_top: Option<Shortcut>,
+    pub snap_percent_bottom: Option<Shortcut>,
     pub stack: Option<Shortcut>,
 }
 
@@ -621,7 +625,7 @@ impl Chords {
     /// It exists exactly once on purpose. The order is also the Settings pane's draw order
     /// and its keyboard focus order; three independently maintained copies of it is how the
     /// visible order and the precedence order start disagreeing with nothing detecting it.
-    pub fn in_declared_order(&self) -> [ChordSlot; 9] {
+    pub fn in_declared_order(&self) -> [ChordSlot; 13] {
         [
             ChordSlot {
                 chord: self.primary,
@@ -654,6 +658,22 @@ impl Chords {
             ChordSlot {
                 chord: self.move_next_monitor,
                 command: Command::MoveToNextMonitor.as_u8(),
+            },
+            ChordSlot {
+                chord: self.snap_percent_left,
+                command: Command::SnapPercentLeft.as_u8(),
+            },
+            ChordSlot {
+                chord: self.snap_percent_right,
+                command: Command::SnapPercentRight.as_u8(),
+            },
+            ChordSlot {
+                chord: self.snap_percent_top,
+                command: Command::SnapPercentTop.as_u8(),
+            },
+            ChordSlot {
+                chord: self.snap_percent_bottom,
+                command: Command::SnapPercentBottom.as_u8(),
             },
             ChordSlot {
                 chord: self.stack,
@@ -896,7 +916,7 @@ fn load_shortcuts(worker_hwnd: HWND) -> Chords {
     // shipped default, and its diagnostic name appear together. The six hand-written
     // blocks this replaces each repeated that triple, and a new chord meant writing a
     // seventh block correctly rather than adding a row.
-    let rows: [(&str, &str, &str); 9] = [
+    let rows: [(&str, &str, &str); 13] = [
         (
             "switcher.shortcut",
             &cfg.switcher.shortcut,
@@ -938,13 +958,33 @@ fn load_shortcuts(worker_hwnd: HWND) -> Chords {
             &layout_defaults.move_next_monitor_shortcut,
         ),
         (
+            "snapping.snap_percent_left",
+            &cfg.snapping.snap_percent_left,
+            &snap_defaults.snap_percent_left,
+        ),
+        (
+            "snapping.snap_percent_right",
+            &cfg.snapping.snap_percent_right,
+            &snap_defaults.snap_percent_right,
+        ),
+        (
+            "snapping.snap_percent_top",
+            &cfg.snapping.snap_percent_top,
+            &snap_defaults.snap_percent_top,
+        ),
+        (
+            "snapping.snap_percent_bottom",
+            &cfg.snapping.snap_percent_bottom,
+            &snap_defaults.snap_percent_bottom,
+        ),
+        (
             "layout.stack_shortcut",
             &cfg.layout.stack_shortcut,
             &layout_defaults.stack_shortcut,
         ),
     ];
 
-    let mut resolved: [Option<Shortcut>; 9] = [None; 9];
+    let mut resolved: [Option<Shortcut>; 13] = [None; 13];
     for (i, (field, configured, default)) in rows.iter().enumerate() {
         resolved[i] = Some(resolve_one(worker_hwnd, field, configured, default));
     }
@@ -975,7 +1015,11 @@ fn load_shortcuts(worker_hwnd: HWND) -> Chords {
         snap_bottom: resolved[5],
         snap_maximize: resolved[6],
         move_next_monitor: resolved[7],
-        stack: resolved[8],
+        snap_percent_left: resolved[8],
+        snap_percent_right: resolved[9],
+        snap_percent_top: resolved[10],
+        snap_percent_bottom: resolved[11],
+        stack: resolved[12],
     }
 }
 
@@ -1384,6 +1428,10 @@ mod tests {
             snap_bottom: Shortcut::parse(&cfg.snapping.snap_half_bottom),
             snap_maximize: Shortcut::parse(&cfg.snapping.snap_maximize),
             move_next_monitor: Shortcut::parse(&cfg.layout.move_next_monitor_shortcut),
+            snap_percent_left: Shortcut::parse(&cfg.snapping.snap_percent_left),
+            snap_percent_right: Shortcut::parse(&cfg.snapping.snap_percent_right),
+            snap_percent_top: Shortcut::parse(&cfg.snapping.snap_percent_top),
+            snap_percent_bottom: Shortcut::parse(&cfg.snapping.snap_percent_bottom),
             stack: Shortcut::parse(&cfg.layout.stack_shortcut),
         }
     }

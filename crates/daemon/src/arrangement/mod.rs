@@ -225,11 +225,15 @@ mod tests {
         assert_eq!(Command::SnapTop.as_u8(), 6);
         assert_eq!(Command::SnapBottom.as_u8(), 7);
         assert_eq!(Command::MoveToNextMonitor.as_u8(), 8);
+        assert_eq!(Command::SnapPercentLeft.as_u8(), 9);
+        assert_eq!(Command::SnapPercentRight.as_u8(), 10);
+        assert_eq!(Command::SnapPercentTop.as_u8(), 11);
+        assert_eq!(Command::SnapPercentBottom.as_u8(), 12);
     }
 
     #[test]
     fn unknown_command_values_still_decode_as_nop() {
-        assert_eq!(Command::from_u8(9), Command::Nop);
+        assert_eq!(Command::from_u8(13), Command::Nop);
         assert_eq!(Command::from_u8(200), Command::Nop);
     }
 
@@ -243,10 +247,7 @@ mod tests {
         assert_eq!(snapping.snap_half_top, "ctrl+alt+up");
         assert_eq!(snapping.snap_half_bottom, "ctrl+alt+down");
         assert_eq!(snapping.snap_maximize, "ctrl+alt+enter");
-        assert_eq!(
-            LayoutConfig::default().stack_shortcut,
-            "ctrl+alt+shift+down"
-        );
+        assert_eq!(LayoutConfig::default().stack_shortcut, "ctrl+alt+shift+s");
         assert_eq!(
             LayoutConfig::default().move_next_monitor_shortcut,
             "ctrl+alt+shift+enter"
@@ -348,7 +349,7 @@ mod tests {
         // protected is not, and the set must stay closed at whatever size it reaches.
         // Deleting the test rather than replacing it would have thrown away the guard
         // along with the rule it happened to be attached to.
-        for raw in 0u8..=8 {
+        for raw in 0u8..=12 {
             let cmd = Command::from_u8(raw);
             assert!(
                 matches!(
@@ -362,13 +363,17 @@ mod tests {
                         | Command::SnapTop
                         | Command::SnapBottom
                         | Command::MoveToNextMonitor
+                        | Command::SnapPercentLeft
+                        | Command::SnapPercentRight
+                        | Command::SnapPercentTop
+                        | Command::SnapPercentBottom
                 ),
                 "unexpected command at wire value {raw}"
             );
         }
         // One past the end must still be `Nop`, so the range above is the whole set
         // rather than merely a prefix of it.
-        assert_eq!(Command::from_u8(9), Command::Nop);
+        assert_eq!(Command::from_u8(13), Command::Nop);
     }
 
     // --- Plan semantics -----------------------------------------------------

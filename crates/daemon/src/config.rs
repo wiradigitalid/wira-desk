@@ -38,6 +38,7 @@ pub struct HookSnapshot {
 #[derive(Debug, Clone)]
 pub struct WorkerSnapshot {
     pub layout: LayoutConfig,
+    pub snapping: shared::config::SnappingConfig,
 }
 
 /// Why a candidate configuration was refused.
@@ -59,6 +60,8 @@ pub enum RejectReason {
     /// arriving here means the file was hand-edited, which deserves a straight answer
     /// rather than a quiet repair.
     DuplicateShortcut,
+    /// A snap percentage was outside 1..=99.
+    InvalidPercentage,
 }
 
 impl RejectReason {
@@ -78,6 +81,9 @@ impl RejectReason {
             }
             RejectReason::DuplicateShortcut => {
                 "Config reload skipped: two actions share one shortcut; keeping current settings"
+            }
+            RejectReason::InvalidPercentage => {
+                "Config reload skipped: snap percentage must be between 1 and 99; keeping current settings"
             }
         }
     }
@@ -139,9 +145,28 @@ pub fn validate(text: &str) -> Result<(Config, HookSnapshot, WorkerSnapshot), Re
         Shortcut::parse(&cfg.snapping.snap_half_bottom).ok_or(RejectReason::InvalidShortcut)?;
     let snap_maximize =
         Shortcut::parse(&cfg.snapping.snap_maximize).ok_or(RejectReason::InvalidShortcut)?;
-    let stack = Shortcut::parse(&cfg.layout.stack_shortcut).ok_or(RejectReason::InvalidShortcut)?;
     let move_next_monitor = Shortcut::parse(&cfg.layout.move_next_monitor_shortcut)
         .ok_or(RejectReason::InvalidShortcut)?;
+    let snap_percent_left =
+        Shortcut::parse(&cfg.snapping.snap_percent_left).ok_or(RejectReason::InvalidShortcut)?;
+    let snap_percent_right =
+        Shortcut::parse(&cfg.snapping.snap_percent_right).ok_or(RejectReason::InvalidShortcut)?;
+    let snap_percent_top =
+        Shortcut::parse(&cfg.snapping.snap_percent_top).ok_or(RejectReason::InvalidShortcut)?;
+    let snap_percent_bottom =
+        Shortcut::parse(&cfg.snapping.snap_percent_bottom).ok_or(RejectReason::InvalidShortcut)?;
+    let stack = Shortcut::parse(&cfg.layout.stack_shortcut).ok_or(RejectReason::InvalidShortcut)?;
+
+    for pct in [
+        cfg.snapping.percent_left,
+        cfg.snapping.percent_right,
+        cfg.snapping.percent_top,
+        cfg.snapping.percent_bottom,
+    ] {
+        if pct == 0 || pct >= 100 {
+            return Err(RejectReason::InvalidPercentage);
+        }
+    }
 
     let chords = crate::hook::Chords {
         primary: Some(primary),
@@ -152,6 +177,10 @@ pub fn validate(text: &str) -> Result<(Config, HookSnapshot, WorkerSnapshot), Re
         snap_bottom: Some(snap_bottom),
         snap_maximize: Some(snap_maximize),
         move_next_monitor: Some(move_next_monitor),
+        snap_percent_left: Some(snap_percent_left),
+        snap_percent_right: Some(snap_percent_right),
+        snap_percent_top: Some(snap_percent_top),
+        snap_percent_bottom: Some(snap_percent_bottom),
         stack: Some(stack),
     };
 
@@ -186,6 +215,7 @@ pub fn validate(text: &str) -> Result<(Config, HookSnapshot, WorkerSnapshot), Re
     };
     let worker = WorkerSnapshot {
         layout: cfg.layout.clone(),
+        snapping: cfg.snapping.clone(),
     };
     Ok((cfg, hook, worker))
 }
@@ -648,6 +678,9 @@ snap_half_bottom = \"ctrl+alt+up\"
             RejectReason::Unreadable.message(),
             RejectReason::Malformed.message(),
             RejectReason::InvalidShortcut.message(),
+            RejectReason::ReservedShortcut.message(),
+            RejectReason::DuplicateShortcut.message(),
+            RejectReason::InvalidPercentage.message(),
         ];
         for (i, a) in msgs.iter().enumerate() {
             for b in msgs.iter().skip(i + 1) {

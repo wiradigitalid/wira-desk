@@ -15,9 +15,12 @@ export component ShortcutRow inherits Rectangle {
     in property <string> conflict_name: "";
     in property <bool> has_conflict: conflict_name != "";
     in property <bool> can_swap: false;
+    in property <bool> has_percent: false;
+    in property <int> percent: 50;
 
     callback capture_clicked();
     callback swap_clicked();
+    callback percent_changed(int);
 
     HorizontalLayout {
         padding-left: 16px;
@@ -76,6 +79,125 @@ export component ShortcutRow inherits Rectangle {
         HorizontalLayout {
             spacing: 6px;
             alignment: end;
+
+            // Bounded numeric control for custom-percentage snap actions
+            if root.has_percent : HorizontalLayout {
+                spacing: 4px;
+                alignment: center;
+
+                // Minus button
+                Rectangle {
+                    width: 28px;
+                    height: 30px;
+                    border-radius: 4px;
+                    background: pct_minus_touch.has_hover ? Palette.bg_card_hover : Palette.bg_keycap;
+                    border-width: 1px;
+                    border-color: Palette.stroke_card;
+
+                    accessible-role: button;
+                    accessible-label: "Decrease snap percentage";
+
+                    Text {
+                        text: "−";
+                        font-size: 14px;
+                        font-weight: 700;
+                        color: Palette.text_primary;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                    pct_minus_touch := TouchArea {
+                        clicked => {
+                            root.percent_changed(root.percent - 1);
+                        }
+                    }
+                }
+
+                // Value field (typed as well as stepped, bounded numeric control)
+                Rectangle {
+                    width: 58px;
+                    height: 30px;
+                    border-radius: 4px;
+                    background: Palette.bg_subtle;
+                    border-width: 1px;
+                    border-color: pct_input.has-focus ? Palette.accent_primary : Palette.stroke_card;
+
+                    pct_field_touch := TouchArea {
+                        clicked => {
+                            pct_input.focus();
+                            pct_input.select-all();
+                        }
+                    }
+
+                    HorizontalLayout {
+                        alignment: center;
+                        spacing: 1px;
+
+                        pct_input := TextInput {
+                            width: 26px;
+                            text: "\{root.percent}";
+                            input-type: number;
+                            single-line: true;
+                            font-family: Typography.font_mono;
+                            font-size: 12px;
+                            font-weight: 600;
+                            color: Palette.text_primary;
+                            horizontal-alignment: right;
+                            vertical-alignment: center;
+
+                            accessible-role: text;
+                            accessible-label: "Snap percentage input";
+
+                            accepted => {
+                                if self.text.is-float() {
+                                    root.percent_changed(Math.round(self.text.to-float()));
+                                }
+                                self.clear-focus();
+                            }
+                            changed has-focus => {
+                                if !self.has-focus && self.text.is-float() {
+                                    root.percent_changed(Math.round(self.text.to-float()));
+                                }
+                            }
+                        }
+
+                        Text {
+                            text: "%";
+                            font-family: Typography.font_mono;
+                            font-size: 12px;
+                            font-weight: 600;
+                            color: Palette.text_secondary;
+                            vertical-alignment: center;
+                        }
+                    }
+                }
+
+                // Plus button
+                Rectangle {
+                    width: 28px;
+                    height: 30px;
+                    border-radius: 4px;
+                    background: pct_plus_touch.has_hover ? Palette.bg_card_hover : Palette.bg_keycap;
+                    border-width: 1px;
+                    border-color: Palette.stroke_card;
+
+                    accessible-role: button;
+                    accessible-label: "Increase snap percentage";
+
+                    Text {
+                        text: "+";
+                        font-size: 14px;
+                        font-weight: 700;
+                        color: Palette.text_primary;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                    pct_plus_touch := TouchArea {
+                        clicked => {
+                            root.percent_changed(root.percent + 1);
+                        }
+                    }
+                }
+            }
 
             // One-click Swap ⇄ button
             if root.has_conflict && root.can_swap : Rectangle {
