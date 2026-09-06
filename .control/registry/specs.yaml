@@ -366,7 +366,10 @@ specs:
     status: open
     depends_on: []
     spec_folder: _bmad-output/specs/spec-1-percentage-and-thirds-snap/
-    spec_reviewed: null
+    spec_reviewed:
+      date: '2026-09-06'
+      sha: '77bd03a'
+      lenses: [edge-case-hunter]
     fr: [FR-26, FR-27]
     tickets:
       - id: SPEC-1-01

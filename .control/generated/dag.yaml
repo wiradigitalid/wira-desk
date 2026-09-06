@@ -1,1 +1,6 @@
-dag: []
+dag:
+- spec: SPEC-1
+  order:
+  - parallel:
+    - SPEC-1-01
+    - SPEC-1-02
