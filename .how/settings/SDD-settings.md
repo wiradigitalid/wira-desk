@@ -3,12 +3,12 @@ type: sdd
 component: settings
 status: reviewed
 created: 2026-08-21
-updated: 2026-08-30
+updated: 2026-09-07
 realizes: [UC-4, UC-5, UC-6]
 binds: [AD-1, AD-5, AD-11, AD-11a, AD-12, AD-13]
 reviewed:
-  date: '2026-09-03'
-  sha: 'e845c3c'
+  date: '2026-09-07'
+  sha: 'dd5c8cd'
   lenses: [structure, prose]
 ---
 
