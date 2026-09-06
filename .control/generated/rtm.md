@@ -226,14 +226,19 @@ rtm:
   FR: FR-23
   DEC: []
   UC: UC-7
-  ticket: ''
-  spec: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W4-S3
+  spec: W4
+  release: 0.4.0
+  test:
+  - arrangement::monitor::tests::single_monitor_yields_an_empty_plan
+  - arrangement::monitor::tests::next_monitor_wraps_from_last_to_first
+  - arrangement::monitor::tests::a_left_half_stays_a_left_half_across_monitors
+  - arrangement::monitor::tests::proportional_mapping_survives_a_resolution_difference
+  - arrangement::monitor::tests::empty_destination_work_area_is_rejected
+  status: done
   exempt: false
-  broken_at: ticket
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-13
   FR: FR-24

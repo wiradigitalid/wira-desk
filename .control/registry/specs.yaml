@@ -250,6 +250,27 @@ specs:
     prd: [wira-desk]
     size: M
     status: closed
+    # `spec_reviewed` and `tickets:` added post-hoc (2026-09-06): SPEC-1 touching
+    # window-management surfaced that UC-7 had no flat-shape ticket, and this wave never carried
+    # a spec-level edge-case-hunter trace (the individual SDD/SRS files did, at [structure, prose]
+    # lenses, but not the contract). A real edge-case-hunter pass ran over this wave's SPEC.md +
+    # all 6 stories now, not a fabricated stamp: it found one genuine gap (UC-7's Alternate/Failure
+    # Flows never distinguished monitor-move's "refuse rather than invent a minimum size" behavior
+    # from half-snap's "respect the window's own minimum size", though the code — verified in
+    # `arrangement/monitor.rs` — has always drawn that line) — fixed directly in
+    # UC-7-move-window-next-monitor.md and LC-arrangement-engine.md, code being ground truth here.
+    # `tickets:` carries ONLY S3 (the one satisfying UC-7); S1/S4/S5 satisfy no UC and S2's UC-2 is
+    # already scheduled via W1-S2, so nothing else was needed. S6 (settings) deliberately excluded —
+    # same reasoning as W1: adding it would mark `settings` touched and newly redden UC-5/UC-6/UC-8.
+    spec_reviewed:
+      date: '2026-09-06'
+      sha: 'PENDING-COMMIT'
+      lenses: [edge-case-hunter]
+    tickets:
+      - id: W4-S3
+        component: window-management
+        satisfies: [UC-7]
+        tests: [arrangement::monitor::tests::single_monitor_yields_an_empty_plan, arrangement::monitor::tests::next_monitor_wraps_from_last_to_first, arrangement::monitor::tests::a_left_half_stays_a_left_half_across_monitors, arrangement::monitor::tests::proportional_mapping_survives_a_resolution_difference, arrangement::monitor::tests::empty_destination_work_area_is_rejected]
     # Closed 2026-08-26. All six stories landed, each green on fmt + clippy -D warnings +
     # the full suite; 391 tests at the start of the wave, 438 at the end.
     #

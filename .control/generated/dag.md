@@ -15,4 +15,8 @@ dag:
     - W1-S1
     - W1-S2
     - W1-S3
+- spec: W4
+  order:
+  - parallel:
+    - W4-S3
 ```
