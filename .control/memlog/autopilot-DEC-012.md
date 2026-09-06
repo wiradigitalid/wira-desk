@@ -8,58 +8,19 @@ date: 2026-09-06
 
 ## Resume
 
-- Iteration: 7
+- Iteration: 15
 - Run branch: `autopilot/DEC-012`, worktree at `../wira-desk-autopilot` relative to the main checkout (`git
-  worktree list` finds its actual path), HEAD `b49204b`. PR: not opened yet (opens at first spec close, per
+  worktree list` finds its actual path), HEAD `fc7f8ca`. PR: not opened yet (opens at first spec close, per
   mandate).
-- Stopped at: capacity — `SPEC-1-01`'s code is committed and independently verified green (fmt/clippy/501
-  tests, 0 failed), Step 3 review dispatched as two parallel agents (`abb560804106a7f88` Standards,
-  `a868fce8df0c9fc15` Spec). Cannot be waited on synchronously.
+- Stopped at: capacity — `SPEC-1-02` code committed (`f3f0135`, `fc7f8ca`) and independently verified green
+  (fmt/clippy/full suite, export gate unchanged at `OQ-37` only). Step 3 review dispatched as two parallel
+  agents (`a735dbca9baa9e6c5` Standards, `af5d9691d7170a0b2` Spec). Cannot be waited on synchronously.
 - Blocked: —
 - Parked: —
-- **Near-miss, resolved but worth restating**: job `b8nzz6xny` (iteration 2's first `claude-byok`
-  dispatch) was wrongly presumed dead after its log showed a PowerShell `NativeCommandError` from `*>`
-  redirecting a harmless stderr warning. It was NOT dead — `TaskOutput` later showed it `running`, and it
-  kept running concurrently with its replacement (`bl2cjjxeb`) for several iterations, finishing only at
-  iteration 7 with one small commit (`b49204b`, a 3p.md test-count correction). This was briefly two
-  claude-byok processes in the same worktree at once — exactly the race this mandate exists to prevent.
-  No actual damage: worktree stayed clean, history stayed linear, `b49204b` only touched a doc line,
-  independent test run (501 passed) still holds. Root cause and fix are in Decisions below — the practice
-  going forward is `TaskOutput(block:false)` to check a job's real status, never inferring death from a
-  redirected stderr line.
-- Both review agents reported and were independently verified against the diff/gate, not trusted as
-  written. Two real findings: (1) Spec must-fix — Slint's percentage input silently clamps out-of-range
-  values instead of refusing them, contradicting the ticket's own checklist line; ticket amended with the
-  finding, status reset to `ready-for-agent` (return trip 1/2). (2) Standards must-fix on files *I* wrote
-  (not claude-byok's) — `verify-public-export.ps1` flagged 4 literal local-path hits in `DEC-012`/ledger/
-  `decisions.yaml`; fixed by rewording to `../wira-desk-autopilot` / "see decisions.yaml" instead of the
-  absolute path. A 5th/6th finding (maintainer-handle in `.control/decisions/*`) matches a pre-existing,
-  already-failing pattern (`DEC-011`, on `main` before this mandate) — filed as `OQ-37`, not decided
-  unilaterally. Three Standards *smells* (duplicated range-check logic, duplicated per-edge planner shape,
-  triple command dispatch) are follow-up-only, not must-fix — left unfixed, not returned to Step 2 for.
-- Blocked: —
-- Parked: —
-- `b4i44ijoi` completed (confirmed via `TaskOutput`, not the log), commit `1d15f5c` — `Math.clamp` removed
-  from `shortcut_row.slint`, an out-of-range value now reaches backend validation. Independently verified:
-  fmt/clippy/full suite green (chain exit 0), `verify-public-export.ps1` unchanged at 2 findings (only the
-  already-filed `OQ-37`, nothing new). One incidental note: claude-byok's own commit also edited one word in
-  this ledger's Decisions table (replacing a literal path I'd left in a finding's own description with
-  "developer workstation path") — a real, correct fix, but technically not the coordinator's-only-write rule
-  being followed to the letter; recorded rather than silently accepted.
-- Blocked: —
-- Parked: —
-- Re-review (`a6cedeca717fb4baa`) confirmed clean against the actual code path (traced
-  `save_and_notify`→`validate_config`→`ShortcutError::InvalidPercentage`→`describe()` and the passing test
-  `an_out_of_range_percentage_save_reports_actionable_error`), no must-fix remaining, only a cosmetic
-  follow-up (rejected negative input displays `0` not the typed string). **`SPEC-1-01` closed**:
-  `status: done`, `commit: 1d15f5c`.
-- Blocked: —
-- Parked: —
-- In flight: harness background job `bn4pbwgw7` — claude-byok building `SPEC-1-02` (Snap to thirds). No
-  blocking edge with `SPEC-1-01`, dispatched sequentially anyway per this run's own concurrency rule.
-- Next: once `bn4pbwgw7` is confirmed finished via `TaskOutput(block:false)` — independently verify
-  (fmt/clippy/full suite, gate), dispatch a separate re-review, and on clean close `SPEC-1-02`. Once both
-  tickets are done, close `SPEC-1`, push the run branch, open the one draft PR, watch CI.
+- Next: once both review agents report — adjudicate from the artifact, not their self-description; on
+  clean, close `SPEC-1-02` (`status: done`). That closes `SPEC-1` (both its tickets done) — then push the
+  run branch, open the one draft PR, watch CI, and this mandate's remaining scope is empty (§ Finish: run
+  the smoke test via claude-byok, then wrap up).
 
 ## Decisions
 
@@ -84,3 +45,5 @@ date: 2026-09-06
 | Iter 10 | Fix round 1/2 result | `1d15f5c` genuinely resolves the clamping finding — verified by reading the diff (removed `Math.clamp` in Slint, `main.rs` now floors a negative to 0 in Rust instead) and by independently re-running fmt/clippy/full suite and the export gate myself, not trusting claude-byok's own report | Accepting the "0 hard violations" self-review claim in its report | A ticket closed with a bug the self-review missed | `1d15f5c` |
 | Iter 10 | claude-byok touched the ledger | Its fix commit corrected one literal path fragment I'd left in a Decisions-table cell (via its own export-gate check) — recorded as a rule deviation worth noting, not reverted, since the correction itself is accurate | Reverting the correction to enforce "coordinator-only" strictly, which would reintroduce a real gate finding | None — content is correct either way | This row |
 | Iter 11 | Close `SPEC-1-01` | Re-review traced the actual validation call chain and a passing test, not just claude-byok's report; closed `status: done` | Closing on the fix commit's own self-review claim | Reopen if a later finding contradicts it | ticket file, `commit: 1d15f5c` |
+| Iter 15 | `## Resume` had grown into a decision narrative | Rewrote it back to the compact form this section is supposed to be (position + next step only) — the running history of what happened is what `## Decisions` is for, and it already had it all | Continuing to append a paragraph per iteration, which is exactly the "second home for decisions" anti-pattern this skill's own guide warns against | None — no information lost, `## Decisions` already carried everything | This file |
+| Iter 15 | `SPEC-1-02` build + self-review | claude-byok's own report claims 512 tests passing and 3 self-found-and-fixed findings (test-only-checked-defaults, unpinned wire values, missing boundary tests) across two commits — independently verified via fmt/clippy/full suite (chain exit 0) and the export gate (unchanged) before trusting any of it; dispatched a genuinely separate two-axis review rather than accepting the self-review | Accepting the report as sufficient (self-review by construction, per `wdi-build`) | Re-verify if the separate review contradicts the self-review's claims | `f3f0135`, `fc7f8ca`, `a735dbca9baa9e6c5`, `af5d9691d7170a0b2` |
