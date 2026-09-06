@@ -18,7 +18,23 @@ owner decides.
 
 ## [Unreleased]
 
-Nothing yet.
+Needs a minor bump (0.2.0) once shipped: new behaviour, new settings, and one shipped default
+changes. Not yet released — tracked here per `AGENTS.md`'s versioning rule until the owner bumps
+`Cargo.toml`.
+
+### Added
+
+- Custom-percentage edge snap: snap the active window to a screen edge at a percentage you set
+  per direction in Settings, instead of the fixed half (`Ctrl+Alt+Shift+Left/Right/Up/Down`).
+- Snap to thirds: snap the active window to the left, middle, or right third of the screen
+  (`Ctrl+Alt+1/2/3`).
+
+### Changed
+
+- Overlapping Stack's default shortcut moved from `Ctrl+Alt+Shift+Down` to `Ctrl+Alt+Shift+S`,
+  freeing the arrow keys under `Ctrl+Alt+Shift` for the custom-percentage snap above. See
+  `DEC-011`. An install that already customized (or kept) the old default is not migrated; see
+  the decision for what happens on that chord at startup.
 
 ## [0.1.5] - 2026-09-03
 

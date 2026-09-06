@@ -106,11 +106,11 @@ Local component business rules binding the `settings` Product Component. Global 
 
 #### Rationale — LBR-ST-14
 
-The list of editable actions grew from six to nine in one pass, and it will grow again. The failure this rule prevents is not hypothetical in this codebase: the source already carries comments explaining that the draw order and the declared order must not become two lists, because they had been, and that a field added to the field-to-key table but not to its reverse lookup breaks the round trip silently rather than at compile time.
+The list of editable actions grew from six to nine in one pass, then to sixteen in another (FR-26, FR-27), and it will grow again. The failure this rule prevents is not hypothetical in this codebase: the source already carries comments explaining that the draw order and the declared order must not become two lists, because they had been, and that a field added to the field-to-key table but not to its reverse lookup breaks the round trip silently rather than at compile time.
 
 The rule also makes the collision precedence order (`BR-6`, `DEC-009`) inspectable. Precedence is arbitrary by nature; what makes it defensible is that a reader can verify it against one declared sequence in a few seconds, and that the pane they are looking at is drawn from that same sequence.
 
-Grouping is explicitly permitted and explicitly constrained. Nine undifferentiated rows are hard to scan, so headings earn their place — but a heading that reorders rows relative to the declared sequence would put the visible order and the precedence order back into disagreement, which is the whole thing this rule exists to stop.
+Grouping is explicitly permitted and explicitly constrained. Sixteen undifferentiated rows are hard to scan, so headings earn their place — but a heading that reorders rows relative to the declared sequence would put the visible order and the precedence order back into disagreement, which is the whole thing this rule exists to stop.
 
 #### Rationale — LBR-ST-15
 
@@ -712,6 +712,6 @@ refused only on submission. Folding them into one scenario would have made SCN-0
 *rejected before save* — untrue of half its own content.
 
 The submit action is never disabled to express this collision. `DEC-001` governs, and states the
-reason: a disabled submit has to explain which field disabled it — something a user facing nine
+reason: a disabled submit has to explain which field disabled it — something a user facing sixteen
 shortcut fields cannot work out.
 

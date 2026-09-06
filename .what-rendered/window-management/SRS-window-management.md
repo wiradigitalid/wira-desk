@@ -20,7 +20,7 @@ Users manage multiple windows within the same application (multiple browser sess
 
 | Actor | Who they are | What they may do |
 | --- | --- | --- |
-| Power User | Desktop user managing multiple windows of the same application across multi-monitor or virtual desktop workspaces. | Trigger same-app cycling, snap active windows to any half or to full screen, move the active window to the next monitor, access tray menu, open diagnostic logs. |
+| Power User | Desktop user managing multiple windows of the same application across multi-monitor or virtual desktop workspaces. | Trigger same-app cycling, snap active windows to any half or to full screen, to a custom percentage of a screen edge, or to a left/middle/right third, move the active window to the next monitor, access tray menu, open diagnostic logs. |
 | New User | First-time user running Wira Desk on Windows. | Experience default cycling and snapping shortcuts without opening configuration. |
 | Sysadmin | System administrator operating standard and elevated command shells or administrative tools. | Cycle seamlessly between standard and elevated administrator windows without UIPI refusal. |
 
@@ -35,6 +35,8 @@ Rendered from `usecases.yaml`.
 | `UC-2` | Snap the active window to half the screen | `window-management` | `FR-14`, `FR-22` | no |
 | `UC-3` | See the tray icon return after Windows Explorer restarts | `window-management` | `FR-10`, `FR-11`, `FR-12` | no |
 | `UC-7` | Move the active window to the next monitor | `window-management` | `FR-23` | no |
+| `UC-9` | Snap the active window to a screen edge at a custom percentage | `window-management` | `FR-26` | no |
+| `UC-10` | Snap the active window to a third of the screen | `window-management` | `FR-27` | no |
 
 
 ## Constraints
@@ -101,6 +103,8 @@ Local component business rules binding the `window-management` Product Component
 | LBR-WM-6 | A window belonging to Wira Desk itself must never be an arrangement target; the chord is consumed and nothing moves, is retargeted, or raises a popup. | `window-management` | DEC-006 | active |
 | LBR-WM-7 | A monitor-move command visits monitors in one fixed order, sampled fresh per invocation, wrapping from the last back to the first; the destination is derived from the window's share of its source work area, never from copying pixel dimensions; a maximized window is restored before being placed; with one monitor attached the command is a successful no-op; the virtual desktop never changes as a side effect. | `window-management` | FR-23, DEC-007, AD-14 | active |
 | LBR-WM-8 | A half-screen snap divides the work area at one boundary computed fresh on every press, so the two halves exactly tile the work area with neither a gap nor an overlap; an odd extent gives the floor to the first half; a half that would be empty is refused rather than emitted as a zero-extent placement. | `window-management` | FR-14, FR-22 | active |
+| LBR-WM-9 | A custom-percentage edge snap resizes the active window to the percentage configured for that edge — of the work area's width for left/right, of its height for top/bottom — computed fresh on every press and independent of every other edge's configured percentage; a percentage that would produce a zero or negative extent is refused rather than emitted as a degenerate placement. | `window-management` | FR-26 | active |
+| LBR-WM-10 | A thirds snap divides the work area's width into three columns computed fresh on every press, so the three columns exactly tile the work area with neither a gap nor an overlap; a width not evenly divisible by three gives the remainder to the middle column; a column that would be empty is refused rather than emitted as a zero-extent placement. | `window-management` | FR-27 | active |
 
 #### Rationale — LBR-WM-6
 
@@ -113,6 +117,14 @@ Coordinate ordering is undefined for vertically stacked or L-shaped arrangements
 #### Rationale — LBR-WM-8
 
 Both halves being derived from one boundary makes "the halves exactly tile the work area" true by construction rather than by an off-by-one convention every reader has to remember, and it holds for both axes so the vertical division added at FR-22 inherits the same guarantee rather than reinventing it.
+
+#### Rationale — LBR-WM-9
+
+Each edge's percentage is independent rather than paired with its opposite edge, because a single-key press is not a two-window layout decision the way `FR-14`'s halves are — the user snapping left at 70% is not promising anything about what happens if they later snap right, so there is nothing to keep tiled and nothing gained by coupling the two.
+
+#### Rationale — LBR-WM-10
+
+The remainder goes to the middle column rather than the first, unlike `LBR-WM-8`'s floor-to-the-first-half rule: a thirds layout is read as symmetric (left, center, right), and a stray pixel on an outer column would be visible against the other outer column in a way the same pixel hidden in the middle is not.
 
 #### Retired
 
@@ -135,7 +147,7 @@ Conceptual domain model for the `window-management` component. Represents domain
 | `hook-command` | An intercepted, validated, and throttled user intent command dispatched from the keyboard hook to the background worker. | Command action code and dispatch timestamp |
 | `window-focus-state` | The live snapshot of active window focus, monitor boundaries, virtual desktop context, and application identity on the current desktop. | Foreground window handle (`HWND`), monitor identity, and virtual desktop GUID |
 | `tray-health-state` | The operational status of the background daemon, tracking hook attachment vitality, error severity level, and user notification state. | Error tier level (`Normal`, `Warning`, `Critical`) and hook vitality status |
-| `arrangement-command` | A planned window repositioning and sizing action targeting specific desktop regions (a half-screen snap to any of the four halves, maximized state, an overlapping stack slot, or a move to the next monitor). | Target screen region geometry, the destination monitor, and monitor DPI scaling context |
+| `arrangement-command` | A planned window repositioning and sizing action targeting specific desktop regions (a half-screen snap to any of the four halves, a custom-percentage edge snap, a snap to a horizontal third, maximized state, an overlapping stack slot, or a move to the next monitor). | Target screen region geometry, the destination monitor, and monitor DPI scaling context |
 
 #### Relationships
 
@@ -325,6 +337,69 @@ Keyboard focus and active window state transfer immediately to the next same-app
 - `LBR-WM-4` (Lock-free drop-on-saturation policy)
 
 
+### `UC-10-snap-window-third.md`
+
+### UC-10 — Snap the active window to a third of the screen
+
+#### Trigger
+
+User presses a configured thirds-snap keyboard shortcut for one of the three columns — left, middle, or
+right (shipped defaults `Ctrl + Alt + 1`, `Ctrl + Alt + 2`, `Ctrl + Alt + 3`).
+
+#### Precondition
+
+- Wira Desk daemon is running with active low-level keyboard hook.
+- Foreground window is a standard resizable top-level application window on an active physical monitor.
+
+#### Main Flow
+
+1. User presses the thirds-snap shortcut for one column while focused on a resizable window.
+2. System intercepts keystroke on dedicated hook thread, validates shortcut chord, and enqueues the
+   command to the lock-free ring buffer.
+3. System posts command notification to worker thread and returns immediately without blocking input.
+4. System worker thread retrieves the command and identifies active monitor bounds and DPI scale factor.
+5. System divides the work area's width into three columns computed fresh on every press — any
+   remainder pixel width goes to the middle column, so the three columns exactly tile the work area
+   with neither a gap nor an overlap — and selects the column the chord named.
+6. System executes atomic DPI-aware repositioning and resizing via non-blocking Win32 APIs.
+7. User sees the active window aligned flush to the targeted column at exactly one third of the work
+   area's width and full work-area height.
+
+#### Alternate Flows
+
+| From step | Condition | What happens |
+| --- | --- | --- |
+| Step 1 | Foreground window is currently maximized | System restores window to normal state before applying the third-width dimensions. |
+| Step 2 | Keystroke has unconfigured modifier combinations | System passes keystroke through via `CallNextHookEx` without executing any snapping action. |
+| Step 4 | Foreground window belongs to Wira Desk itself — the Settings window or its onboarding modal | System resolves no target and arranges nothing. The chord stays consumed rather than passed back to Windows (`LBR-WM-6`, `DEC-006`). |
+| Step 4 | Window spans a multi-monitor boundary | System determines the primary containing monitor via center-point calculation and applies the snap to that monitor's work area. |
+| Step 5 | Work area is too narrow to divide into three non-zero columns | System plans nothing and reports a planning failure rather than emitting a zero-extent placement. Nothing moves. |
+| Step 6 | Window enforces custom minimum size constraints larger than one third of the work area | System positions the window flush to the named column while respecting the application's enforced minimum boundaries. |
+
+#### Failure Flows
+
+| From step | Failure | What the system does | What the user is left with |
+| --- | --- | --- | --- |
+| Step 4 | Monitor handle invalid or disconnected during hot-unplug | System falls back to primary desktop work area coordinates | Window is safely positioned on primary display |
+| Step 6 | Win32 `SetWindowPos` call refused due to target privilege or style lock | System logs Tier 2 diagnostic warning without crashing | Window remains at current position and size |
+
+#### Outcome
+
+The active window is cleanly resized and positioned to exactly one third of the active monitor's
+available work area — the column the chord named — with proper per-monitor DPI scaling and work area
+boundary adherence. The three columns cover the work area exactly, with no gap and no overlap between
+them, and a width not evenly divisible by three is divided the same way on every press.
+
+#### Business Rules
+
+- `BR-1` (Explicit IPC configuration reload)
+- `LBR-WM-1` (Exact shortcut matching only)
+- `LBR-WM-3` (Non-blocking kernel API sterilization)
+- `LBR-WM-4` (Lock-free drop-on-saturation policy)
+- `LBR-WM-6` (Arrangement target eligibility)
+- `LBR-WM-10` (Deterministic thirds division)
+
+
 ### `UC-2-snap-window-half.md`
 
 ### UC-2 — Snap the active window to half the screen
@@ -484,6 +559,71 @@ The active window sits on the next attached monitor, occupying the same share of
 - `LBR-WM-4` (Lock-free drop-on-saturation policy)
 - `LBR-WM-6` (Arrangement target eligibility)
 - `LBR-WM-7` (Monitor-move semantics)
+
+
+### `UC-9-snap-window-custom-percentage.md`
+
+### UC-9 — Snap the active window to a screen edge at a custom percentage
+
+#### Trigger
+
+User presses a configured custom-percentage snap keyboard shortcut for one of the four edges — left,
+right, top, or bottom (shipped defaults `Ctrl + Alt + Shift + Left`, `Ctrl + Alt + Shift + Right`,
+`Ctrl + Alt + Shift + Up`, `Ctrl + Alt + Shift + Down`).
+
+#### Precondition
+
+- Wira Desk daemon is running with active low-level keyboard hook.
+- Foreground window is a standard resizable top-level application window on an active physical monitor.
+- The pressed edge has a percentage configured in Settings (default 50%, matching the fixed half-snap
+  until the user changes it).
+
+#### Main Flow
+
+1. User presses the custom-percentage snap shortcut for one edge while focused on a resizable window.
+2. System intercepts keystroke on dedicated hook thread, validates shortcut chord, and enqueues the
+   command to the lock-free ring buffer.
+3. System posts command notification to worker thread and returns immediately without blocking input.
+4. System worker thread retrieves the command and identifies active monitor bounds, DPI scale factor,
+   and the percentage configured for the named edge.
+5. System computes target coordinates by taking the configured percentage of the work area's width
+   (left/right edges) or height (top/bottom edges), measured from the named edge inward.
+6. System executes atomic DPI-aware repositioning and resizing via non-blocking Win32 APIs.
+7. User sees active window aligned flush to the targeted edge at exactly the configured percentage of
+   the work area.
+
+#### Alternate Flows
+
+| From step | Condition | What happens |
+| --- | --- | --- |
+| Step 1 | Foreground window is currently maximized | System restores window to normal state before applying the configured-percentage dimensions. |
+| Step 2 | Keystroke has unconfigured modifier combinations | System passes keystroke through via `CallNextHookEx` without executing any snapping action. |
+| Step 4 | Foreground window belongs to Wira Desk itself — the Settings window or its onboarding modal | System resolves no target and arranges nothing. The chord stays consumed rather than passed back to Windows (`LBR-WM-6`, `DEC-006`). |
+| Step 4 | Window spans a multi-monitor boundary | System determines the primary containing monitor via center-point calculation and applies the snap to that monitor's work area. |
+| Step 5 | Work area is too small to produce a non-zero extent at the configured percentage | System plans nothing and reports a planning failure rather than emitting a zero-extent placement. Nothing moves. |
+| Step 6 | Window enforces custom minimum size constraints larger than the configured percentage | System positions the window flush to the named edge while respecting the application's enforced minimum boundaries. |
+
+#### Failure Flows
+
+| From step | Failure | What the system does | What the user is left with |
+| --- | --- | --- | --- |
+| Step 4 | Monitor handle invalid or disconnected during hot-unplug | System falls back to primary desktop work area coordinates | Window is safely positioned on primary display |
+| Step 6 | Win32 `SetWindowPos` call refused due to target privilege or style lock | System logs Tier 2 diagnostic warning without crashing | Window remains at current position and size |
+
+#### Outcome
+
+The active window is cleanly resized and positioned against the named edge at exactly the percentage of
+the active monitor's available work area configured for that edge — proper per-monitor DPI scaling and
+work area boundary adherence, independent of what the fixed half-snap (`UC-2`) does with the same edge.
+
+#### Business Rules
+
+- `BR-1` (Explicit IPC configuration reload)
+- `LBR-WM-1` (Exact shortcut matching only)
+- `LBR-WM-3` (Non-blocking kernel API sterilization)
+- `LBR-WM-4` (Lock-free drop-on-saturation policy)
+- `LBR-WM-6` (Arrangement target eligibility)
+- `LBR-WM-9` (Deterministic percentage division)
 
 
 ## Scenarios — `05-scenarios/`

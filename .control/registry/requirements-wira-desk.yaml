@@ -40,6 +40,12 @@ capabilities:
   - id: CAP-13
     goal: BG-2
     text: Check whether a newer release is available, on a schedule and on request, without any other network activity or identifying payload.
+  - id: CAP-14
+    goal: BG-3
+    text: Snap the active window to a screen edge at a user-configurable percentage instead of a fixed half.
+  - id: CAP-15
+    goal: BG-3
+    text: Snap the active window to one of three equal horizontal thirds of the current monitor.
 
 functional:
   - id: FR-1
@@ -197,7 +203,8 @@ functional:
     text: Apply overlapping stack layout on small monitors with up to three half-width windows.
     statement: >-
       The system can arrange up to three same-application windows in an overlapping 50%-width stack
-      with offset horizontal edges on small screens, triggered by `Ctrl + Alt + Shift + Down`.
+      with offset horizontal edges on small screens, triggered by `Ctrl + Alt + Shift + S`
+      (`DEC-011`; was `Ctrl + Alt + Shift + Down` until the arrow tier was freed for FR-26).
     proof: >-
       Triggering the stack layout command positions up to three windows at 50% screen width each
       with visible exposed borders allowing mouse selection.
@@ -318,6 +325,31 @@ functional:
       Clicking "Check for Updates" with a newer release published downloads the installer,
       verifies it against the published hash, and offers to launch it; a corrupted or tampered
       download is deleted and never launched.
+  - id: FR-26
+    capability: CAP-14
+    component: window-management
+    text: Snap the active window to a screen edge at a percentage the user configures per direction, instead of the fixed half.
+    statement: >-
+      The system can snap and resize the active window against the left, right, top, or bottom
+      edge of the current monitor's working area at a percentage the user sets independently per
+      direction in Settings (default 50%, matching `FR-14`/`FR-22` until changed), using dedicated
+      keyboard shortcuts (`Ctrl + Alt + Shift + Left/Right/Up/Down`), scaled to the target
+      monitor's DPI.
+    proof: >-
+      With the left-edge percentage set to 70% in Settings, pressing `Ctrl + Alt + Shift + Left`
+      resizes and aligns the active window to exactly 70% of the working area's width from the
+      left edge of the current monitor, taking display scaling into account.
+  - id: FR-27
+    capability: CAP-15
+    component: window-management
+    text: Snap the active window to the left, middle, or right third of the current monitor.
+    statement: >-
+      The system can snap and resize the active window to the left, middle, or right third of the
+      current monitor's working area using dedicated keyboard shortcuts (`Ctrl + Alt + 1/2/3`),
+      scaled to the target monitor's DPI.
+    proof: >-
+      Pressing `Ctrl + Alt + 2` resizes and aligns the active window to the middle third of the
+      working area of the current monitor, taking display scaling into account.
 
 nonfunctional:
   - id: NFR-1

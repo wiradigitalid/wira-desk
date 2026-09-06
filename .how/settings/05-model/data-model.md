@@ -20,11 +20,18 @@ erDiagram
 | cycling_fallback | string | yes | Optional `Alt+Oem3` fallback |
 | snap_left | string | no | Half-left snap binding |
 | snap_right | string | no | Half-right snap binding |
-| snap_top | string | no | Half-top snap binding. `[MISSING]` — planned by this pass (FR-22) |
-| snap_bottom | string | no | Half-bottom snap binding. `[MISSING]` — planned by this pass (FR-22) |
+| snap_top | string | no | Half-top snap binding (FR-22) |
+| snap_bottom | string | no | Half-bottom snap binding (FR-22) |
 | snap_maximize | string | no | Maximize binding |
-| move_next_monitor | string | no | Next-monitor move binding. `[MISSING]` — planned by this pass (FR-23) |
-| snap_stack | string | no | Overlapping stack binding |
+| move_next_monitor | string | no | Next-monitor move binding (FR-23) |
+| snap_percent_left | string | no | Custom-percentage left-edge snap binding. `[MISSING]` — planned by this pass (FR-26) |
+| snap_percent_right | string | no | Custom-percentage right-edge snap binding. `[MISSING]` — planned by this pass (FR-26) |
+| snap_percent_top | string | no | Custom-percentage top-edge snap binding. `[MISSING]` — planned by this pass (FR-26) |
+| snap_percent_bottom | string | no | Custom-percentage bottom-edge snap binding. `[MISSING]` — planned by this pass (FR-26) |
+| snap_stack | string | no | Overlapping stack binding. Default `ctrl+alt+shift+s` (`DEC-011`; was `ctrl+alt+shift+down` until the arrow tier above was freed for the four `snap_percent_*` rows) — placed **after** them in this declared sequence on purpose: on an install still holding the retired default, the percent-snap row must resolve the chord first, per `DEC-011`'s cost and the `DEC-009` mechanism it relies on |
+| snap_third_left | string | no | Left-third snap binding. `[MISSING]` — planned by this pass (FR-27) |
+| snap_third_middle | string | no | Middle-third snap binding. `[MISSING]` — planned by this pass (FR-27) |
+| snap_third_right | string | no | Right-third snap binding. `[MISSING]` — planned by this pass (FR-27) |
 
 ### Dictionary
 
@@ -33,6 +40,18 @@ erDiagram
 - Every value is a **canonical** chord string. Two rows holding the same canonical string is the collision condition `BR-6` governs; this component refuses to save it at all.
 
 Schema source: `shared::Config` in `crates/shared/src/config.rs`.
+
+## arrangement-percentage-preference
+
+The percentage each `snap_percent_*` chord snaps to — a value, not a chord, so it is not part of the
+declared sequence above and cannot collide with anything. `[MISSING]` — planned by this pass (FR-26).
+
+| Column | Type | Nullable | Meaning |
+| --- | --- | --- | --- |
+| percent_left | u8 | no | Percentage of work-area width, left edge. Default `50` |
+| percent_right | u8 | no | Percentage of work-area width, right edge. Default `50` |
+| percent_top | u8 | no | Percentage of work-area height, top edge. Default `50` |
+| percent_bottom | u8 | no | Percentage of work-area height, bottom edge. Default `50` |
 
 ## onboarding-completion
 

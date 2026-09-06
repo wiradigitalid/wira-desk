@@ -56,10 +56,10 @@ Wira Desk is an offline Windows desktop utility. It uses no HTTP/JSON error enve
 - **Payload**: Raw `u8` command enum defined in `crates/shared/src/commands.rs`:
   - `0`: `Nop`
   - `1`: `Cycle` (Win+Backtick)
-  - `2`: `SnapLeft` (Ctrl+Win+Left)
-  - `3`: `SnapRight` (Ctrl+Win+Right)
-  - `4`: `SnapMaximize` (Ctrl+Win+Enter)
-  - `5`: `OverlappingStack` (Ctrl+Win+Down)
+  - `2`: `SnapLeft` (Ctrl+Alt+Left)
+  - `3`: `SnapRight` (Ctrl+Alt+Right)
+  - `4`: `SnapMaximize` (Ctrl+Alt+Enter)
+  - `5`: `OverlappingStack` (Ctrl+Alt+Shift+S, `DEC-011`)
 - **Queue Overflow Policy**: If the ring buffer is full (e.g. extreme spam), new incoming commands are dropped immediately by the Hook Thread.
 
 ## Security & Elevation

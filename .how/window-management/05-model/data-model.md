@@ -17,7 +17,7 @@ Ephemeral command issued by `LC-hook-thread` and consumed by `LC-worker-thread`.
 
 | Column | Type | Nullable | Meaning |
 | --- | --- | --- | --- |
-| code | u8 | no | `shared::Command` discriminant. `0`=Nop, `1`=Cycle, `2`=SnapLeft, `3`=SnapRight, `4`=SnapMaximize, `5`=OverlappingStack, `6`=SnapTop, `7`=SnapBottom, `8`=MoveToNextMonitor. Extended, never renumbered; anything outside the set decodes to `Nop` (AD-2) |
+| code | u8 | no | `shared::Command` discriminant. `0`=Nop, `1`=Cycle, `2`=SnapLeft, `3`=SnapRight, `4`=SnapMaximize, `5`=OverlappingStack, `6`=SnapTop, `7`=SnapBottom, `8`=MoveToNextMonitor, `9`=SnapPercentLeft, `10`=SnapPercentRight, `11`=SnapPercentTop, `12`=SnapPercentBottom, `13`=SnapThirdLeft, `14`=SnapThirdMiddle, `15`=SnapThirdRight. Extended, never renumbered; anything outside the set decodes to `Nop` (AD-2) |
 | issued_at | QPC tick | no | Used only for 50 ms throttle; not persisted |
 
 ## window-focus-state
@@ -48,7 +48,7 @@ Planning input for `LC-arrangement-engine`.
 | Column | Type | Nullable | Meaning |
 | --- | --- | --- | --- |
 | target_hwnd | HWND | no | Window to move |
-| region | enum | no | `left` · `right` · `top` · `bottom` · `full` · `stack_slot_n` · `next_monitor` |
+| region | enum | no | `left` · `right` · `top` · `bottom` · `full` · `stack_slot_n` · `next_monitor` · `percent_left` · `percent_right` · `percent_top` · `percent_bottom` · `third_left` · `third_middle` · `third_right` |
 | dpi | u32 | no | Monitor DPI at plan time. Carried for traceability only — coordinates arrive already in physical pixels, so no planner scales by it |
 | destination_monitor | HMONITOR | yes | Set only for `next_monitor`; null for every region planned inside the window's own work area |
 
@@ -57,6 +57,7 @@ Planning input for `LC-arrangement-engine`.
 - **`region`** names *what* is planned, not how. `next_monitor` is the one value whose plan reads two work areas; every other value reads one.
 - **`destination_monitor`** is valid only for the duration of the command that enumerated it. It is a handle, not an identity, and it MUST NOT be stored beyond that (AD-14).
 - An `arrangement-command` that yields an **empty** plan has succeeded, not failed. A disabled overlapping stack and a `next_monitor` on a single-monitor desktop both land there.
+- **`percent_left`/`percent_right`/`percent_top`/`percent_bottom`** each read their percentage from `shared::Config` (`snapping.percent_*`) at plan time rather than carrying it as a column — the wire command names only the edge, never the value. `[MISSING]` — planned by this pass.
 
 ## monitor-set
 

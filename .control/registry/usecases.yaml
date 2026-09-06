@@ -56,3 +56,17 @@ usecases:
     actor: Power User
     satisfies: [FR-25]
     critical: false
+
+  - id: UC-9
+    component: window-management
+    title: Snap the active window to a screen edge at a custom percentage
+    actor: Power User
+    satisfies: [FR-26]
+    critical: false
+
+  - id: UC-10
+    component: window-management
+    title: Snap the active window to a third of the screen
+    actor: Power User
+    satisfies: [FR-27]
+    critical: false

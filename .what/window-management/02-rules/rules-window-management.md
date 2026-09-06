@@ -23,6 +23,8 @@ Local component business rules binding the `window-management` Product Component
 | LBR-WM-6 | A window belonging to Wira Desk itself must never be an arrangement target; the chord is consumed and nothing moves, is retargeted, or raises a popup. | `window-management` | DEC-006 | active |
 | LBR-WM-7 | A monitor-move command visits monitors in one fixed order, sampled fresh per invocation, wrapping from the last back to the first; the destination is derived from the window's share of its source work area, never from copying pixel dimensions; a maximized window is restored before being placed; with one monitor attached the command is a successful no-op; the virtual desktop never changes as a side effect. | `window-management` | FR-23, DEC-007, AD-14 | active |
 | LBR-WM-8 | A half-screen snap divides the work area at one boundary computed fresh on every press, so the two halves exactly tile the work area with neither a gap nor an overlap; an odd extent gives the floor to the first half; a half that would be empty is refused rather than emitted as a zero-extent placement. | `window-management` | FR-14, FR-22 | active |
+| LBR-WM-9 | A custom-percentage edge snap resizes the active window to the percentage configured for that edge — of the work area's width for left/right, of its height for top/bottom — computed fresh on every press and independent of every other edge's configured percentage; a percentage that would produce a zero or negative extent is refused rather than emitted as a degenerate placement. | `window-management` | FR-26 | active |
+| LBR-WM-10 | A thirds snap divides the work area's width into three columns computed fresh on every press, so the three columns exactly tile the work area with neither a gap nor an overlap; a width not evenly divisible by three gives the remainder to the middle column; a column that would be empty is refused rather than emitted as a zero-extent placement. | `window-management` | FR-27 | active |
 
 ## Rationale — LBR-WM-6
 
@@ -35,6 +37,14 @@ Coordinate ordering is undefined for vertically stacked or L-shaped arrangements
 ## Rationale — LBR-WM-8
 
 Both halves being derived from one boundary makes "the halves exactly tile the work area" true by construction rather than by an off-by-one convention every reader has to remember, and it holds for both axes so the vertical division added at FR-22 inherits the same guarantee rather than reinventing it.
+
+## Rationale — LBR-WM-9
+
+Each edge's percentage is independent rather than paired with its opposite edge, because a single-key press is not a two-window layout decision the way `FR-14`'s halves are — the user snapping left at 70% is not promising anything about what happens if they later snap right, so there is nothing to keep tiled and nothing gained by coupling the two.
+
+## Rationale — LBR-WM-10
+
+The remainder goes to the middle column rather than the first, unlike `LBR-WM-8`'s floor-to-the-first-half rule: a thirds layout is read as symmetric (left, center, right), and a stray pixel on an outer column would be visible against the other outer column in a way the same pixel hidden in the middle is not.
 
 ## Retired
 

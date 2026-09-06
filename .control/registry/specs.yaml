@@ -1,9 +1,18 @@
-# waves.yaml — the work plan.
+# specs.yaml — the work plan.
 #
-# `release` MUST be named on every wave. STORY STATUS MUST NOT BE COPIED HERE — it is read from
-# story-file frontmatter when `.control/generated/` regenerates (V18).
+# Renamed from waves.yaml. Its top-level key was `waves:`; the validator reads `specs:`
+# (`rows(self.specs, "specs")`), which meant every closed W1-W4 wave below was invisible to
+# validate.py (uc-scheduled's "no spec yet" was true only because nothing here was read at all,
+# not because the product had none). Key renamed to `specs:` while opening SPEC-1 — the first
+# spec to use it, per wdi-upgrade's finding that this file's re-cut is wdi-build's, not a hand
+# edit. The W1-W4 entries are frozen records and are otherwise untouched: their `id: W<N>` stays
+# a retired alias (wdi-build's own Phase 1 rule), and their `epics`/`stories` nesting stays as
+# history — only a new spec uses the flat `tickets:` shape.
+#
+# `release` MUST be named on every spec. TICKET STATUS MUST NOT BE COPIED HERE — it is read from
+# ticket-file frontmatter/body when `.control/generated/` regenerates (`ticket-status-one-home`).
 
-waves:
+specs:
   - id: W1
     release: "0.1.0"
     prd: [wira-desk]
@@ -349,3 +358,13 @@ waves:
               - app::tests::every_field_has_a_distinct_key_and_label
               - app::tests::field_declaration_order_is_the_precedence_order
               - persistence::tests::a_collision_names_both_fields
+
+  - id: SPEC-1
+    release: "0.2.0"
+    prd: [wira-desk]
+    size: M
+    status: open
+    depends_on: []
+    spec_folder: _bmad-output/specs/spec-1-percentage-and-thirds-snap/
+    fr: [FR-26, FR-27]
+    tickets: []

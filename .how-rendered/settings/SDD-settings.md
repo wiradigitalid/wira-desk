@@ -110,7 +110,7 @@ Failure modes across all internal and external Win32 / OS / IPC boundaries:
 | **System Typography Loader** (`%SystemRoot%\Fonts\SegUIVar.ttf`, `segoeui.ttf`, `tahoma.ttf`) | Disk read of font file takes >50 ms at startup. | All three system fonts (`SegUIVar.ttf`, `segoeui.ttf`, `tahoma.ttf`) absent from disk (minimal container/Windows Server SKU). | A tried font's TTF file exists but contains corrupted header or invalid glyph table bytes. | `ttf-parser` rejects corrupt bytes and the loader tries the next tier; three system tiers in order (Segoe UI Variable Text, Segoe UI, Tahoma), then `LoadedFont::Bundled` (the renderer's own default face) when none load. About pane displays actual typeface. | `LoadedFont::Bundled` surfaced in About tab; no crash or panic during atlas generation. |
 | **UI Automation** (Slint's Windows accessibility backend, AccessKit internally) | Accessibility tree generation takes several milliseconds on dense frame. | Assistive client (Narrator) not running. | Screen reader queries unmapped node ID during rapid pane switching. | Visual rendering completely unaffected; screen reader receives clean node tree updates or graceful null node responses. | Handled internally by Slint's accessibility backend. |
 | **Shortcut Input Validation** (`validate_shortcut`) | User types keys with high latency. | User submits empty string or modifier-only chord. | User inputs conflicting or multiple main keys (`ctrl+a+b`). | Field rejected with precise inline explanation (e.g. *"Switch windows... needs a main key in addition to modifiers"*); draft preserved for correction. | Validation error formatted via `describe()` and rendered in `SaveFeedback::Error`. |
-| **Shortcut Collision Check** (`validate_config`, at submission) | No slow path: the comparison runs over the nine in-memory shortcut fields. | Not reachable — a field the grammar check already refused never arrives here. | Two actions carry the same canonical chord, each perfectly legal on its own, so nothing upstream has grounds to refuse either. | Both actions are marked while the draft stands, each naming the other. The submit action stays available throughout; on submission, the draft is refused with a message naming both (SCN-03, LBR-ST-8, LBR-ST-9). | Refusal reason recorded with both field names, via `describe()` as `SaveFeedback::Error`. |
+| **Shortcut Collision Check** (`validate_config`, at submission) | No slow path: the comparison runs over the sixteen in-memory shortcut fields. `[MISSING]` — the seven `snap_percent_*`/`snap_third_*` fields are planned by this pass (FR-26, FR-27); nine are built today. | Not reachable — a field the grammar check already refused never arrives here. | Two actions carry the same canonical chord, each perfectly legal on its own, so nothing upstream has grounds to refuse either. | Both actions are marked while the draft stands, each naming the other. The submit action stays available throughout; on submission, the draft is refused with a message naming both (SCN-03, LBR-ST-8, LBR-ST-9). | Refusal reason recorded with both field names, via `describe()` as `SaveFeedback::Error`. |
 
 Chord ownership outside this process is not a boundary this table can carry a row for: nothing is
 queried, so there is no call to time out, find absent, or catch lying (`DEC-002`). Windows exposes
@@ -547,11 +547,18 @@ erDiagram
 | cycling_fallback | string | yes | Optional `Alt+Oem3` fallback |
 | snap_left | string | no | Half-left snap binding |
 | snap_right | string | no | Half-right snap binding |
-| snap_top | string | no | Half-top snap binding. `[MISSING]` — planned by this pass (FR-22) |
-| snap_bottom | string | no | Half-bottom snap binding. `[MISSING]` — planned by this pass (FR-22) |
+| snap_top | string | no | Half-top snap binding (FR-22) |
+| snap_bottom | string | no | Half-bottom snap binding (FR-22) |
 | snap_maximize | string | no | Maximize binding |
-| move_next_monitor | string | no | Next-monitor move binding. `[MISSING]` — planned by this pass (FR-23) |
-| snap_stack | string | no | Overlapping stack binding |
+| move_next_monitor | string | no | Next-monitor move binding (FR-23) |
+| snap_percent_left | string | no | Custom-percentage left-edge snap binding. `[MISSING]` — planned by this pass (FR-26) |
+| snap_percent_right | string | no | Custom-percentage right-edge snap binding. `[MISSING]` — planned by this pass (FR-26) |
+| snap_percent_top | string | no | Custom-percentage top-edge snap binding. `[MISSING]` — planned by this pass (FR-26) |
+| snap_percent_bottom | string | no | Custom-percentage bottom-edge snap binding. `[MISSING]` — planned by this pass (FR-26) |
+| snap_stack | string | no | Overlapping stack binding. Default `ctrl+alt+shift+s` (`DEC-011`; was `ctrl+alt+shift+down` until the arrow tier above was freed for the four `snap_percent_*` rows) — placed **after** them in this declared sequence on purpose: on an install still holding the retired default, the percent-snap row must resolve the chord first, per `DEC-011`'s cost and the `DEC-009` mechanism it relies on |
+| snap_third_left | string | no | Left-third snap binding. `[MISSING]` — planned by this pass (FR-27) |
+| snap_third_middle | string | no | Middle-third snap binding. `[MISSING]` — planned by this pass (FR-27) |
+| snap_third_right | string | no | Right-third snap binding. `[MISSING]` — planned by this pass (FR-27) |
 
 ##### Dictionary
 
@@ -560,6 +567,18 @@ erDiagram
 - Every value is a **canonical** chord string. Two rows holding the same canonical string is the collision condition `BR-6` governs; this component refuses to save it at all.
 
 Schema source: `shared::Config` in `crates/shared/src/config.rs`.
+
+#### arrangement-percentage-preference
+
+The percentage each `snap_percent_*` chord snaps to — a value, not a chord, so it is not part of the
+declared sequence above and cannot collide with anything. `[MISSING]` — planned by this pass (FR-26).
+
+| Column | Type | Nullable | Meaning |
+| --- | --- | --- | --- |
+| percent_left | u8 | no | Percentage of work-area width, left edge. Default `50` |
+| percent_right | u8 | no | Percentage of work-area width, right edge. Default `50` |
+| percent_top | u8 | no | Percentage of work-area height, top edge. Default `50` |
+| percent_bottom | u8 | no | Percentage of work-area height, bottom edge. Default `50` |
 
 #### onboarding-completion
 

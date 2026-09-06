@@ -176,7 +176,7 @@ The system can snap and resize the active window to half-screen left/right or ma
 
 #### FR-15 — Apply overlapping stack layout on small monitors with up to three half-width windows.
 
-The system can arrange up to three same-application windows in an overlapping 50%-width stack with offset horizontal edges on small screens, triggered by `Ctrl + Alt + Shift + Down`.
+The system can arrange up to three same-application windows in an overlapping 50%-width stack with offset horizontal edges on small screens, triggered by `Ctrl + Alt + Shift + S` (`DEC-011`; was `Ctrl + Alt + Shift + Down` until the arrow tier was freed for FR-26).
 
 **Proof of done:** Triggering the stack layout command positions up to three windows at 50% screen width each with visible exposed borders allowing mouse selection.  
 **Capability:** `CAP-2`  
@@ -370,6 +370,38 @@ The user can request an update check at any time from the About pane; when a new
 
 ---
 
+### 3.13 Custom-Percentage Edge Snap
+
+**Capability:** CAP-14 — serves BG-3.
+
+**Description:** Snaps the active window against a screen edge at a percentage the user sets independently per direction in Settings, instead of the fixed half `FR-14`/`FR-22` already snap to. Uses its own shortcut tier so the fixed half-snap keeps its existing chords. `DEC-011` freed the arrow keys under `Ctrl+Alt+Shift` for this feature by moving the Overlapping Stack default off `Down`.
+
+#### FR-26 — Snap the active window to a screen edge at a percentage the user configures per direction, instead of the fixed half.
+
+The system can snap and resize the active window against the left, right, top, or bottom edge of the current monitor's working area at a percentage the user sets independently per direction in Settings (default 50%, matching `FR-14`/`FR-22` until changed), using dedicated keyboard shortcuts (`Ctrl + Alt + Shift + Left/Right/Up/Down`), scaled to the target monitor's DPI.
+
+**Proof of done:** With the left-edge percentage set to 70% in Settings, pressing `Ctrl + Alt + Shift + Left` resizes and aligns the active window to exactly 70% of the working area's width from the left edge of the current monitor, taking display scaling into account.  
+**Capability:** `CAP-14`  
+**Component:** `window-management`
+
+---
+
+### 3.14 Snap to Thirds
+
+**Capability:** CAP-15 — serves BG-3.
+
+**Description:** Snaps the active window to the left, middle, or right third of the current monitor's working area, DPI-aware per monitor like every other arrangement shortcut.
+
+#### FR-27 — Snap the active window to the left, middle, or right third of the current monitor.
+
+The system can snap and resize the active window to the left, middle, or right third of the current monitor's working area using dedicated keyboard shortcuts (`Ctrl + Alt + 1/2/3`), scaled to the target monitor's DPI.
+
+**Proof of done:** Pressing `Ctrl + Alt + 2` resizes and aligns the active window to the middle third of the working area of the current monitor, taking display scaling into account.  
+**Capability:** `CAP-15`  
+**Component:** `window-management`
+
+---
+
 ### Capabilities
 
 | id | Serves | Capability | Priority | Release | Depends on |
@@ -387,6 +419,8 @@ The user can request an update check at any time from the About pane; when a new
 | `CAP-11` | `BG-2` | Expose runtime diagnostic logs from the tray context menu. | — | — | — |
 | `CAP-12` | `BG-3` | Move the active window to another physical monitor from the keyboard, keeping its share of the work area. | — | — | — |
 | `CAP-13` | `BG-2` | Check whether a newer release is available, on a schedule and on request, without any other network activity or identifying payload. | — | — | — |
+| `CAP-14` | `BG-3` | Snap the active window to a screen edge at a user-configurable percentage instead of a fixed half. | — | — | — |
+| `CAP-15` | `BG-3` | Snap the active window to one of three equal horizontal thirds of the current monitor. | — | — | — |
 
 ### User journeys
 
@@ -438,6 +472,7 @@ The user can request an update check at any time from the About pane; when a new
 - UX honesty surfacing unresponsive ("Not Responding") windows.
 - Three-tier error handling protocol with tray recovery.
 - DPI-aware keyboard snapping to any half of the screen (`Ctrl + Alt + Arrows`) and maximize (`Ctrl + Alt + Enter`), plus the overlapping stack layout.
+- DPI-aware keyboard snapping to a user-configurable edge percentage (`Ctrl + Alt + Shift + Arrows`) and to left/middle/right thirds (`Ctrl + Alt + 1/2/3`).
 - Moving the active window to the next physical monitor from the keyboard, keeping its share of the working area.
 - Separate settings binary with first-run onboarding, physical key listening, and UI Automation accessibility.
 - Silent auto-start via Windows Task Scheduler.
@@ -545,4 +580,5 @@ Release-specific exclusions are under **MVP Scope → Out of Scope for MVP** abo
 | 2026-08-21 | Rebranded to Wira Desk and structured into WDI Method corpus format with explicit proof-of-done criteria | Migration from BMAD planning output to WDI repository standard | v1.0.0 |
 | 2026-08-26 | Snapping now covers the top and bottom halves of a screen, not only the left and right; moving the active window to another monitor became something Wira Desk does itself instead of leaving to Windows; and every shipped arrangement shortcut moved to the Ctrl+Alt family | The owner asked for vertical halves and a deliberate monitor move. The shortcut family moved because the previous default, `Ctrl+Win+Left/Right`, silently took over Windows' own shortcut for switching virtual desktops — a promise this product had already made not to break. Monitor movement was previously delegated to Windows' `Win+Shift+Arrow`, which discards whatever arrangement the user had just applied, so the two features never composed | v0.4.0 |
 | 2026-09-03 | Added Update Checking (CAP-13, FR-24, FR-25): the product already shipped an optional, toggleable HTTPS check for a newer release, disclosed in `PRIVACY.md` but never promised here; §7's Constraints corrected to state the one exception instead of an absolute zero; FR-16's tray menu order corrected to match what ships (an "Update to \<version\>..." item only when one is available, not an always-present "Check for Updates...") | `wdi-reconcile` traced the shipped code against the corpus and found the update-check subsystem — real, deliberate, already privacy-documented — had no promise anywhere in `.what/`, and that FR-16's proof no longer matched the running menu | v0.4.0 |
+| 2026-09-06 | Added custom-percentage edge snap (CAP-14, FR-26) and snap-to-thirds (CAP-15, FR-27), both `window-management`; FR-15's proof corrected from `Ctrl + Alt + Shift + Down` to `Ctrl + Alt + Shift + S`, the Overlapping Stack default `DEC-011` moved it to so the new percentage-snap feature could claim the arrow tier | The owner asked for a configurable-percentage snap and a thirds snap, and wanted the first bound to arrow keys; freeing that tier required moving the Overlapping Stack default, recorded as `DEC-011` | Unreleased |
 

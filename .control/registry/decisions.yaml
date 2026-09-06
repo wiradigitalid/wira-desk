@@ -141,3 +141,11 @@ decisions:
       - .what/window-management/02-rules/rules-window-management.md
       - .what/window-management/04-usecases/UC-7-move-window-next-monitor.md
       - .how/window-management/06-flows/flow-monitor-move.md
+
+  - id: DEC-011
+    title: Overlapping Stack's default shortcut moves from Ctrl+Alt+Shift+Down to Ctrl+Alt+Shift+S
+    status: applied
+    file: decisions/DEC-011-overlapping-stack-moves-off-the-arrow-tier.md
+    created: '2026-09-06'
+    touches:
+      - .how/_platform/cross-cutting.md

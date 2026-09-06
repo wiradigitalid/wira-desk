@@ -23,7 +23,7 @@ Wira Desk installs a low-level, global keyboard hook (`WH_KEYBOARD_LL`) to captu
 
 Key capabilities include:
 - **Same-App Window Cycling:** Identifies the active process from the foreground window and cycles through its top-level windows on the same monitor and virtual desktop.
-- **DPI-Aware Window Snapping:** Provides optional keyboard shortcuts (`Ctrl + Win + Left/Right`, `Ctrl + Win + Enter`) to snap and manage windows using native monitor pixel geometry.
+- **DPI-Aware Window Snapping:** Provides optional keyboard shortcuts (`Ctrl + Alt + Left/Right`, `Ctrl + Alt + Enter`) to snap and manage windows using native monitor pixel geometry.
 - **Process Isolation:** Runs the input hook and window-cycling engine in a dedicated daemon while hosting onboarding, configuration, and diagnostics in a companion settings process.
 - **Tray Status and Error Visibility:** Provides lightweight tray feedback with a three-tier error protocol (silent logging, tray indicator warning, and actionable dialog for unrecoverable hook dropouts).
 
@@ -63,7 +63,7 @@ Goals — see `.control/registry/goals.yaml` → `goals:`.
 
 - Global low-level keyboard hook intercepting primary (`Win + backtick`) and fallback (`Alt + backtick`) shortcuts.
 - Dynamic same-process window discovery and immediate focus activation without visual switcher chrome.
-- Optional DPI-aware window snapping shortcuts (`Ctrl + Win + Arrow/Enter`) and overlapping stack layouts.
+- Optional DPI-aware window snapping shortcuts (`Ctrl + Alt + Arrow/Enter`) and overlapping stack layouts.
 - System tray lifecycle management, auto-start task integration, and local TOML configuration parsing.
 - Isolated companion settings and onboarding interface with baseline accessibility compliance.
 - Three-tier error and diagnostic handling for hook lifecycle recovery.

@@ -17,7 +17,7 @@ Conceptual domain model for the `window-management` component. Represents domain
 | `hook-command` | An intercepted, validated, and throttled user intent command dispatched from the keyboard hook to the background worker. | Command action code and dispatch timestamp |
 | `window-focus-state` | The live snapshot of active window focus, monitor boundaries, virtual desktop context, and application identity on the current desktop. | Foreground window handle (`HWND`), monitor identity, and virtual desktop GUID |
 | `tray-health-state` | The operational status of the background daemon, tracking hook attachment vitality, error severity level, and user notification state. | Error tier level (`Normal`, `Warning`, `Critical`) and hook vitality status |
-| `arrangement-command` | A planned window repositioning and sizing action targeting specific desktop regions (a half-screen snap to any of the four halves, maximized state, an overlapping stack slot, or a move to the next monitor). | Target screen region geometry, the destination monitor, and monitor DPI scaling context |
+| `arrangement-command` | A planned window repositioning and sizing action targeting specific desktop regions (a half-screen snap to any of the four halves, a custom-percentage edge snap, a snap to a horizontal third, maximized state, an overlapping stack slot, or a move to the next monitor). | Target screen region geometry, the destination monitor, and monitor DPI scaling context |
 
 ## Relationships
 

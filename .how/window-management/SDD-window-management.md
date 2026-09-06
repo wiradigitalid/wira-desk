@@ -3,8 +3,8 @@ type: sdd
 component: window-management
 status: reviewed
 created: 2026-08-21
-updated: 2026-08-21
-realizes: [UC-1, UC-2, UC-3]
+updated: 2026-09-06
+realizes: [UC-1, UC-2, UC-3, UC-7, UC-9, UC-10]
 binds: [AD-1, AD-2, AD-3, AD-4, AD-5, AD-6, AD-7, AD-8, AD-9, AD-10, AD-12]
 reviewed:
   date: '2026-09-03'
@@ -114,7 +114,7 @@ the filter for these two grants no capability that was not already available.
 
 ## Robustness Analysis (ABCE)
 
-The Robustness Analysis classifies the technical design for all realized use cases (`UC-1`, `UC-2`, `UC-3`, `UC-7`) and edge-case scenarios into Boundary, Control, Entity, and Behaviour.
+The Robustness Analysis classifies the technical design for all realized use cases (`UC-1`, `UC-2`, `UC-3`, `UC-7`, `UC-9`, `UC-10`) and edge-case scenarios into Boundary, Control, Entity, and Behaviour.
 
 ### 1. Boundary Objects
 
@@ -131,12 +131,12 @@ The Robustness Analysis classifies the technical design for all realized use cas
 - **`C-HookController` (`LC-hook-thread`):** Owns hook lifecycle, QPC anti-macro throttle check (50 ms), bypass classification, raw byte serialization to the ring buffer, and the capture lease. The lease is three independent decisions rather than one switch — report the chord to Settings, withhold Wira Desk's own action, withhold the keystroke from Windows — and two named combinations of them: **observe** (`yes / yes / no`) while the Shortcuts pane is visible, **record** (`yes / yes / yes`) while a field is listening. Both require the settings process to hold the foreground window, both fire only on a non-modifier key-down carrying at least one modifier, and the comparison sits above `match_shortcut` so it is reached by a chord that is not yet configured. Withholding the keystroke exists only to record; no chord is ever claimed for a Wira Desk action on the strength of a lease (`DEC-004`, LBR-ST-11).
 - **`C-WorkerDispatcher` (`LC-worker-thread`):** Dispatches ring-buffer command opcodes on thread wake-up, orchestrates candidate collection, filters candidates, and applies activation or geometry updates.
 - **`C-CyclingSelector` (`daemon::cycling`):** Evaluates same-app candidate eligibility (exe name match, style filters), spatial alignment (monitor matching, virtual desktop isolation), and selects the next Z-order target.
-- **`C-ArrangementPlanner` (`LC-arrangement-engine`):** Resolves monitor work-area bounds and DPI scale factors to plan coordinate rectangles for half-screen snaps on either axis (left, right, top, bottom), full maximize, overlapping cascade stacks, and a move to the next monitor. The monitor-move plan is the only one that reads two work areas: it expresses the window's rectangle as a share of the source and maps that share onto the destination, so an arrangement survives a difference in size or scaling (LBR-WM-7). It holds no state between invocations, including no monitor list (AD-14). `Win32WindowMover::apply` clamps the frame-inset-compensated rect against the monitor containing the *planned* (destination) rect, not the monitor the window is still on when `apply` runs — resolving from the window would aim the clamp at the monitor being left, and a compensated rect touching a different-DPI monitor is what Windows uses as its own cue to relocate and rescale the window (`DEC-010`).
+- **`C-ArrangementPlanner` (`LC-arrangement-engine`):** Resolves monitor work-area bounds and DPI scale factors to plan coordinate rectangles for half-screen snaps on either axis (left, right, top, bottom), full maximize, overlapping cascade stacks, a move to the next monitor, a custom-percentage edge snap, and a thirds snap. The monitor-move plan is the only one that reads two work areas: it expresses the window's rectangle as a share of the source and maps that share onto the destination, so an arrangement survives a difference in size or scaling (LBR-WM-7). It holds no state between invocations, including no monitor list (AD-14). `Win32WindowMover::apply` clamps the frame-inset-compensated rect against the monitor containing the *planned* (destination) rect, not the monitor the window is still on when `apply` runs — resolving from the window would aim the clamp at the monitor being left, and a compensated rect touching a different-DPI monitor is what Windows uses as its own cue to relocate and rescale the window (`DEC-010`). The percentage-edge and thirds plans are each derived from one boundary computed fresh per invocation, the same tiling discipline the half-snap already uses, so neither reinvents `LBR-WM-8`'s guarantee (LBR-WM-9, LBR-WM-10). `[MISSING]` — planned by this pass, not yet implemented.
 - **`C-TrayHealthStateMachine` (`LC-tray-controller`):** Manages the 3-Tier error state transitions, updates icon overlays, latches warning states, and throttles toast notifications to exactly one dispatch per critical failure.
 
 ### 3. Entity Objects
 
-- **`E-HookCommand` (`hook-command`):** Ephemeral command transfer entity represented as a `u8` byte (`0`=Nop, `1`=Cycle, `2`=SnapLeft, `3`=SnapRight, `4`=SnapMaximize, `5`=OverlappingStack, `6`=SnapTop, `7`=SnapBottom, `8`=MoveToNextMonitor). Values 6-8 are `[MISSING]` — planned by this pass. Any byte outside the assigned set decodes to `Nop`.
+- **`E-HookCommand` (`hook-command`):** Ephemeral command transfer entity represented as a `u8` byte (`0`=Nop, `1`=Cycle, `2`=SnapLeft, `3`=SnapRight, `4`=SnapMaximize, `5`=OverlappingStack, `6`=SnapTop, `7`=SnapBottom, `8`=MoveToNextMonitor, `9`=SnapPercentLeft, `10`=SnapPercentRight, `11`=SnapPercentTop, `12`=SnapPercentBottom, `13`=SnapThirdLeft, `14`=SnapThirdMiddle, `15`=SnapThirdRight). Values 9-15 are `[MISSING]` — planned by this pass. Any byte outside the assigned set decodes to `Nop`.
 - **`E-ActiveContext` (`window-focus-state`):** In-memory capture of the origin window state prior to cycling (`HWND`, executable basename, `HMONITOR`, virtual desktop membership).
 - **`E-TrayHealthState` (`tray-health-state`):** Current status of the tray icon (`Normal`, `Warning`, `Critical`), `warning_latched` boolean, and `hook_dead_toast_sent` single-shot guard.
 - **`E-PlacementPlan` (`arrangement-command`):** Calculated target window bounds (`RECT`), DPI scale, target `HWND`, and placement flags for `SetWindowPos`. An **empty** plan is a successful no-op rather than a failure — a disabled stack and a single-monitor move both land there.
@@ -176,6 +176,28 @@ The Robustness Analysis classifies the technical design for all realized use cas
 8. `C-WorkerDispatcher` invokes `suppress_start_menu()`.
 
 Step 4 is where this use case differs from every other arrangement command: it is the only one whose destination work area is not the one the foreground window sits on, and the only one that reads the display set at all.
+
+#### UC-9: Snap Active Window to a Custom-Percentage Edge `[MISSING]`
+
+1. User presses `Ctrl + Alt + Shift + Left` (or `Right` / `Up` / `Down`).
+2. `C-HookController` translates the chord to `Command::SnapPercentLeft` (`9`), `SnapPercentRight` (`10`), `SnapPercentTop` (`11`), or `SnapPercentBottom` (`12`), pushes to `ring.rs`, and wakes `C-WorkerDispatcher`.
+3. `C-WorkerDispatcher` captures the active foreground `HWND` and current monitor work area via `B-WinMgr`.
+4. `C-ArrangementPlanner` reads the percentage configured for the named edge from `shared::Config`, computes the DPI-scaled target coordinates (`E-PlacementPlan`), and refuses (empty plan) if the configured percentage would produce a zero or negative extent.
+5. `C-WorkerDispatcher` applies geometry via `B-WinMgr` (`SetWindowPos` with `SWP_NOACTIVATE | SWP_NOZORDER`).
+6. `C-WorkerDispatcher` invokes `suppress_start_menu()`.
+
+Each edge's percentage is read and applied independently — this use case does not pair opposite edges the way `UC-2`'s halves are paired (LBR-WM-9).
+
+#### UC-10: Snap Active Window to a Third `[MISSING]`
+
+1. User presses `Ctrl + Alt + 1` (or `2` / `3`).
+2. `C-HookController` translates the chord to `Command::SnapThirdLeft` (`13`), `SnapThirdMiddle` (`14`), or `SnapThirdRight` (`15`), pushes to `ring.rs`, and wakes `C-WorkerDispatcher`.
+3. `C-WorkerDispatcher` captures the active foreground `HWND` and current monitor work area via `B-WinMgr`.
+4. `C-ArrangementPlanner` divides the work area's width into three columns computed fresh on every press — remainder pixels to the middle column — and selects the column the command named (`E-PlacementPlan`).
+5. `C-WorkerDispatcher` applies geometry via `B-WinMgr` (`SetWindowPos` with `SWP_NOACTIVATE | SWP_NOZORDER`).
+6. `C-WorkerDispatcher` invokes `suppress_start_menu()`.
+
+The three columns tile the work area exactly, the same guarantee `UC-2`'s halves make for two regions instead of three (LBR-WM-10).
 
 #### SCN-03: Duplicate Chord in Configuration
 1. `load_shortcuts` parses every configured chord at daemon start and finds two fields resolving to the same one.

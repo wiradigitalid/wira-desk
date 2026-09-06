@@ -8,7 +8,7 @@ This is what the owner reads at **G3 Blueprint** — one page, every one of the 
 
 ## Use case catalogue
 
-**8 use cases**, 0 marked `critical`. Rendered from `usecases.yaml`.
+**10 use cases**, 0 marked `critical`. Rendered from `usecases.yaml`.
 
 | id | Use case | Component | Satisfies | critical |
 | --- | --- | --- | --- | --- |
@@ -20,6 +20,8 @@ This is what the owner reads at **G3 Blueprint** — one page, every one of the 
 | `UC-6` | Turn auto-start on boot on or off | `settings` | `FR-13` | no |
 | `UC-7` | Move the active window to the next monitor | `window-management` | `FR-23` | no |
 | `UC-8` | Check for updates from the About pane | `settings` | `FR-25` | no |
+| `UC-9` | Snap the active window to a screen edge at a custom percentage | `window-management` | `FR-26` | no |
+| `UC-10` | Snap the active window to a third of the screen | `window-management` | `FR-27` | no |
 
 
 ## Actor list
@@ -36,7 +38,7 @@ This is what the owner reads at **G3 Blueprint** — one page, every one of the 
 
 | Actor | Who they are | What they may do |
 | --- | --- | --- |
-| Power User | Desktop user managing multiple windows of the same application across multi-monitor or virtual desktop workspaces. | Trigger same-app cycling, snap active windows to any half or to full screen, move the active window to the next monitor, access tray menu, open diagnostic logs. |
+| Power User | Desktop user managing multiple windows of the same application across multi-monitor or virtual desktop workspaces. | Trigger same-app cycling, snap active windows to any half or to full screen, to a custom percentage of a screen edge, or to a left/middle/right third, move the active window to the next monitor, access tray menu, open diagnostic logs. |
 | New User | First-time user running Wira Desk on Windows. | Experience default cycling and snapping shortcuts without opening configuration. |
 | Sysadmin | System administrator operating standard and elevated command shells or administrative tools. | Cycle seamlessly between standard and elevated administrator windows without UIPI refusal. |
 
@@ -104,7 +106,7 @@ Conceptual domain model for the `window-management` component. Represents domain
 | `hook-command` | An intercepted, validated, and throttled user intent command dispatched from the keyboard hook to the background worker. | Command action code and dispatch timestamp |
 | `window-focus-state` | The live snapshot of active window focus, monitor boundaries, virtual desktop context, and application identity on the current desktop. | Foreground window handle (`HWND`), monitor identity, and virtual desktop GUID |
 | `tray-health-state` | The operational status of the background daemon, tracking hook attachment vitality, error severity level, and user notification state. | Error tier level (`Normal`, `Warning`, `Critical`) and hook vitality status |
-| `arrangement-command` | A planned window repositioning and sizing action targeting specific desktop regions (a half-screen snap to any of the four halves, maximized state, an overlapping stack slot, or a move to the next monitor). | Target screen region geometry, the destination monitor, and monitor DPI scaling context |
+| `arrangement-command` | A planned window repositioning and sizing action targeting specific desktop regions (a half-screen snap to any of the four halves, a custom-percentage edge snap, a snap to a horizontal third, maximized state, an overlapping stack slot, or a move to the next monitor). | Target screen region geometry, the destination monitor, and monitor DPI scaling context |
 
 #### Relationships
 

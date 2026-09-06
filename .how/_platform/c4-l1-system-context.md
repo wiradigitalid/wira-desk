@@ -24,7 +24,7 @@ graph TD
         ReleaseFile["Release descriptor + installer<br/>(static, HTTPS)"]
     end
 
-    User -- "Global key shortcuts<br/>(Win+`, Ctrl+Win+Arrows)" --> WinHook
+    User -- "Global key shortcuts<br/>(Win+`, Ctrl+Alt+Arrows)" --> WinHook
     WinHook -- "Hook events" --> WD
     User -- "Tray menu click / Configuration" --> WD
     

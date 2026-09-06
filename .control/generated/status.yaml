@@ -1,9 +1,34 @@
 promise_progress: 0%
 rtm_rows:
   green: 0
-  counted: 17
+  counted: 19
   excluded_no_uc: 8
-work_progress: []
+work_progress:
+- spec: SPEC-1
+  status: open
+  tickets_done: 0
+  tickets_total: 0
+  work_progress: n/a
+- spec: W1
+  status: closed
+  tickets_done: 0
+  tickets_total: 0
+  work_progress: n/a
+- spec: W2
+  status: closed
+  tickets_done: 0
+  tickets_total: 0
+  work_progress: n/a
+- spec: W3
+  status: closed
+  tickets_done: 0
+  tickets_total: 0
+  work_progress: n/a
+- spec: W4
+  status: closed
+  tickets_done: 0
+  tickets_total: 0
+  work_progress: n/a
 gate_readiness: 100%
 validators_red: []
 validators_skipped:
@@ -11,8 +36,6 @@ validators_skipped:
     rule MUST NOT be moved here just to give the room content
   review-trace: 'advisory — trace stale, re-run before the next gate or spec close: .how/settings/SDD-settings.md
     (changed at 5b6769a, reviewed at e845c3c)'
-  uc-scheduled: no spec yet, so no ticket yet — every unscheduled UC is the correct state. Full catalogue
-    coverage is checked at G5
 open_questions:
   blocking: 0
   assumptions: 31
