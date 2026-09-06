@@ -48,13 +48,18 @@ date: 2026-09-06
   being followed to the letter; recorded rather than silently accepted.
 - Blocked: —
 - Parked: —
-- In flight: independent re-review of just commit `1d15f5c` (agent `a6cedeca717fb4baa`) — genuinely separate
-  from claude-byok, since its own internal review is self-review by construction.
-- Next: once the re-review reports — on clean, close `SPEC-1-01` (ticket status already `ready-for-review`
-  from claude-byok; coordinator's own review is what actually closes it) and dispatch claude-byok for
-  `SPEC-1-02`, sequentially, confirming via `TaskOutput` throughout. If the re-review finds a real must-fix,
-  that would be return trip 2/2 (the cap) — a third failed fix escalates rather than retrying. Once both
-  tickets are done, close `SPEC-1`, push the run branch, open the one draft PR, watch CI.
+- Re-review (`a6cedeca717fb4baa`) confirmed clean against the actual code path (traced
+  `save_and_notify`→`validate_config`→`ShortcutError::InvalidPercentage`→`describe()` and the passing test
+  `an_out_of_range_percentage_save_reports_actionable_error`), no must-fix remaining, only a cosmetic
+  follow-up (rejected negative input displays `0` not the typed string). **`SPEC-1-01` closed**:
+  `status: done`, `commit: 1d15f5c`.
+- Blocked: —
+- Parked: —
+- In flight: claude-byok dispatched for `SPEC-1-02` (Snap to thirds) — no blocking edge with `SPEC-1-01`,
+  dispatched sequentially anyway per this run's own concurrency rule.
+- Next: once that job is confirmed finished via `TaskOutput` — independently verify, dispatch a separate
+  re-review, and on clean close `SPEC-1-02`. Once both tickets are done, close `SPEC-1`, push the run
+  branch, open the one draft PR, watch CI.
 
 ## Decisions
 
@@ -78,3 +83,4 @@ date: 2026-09-06
 | Iter 7 | Standards must-fix, corpus-wide, not decided | The remaining 2 gate findings (maintainer handle in `.control/decisions/*`, no `Allowed` entry there) match `DEC-011`'s pre-existing violation on `main` — a policy tension between `decision-guide.md`'s required `accepted_by` field and this product's own gate, predating this mandate. Filed as `OQ-37` for the owner rather than invented a fix | Silently widening the gate's `Allowed` list, or silently moving `accepted_by` out of the `DEC-` file against the method's own format | If wrong, the owner's answer supersedes `OQ-37` and this run (or a follow-up) applies it | `.control/questions/assumptions.md` `OQ-37` |
 | Iter 10 | Fix round 1/2 result | `1d15f5c` genuinely resolves the clamping finding — verified by reading the diff (removed `Math.clamp` in Slint, `main.rs` now floors a negative to 0 in Rust instead) and by independently re-running fmt/clippy/full suite and the export gate myself, not trusting claude-byok's own report | Accepting the "0 hard violations" self-review claim in its report | A ticket closed with a bug the self-review missed | `1d15f5c` |
 | Iter 10 | claude-byok touched the ledger | Its fix commit corrected one literal path fragment I'd left in a Decisions-table cell (via its own export-gate check) — recorded as a rule deviation worth noting, not reverted, since the correction itself is accurate | Reverting the correction to enforce "coordinator-only" strictly, which would reintroduce a real gate finding | None — content is correct either way | This row |
+| Iter 11 | Close `SPEC-1-01` | Re-review traced the actual validation call chain and a passing test, not just claude-byok's report; closed `status: done` | Closing on the fix commit's own self-review claim | Reopen if a later finding contradicts it | ticket file, `commit: 1d15f5c` |

@@ -3,7 +3,8 @@ id: SPEC-1-01
 component: window-management
 satisfies: [UC-9, FR-26]
 blocked_by: []
-status: ready-for-review
+status: done
+commit: 1d15f5c
 tests:
   - arrangement::snap::tests::snap_percent_returns_configured_width_from_the_named_edge
   - arrangement::snap::tests::snap_percent_refuses_a_zero_or_negative_extent
