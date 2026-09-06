@@ -8,24 +8,31 @@ date: 2026-09-06
 
 ## Resume
 
-- Iteration: 5
+- Iteration: 7
 - Run branch: `autopilot/DEC-012`, worktree `D:\Developer\wiradigital.id\wira-desk-autopilot`, HEAD
-  `ede6656`. PR: not opened yet (opens at first spec close, per mandate).
-- Stopped at: capacity — `bl2cjjxeb` has already committed `SPEC-1-01`'s work (`ede6656`, "All 499 tests
-  pass" claimed in the message) but `TaskOutput` confirms the job itself is still `running` — do not treat
-  the commit as the finish line.
+  `b49204b`. PR: not opened yet (opens at first spec close, per mandate).
+- Stopped at: capacity — `SPEC-1-01`'s code is committed and independently verified green (fmt/clippy/501
+  tests, 0 failed), Step 3 review dispatched as two parallel agents (`abb560804106a7f88` Standards,
+  `a868fce8df0c9fc15` Spec). Cannot be waited on synchronously.
 - Blocked: —
 - Parked: —
-- In flight: harness background job `bl2cjjxeb`, still running past its first commit. Do not run
-  cargo build/test in this worktree, do not start the Step 3 review, and do not dispatch `SPEC-1-02` until
-  `bl2cjjxeb` is confirmed no longer `running` (via `TaskOutput ... block:false` or a completion
-  notification) — a commit mid-job is not the same as the job being done.
-- Next: once `bl2cjjxeb` is confirmed finished — independently verify (this is now safe: nothing else will
-  be building in this worktree once the job has actually exited) rather than trusting the commit message's
-  "499 tests pass" claim, then run Step 3 (Standards + Spec axes review, as a separate agent from the
-  builder). On a clean review, `SPEC-1-01` is closed (already on the run branch, no merge needed), then
-  dispatch claude-byok for `SPEC-1-02` next, sequentially. Once both tickets are done, close `SPEC-1`, push
-  the run branch, open the one draft PR, watch CI.
+- **Near-miss, resolved but worth restating**: job `b8nzz6xny` (iteration 2's first `claude-byok`
+  dispatch) was wrongly presumed dead after its log showed a PowerShell `NativeCommandError` from `*>`
+  redirecting a harmless stderr warning. It was NOT dead — `TaskOutput` later showed it `running`, and it
+  kept running concurrently with its replacement (`bl2cjjxeb`) for several iterations, finishing only at
+  iteration 7 with one small commit (`b49204b`, a 3p.md test-count correction). This was briefly two
+  claude-byok processes in the same worktree at once — exactly the race this mandate exists to prevent.
+  No actual damage: worktree stayed clean, history stayed linear, `b49204b` only touched a doc line,
+  independent test run (501 passed) still holds. Root cause and fix are in Decisions below — the practice
+  going forward is `TaskOutput(block:false)` to check a job's real status, never inferring death from a
+  redirected stderr line.
+- In flight: two review agents on `SPEC-1-01` (`ede6656`+`fa2eeeb` vs. `9216f4c`), Standards axis
+  `abb560804106a7f88` and Spec axis `a868fce8df0c9fc15`.
+- Next: once both review agents report — adjudicate any findings from the artifact (not from either
+  agent's self-description); on a clean or resolved review, `SPEC-1-01` closes (already on the run branch),
+  then dispatch claude-byok for `SPEC-1-02` next, sequentially, confirming via `TaskOutput` before
+  considering any prior job fully dead. Once both tickets are done, close `SPEC-1`, push the run branch,
+  open the one draft PR, watch CI.
 
 ## Decisions
 
@@ -41,3 +48,6 @@ date: 2026-09-06
 | Iter 2 | Capability failure, retry mechanism | Re-dispatched via the harness's own Bash/PowerShell `run_in_background` tracking instead of `claude --bg`'s OS-level daemon — first Bash attempt also failed (`CLAUDE_CONFIG_DIR` alone isn't enough auth; got "Not logged in") until the actual `claude-byok` PowerShell profile function (`~/Documents/WindowsPowerShell/Microsoft.PowerShell_profile.ps1`) was found and used instead of hand-rolling the env vars | Guessing at `ANTHROPIC_API_KEY`/`ANTHROPIC_BASE_URL` values directly, or asking the owner before checking for an existing launcher | If `claude-byok`'s own env wiring ever changes, re-read the profile function rather than trusting this row | This row, `b8nzz6xny` |
 | Iter 3 | Capability failure, PowerShell redirection | `b8nzz6xny` still failed — `*>` (all-streams redirect) on a native command makes PowerShell 5.1 wrap any stderr line (here, a harmless model-metadata warning) in a terminating `NativeCommandError`, killing the job before `claude-byok` ran at all. Re-dispatched with no stream redirection (harness already captures stdout/stderr for a background job) as `bl2cjjxeb`, confirmed actually running before this iteration ended | Redirecting only stderr elsewhere, or writing to a log file at all | If it fails a third time for a new reason, escalate per `wdi-systematic-debugging` rather than trying a fourth variant | This row, `bl2cjjxeb` |
 | Iter 5 | Judging "done" for a background builder | `bl2cjjxeb` committed `ede6656` while `TaskOutput` still reported it `running` — treated the job's actual exit, not its first commit, as the completion signal; deferred review and cargo commands until it exits | Starting Step 3 review the moment a commit appears | A ticket "closed" while claude-byok still mid-run to it, or a build race if I'd run cargo concurrently | This row |
+| Iter 7 | Root cause: `b8nzz6xny` misjudged dead | A PowerShell `NativeCommandError` written to a redirected log by `*>` does not mean the underlying job died — `$ErrorActionPreference` was never `Stop`, so the background job kept running past that line. Confirmed via `TaskOutput`, which showed it still `running` for iterations 3-6 and only just completed | Assuming the visible error text meant termination, which is what let a second builder get dispatched into the same worktree while the first was still technically alive | Two concurrent claude-byok processes in one worktree, the exact race `DEC-012` exists to prevent — this time harmless (one small doc commit), not guaranteed next time | This row, `b49204b` |
+| Iter 7 | Fix: job-liveness check going forward | Every future "is this job still running" question is answered by `TaskOutput(task_id, block:false)`, never by reading a log's content and inferring state from it | Continuing to eyeball log files for signs of life or death | Repeating the same near-miss | This row, all iterations from here |
+| Iter 7 | Step 3 dispatch | Two parallel review agents, Standards axis and Spec axis, per `code-review`'s own process — genuinely separate from claude-byok (the builder) | A self-review, or trusting claude-byok's own internal `/code-review` pass (self-review by construction, doesn't satisfy Step 3 per `wdi-build`) | Re-dispatch if either agent's findings turn out unverifiable from the diff | This row, `abb560804106a7f88`, `a868fce8df0c9fc15` |
