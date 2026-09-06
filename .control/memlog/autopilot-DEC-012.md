@@ -8,25 +8,27 @@ date: 2026-09-06
 
 ## Resume
 
-- Iteration: 1
+- Iteration: 2
 - Run branch: `autopilot/DEC-012`, worktree `D:\Developer\wiradigital.id\wira-desk-autopilot`, cut from
   `main` at `9216f4c`. PR: not opened yet (opens at first spec close, per mandate).
-- Stopped at: capacity — claude-byok dispatched in the background for `SPEC-1-01`; cannot be waited on
-  synchronously. Coordinator does not touch this worktree's build/test while it runs.
+- Stopped at: capacity — claude-byok dispatched for `SPEC-1-01`, tracked as harness background job
+  `b8nzz6xny` (not `claude --bg`, see Decisions). Cannot be waited on synchronously.
 - Blocked: —
 - Parked: —
-- In flight: claude-byok background session `4d098608` building ticket `SPEC-1-01` (Custom-percentage edge
-  snap, Steps 1+2 of `wdi-build`'s pipeline: TDD + implement + full suite green + commit to
-  `autopilot/DEC-012`, no push). Check with `claude logs 4d098608` / `claude agents --json` before doing
-  anything else in this worktree.
-- Next: once `4d098608` reports done — (a) coordinator reviews the diff as a separate agent from the
-  builder (Step 3: Standards + Spec axes, `code-review`/`bmad-code-review`), judging from claude-byok's own
-  logged command output, not its chat summary; (b) on a clean review, ticket `SPEC-1-01` is closed (already
-  committed to the run branch by claude-byok — no separate merge needed in this single-worktree design);
-  (c) dispatch claude-byok for `SPEC-1-02` next, sequentially (not concurrently, by design); (d) once both
-  tickets are done, close `SPEC-1`, push the run branch, open the one draft PR, watch CI.
-  If `4d098608` is still running, just re-check next firing — do not dispatch a second claude-byok session
-  into this worktree concurrently.
+- In flight: harness background job `b8nzz6xny` running `claude-byok -p <ticket brief>` for `SPEC-1-01`
+  (Custom-percentage edge snap, Steps 1+2 of `wdi-build`'s pipeline: TDD + implement + full suite green +
+  commit to `autopilot/DEC-012`, no push). Log:
+  `<scratchpad>/spec-1-01-claude-byok.log`. Wait for the harness's own completion notification on
+  `b8nzz6xny` before doing anything else in this worktree — do not poll `claude agents`/`claude logs` for
+  this one, that was the wrong mechanism (see Decisions).
+- Next: once `b8nzz6xny` completes — (a) coordinator reviews the diff as a separate agent from the builder
+  (Step 3: Standards + Spec axes, `code-review`/`bmad-code-review`), judging from the log's real command
+  output, not a chat summary; (b) on a clean review, ticket `SPEC-1-01` is closed (already committed to the
+  run branch by claude-byok — no separate merge needed in this single-worktree design); (c) dispatch
+  claude-byok for `SPEC-1-02` next, sequentially (not concurrently, by design); (d) once both tickets are
+  done, close `SPEC-1`, push the run branch, open the one draft PR, watch CI.
+  If `b8nzz6xny` is still running, just re-check next firing — do not dispatch a second claude-byok
+  invocation into this worktree concurrently.
 
 ## Decisions
 
@@ -38,3 +40,5 @@ date: 2026-09-06
 | Preflight | Runtime: build/test ownership | Coordinator never runs `cargo build`/`cargo test`/`./build.ps1` or launches the app in the shared worktree; claude-byok's own ticket-closing checklist covers it | Coordinator running the full suite itself between claude-byok invocations | A concurrent build race in the shared worktree | This ledger, `DEC-012` |
 | Iter 1 | `wdi-build` Step 2 dispatch | Dispatched claude-byok as a detached background CLI session (`claude --bg`, `--dangerously-skip-permissions`, `CLAUDE_CONFIG_DIR=~/.claude-byok`) rather than a synchronous call, since Step 1+2 for a real ticket can run far longer than one tool-call window | A synchronous/blocking invocation | None — `claude logs`/`claude agents` recover the session at any later point | This ledger |
 | Iter 1 | Work order across `SPEC-1`'s two tickets | `SPEC-1-01` first, `SPEC-1-02` only after it finishes — sequential despite both having `depends_on: []` | Building both in parallel (allowed by the guide since there's no blocking edge) | None — just slower than it had to be | This ledger |
+| Iter 2 | Capability failure, `wdi-build`'s own rule | `claude --bg`'s detached process was killed by this sandbox's job-object cleanup — session `4d098608` never persisted, no commits, nothing to recover. Not recorded against the ticket (capability failure, not a ticket failure) | Treating it as a ticket-level Blocked | — | This row |
+| Iter 2 | Capability failure, retry mechanism | Re-dispatched via the harness's own Bash/PowerShell `run_in_background` tracking instead of `claude --bg`'s OS-level daemon — first Bash attempt also failed (`CLAUDE_CONFIG_DIR` alone isn't enough auth; got "Not logged in") until the actual `claude-byok` PowerShell profile function (`~/Documents/WindowsPowerShell/Microsoft.PowerShell_profile.ps1`) was found and used instead of hand-rolling the env vars | Guessing at `ANTHROPIC_API_KEY`/`ANTHROPIC_BASE_URL` values directly, or asking the owner before checking for an existing launcher | If `claude-byok`'s own env wiring ever changes, re-read the profile function rather than trusting this row | This row, `b8nzz6xny` |
