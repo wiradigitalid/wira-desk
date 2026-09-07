@@ -52,6 +52,21 @@ impl Pane {
         }
     }
 
+    /// Recover a pane from its position in the declared sequence.
+    ///
+    /// The navigation index crosses the UI boundary as an `int`, and this is the one place that
+    /// reads it back. Out of range falls back to the first pane rather than panicking, for the
+    /// same reason [`ShortcutField::from_index`] does: the index arrives from the UI, and a
+    /// settings window that closes itself on a stale event is worse than one showing the wrong
+    /// pane. Derived from [`Pane::ALL`] so removing a pane cannot leave a hand-numbered table
+    /// pointing at the wrong one.
+    pub fn from_index(index: i32) -> Pane {
+        Pane::ALL
+            .get(usize::try_from(index).unwrap_or(0))
+            .copied()
+            .unwrap_or(Pane::General)
+    }
+
     /// Reverse lookup of [`Pane::label`].
     /// Lets the renderer draw its tab bar by iterating [`focus_order`]'s
     /// declared sequence instead of a second, independent iteration over
@@ -321,6 +336,25 @@ impl ShortcutField {
                 | ShortcutField::SnapPercentTop
                 | ShortcutField::SnapPercentBottom
         )
+    }
+
+    /// The inclusive range a percentage row accepts, or `None` for a row with no percentage.
+    ///
+    /// One home for these numbers, in Rust rather than as markup literals, because markup cannot
+    /// be asserted on and this is where the range can be guarded. `Stack` is the odd one: the
+    /// overlapping-stack width has always accepted 10-100, while a snap edge accepts 1-99. Both
+    /// pairs used to be hardcoded in different files — `shortcut_row.slint`'s stepper carried
+    /// `1`/`99` and the retired Layout pane carried `10`/`100` — so moving the stack control onto
+    /// a shortcut row without moving its range with it silently narrowed it.
+    pub fn percent_bounds(self) -> Option<(u32, u32)> {
+        match self {
+            ShortcutField::SnapPercentLeft
+            | ShortcutField::SnapPercentRight
+            | ShortcutField::SnapPercentTop
+            | ShortcutField::SnapPercentBottom => Some((1, 99)),
+            ShortcutField::Stack => Some((10, 100)),
+            _ => None,
+        }
     }
 
     pub fn percent(self, cfg: &Config) -> Option<u32> {
@@ -1503,6 +1537,88 @@ mod tests {
             ],
             "the pane headings, in declared order, are exactly the five `DEC-014` names"
         );
+    }
+
+    #[test]
+    fn pane_enum_no_longer_declares_layout() {
+        // `DEC-014`'s accepted extension: the Layout pane is retired, not merely emptied. Its one
+        // remaining control moves onto the Overlapping Stack row. Asserted on the count as well as
+        // the name, because `Pane::ALL`'s length is itself a hand-written number and a pane list
+        // that still says five is stale whether or not anything in it says "Layout".
+        assert_eq!(Pane::ALL.len(), 4, "Settings ships four panes");
+        assert!(
+            Pane::from_label("Layout").is_none(),
+            "no pane answers to the retired name"
+        );
+        for p in Pane::ALL {
+            assert_ne!(p.label(), "Layout", "a pane still labels itself Layout");
+        }
+    }
+
+    #[test]
+    fn pane_declaration_order_is_the_navigation_index() {
+        // The navigation index crossing the UI boundary is the discriminant, and that identity
+        // only holds while the discriminants match `ALL`'s order. Same guard, and same reason, as
+        // `field_declaration_order_is_the_precedence_order` — a hand-numbered table that drifts
+        // from `ALL` shows one pane while highlighting another's nav entry, and nothing crashes.
+        for (i, p) in Pane::ALL.into_iter().enumerate() {
+            assert_eq!(p as usize, i, "{} sits out of declared order", p.label());
+        }
+    }
+
+    #[test]
+    fn every_pane_index_round_trips_through_the_ui_boundary() {
+        // Asserted against the DISCRIMINANT, not against the loop counter. `from_index` reads
+        // `ALL` by position, so `from_index(i) == ALL[i]` is true of any ordering whatsoever and
+        // would be a test that cannot fail. What has to hold is that the value `main.rs` sends
+        // across the boundary — `pane as i32` — comes back as the same pane, which breaks the
+        // moment `ALL`'s order and the discriminants disagree.
+        for p in Pane::ALL {
+            assert_eq!(
+                Pane::from_index(p as i32),
+                p,
+                "the index `main.rs` sends across the UI boundary must return the same pane"
+            );
+        }
+        // The index arrives from the UI, so out of range must not panic.
+        assert_eq!(Pane::from_index(-1), Pane::General);
+        assert_eq!(Pane::from_index(99), Pane::General);
+    }
+
+    #[test]
+    fn overlapping_stack_row_has_percent_true() {
+        // `DEC-014`'s extension puts the stack width on the Overlapping Stack row, using the same
+        // `has_percent` plumbing the four `Snap to custom` rows already use.
+        assert!(
+            ShortcutField::Stack.has_percent(),
+            "the Overlapping Stack row carries a percentage"
+        );
+    }
+
+    #[test]
+    fn the_stack_row_carries_its_own_percent_bounds() {
+        // A snap edge accepts 1-99; the overlapping-stack width accepts 10-100. Setting
+        // `has_percent` on `Stack` without carrying its range across silently narrows it, because
+        // the stepper's bounds used to be literals in the markup.
+        assert_eq!(ShortcutField::Stack.percent_bounds(), Some((10, 100)));
+        for f in [
+            ShortcutField::SnapPercentLeft,
+            ShortcutField::SnapPercentRight,
+            ShortcutField::SnapPercentTop,
+            ShortcutField::SnapPercentBottom,
+        ] {
+            assert_eq!(f.percent_bounds(), Some((1, 99)), "{}", f.label());
+        }
+        // And the two facts cannot drift apart: a row that draws a percentage must have a range,
+        // and a row with a range must draw one. Either half alone is a silently broken control.
+        for f in ShortcutField::ALL {
+            assert_eq!(
+                f.has_percent(),
+                f.percent_bounds().is_some(),
+                "{} disagrees about whether it has a percentage",
+                f.label()
+            );
+        }
     }
 
     #[test]
