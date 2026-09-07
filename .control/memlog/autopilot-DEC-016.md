@@ -8,24 +8,27 @@ date: 2026-09-07
 
 ## Resume
 
-- Iteration: 13 — `SPEC-3-02` verified, panel dispatched.
-- Run branch: `autopilot/DEC-016`, HEAD `c803a1d` (builder's commit, not yet a ledger boundary). **PR #17
-  open, draft**: https://github.com/wiradigitalid/wira-desk/pull/17. CI green on the last pushed head
-  (`f9840fe`); nothing new pushed since (next push is at this spec's close).
-- Stopped at: **Capacity.** `SPEC-3-02` builder (`bcthvyq4n`) exited code 0, commit `c803a1d`. Did NOT
-  trust its report: independently re-ran fmt/clippy/full suite (533 passed/0 failed, all 4 named ticket
-  tests green) and the export gate (10/10); confirmed no corpus file touched; confirmed
-  `TOGGLE_OVERLAPPING_STACK` is genuinely gone and the remaining `enable_overlapping_stack` hits are only
-  the intentional legacy-migration shim from `SPEC-3-01`, not the retired schema field. Dispatched the real
-  panel fresh (Standards `afc44e6affecd82f1`, Spec `abc48b8283f11c210`), asked to scrutinize the
-  keyboard-hook fall-through behaviour specifically (this is Win32 hook code).
+- Iteration: 14 — every spec closed; § Finish reached; smoke test dispatched.
+- Run branch: `autopilot/DEC-016`, HEAD `10eb0e6`. **PR #17 open, draft**:
+  https://github.com/wiradigitalid/wira-desk/pull/17. Not pushed since `f9840fe` — pushing once more at
+  Finish, not per intermediate commit.
+- Stopped at: **Capacity.** Both panel axes clean on `SPEC-3-02` (Standards `afc44e6affecd82f1`, Spec
+  `abc48b8283f11c210`) — closed `SPEC-3-02` and `SPEC-3`. Cleared the `review-trace` advisory
+  (`SDD-settings.md`, structure+prose, clean on the trivial delta, re-stamped `f7760db`). Ran
+  `wdi-reconcile`: found and fixed two real gaps — `BR-9`'s Enforcement still said "Not yet built" for a
+  rule that just shipped, and cited the retired one-off toggle as "today's only existing toggle";
+  `inventory-db.md`'s `[layout]` schema row still named the retired `enable_overlapping_stack` key instead
+  of the real `stack_shortcut_enabled`, and didn't mention the new per-action `*_enabled` fields at all.
+  `.control/generated/status.md` now reads `promise_progress: 100%`, RTM `28/28` green, every spec
+  `closed`, `gate_readiness: 100%` — **this is § Finish.** Dispatched the smoke test to `claude-byok`
+  (job `btmzzj4s0`, confirmed running) per `smoke_test: agent`, covering `FR-25`/`FR-28`/`FR-29` and the
+  `SPEC-2-01` UI fix, explicitly told to report honestly what this headless session cannot reach (the
+  elevated daemon, real keypress injection) rather than round up.
 - Blocked: —
 - Parked: —
-- Advisory (not blocking): `review-trace` still flags `SDD-settings.md` stale — re-run `wdi-review` before
-  this spec's close.
-- Next: read both panel verdicts. Clean → close `SPEC-3-02`/`SPEC-3` (last ticket in scope), run
-  `wdi-review` for the advisory, `wdi-reconcile`, push at spec close, then check whether every `FR` in
-  scope is closed (§ Finish) or more remains.
+- Next: check job `btmzzj4s0`. On exit: record its result per `FR` verbatim (never rounded up), then
+  `wdi-report` intent `progress`, raise the mandate to `applied`, push, watch CI on the final head, mark
+  the PR ready only if green, cancel the loop, write the Finish report.
 
 ## Decisions
 
@@ -53,3 +56,6 @@ date: 2026-09-07
 | Iter 12 | Close `SPEC-3-01` | Both panel axes clean, same follow-up independently found (orphaned constant) — confirmed real by reading `theme.rs` myself, no behaviour delta, not a return-trip trigger | Treating a duplicate follow-up as two separate findings, or triggering a return trip for a non-behavioural issue | If wrong, a later ticket removes the dead code anyway | ticket file, `9c1257b` |
 | Iter 12 | Bundle the follow-up | Carried the orphaned-constant cleanup into `SPEC-3-02`'s builder brief instead of a dedicated dispatch | A separate tiny dispatch just for dead-code removal | None — cheap either way | `.scratch/builder-brief-spec-3-02.md` |
 | Iter 13 | `SPEC-3-02` verification | Independently re-ran fmt/clippy/full suite/export-gate, and grepped for the retired field/constant myself, before trusting `bcthvyq4n`'s report | Accepting the builder's self-review as Step 3 | A false-green ticket if the report and artifact disagree | `c803a1d`, this ledger |
+| Iter 14 | Clear `review-trace` advisory | Re-ran `wdi-review` (structure+prose) on `SDD-settings.md`'s delta since its last review — a one-word pane-name correction — found clean, re-stamped | Ignoring the advisory since it doesn't fail the gate | Next reconcile pass re-flags if actually stale | `SDD-settings.md` |
+| Iter 14 | `wdi-reconcile` after `SPEC-3` | Found real drift: `BR-9` Enforcement said "Not yet built" for a shipped rule and cited the retired toggle; `inventory-db.md`'s `[layout]` row named the retired field instead of the real one, omitted the new per-action fields entirely. Fixed both, present tense | Treating either as merely "behind the code" (both were load-bearing — a reader would misjudge what's built or what key to look for) | A reader trusting either claim | `10eb0e6` |
+| Iter 14 | Reached § Finish | `status.md`: 100% promise progress, RTM 28/28 green, every spec closed. Dispatched the smoke test to `claude-byok` per `smoke_test: agent`, told explicitly to report what's unreachable from this headless session rather than round up | Coordinator running the smoke test itself (mandate reserves it for claude-byok only) | None — matches the mandate's own setting | `btmzzj4s0`, `.scratch/smoke-test-dec-016.md` |
