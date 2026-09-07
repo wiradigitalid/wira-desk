@@ -2,7 +2,7 @@
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use crate::app::{Pane, SettingsModel, ShortcutField};
+    use crate::app::{Pane, SaveFeedback, SettingsModel, ShortcutField};
     use crate::{bind_callbacks, sync_model_to_ui, MainWindow};
     use i_slint_backend_testing::{ElementHandle, TestingBackend, TestingBackendOptions};
     use shared::Config;
@@ -52,7 +52,8 @@ pub(crate) mod tests {
         }
     }
 
-    fn setup_shortcuts_window() -> (MainWindow, Rc<RefCell<SettingsModel>>, std::path::PathBuf) {
+    pub(crate) fn setup_shortcuts_window(
+    ) -> (MainWindow, Rc<RefCell<SettingsModel>>, std::path::PathBuf) {
         let main_window = MainWindow::new().expect("MainWindow creation");
         let mut path = std::env::temp_dir();
         path.push(format!(
@@ -389,6 +390,129 @@ pub(crate) mod tests {
             assert!(
                 model.borrow().draft.snapping.snap_percent_left_enabled,
                 "Toggling switch on must enable SnapPercentLeft in draft"
+            );
+
+            let _ = std::fs::remove_file(&save_path);
+        });
+    }
+
+    #[test]
+    fn out_of_range_stack_width_is_refused_not_clamped() {
+        run_on_ui_thread(|| {
+            let (window, model, save_path) = setup_shortcuts_window();
+
+            // Scroll down to bring the Overlapping Stack row into view
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::PointerScrolled {
+                    position: slint::LogicalPosition::new(300.0, 300.0),
+                    delta_x: 0.0,
+                    delta_y: -600.0,
+                });
+
+            // Focus the stack width field on the Overlapping Stack row
+            let mut fields = ElementHandle::find_by_accessible_label(
+                &window,
+                crate::theme::STACK_WIDTH_FIELD.name,
+            );
+            let field_btn = fields.next().expect("Stack width field element found");
+            field_btn.invoke_accessible_default_action();
+
+            // Find stack width input element
+            let mut inputs = ElementHandle::find_by_accessible_label(
+                &window,
+                crate::theme::STACK_WIDTH_INPUT.name,
+            );
+            let width_input = inputs.next().expect("Stack width input element found");
+
+            // Type out-of-range percentage 150
+            width_input.set_accessible_value("150");
+
+            // Value must not commit to draft before departure
+            assert_eq!(
+                model.borrow().draft.layout.stack_width_percent,
+                50,
+                "Stack width percentage must not commit before departure"
+            );
+
+            // Save is clicked
+            window.invoke_save_clicked();
+
+            // 1. Must NOT be silently clamped to 100 in the model draft
+            assert_eq!(
+                model.borrow().draft.layout.stack_width_percent,
+                150,
+                "Stack width percentage must not be silently clamped to 100 on input"
+            );
+
+            // 2. The out-of-range value must be refused with an actionable message
+            if let SaveFeedback::Error(msg) = &model.borrow().feedback {
+                assert!(
+                    msg.contains("Stack width percentage") && msg.contains("between 10% and 100%"),
+                    "Feedback message must be actionable: {msg}"
+                );
+            } else {
+                panic!(
+                    "Expected SaveFeedback::Error for out-of-range stack width percentage, got {:?}",
+                    model.borrow().feedback
+                );
+            }
+
+            // 3. Saved config must remain untouched at 50
+            assert_eq!(
+                model.borrow().saved.layout.stack_width_percent,
+                50,
+                "Saved config must not be overwritten when out-of-range"
+            );
+
+            let _ = std::fs::remove_file(&save_path);
+        });
+    }
+
+    #[test]
+    fn stack_row_percent_commits_on_save_click() {
+        run_on_ui_thread(|| {
+            let (window, model, save_path) = setup_shortcuts_window();
+
+            // Scroll down to bring the Overlapping Stack row into view
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::PointerScrolled {
+                    position: slint::LogicalPosition::new(300.0, 300.0),
+                    delta_x: 0.0,
+                    delta_y: -600.0,
+                });
+
+            // Find the percentage input for the Overlapping Stack row
+            let mut inputs = ElementHandle::find_by_accessible_label(
+                &window,
+                crate::theme::STACK_WIDTH_INPUT.name,
+            );
+            let stack_input = inputs.next().expect("Stack width input element found");
+
+            // Type '65' into the percentage field without pressing Enter
+            stack_input.set_accessible_value("65");
+
+            // Must NOT commit prematurely before departure
+            assert_eq!(
+                model.borrow().draft.layout.stack_width_percent,
+                50,
+                "Stack width value must not commit to draft before departure"
+            );
+
+            // Save is clicked directly while the field has focus / was typed into
+            window.invoke_save_clicked();
+
+            // The typed value '65' must be committed on departure (save click), not discarded
+            assert_eq!(
+                model.borrow().draft.layout.stack_width_percent,
+                65,
+                "Typing 65 then clicking Save must commit 65 to draft without requiring Enter"
+            );
+            assert_eq!(
+                model.borrow().saved.layout.stack_width_percent,
+                65,
+                "Typing 65 then clicking Save must save 65 to config"
             );
 
             let _ = std::fs::remove_file(&save_path);

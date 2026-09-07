@@ -252,6 +252,8 @@ rtm:
   - app::tests::pane_declaration_order_is_the_navigation_index
   - app::tests::every_pane_index_round_trips_through_the_ui_boundary
   - app::tests::the_stack_row_carries_its_own_percent_bounds
+  - app::tests::every_percentage_row_reaches_all_four_percent_seams
+  - theme::tests::every_rendered_percent_control_name_comes_from_theme
   status: ready-for-agent
   exempt: false
   green: false
@@ -527,6 +529,8 @@ rtm:
   - app::tests::pane_declaration_order_is_the_navigation_index
   - app::tests::every_pane_index_round_trips_through_the_ui_boundary
   - app::tests::the_stack_row_carries_its_own_percent_bounds
+  - app::tests::every_percentage_row_reaches_all_four_percent_seams
+  - theme::tests::every_rendered_percent_control_name_comes_from_theme
   status: ready-for-agent
   exempt: false
   green: false
@@ -731,6 +735,8 @@ rtm:
   - app::tests::pane_declaration_order_is_the_navigation_index
   - app::tests::every_pane_index_round_trips_through_the_ui_boundary
   - app::tests::the_stack_row_carries_its_own_percent_bounds
+  - app::tests::every_percentage_row_reaches_all_four_percent_seams
+  - theme::tests::every_rendered_percent_control_name_comes_from_theme
   status: ready-for-agent
   exempt: false
   green: false

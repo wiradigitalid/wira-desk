@@ -14,26 +14,21 @@ use crate::persistence::{
     save_and_notify, signal_capture_lease, validate_shortcut, DaemonSignal, SaveOutcome,
     ShortcutError,
 };
-use crate::theme::{
-    self, ThemeMode, LISTENING_ANNOUNCEMENT, STACK_WIDTH_DECREASE, STACK_WIDTH_INCREASE,
-    STACK_WIDTH_INPUT, TOGGLE_AUTO_START,
-};
+use crate::theme::{self, ThemeMode, LISTENING_ANNOUNCEMENT, TOGGLE_AUTO_START};
 
 /// Which pane the shell is showing.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Pane {
     General,
     Shortcuts,
-    Layout,
     VmExceptions,
     About,
 }
 
 impl Pane {
-    pub const ALL: [Pane; 5] = [
+    pub const ALL: [Pane; 4] = [
         Pane::General,
         Pane::Shortcuts,
-        Pane::Layout,
         Pane::VmExceptions,
         Pane::About,
     ];
@@ -43,13 +38,24 @@ impl Pane {
         match self {
             Pane::General => "General",
             Pane::Shortcuts => "Shortcuts",
-            // "Layout", not "Layout & Snapping": this pane holds the overlapping-stack
-            // toggle and its width slider and no chord at all. Every chord lives in the
-            // Shortcuts pane, and the old name promised otherwise.
-            Pane::Layout => "Layout",
             Pane::VmExceptions => "VM & Exceptions",
             Pane::About => "About",
         }
+    }
+
+    /// Recover a pane from its position in the declared sequence.
+    ///
+    /// The navigation index crosses the UI boundary as an `int`, and this is the one place that
+    /// reads it back. Out of range falls back to the first pane rather than panicking, for the
+    /// same reason [`ShortcutField::from_index`] does: the index arrives from the UI, and a
+    /// settings window that closes itself on a stale event is worse than one showing the wrong
+    /// pane. Derived from [`Pane::ALL`] so removing a pane cannot leave a hand-numbered table
+    /// pointing at the wrong one.
+    pub fn from_index(index: i32) -> Pane {
+        Pane::ALL
+            .get(usize::try_from(index).unwrap_or(0))
+            .copied()
+            .unwrap_or(Pane::General)
     }
 
     /// Reverse lookup of [`Pane::label`].
@@ -320,7 +326,30 @@ impl ShortcutField {
                 | ShortcutField::SnapPercentRight
                 | ShortcutField::SnapPercentTop
                 | ShortcutField::SnapPercentBottom
+                | ShortcutField::Stack
         )
+    }
+
+    /// The inclusive range a percentage row accepts, or `None` for a row with no percentage.
+    ///
+    /// One home for these numbers, in Rust rather than as markup literals, because markup cannot
+    /// be asserted on and this is where the range can be guarded. `Stack` is the odd one: the
+    /// overlapping-stack width has always accepted 10-100, while a snap edge accepts 1-99. Both
+    /// pairs used to be hardcoded in different files — `shortcut_row.slint`'s stepper carried
+    /// `1`/`99` and the retired Layout pane carried `10`/`100` — so moving the stack control onto
+    /// a shortcut row without moving its range with it silently narrowed it.
+    pub fn percent_bounds(self) -> Option<(u32, u32)> {
+        use shared::constants::{
+            MAX_SNAP_PERCENT, MAX_STACK_WIDTH_PERCENT, MIN_SNAP_PERCENT, MIN_STACK_WIDTH_PERCENT,
+        };
+        match self {
+            ShortcutField::SnapPercentLeft
+            | ShortcutField::SnapPercentRight
+            | ShortcutField::SnapPercentTop
+            | ShortcutField::SnapPercentBottom => Some((MIN_SNAP_PERCENT, MAX_SNAP_PERCENT)),
+            ShortcutField::Stack => Some((MIN_STACK_WIDTH_PERCENT, MAX_STACK_WIDTH_PERCENT)),
+            _ => None,
+        }
     }
 
     pub fn percent(self, cfg: &Config) -> Option<u32> {
@@ -329,6 +358,7 @@ impl ShortcutField {
             ShortcutField::SnapPercentRight => Some(cfg.snapping.percent_right),
             ShortcutField::SnapPercentTop => Some(cfg.snapping.percent_top),
             ShortcutField::SnapPercentBottom => Some(cfg.snapping.percent_bottom),
+            ShortcutField::Stack => Some(cfg.layout.stack_width_percent),
             _ => None,
         }
     }
@@ -339,6 +369,7 @@ impl ShortcutField {
             ShortcutField::SnapPercentRight => cfg.snapping.percent_right = value,
             ShortcutField::SnapPercentTop => cfg.snapping.percent_top = value,
             ShortcutField::SnapPercentBottom => cfg.snapping.percent_bottom = value,
+            ShortcutField::Stack => cfg.layout.stack_width_percent = value,
             _ => {}
         }
     }
@@ -1120,12 +1151,6 @@ pub fn focus_order(pane: Pane) -> Vec<&'static str> {
                 order.push(f.label());
             }
         }
-        Pane::Layout => {
-            // Visual order: the field sits between the two buttons.
-            order.push(STACK_WIDTH_DECREASE.name);
-            order.push(STACK_WIDTH_INPUT.name);
-            order.push(STACK_WIDTH_INCREASE.name);
-        }
         Pane::VmExceptions => {
             order.push(theme::VM_BYPASS_PROCESS_LIST.name);
             order.push(theme::VM_BYPASS_CLASS_LIST.name);
@@ -1294,7 +1319,7 @@ mod tests {
     #[test]
     fn switching_between_other_panes_does_not_disturb_an_idle_capture() {
         let mut m = model();
-        m.set_pane(Pane::Layout);
+        m.set_pane(Pane::VmExceptions);
         m.set_pane(Pane::About);
         assert_eq!(m.pane, Pane::About);
         assert_eq!(m.capture, CaptureState::Idle);
@@ -1506,6 +1531,127 @@ mod tests {
     }
 
     #[test]
+    fn pane_enum_no_longer_declares_layout() {
+        // `DEC-014`'s accepted extension: the Layout pane is retired, not merely emptied. Its one
+        // remaining control moves onto the Overlapping Stack row. Asserted on the count as well as
+        // the name, because `Pane::ALL`'s length is itself a hand-written number and a pane list
+        // that still says five is stale whether or not anything in it says "Layout".
+        assert_eq!(Pane::ALL.len(), 4, "Settings ships four panes");
+        assert!(
+            Pane::from_label("Layout").is_none(),
+            "no pane answers to the retired name"
+        );
+        for p in Pane::ALL {
+            assert_ne!(p.label(), "Layout", "a pane still labels itself Layout");
+        }
+    }
+
+    #[test]
+    fn pane_declaration_order_is_the_navigation_index() {
+        // The navigation index crossing the UI boundary is the discriminant, and that identity
+        // only holds while the discriminants match `ALL`'s order. Same guard, and same reason, as
+        // `field_declaration_order_is_the_precedence_order` — a hand-numbered table that drifts
+        // from `ALL` shows one pane while highlighting another's nav entry, and nothing crashes.
+        for (i, p) in Pane::ALL.into_iter().enumerate() {
+            assert_eq!(p as usize, i, "{} sits out of declared order", p.label());
+        }
+    }
+
+    #[test]
+    fn every_pane_index_round_trips_through_the_ui_boundary() {
+        // Asserted against the DISCRIMINANT, not against the loop counter. `from_index` reads
+        // `ALL` by position, so `from_index(i) == ALL[i]` is true of any ordering whatsoever and
+        // would be a test that cannot fail. What has to hold is that the value `main.rs` sends
+        // across the boundary — `pane as i32` — comes back as the same pane, which breaks the
+        // moment `ALL`'s order and the discriminants disagree.
+        for p in Pane::ALL {
+            assert_eq!(
+                Pane::from_index(p as i32),
+                p,
+                "the index `main.rs` sends across the UI boundary must return the same pane"
+            );
+        }
+        // The index arrives from the UI, so out of range must not panic.
+        assert_eq!(Pane::from_index(-1), Pane::General);
+        assert_eq!(Pane::from_index(99), Pane::General);
+    }
+
+    #[test]
+    fn overlapping_stack_row_has_percent_true() {
+        // `DEC-014`'s extension puts the stack width on the Overlapping Stack row, using the same
+        // `has_percent` plumbing the four `Snap to custom` rows already use.
+        assert!(
+            ShortcutField::Stack.has_percent(),
+            "the Overlapping Stack row carries a percentage"
+        );
+    }
+
+    #[test]
+    fn every_percentage_row_reaches_all_four_percent_seams() {
+        // `set_percent` and `percent` both end in `_ => {}` / `_ => None` catch-alls, so a field
+        // added to `has_percent()` but forgotten in either one fails **silently** — the row draws
+        // a control that discards every edit. That is exactly what this ticket was caught on, and
+        // `Stack`'s own round-trip test only proves it for `Stack`. This pins the general rule:
+        // the four seams agree for every field, so the next percentage row cannot repeat it.
+        let mut cfg = Config::default();
+        for f in ShortcutField::ALL {
+            let claims = f.has_percent();
+            assert_eq!(
+                claims,
+                f.percent_bounds().is_some(),
+                "{} disagrees between has_percent and percent_bounds",
+                f.label()
+            );
+            assert_eq!(
+                claims,
+                f.percent(&cfg).is_some(),
+                "{} disagrees between has_percent and percent",
+                f.label()
+            );
+            if !claims {
+                continue;
+            }
+            // And the write actually lands rather than falling through the catch-all. Chosen
+            // inside every row's own bounds so no row is refused for being out of range.
+            let (min, max) = f.percent_bounds().expect("a percentage row has bounds");
+            let target = min + (max - min) / 2;
+            f.set_percent(&mut cfg, target);
+            assert_eq!(
+                f.percent(&cfg),
+                Some(target),
+                "{} accepted a percentage and discarded it",
+                f.label()
+            );
+        }
+    }
+
+    #[test]
+    fn the_stack_row_carries_its_own_percent_bounds() {
+        // A snap edge accepts 1-99; the overlapping-stack width accepts 10-100. Setting
+        // `has_percent` on `Stack` without carrying its range across silently narrows it, because
+        // the stepper's bounds used to be literals in the markup.
+        assert_eq!(ShortcutField::Stack.percent_bounds(), Some((10, 100)));
+        for f in [
+            ShortcutField::SnapPercentLeft,
+            ShortcutField::SnapPercentRight,
+            ShortcutField::SnapPercentTop,
+            ShortcutField::SnapPercentBottom,
+        ] {
+            assert_eq!(f.percent_bounds(), Some((1, 99)), "{}", f.label());
+        }
+        // And the two facts cannot drift apart: a row that draws a percentage must have a range,
+        // and a row with a range must draw one. Either half alone is a silently broken control.
+        for f in ShortcutField::ALL {
+            assert_eq!(
+                f.has_percent(),
+                f.percent_bounds().is_some(),
+                "{} disagrees about whether it has a percentage",
+                f.label()
+            );
+        }
+    }
+
+    #[test]
     fn the_group_headings_have_one_home() {
         // `ShortcutField::GROUPS` is that home. Walking `ALL` and deduplicating the headings
         // must reproduce it exactly — which is only true while every heading `group()` returns
@@ -1629,12 +1775,6 @@ mod tests {
                 );
             }
         }
-    }
-
-    #[test]
-    fn the_layout_pane_no_longer_claims_snapping() {
-        assert_eq!(Pane::Layout.label(), "Layout");
-        assert_eq!(Pane::from_label("Layout"), Some(Pane::Layout));
     }
 
     #[test]

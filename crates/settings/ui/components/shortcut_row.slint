@@ -18,6 +18,12 @@ export component ShortcutRow inherits Rectangle {
     in property <bool> can_swap: false;
     in property <bool> has_percent: false;
     in property <int> percent: 50;
+    in property <int> percent_min: 1;
+    in property <int> percent_max: 99;
+    in property <string> accessible_label_decrease: "";
+    in property <string> accessible_label_field: "";
+    in property <string> accessible_label_input: "";
+    in property <string> accessible_label_increase: "";
     in-out property <string> typed_text: "\{root.percent}";
     in property <bool> enabled: true;
 
@@ -36,14 +42,14 @@ export component ShortcutRow inherits Rectangle {
 
     public function step_plus() {
         let base = root.current_value();
-        let next = (base >= 1 && base < 99) ? (base + 1) : base;
+        let next = (base >= root.percent_min && base < root.percent_max) ? (base + 1) : base;
         root.typed_text = "\{next}";
         root.percent_changed(next);
     }
 
     public function step_minus() {
         let base = root.current_value();
-        let next = (base > 1 && base <= 99) ? (base - 1) : base;
+        let next = (base > root.percent_min && base <= root.percent_max) ? (base - 1) : base;
         root.typed_text = "\{next}";
         root.percent_changed(next);
     }
@@ -135,7 +141,7 @@ export component ShortcutRow inherits Rectangle {
                     border-color: Palette.stroke_card;
 
                     accessible-role: button;
-                    accessible-label: "Decrease snap percentage";
+                    accessible-label: root.accessible_label_decrease;
                     accessible-action-default => {
                         root.step_minus();
                     }
@@ -165,7 +171,7 @@ export component ShortcutRow inherits Rectangle {
                     border-color: pct_input.has-focus ? Palette.accent_primary : Palette.stroke_card;
 
                     accessible-role: button;
-                    accessible-label: "Snap percentage field";
+                    accessible-label: root.accessible_label_field;
                     accessible-action-default => {
                         pct_input.focus();
                         pct_input.select-all();
@@ -195,7 +201,7 @@ export component ShortcutRow inherits Rectangle {
                             vertical-alignment: center;
 
                             accessible-role: text;
-                            accessible-label: "Snap percentage input";
+                            accessible-label: root.accessible_label_input;
                             accessible-action-set-value(val) => {
                                 root.typed_text = val;
                                 if val.is-float() {
@@ -260,7 +266,7 @@ export component ShortcutRow inherits Rectangle {
                     border-color: Palette.stroke_card;
 
                     accessible-role: button;
-                    accessible-label: "Increase snap percentage";
+                    accessible-label: root.accessible_label_increase;
                     accessible-action-default => {
                         root.step_plus();
                     }

@@ -9,8 +9,6 @@ mod theme;
 mod update;
 
 #[cfg(test)]
-mod layout_pane_slint_snapshot;
-#[cfg(test)]
 mod shortcut_row_slint_snapshot;
 
 slint::include_modules!();
@@ -132,14 +130,7 @@ pub(crate) fn sync_model_to_ui(window: &MainWindow, model: &SettingsModel) {
         window.set_onboarding_auto_start(model.onboarding_auto_start);
     } else {
         // Navigation Pane
-        let pane_idx = match model.pane {
-            Pane::General => 0,
-            Pane::Shortcuts => 1,
-            Pane::Layout => 2,
-            Pane::VmExceptions => 3,
-            Pane::About => 4,
-        };
-        window.set_current_pane(pane_idx);
+        window.set_current_pane(model.pane as i32);
 
         // General
         window.set_auto_start(model.draft.general.auto_start);
@@ -169,20 +160,53 @@ pub(crate) fn sync_model_to_ui(window: &MainWindow, model: &SettingsModel) {
         // array appears in the pane, in the right group, with its conflict and swap state,
         // without a line changing in this file — which is the property the previous
         // one-property-per-field shape could not offer.
-        let row_of = |field: ShortcutField| ShortcutRowData {
-            index: field as i32,
-            title: slint::SharedString::from(field.label()),
-            description: slint::SharedString::from(field.description()),
-            shortcut: slint::SharedString::from(format_shortcut_display(field.get(&model.draft))),
-            conflict_name: slint::SharedString::from(
-                model.find_conflict(field).map(|f| f.label()).unwrap_or(""),
-            ),
-            can_swap: model.can_swap(field),
-            has_percent: field.has_percent(),
-            percent: field
-                .percent(&model.draft)
-                .unwrap_or(shared::constants::DEFAULT_SNAP_PERCENT) as i32,
-            enabled: field.is_enabled(&model.draft),
+        let row_of = |field: ShortcutField| {
+            let (min, max) = field.percent_bounds().unwrap_or((
+                shared::constants::MIN_SNAP_PERCENT,
+                shared::constants::MAX_SNAP_PERCENT,
+            ));
+            let (label_decrease, label_field, label_input, label_increase) = match field {
+                ShortcutField::Stack => (
+                    theme::STACK_WIDTH_DECREASE.name,
+                    theme::STACK_WIDTH_FIELD.name,
+                    theme::STACK_WIDTH_INPUT.name,
+                    theme::STACK_WIDTH_INCREASE.name,
+                ),
+                ShortcutField::SnapPercentLeft
+                | ShortcutField::SnapPercentRight
+                | ShortcutField::SnapPercentTop
+                | ShortcutField::SnapPercentBottom => (
+                    theme::SNAP_PERCENT_DECREASE.name,
+                    theme::SNAP_PERCENT_FIELD.name,
+                    theme::SNAP_PERCENT_INPUT.name,
+                    theme::SNAP_PERCENT_INCREASE.name,
+                ),
+                _ => ("", "", "", ""),
+            };
+            ShortcutRowData {
+                index: field as i32,
+                title: slint::SharedString::from(field.label()),
+                description: slint::SharedString::from(field.description()),
+                shortcut: slint::SharedString::from(format_shortcut_display(
+                    field.get(&model.draft),
+                )),
+                conflict_name: slint::SharedString::from(
+                    model.find_conflict(field).map(|f| f.label()).unwrap_or(""),
+                ),
+                can_swap: model.can_swap(field),
+                has_percent: field.has_percent(),
+                percent: field
+                    .percent(&model.draft)
+                    .unwrap_or(shared::constants::DEFAULT_SNAP_PERCENT)
+                    as i32,
+                percent_min: min as i32,
+                percent_max: max as i32,
+                accessible_label_decrease: slint::SharedString::from(label_decrease),
+                accessible_label_field: slint::SharedString::from(label_field),
+                accessible_label_input: slint::SharedString::from(label_input),
+                accessible_label_increase: slint::SharedString::from(label_increase),
+                enabled: field.is_enabled(&model.draft),
+            }
         };
         let group_rows = |heading: &str| -> slint::ModelRc<ShortcutRowData> {
             let rows: Vec<ShortcutRowData> = ShortcutField::ALL
@@ -221,9 +245,6 @@ pub(crate) fn sync_model_to_ui(window: &MainWindow, model: &SettingsModel) {
         window.set_kc_last_canonical(slint::SharedString::from(&model.key_check.last_canonical));
         window.set_kc_verdict(model.key_check.verdict as i32);
         window.set_kc_beat(model.key_check.beat);
-
-        // Layout
-        window.set_stack_width_percent(model.draft.layout.stack_width_percent as i32);
 
         // About
         window.set_app_version(slint::SharedString::from(env!("CARGO_PKG_VERSION")));
@@ -297,8 +318,6 @@ pub(crate) fn bind_callbacks(
 ) {
     let uncommitted_percent: Rc<std::cell::RefCell<Option<(ShortcutField, u32)>>> =
         Rc::new(std::cell::RefCell::new(None));
-    let uncommitted_width: Rc<std::cell::RefCell<Option<u32>>> =
-        Rc::new(std::cell::RefCell::new(None));
 
     {
         let uncommitted = Rc::clone(&uncommitted_percent);
@@ -310,36 +329,18 @@ pub(crate) fn bind_callbacks(
             }
         });
     }
-    {
-        let uncommitted = Rc::clone(&uncommitted_width);
-        main_window.on_editing_width_changed(move |val| {
-            let uval = if val < 0 { 0 } else { val as u32 };
-            *uncommitted.borrow_mut() = Some(uval);
-        });
-    }
 
     // Callbacks: Navigation & General
     {
         let model_rc = Rc::clone(model);
         let window_weak = main_window.as_weak();
         let uncommitted_pct = Rc::clone(&uncommitted_percent);
-        let uncommitted_w = Rc::clone(&uncommitted_width);
         main_window.on_pane_selected(move |idx| {
             let mut m = model_rc.borrow_mut();
             if let Some((field, val)) = uncommitted_pct.borrow_mut().take() {
                 m.set_percent(field, val);
             }
-            if let Some(val) = uncommitted_w.borrow_mut().take() {
-                m.draft.layout.stack_width_percent = val;
-            }
-            let pane = match idx {
-                0 => Pane::General,
-                1 => Pane::Shortcuts,
-                2 => Pane::Layout,
-                3 => Pane::VmExceptions,
-                4 => Pane::About,
-                _ => Pane::General,
-            };
+            let pane = Pane::from_index(idx);
             m.set_pane(pane);
             if let Some(w) = window_weak.upgrade() {
                 sync_model_to_ui(&w, &m);
@@ -431,35 +432,16 @@ pub(crate) fn bind_callbacks(
         });
     }
 
-    // Callbacks: Layout
-    {
-        let model_rc = Rc::clone(model);
-        let window_weak = main_window.as_weak();
-        let uncommitted_w = Rc::clone(&uncommitted_width);
-        main_window.on_width_changed(move |val| {
-            *uncommitted_w.borrow_mut() = None;
-            let mut m = model_rc.borrow_mut();
-            m.draft.layout.stack_width_percent = if val < 0 { 0 } else { val as u32 };
-            if let Some(w) = window_weak.upgrade() {
-                sync_model_to_ui(&w, &m);
-            }
-        });
-    }
-
     // Callbacks: Save & Revert
     {
         let model_rc = Rc::clone(model);
         let window_weak = main_window.as_weak();
         let target_path = custom_save_path.unwrap_or_else(config_path);
         let uncommitted_pct = Rc::clone(&uncommitted_percent);
-        let uncommitted_w = Rc::clone(&uncommitted_width);
         main_window.on_save_clicked(move || {
             let mut m = model_rc.borrow_mut();
             if let Some((field, val)) = uncommitted_pct.borrow_mut().take() {
                 m.set_percent(field, val);
-            }
-            if let Some(val) = uncommitted_w.borrow_mut().take() {
-                m.draft.layout.stack_width_percent = val;
             }
             m.save(&target_path);
             if let Some(w) = window_weak.upgrade() {
@@ -471,10 +453,8 @@ pub(crate) fn bind_callbacks(
         let model_rc = Rc::clone(model);
         let window_weak = main_window.as_weak();
         let uncommitted_pct = Rc::clone(&uncommitted_percent);
-        let uncommitted_w = Rc::clone(&uncommitted_width);
         main_window.on_revert_clicked(move || {
             *uncommitted_pct.borrow_mut() = None;
-            *uncommitted_w.borrow_mut() = None;
             let mut m = model_rc.borrow_mut();
             m.revert();
             if let Some(w) = window_weak.upgrade() {

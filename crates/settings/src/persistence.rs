@@ -692,6 +692,40 @@ mod tests {
     }
 
     #[test]
+    fn stack_width_percent_round_trips_through_the_shortcut_row_path() {
+        // The Overlapping Stack row edits `layout.stack_width_percent` through the same
+        // `ShortcutField` percentage plumbing every `Snap to custom` row uses. That path has a
+        // catch-all arm, so a field left out of it does not fail to compile — it accepts the edit
+        // and discards it, drawing a control that silently does nothing. This asserts the value
+        // actually reaches the config and survives a serialise/parse round trip.
+        let mut cfg = Config::default();
+        crate::app::ShortcutField::Stack.set_percent(&mut cfg, 42);
+        assert_eq!(
+            cfg.layout.stack_width_percent, 42,
+            "the shortcut-row percentage path must reach `layout.stack_width_percent`"
+        );
+        assert_eq!(
+            crate::app::ShortcutField::Stack.percent(&cfg),
+            Some(42),
+            "and must read back what it wrote"
+        );
+
+        // Round-tripped through the real save path rather than a serde call, so this covers what
+        // a user's Save actually does to the file on disk.
+        let dir = temp_dir();
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("stack-width-round-trip.toml");
+        assert!(
+            matches!(save_and_notify(&cfg, &path), SaveOutcome::Saved { .. }),
+            "42 is inside the stack range, so the save must be accepted"
+        );
+        let reloaded = Config::from_toml_str(&std::fs::read_to_string(&path).unwrap())
+            .expect("the saved file parses back");
+        assert_eq!(reloaded.layout.stack_width_percent, 42);
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
     fn default_config_passes_its_own_validation() {
         assert!(validate_config(&Config::default()).is_ok());
     }

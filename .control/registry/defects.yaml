@@ -48,6 +48,13 @@ defects:
       land in `typed_text`/commit, in addition to the existing accessible-value tests, which stay -- they
       cover the automation/assistive-technology path and MUST NOT be weakened to make room for the new one.
     owner: repo owner
+
+  # The `- id: DEF-1` marker below was missing, so every field of DEF-1 was parsed as a
+  # continuation of DEF-5's mapping and won on last-wins. The consequences were not cosmetic:
+  # DEF-1 did not exist as a row at all, and DEF-5 -- the defect `SPEC-4-04` is open to fix --
+  # read back as `status: fixed`, `severity: high`, `component: window-management`. `validate.py`
+  # was GREEN throughout, so nothing in the corpus checks that a defect row is its own row.
+  - id: DEF-1
     title: Two hook tests depend on the live desktop and fail with no foreground window
     status: fixed
     severity: high
@@ -106,6 +113,42 @@ defects:
       explicitly and none of them reads the desktop. Assertion and failure message unchanged.
 
 
+  - id: DEF-6
+    title: All four custom-percentage rows announce the same accessible name
+    status: open
+    severity: low
+    component: settings
+    violates: [FR-20, FR-21]
+    found_in: "0.4.0"
+    found_by: Standards-axis review of SPEC-4-02, 2026-09-07 (pre-existing, not introduced by it)
+    tests: []
+    summary: >-
+      `SnapPercentLeft`, `SnapPercentRight`, `SnapPercentTop` and `SnapPercentBottom` each render
+      the same four accessible names — "Decrease snap percentage", "Snap percentage field",
+      "Snap percentage input", "Increase snap percentage". A screen-reader user moving through the
+      Shortcuts pane therefore cannot tell the left-edge percentage control from the top-edge one:
+      four focusable controls, one name each, repeated four times over.
+    why_it_hid: >-
+      `shortcut_row.slint` already hardcoded exactly these four strings, unconditionally, for every
+      percentage row -- so nothing changed when `SPEC-4-02` moved them into declared `theme.rs`
+      vocabulary. (The range-based conditional that briefly chose between the two families existed
+      only mid-ticket and was removed in the same ticket; it is not where these strings came from.) And
+      `theme::tests::accessible_names_are_unique` compares the CONSTANTS to each other, where each
+      name appears once and is genuinely unique. The duplication is in the RENDERED tree, across
+      rows, which that guard does not look at. `DEF-2` was the same class of fault — two focusable
+      controls sharing a name — caught then because both controls sat in one pane.
+    impact: >-
+      Accessibility only; no functional defect and nothing is mis-saved. The four rows are still
+      distinguishable by their row title, which a screen reader reads, so this degrades navigation
+      rather than blocking it. `DEF-2` carried `low` for the same fault class, so this row matches
+      that precedent rather than departing from it.
+    fix_direction: >-
+      Per-direction names, e.g. "Left edge percentage input", rather than one shared set for the
+      family. That needs a `ShortcutField`-keyed label set rather than the two-family split
+      `SPEC-4-02` introduced, so it is a design change and belongs to its own ticket rather than
+      to `SPEC-4`, whose remaining two tickets are both already scope-guarded against it.
+    owner: repo owner
+
   - id: DEF-2
     title: Two focusable controls share the accessible name "Stack width percent"
     status: fixed
@@ -119,6 +162,14 @@ defects:
       - app::tests::focus_order_has_no_duplicates
       - app::tests::focus_order_is_stable_across_calls
       - app::tests::focus_order_starts_with_navigation_and_ends_with_actions
+    # `SPEC-4-02` retired the Layout pane, and with it `focus_order(Pane::Layout)` — the one
+    # production reader of `theme.rs`'s three `STACK_WIDTH_*` names. The three `focus_order_*`
+    # guards above therefore no longer touch these controls at all, and
+    # `accessible_names_are_unique` iterates constants the UI no longer draws. The stack-width
+    # controls DO still carry three distinct accessible names on their new Overlapping Stack row,
+    # so this defect's symptom has not returned — but its named guards stopped covering it, which
+    # is recorded here rather than left for a future reader to discover. `SPEC-4-02`'s return trip
+    # re-points the markup at those constants and adds the guard that makes this row true again.
     summary: >-
       `focus_order(Pane::Layout)` declares "Stack width percent" as ONE focus stop, but the
       published UI Automation tree carries two focusable controls with that identical name --

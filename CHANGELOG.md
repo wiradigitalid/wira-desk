@@ -36,6 +36,11 @@ changes. Not yet released — tracked here per `AGENTS.md`'s versioning rule unt
   rows now sit beside the halves and thirds they resemble instead of under moving windows around,
   and a row no longer repeats its group's name — under *Snap to custom* a row reads "Snap to left
   edge". See `DEC-014`.
+- The **Layout** pane is gone, and Settings now has four panes: General, Shortcuts, VM &
+  Exceptions, About. Its one remaining control — the overlapping-stack width percentage — moves
+  onto the **Overlapping Stack** row in the Shortcuts pane, beside that action's own shortcut and
+  its on/off switch, so the setting sits with the action it belongs to. Nothing stored changes and
+  no value is migrated; the width you had is the width you keep. See `DEC-014`.
 - If you have bound two actions to the same chord, the one that keeps it may have changed.
   Maximize now sits behind every snap variant in the order that resolves a collision, so a snap
   action wins where Maximize used to. Nothing is migrated and no chord is renamed; on the shipped

@@ -5,7 +5,6 @@ import { Titlebar } from "components/titlebar.slint";
 import { Sidebar } from "components/sidebar.slint";
 import { GeneralPane } from "panes/general_pane.slint";
 import { ShortcutsPane, ShortcutRowData } from "panes/shortcuts_pane.slint";
-import { LayoutPane } from "panes/layout_pane.slint";
 import { VmExceptionsPane } from "panes/vm_exceptions_pane.slint";
 import { AboutPane } from "panes/about_pane.slint";
 import { KeyCheck } from "components/key_check.slint";
@@ -75,9 +74,6 @@ export component MainWindow inherits Window {
     in property <int> kc_verdict: 0;
     in property <bool> kc_beat: false;
 
-    // Layout Pane Properties
-    in-out property <int> stack_width_percent: 50;
-
     // VM Exceptions Pane Properties
     in property <[string]> bypass_processes: [
         "mstsc.exe",
@@ -130,9 +126,6 @@ export component MainWindow inherits Window {
     callback percent_changed(int, int);
     callback editing_percent_changed(int, int);
     callback shortcut_enabled_toggled(int, bool);
-
-    callback width_changed(int);
-    callback editing_width_changed(int);
 
     callback save_clicked();
     callback revert_clicked();
@@ -282,18 +275,12 @@ export component MainWindow inherits Window {
                                 toggle_enabled(idx, val) => { root.shortcut_enabled_toggled(idx, val); }
                             }
 
-                            if root.current_pane == 2 : LayoutPane {
-                                stack_width_percent <=> root.stack_width_percent;
-                                width_changed(val) => { root.width_changed(val); }
-                                editing_width_changed(val) => { root.editing_width_changed(val); }
-                            }
-
-                            if root.current_pane == 3 : VmExceptionsPane {
+                            if root.current_pane == 2 : VmExceptionsPane {
                                 bypass_processes: root.bypass_processes;
                                 bypass_classes: root.bypass_classes;
                             }
 
-                            if root.current_pane == 4 : AboutPane {
+                            if root.current_pane == 3 : AboutPane {
                                 version: root.app_version;
                                 typeface: root.app_typeface;
                                 update_status: root.update_status;
