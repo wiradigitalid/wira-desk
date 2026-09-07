@@ -8,20 +8,15 @@ date: 2026-09-07
 
 ## Resume
 
-- Iteration 1 — `SPEC-4-01` Step 1 closed (seven tests red at the right assertions, `3d3a9bf`);
-  **Step 2 dispatched and IN FLIGHT**. Boundary commit: `c8a9aad` on `ticket/SPEC-4-01`.
-- Run branch: `autopilot/DEC-017` at `c58e703`; ticket work rides `ticket/SPEC-4-01`, cut from it, and
-  merges back only green, so the run branch never carries red. No PR open yet.
-- Stopped at: — (iteration in progress, waiting on a dispatched step)
+- Iteration 2 — **`SPEC-4-01` closed and merged.** Boundary commit: `8dac1fe` on the run branch
+  (the merge), with the ledger commit that carries this line on top.
+- Run branch: `autopilot/DEC-017`. **Not pushed yet, no PR** — the first push happens at spec
+  close, not ticket close, and `SPEC-4` still has three open tickets.
+- Stopped at: — (iteration in progress)
 - Blocked: —
 - Parked: —
-- **In flight — do NOT re-dispatch:** `claude-byok` builds `SPEC-4-01` as background job `ble3851qv`,
-  brief at `.scratch/builder-brief-spec-4-01.md`. Confirmed working from the worktree itself (five
-  files modified inside ticket scope), not from its own report. The coordinator holds the build lock
-  shut while it is out: run **no** `cargo` command until this job exits.
-- Next: when `ble3851qv` exits — judge Step 2 from the artifact (re-run fmt/clippy/full suite and read
-  the diff, never the builder's summary), then Step 3's two-axis panel by agents that are not the
-  builder, then merge green into the run branch and delete `ticket/SPEC-4-01`.
+- Next: `SPEC-4-02` — apply the pane-index amendment drafted for it, then `wdi-build` Step 1
+  (coordinator writes the failing tests), then dispatch `claude-byok` for Step 2.
 
 ## Decisions
 
@@ -41,3 +36,13 @@ date: 2026-09-07
 | Iter 1 | `DEC-014` internal inconsistency | `DEC-014`'s Why called Maximize's old slot "position 5" (it is index 6) and its new one "second-to-last" (its own group enumeration puts it third-to-last). Took the Decision section's group list as normative — Maximize at index 13, ahead of `MoveNextMonitor` and `Stack` — and corrected the Why prose to match, permitted because `DEC-014` is `accepted`, not `applied` | Following the Why's "second-to-last", which would put `MoveNextMonitor` ahead of Maximize and contradict the same decision's own group membership | If the owner meant the Why literally, one entry swaps and the tests move with it | `DEC-014`, ticket amendment 1 |
 | Iter 1 | `wdi-build` Step 1 authorship | Wrote the seven failing tests myself and added `SHORTCUT_DECLARED_ORDER` with them, because the constant IS the acceptance criterion expressed as data and without it the suite would fail to compile rather than fail an assertion. Every behaviour change stays `claude-byok`'s | Handing Step 1 to `claude-byok` too, against the owner's split (unit tests are the coordinator's) | If the constant's order is wrong, six tests say so immediately | `crates/shared/src/constants.rs`, `crates/settings/src/app.rs`, `crates/daemon/src/hook.rs` |
 | Iter 1 | Run-branch hygiene | Ticket work rides `ticket/SPEC-4-01` cut from the run branch and merges back only once green, so `wdi-build`'s "nothing lands on the run branch red" holds literally while TDD's red phase is still committed and handed to the builder. Same worktree, one build location — the owner's constraint — since the four tickets are a serial chain and never build concurrently | Committing red tests straight onto the run branch, or opening a second worktree per ticket | None; the branch is deleted after the merge and only the run branch is ever pushed | `ticket/SPEC-4-01` |
+| Iter 2 | `wdi-build` Step 3 adjudication | Confirmed the Spec axis's must-fix by reading the cited lines: `validate_config`'s own `fields` literal was a THIRD ordered list of the sixteen, still in pre-`DEC-014` order, so Settings named `snap_maximize` as a shared chord's holder while the daemon unbinds it. Live and user-visible on the Save path, not latent | Accepting the axis's severity on its word, or dismissing it as bookkeeping because the save is refused either way | The pane and the daemon ship disagreeing about who keeps a chord | `persistence.rs`, ticket amendment 2 |
+| Iter 2 | `DEC-018` was wrong | `DEC-018` attributed the save-time duplicate rejection to `ShortcutField::ALL`. It belongs to `persistence.rs`'s own literal, and that misattribution is why the builder never looked there. Corrected to enumerate all three lists, and the miscount recorded in the decision rather than quietly fixed | Editing the count silently, leaving no trace of why one list was missed | A future reader repeats the same search and misses the same file | `DEC-018` |
+| Iter 2 | Guard that could not fail | Both axes said Amendment 1's row-table guard was undelivered. Verified by mutation rather than argument: swapped `resolved[13]`/`resolved[14]` and `the_daemon_precedence_order_matches_the_shared_source` stayed GREEN while chords bound to wrong actions. Replaced with an end-to-end guard driving sixteen distinct chords through `load_shortcuts_from_config` | Trusting that the original guard covered the mapping because its name suggested it did | A positional-index desync ships with a green suite | `hook.rs`, companion mutation run |
+| Iter 2 | Guards seen red | Both new guards started green, so each was broken deliberately, watched fail, and restored — the repo's rule that a guard never seen red is a claim rather than proof | Committing them green and calling the invariant guarded | An assertion that cannot fail, which is worse than no assertion | `hook.rs`, `app.rs` |
+| Iter 2 | Fix shape for the third list | Had `validate_config` **derive** its walk from `SHORTCUT_DECLARED_ORDER` instead of reordering its literal, so the order has one home. A key-to-value `match` is not a second order, since iteration comes from the constant | Reordering the literal, which is smaller and leaves a copy for the next taxonomy change to break | If the layer boundary matters more than the duplication, the literal returns — but `shared` was already imported here | `persistence.rs`, `DEC-018` |
+| Iter 2 | Standards' CHANGELOG finding | Accepted rather than deferred to spec close: the precedence flip is something a user can feel, so `## [Unreleased]` now carries it and the taxonomy change. No version digit moved — that is the owner's | Deferring it to spec close, which the axis itself offered as defensible | Release notes miss a behaviour change users would meet by surprise | `CHANGELOG.md` |
+| Iter 2 | Coordinator error, recorded | `resolve_chords` does not exist and never did; I invented it in Amendment 1 and the builder brief, and it propagated into `3p.md` and this ledger. The row table is `load_shortcuts_from_config`. All five occurrences corrected | Leaving a symbol name that resolves to nothing, which sends the next reader hunting | Already spent — caught by the Spec axis, not in production | ticket, brief, `3p.md`, this ledger |
+| Iter 2 | Panic arm, adjudicated | Left the derived `field_for`'s `panic!` fallback as is and recorded which existing test covers it, rather than adding a second test asserting what `default_config_passes_its_own_validation` already traverses. Failing open would leave a field silently unvalidated — the worse trade | Adding a named guard duplicating existing coverage, or returning an error and skipping the key | A seventeenth key added without an arm fails the suite loudly instead of at compile time | `persistence.rs` |
+| Iter 2 | Two stale comments | Fixed `key()`'s doc, which still described persistence keeping a parallel ordered table and so read as licence to re-add the one `LBR-ST-14` forbids; and noted at `main.rs`'s `GROUPS[n]` block that the index order is hard-bound to the markup's group order and nothing can prove it | Filing both as follow-ups for a later ticket | Both are wrong-repair risk, which the repo's rules put ahead of tidiness | `app.rs`, `main.rs` |
+| Iter 2 | Ticket close | Answered the three-item closing checklist; verified all nine `specs.yaml` test names against the tests that actually ran rather than by eye; merged `ticket/SPEC-4-01` green and deleted it. Run branch still unpushed — the first push is at spec close | Pushing at ticket close, which would open the PR three tickets early | None | `8dac1fe` |
