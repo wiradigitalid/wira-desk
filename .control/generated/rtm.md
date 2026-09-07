@@ -254,10 +254,10 @@ rtm:
   - app::tests::the_stack_row_carries_its_own_percent_bounds
   - app::tests::every_percentage_row_reaches_all_four_percent_seams
   - theme::tests::every_rendered_percent_control_name_comes_from_theme
-  status: ready-for-agent
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-5
   FR: FR-18
@@ -531,10 +531,10 @@ rtm:
   - app::tests::the_stack_row_carries_its_own_percent_bounds
   - app::tests::every_percentage_row_reaches_all_four_percent_seams
   - theme::tests::every_rendered_percent_control_name_comes_from_theme
-  status: ready-for-agent
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-3
   CAP: CAP-15
   FR: FR-27
@@ -737,10 +737,10 @@ rtm:
   - app::tests::the_stack_row_carries_its_own_percent_bounds
   - app::tests::every_percentage_row_reaches_all_four_percent_seams
   - theme::tests::every_rendered_percent_control_name_comes_from_theme
-  status: ready-for-agent
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-3
   FR: FR-7

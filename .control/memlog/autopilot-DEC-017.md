@@ -8,21 +8,17 @@ date: 2026-09-07
 
 ## Resume
 
-- Iteration 5 — `SPEC-4-02` re-panel adjudicated: no must-fix on the mechanism, two on what it left
-  behind, both taken. Coordinator's half landed (derived `theme::ALL`, per-row assignment guard,
-  `DEF-6` filed), suite 548 passed / 0 failed / 2 ignored. **Return trip 2 of 2 dispatched.**
-- Run branch: `autopilot/DEC-017` at `3b1cb32`; ticket work on `ticket/SPEC-4-02`. Not pushed, no
-  PR — first push is at spec close.
-- Stopped at: — (iteration in progress, waiting on a dispatched step)
+- Iteration 6 — **`SPEC-4-02` closed and merged.** `SPEC-4` at 2 of 4 tickets. Boundary commit:
+  `79efd93` on the run branch (the merge), with the ledger commit carrying this line on top.
+- Run branch: `autopilot/DEC-017`. **Not pushed, no PR** — the first push is at spec close, and
+  `SPEC-4` still has `SPEC-4-03` and `SPEC-4-04` open.
+- Stopped at: — (iteration in progress)
 - Blocked: —
 - Parked: —
-- **IN FLIGHT — do NOT re-dispatch:** `claude-byok` on return trip 2, brief at
-  `.scratch/builder-brief-spec-4-02-fix2.md`, one four-line change. Build lock shut: no `cargo`, no
-  stash, no branch switch, no worktree restore until it exits.
-- **This is the CAP.** A must-fix surviving this trip is escalated and recorded under Blocked — it
-  does NOT open a third trip.
-- Next: when it exits — judge from the artifact, re-run the whole panel, then ticket close, merge,
-  and `SPEC-4-03`.
+- Next: `SPEC-4-03` — `wdi-build` Step 1, coordinator writes the failing tests. Two facts already
+  established for it: it needs the new `shortcuts_pane_slint_snapshot` module (which also takes
+  `SPEC-4-01`'s deferred heading coverage, so the file is created once), and Slint's testing
+  backend only instantiates accessible elements once scrolled into view.
 
 ## Decisions
 
@@ -58,3 +54,10 @@ date: 2026-09-07
 | Iter 3 | Two ticket test names | `main::tests::overlapping_stack_row_has_percent_true` moved to `app::tests::` (`has_percent` is a `ShortcutField` method and `main.rs` has no tests module); `stack_row_percent_commits_on_save_click` reassigned to the builder under `tdd`, since it cannot exist before the control it tests | Standing up a Slint window in `main.rs` tests, or dropping the snapshot test as unwritable at Step 1 | Names drift from `specs.yaml` and the RTM chain breaks | ticket, `specs.yaml` |
 | Iter 3 | Coordinator error, recorded | Wrote the in-flight Resume note uncommitted, to avoid a git race with the builder. The builder restored the working tree and the note was silently discarded. No work lost, and the double-dispatch it guarded against did not happen | Repeating either failed approach — stashing under a live builder, or leaving Resume uncommitted | Already spent. Rule adopted: Resume is written INTO the Step 1 commit, before dispatch, which is what the skill said all along | this ledger |
 | Iter 3 | `DEF-5` is reproducible in-suite | Established before reaching `SPEC-4-04` that `shortcut_row_slint_snapshot.rs` already dispatches `WindowEvent::KeyPressed`, whose `text` is a `SharedString` — so a digit keystroke is one line's variation, not a harness to build. `DEF-5`'s root cause can be chased against a failing test instead of a live window, which is what defeated both previous attempts | Assuming the ticket's premise that a real-keystroke harness might not exist | If the in-suite keystroke works while the live one does not, that IS the root-cause signal and must be reported as such, never as "`DEF-5` fixed" | scratch plan, `SPEC-4-04` |
+| Iter 6 | `wdi-build` Step 3, severity split | Adjudicated **must-fix** where Standards said must-fix and Spec said follow-up on the constant register. Spec's reason for the lower score was that this brief's "do not edit existing tests" collided with Amendment 3's intent; resolved by reading that rule as it is written — it stops guards being softened, not frozen, and extending coverage is not weakening | Taking the lower of two scores, or leaving the tension for the owner | If wrong, a test gains coverage it did not need — the cheap direction to be wrong in | ticket amendment 4 |
+| Iter 6 | Coordinator error, the serious one | Generated `theme::ALL` with `^pub const ([A-Z_]+)` — a pattern excluding digits — so `ONBOARDING_DUMMY_WIN_1`/`_2` were dropped from an array claiming to be complete. There are 20 constants, not 18, and both dropped ones were covered by BOTH old arrays: a change described as extending coverage reduced it. Caught by the panel, not by me | Shipping a register that measured itself, which is how the omission stayed invisible | Two constants silently uncovered, in the file whose `accessible_names_are_unique` is `DEF-2`'s named regression test | `theme.rs`, proven by mutation |
+| Iter 6 | `ALL`'s honesty | Rewrote its doc to state that nothing enforces completeness, that `#![allow(dead_code)]` means an omitted constant will not even warn, and how the first version dropped two. Standards' judgement was that the hand-kept array is the right shape here **provided the header stops claiming otherwise** — Rust cannot enumerate module items without a macro and this workspace has none | A macro, a new pinned dependency, or deriving the constants from `ALL[i]` and trading a benign omission for silent mislabelling | The residual stays: a constant declared and not added here is invisible. Named rather than implied | `theme.rs` |
+| Iter 6 | Registry corruption, pre-existing | `defects.yaml` was missing `DEF-1`'s entire `- id:` header, so its fields merged into `DEF-5`'s mapping and won on last-wins. `DEF-1` did not exist as a row and `DEF-5` — the defect `SPEC-4-04` is open to fix — read back `status: fixed`. Broken for many commits before this run, with `validate.py` GREEN throughout. Header restored; six rows parse | Leaving a registry that reports the next ticket's target as already fixed | None — and the file now records that nothing in the corpus checks a defect row is its own row | `defects.yaml` |
+| Iter 6 | `DEF-6` filed and corrected | Filed the accessibility gap Standards found — four custom-percentage rows announcing one name set — then fixed two errors the panel found in my own row: `why_it_hid` sent readers to a deleted file for strings that lived in `shortcut_row.slint`, and `impact` justified `low` by contrast with a `DEF-2` severity that is also `low` | Filing it once and not re-reading it | A defect row that misdirects the person who picks it up | `defects.yaml` |
+| Iter 6 | Guard strength over guard count | Turned `every_rendered_percent_control_name_comes_from_theme` from set membership into per-row family/slot assignment, and deliberately did not restate which field maps to which family — a test repeating the production mapping proves only that the mapping equals itself. Asserts instead that a row never mixes families or slots and that exactly one row wears the stack family | Adding a second membership test, or mirroring the `match` in the test | Standards judged the cardinality invariant sound: it can only fail loudly, unlike the numeric one it replaced | `theme.rs`, two mutations |
+| Iter 6 | Return-trip cap respected | Fixed my own `ALL` error myself rather than opening a third builder trip. The cap governs sending the ticket back to Step 2; a coordinator repairing coordinator work is not that, and saying so explicitly is cheaper than letting the distinction blur | Escalating the ticket under Blocked, or quietly running a third trip | If the distinction is wrong, the ticket should have escalated — recorded here so the owner can say so | this row |
