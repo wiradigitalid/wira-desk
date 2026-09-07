@@ -61,12 +61,18 @@ accessible label* and then exposes `size()` and `absolute_position()`. And today
 | What a test must find | Its accessible label |
 |---|---|
 | The keycap (`Rectangle`, `width: max(135px, lbl.width + 24px)`) | **none** |
-| The row's title-and-description block | **none** |
-| Each of the five `ShortcutGroup` headings (`Text { text: root.heading }`) | **none** |
+| The row's title-and-description block | **none** — it does not exist yet |
+| Each of the five `ShortcutGroup` headings (`Text { text: root.heading }`) | ~~none~~ **it already has one** |
 
-Only the four percentage controls and the enable toggle (`"Enable " + root.title`) carry labels. So
-no test can locate the keycap to compare its centre against the toggle's, and none can locate a
-heading to measure the pane's width against.
+**Corrected 2026-09-08, after the review panel caught it:** the heading row of that table was
+wrong. Slint's compiler auto-assigns `accessible-role: text` and `accessible-label: self.text` to
+every `Text` that does not set them itself (`lower_accessibility.rs`), so the five headings were
+labelled all along and were findable. Only the keycap — a `Rectangle`, which gets no such
+default — and the title block, which did not yet exist, were genuinely unreachable.
+
+That does not change the conclusion (the two row-level criteria still could not be tested in
+advance, and the heading test was allowed to start green), but the stated reason was wrong for a
+third of the table, and a reader would have inherited the error.
 
 **Making those elements reachable is this ticket's own work, not scaffolding for it.** The tooltip
 criterion already requires it: *"The tooltip is reachable by keyboard focus, not only mouse hover"*
@@ -117,6 +123,130 @@ Each of the four tests must be **seen red before the code that satisfies it**, a
 green — the heading one may — must be broken deliberately, watched fail, and restored. Report which
 mutation you ran for each. A guard never seen red is a claim, not proof, and this ticket has no
 red suite handed to it, so that discipline is the only thing standing in for one.
+
+## Amendment 2 — 2026-09-08, return trip 1 of 2 (`wdi-build` Step 3 panel)
+
+The three visual defects are genuinely fixed in the markup — both axes agree, and the centring fix
+was verified by reproducing its measurement independently. What the panel found is in **what proves
+it**, plus one behavioural regression neither axis predicted and the coordinator confirmed by probe.
+
+### The Tab-order regression — measured, not inferred
+
+The two axes disagreed. Standards reasoned that `main_window.slint`'s `key-pressed` handler ends in
+`accept` for every key, so Tab could not arrive at all. Spec found that `FocusScope` defaults to
+`focus-on-tab-navigation: true` and was not overridden, so all sixteen rows gain an undeclared Tab
+stop. A throwaway probe dispatching real `WindowEvent::KeyPressed { Key::Tab }` settled it:
+
+```
+PROBE: tooltip surfaced after Some(1) Tab presses
+```
+
+**Tab traverses fine — Standards' inference was wrong — and the title block is reachable in ONE
+press from a fresh window.** So it is not merely an extra stop appended to the order; it is at or
+near the front of it. `LBR-ST-5` (`status: active`,
+`.what/settings/02-rules/rules-settings.md`) requires *"a deterministic Tab navigation order that
+starts with navigation tabs and terminates with action buttons."* Tab from a fresh Settings window
+now lands on a row's description block instead of the navigation sidebar. That is user-visible.
+
+- [ ] **Root-cause it with `wdi-systematic-debugging` before changing anything.** Why one press
+      reaches it is not yet known, and the two obvious remedies pull opposite ways: suppressing the
+      stop (`focus-on-tab-navigation: false`) protects `LBR-ST-5` but may cost the keyboard half of
+      `FR-20`/`FR-21` that criterion 2 requires; declaring the stop in `app::focus_order` keeps the
+      feature but must place it where `LBR-ST-5` says, not first. Do not pick one blind.
+- [ ] Whichever holds, `crates/settings/src/app.rs`'s `focus_order` must end up **true**. It was
+      not updated, and `focus_order_mismatch` only ever compares `focus_order`'s output to itself,
+      so nothing was going to catch it. Note honestly that the declaration was already fictional
+      before this ticket — no rendered element carries `f.label()` as an accessible name — so this
+      is drift into an existing hole rather than a live guard broken. It is still the hole this
+      criterion walked into.
+- [ ] Prove the final order with a **real `Key::Tab`** sequence, not
+      `invoke_accessible_default_action()`. That call fires the
+      `accessible-action-default => { self.focus(); }` hook added at `shortcut_row.slint:76-78`,
+      which exists for no production purpose — it is there so the test can focus the block. That is
+      test-driven API in the component and it goes with the fix.
+
+**Why this one matters beyond itself:** proving a focus path through the accessibility harness
+instead of a real keystroke is `DEF-5`'s exact mechanism, recurring inside the ticket series opened
+to fix `DEF-5`'s siblings — and the counter-technique already sat 300 lines above in the same file.
+
+### Seven constants, no consumers
+
+Both axes, and the coordinator, independently. `theme.rs` gained seven `ControlSemantics`; six have
+zero readers anywhere and the seventh is read only by a test — which makes the constant a fixture
+that must match markup rather than a declaration markup obeys, the coupling backwards. The strings
+appear a third and fourth time as raw literals in the new tests.
+
+- [ ] **Delete the five `GROUP_HEADING_*` constants.** `ShortcutField::GROUPS` is already the one
+      home for those five strings, `shortcuts_pane.slint` renders them through `root.heading`, and
+      `app.rs` already guards `GROUPS` against `group()`. A second unenforced copy of a
+      single-source array is what `DEC-018` exists to prevent.
+- [ ] Keep `SHORTCUT_KEYCAP` and `SHORTCUT_ROW_DESCRIPTION`, but **consume them the way this file
+      already consumes the other four** — an `in property` on `ShortcutRow`, filled from Rust in
+      `main.rs` — instead of literals in markup. That plumbing exists eleven lines away.
+
+### Sixteen controls, two names
+
+- [ ] Both new labels are row-invariant, so the tree carries sixteen elements named
+      `"Shortcut keycap"` and sixteen named `"Shortcut description"`, one of them on a `FocusScope`
+      and one on an `accessible-role: button`. That is `DEF-2`'s literal shape and a new instance of
+      `DEF-6`'s class, citing the same `FR-20`/`FR-21` criterion 2 invokes. Eleven lines below,
+      `"Enable " + root.title` does it correctly. Make them per-row.
+      `accessible_names_are_unique` cannot see this: it iterates `ALL`, not the rendered tree.
+- [ ] `min-height: 50px` on the row is **inert** — the row's natural height is already 50px
+      (30px cluster + 10px + 10px padding), so deleting the line changes no pixel and breaks no
+      test. Either give it a real assertion or remove it. Do not leave a line that looks like a
+      guarantee and guarantees nothing.
+
+### Landed by the coordinator in this trip
+
+Recorded here so the builder does not redo them, and because three are the coordinator's own errors:
+
+- [x] Amendment 1's premise about the heading labels was wrong; corrected above.
+- [x] `five_groups_fit_the_default_window_width_with_no_horizontal_scroll` could pass finding
+      nothing — proven by emptying the heading labels, then closed (`b28d5ab`).
+- [ ] Its bound is still the **window** edge (760px), not the pane's content edge (~740px after the
+      175px sidebar and 20px padding), so up to ~36px of real overflow passes. Tighten it, and run a
+      **geometry** mutation — widening the cluster — because every mutation so far proved only that
+      the test detects *missing elements*, never *actual width*. Nothing was narrowed for defect 3
+      and the width assertion has never been observed failing.
+- [ ] The height guard measures two **title blocks**, not two rows, and after this change they are
+      structurally identical by construction — it cannot go red for the property it names. Rewrite
+      it to measure real row heights across two shapes: a one-line row and a row carrying the
+      conflict or "Disabled" line, which is the shape `shortcut_row.slint`'s own comment says broke
+      historically.
+- [ ] `scroll_by(window, 1200.0)` is "scroll up by an amount currently believed to exceed the
+      extent" wearing the name of a primitive. `SPEC-4` is adding rows. Name it with its reason or
+      make it saturating, unify the two divergent scroll ladders in one file, and share the helper
+      into `shortcut_row_slint_snapshot.rs`, which still inlines raw dispatches — the commit message
+      claimed a reach it did not have.
+- [ ] The measured counters double-count, because the outer loop revisits scroll positions. Harmless
+      for `> 0`, misleading as coverage.
+- [ ] `shortcut_row.slint`'s header comment and the note above the cluster both still describe the
+      always-visible wrapping description. Both are now false in the direction that matters: a
+      reader repairing a badly-wrapping tooltip would read them as licence to make it single-line,
+      undoing defect 1.
+- [ ] `CHANGELOG.md` `## [Unreleased]` — this adds behaviour and new files, so it fails the patch
+      test twice, and it is user-facing in exactly the way that section's preamble describes.
+- [ ] `3p.md` overstates two things after `b28d5ab` (the width test now proves `>= 1` keycap and
+      toggle, not "all"; row height is a 50px floor, not a deterministic 50px), carries no entry for
+      `b28d5ab`, and records no per-test mutation report though the brief required one.
+
+### Recorded, not fixed
+
+- The tooltip is placed at `y: root.height + 2px` — **outside the row's own bounds**. On the last
+  visible row the ScrollView clips it; elsewhere it overdraws the next row's divider, which is the
+  exact failure the header comment was written about. `z: 100` orders only within one row's
+  children, so it cannot win against a later sibling row. No criterion covers placement and the
+  testing backend renders nothing, so this cannot be proven here — it is a hand-verifiable risk and
+  belongs in the smoke test rather than in a tree-presence assertion.
+- `shortcut_row_slint_snapshot.rs`'s remaining `if let Some(save_btn)` silent-skip, the same idiom
+  `b28d5ab` condemned three tests away.
+- An `eprintln!("MEASUREMENT: …")` ships unconditionally rather than only on failure.
+- `verify-public-export.ps1` does not scan `.slint` at all — `$textExtensions` omits it — so the two
+  markup files in this ticket were never checked by the publication gate. Pre-existing, out of
+  scope, and worth the owner knowing.
+- The centring test covers one-line rows with and without a stepper, not the two-line shape the
+  ticket named. Low risk (keycap height is fixed at 30px) but it is the shape with a history.
 
 ## Out of scope, deliberately
 
