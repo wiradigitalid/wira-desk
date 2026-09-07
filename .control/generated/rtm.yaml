@@ -222,6 +222,8 @@ rtm:
   - app::tests::snap_maximize_now_sorts_after_every_snap_variant
   - app::tests::grouping_never_reorders_the_declared_sequence
   - app::tests::snap_custom_labels_no_longer_repeat_the_group_name
+  - app::tests::the_declared_sequence_matches_the_shared_source
+  - hook::tests::the_daemon_precedence_order_matches_the_shared_source
   status: ready-for-agent
   exempt: false
   green: false
@@ -690,6 +692,8 @@ rtm:
   - app::tests::snap_maximize_now_sorts_after_every_snap_variant
   - app::tests::grouping_never_reorders_the_declared_sequence
   - app::tests::snap_custom_labels_no_longer_repeat_the_group_name
+  - app::tests::the_declared_sequence_matches_the_shared_source
+  - hook::tests::the_daemon_precedence_order_matches_the_shared_source
   status: ready-for-agent
   exempt: false
   green: false

@@ -299,3 +299,10 @@ decisions:
       worktree: ../wira-desk-autopilot  # sibling of the main checkout; `git worktree list` from there finds its actual path
       build_target_dir: ../wira-desk/target  # THE one build location, already warm; pinned as CARGO_TARGET_DIR so no second target tree exists and cargo's lock serialises every build
       ledger: .control/memlog/autopilot-DEC-017.md
+
+  - id: DEC-018
+    title: The declared shortcut sequence has one home in shared, and both crates assert against it
+    status: accepted
+    file: decisions/DEC-018-the-declared-shortcut-sequence-has-one-home-in-shared.md
+    created: '2026-09-07'
+    touches: []

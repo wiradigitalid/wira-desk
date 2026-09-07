@@ -9,6 +9,8 @@ tests:
   - app::tests::snap_maximize_now_sorts_after_every_snap_variant
   - app::tests::grouping_never_reorders_the_declared_sequence
   - app::tests::snap_custom_labels_no_longer_repeat_the_group_name
+  - app::tests::the_declared_sequence_matches_the_shared_source
+  - hook::tests::the_daemon_precedence_order_matches_the_shared_source
 ---
 
 # 01: Shortcuts pane regroups per DEC-014, and Snap-custom row labels drop their group's own name
@@ -60,6 +62,45 @@ four `SnapPercent*` fields drop the `(custom %)` suffix now that the group headi
       edge (custom %)"` and its siblings. The label rename only changes `ShortcutField::label()`'s return
       value; a hand-written string elsewhere that quotes the old label is not touched by that change and
       is left as a stale reference this ticket can catch now instead of `wdi-reconcile` catching it later.
+## Amendment 1 — 2026-09-07, under `DEC-018` (coordinator, mandate `DEC-017`)
+
+**Why this ticket grew.** `LBR-ST-14` says one declared sequence is the single source of the pane's draw
+order, its focus order, **and the chord-collision precedence order**, and that a second independently
+maintained list must not exist. Two exist: `ShortcutField::ALL` here, and `Chords::in_declared_order` plus
+`resolve_chords`'s row table in `crates/daemon/src/hook.rs`. They agree only by coincidence — nothing reads
+one from the other, no test compares them, and `daemon` cannot see `ShortcutField` at all.
+
+Reordering only the `settings` list would leave `DEC-014`'s own recorded consequence undelivered (the
+daemon would still give Maximize its old precedence) **and** make the pane's Tier-2 collision warning
+(`DEC-009`) name a different winner than the daemon actually unbinds. That is a wrong slice, not a thin
+one. Read `DEC-018` before starting.
+
+- [ ] `crates/shared/src/constants.rs` grows `SHORTCUT_DECLARED_ORDER`: the sixteen config keys in
+      declared order, exactly the strings `ShortcutField::key()` already returns. It belongs there for the
+      reason that file's own header gives — a value defined separately in each crate fails silently
+      instead of at compile time.
+- [ ] `ShortcutField::ALL`'s keys equal `SHORTCUT_DECLARED_ORDER`, asserted
+      (`the_declared_sequence_matches_the_shared_source`). Assert against the constant, never against a
+      fresh literal of the same order — a second literal is the very thing `LBR-ST-14` forbids.
+- [ ] `Chords::in_declared_order` and `resolve_chords`'s row table carry the same reorder, and the
+      daemon's row-table key sequence equals `SHORTCUT_DECLARED_ORDER`, asserted
+      (`the_daemon_precedence_order_matches_the_shared_source`). The `Chords { ... resolved[N] }` field
+      mapping moves with it — those indices are positional and every one of them shifts.
+- [ ] `dec_011_collision_favors_percent_snap_bottom_over_legacy_stack_default` is the collision fixture the
+      ticket asked to be checked by hand. It pins `(14, 15)` and reads `resolved[14]`/`resolved[15]` as
+      `snap_percent_bottom`/`stack`. Under the new order `snap_percent_bottom` is 12 and `stack` is 15, so
+      its literal indices and its inline 16-entry array both move. `DEC-011`'s *outcome* must not change —
+      percent-snap still beats legacy stack — only the indices that express it. No collision fixture pins
+      a winner involving `SnapMaximize`; that is the answer to the ticket's "say so if none exists".
+
+**Where `DEC-014` is imprecise, and which reading wins.** Its Why section calls Maximize's old slot
+"position 5" (it is the 7th entry, index 6) and its new one "the second-to-last position" (the group
+enumeration in its Decision section puts it *third*-to-last, ahead of `MoveNextMonitor` and `Stack`). The
+Decision section's group membership is the normative list and this ticket's own wording matches it, so
+`SnapMaximize` lands at index 13, before `MoveNextMonitor` (14) and `Stack` (15). The Why section's two
+loose figures are explanatory prose and do not bind; they are corrected in `DEC-014` in the same change,
+which is permitted because `DEC-014` is `accepted` and not yet `applied`.
+
 - [ ] Full test suite green once, not only this ticket's own tests.
 
 ## Out of scope, deliberately

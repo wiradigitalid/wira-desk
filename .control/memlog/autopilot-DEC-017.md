@@ -8,14 +8,15 @@ date: 2026-09-07
 
 ## Resume
 
-- Iteration 1 — mandate accepted; worktree and run branch cut from `main` at `cce1d75`; the two
-  document blockers preflight named are closed. Boundary commit: the commit carrying this line.
-- Run branch: `autopilot/DEC-017`, in the sibling autopilot worktree. No PR open yet (opens as a draft
-  at the first spec close).
+- Iteration 1 — `SPEC-4-01` at `wdi-build` Step 1 **closed**: seven tests red at the right assertions
+  across `settings` and `daemon`. Boundary commit: the commit carrying this line.
+- Run branch: `autopilot/DEC-017`, in the sibling autopilot worktree; ticket work rides
+  `ticket/SPEC-4-01` and merges back only green, so the run branch never carries red. No PR open yet.
 - Stopped at: — (iteration in progress)
 - Blocked: —
 - Parked: —
-- Next: `wdi-build` from Step 3 on `SPEC-4-01`, dispatching the coding to `claude-byok`.
+- Next: `wdi-build` Step 2 on `SPEC-4-01` — dispatch `claude-byok` against the amended ticket to make
+  the seven red tests green.
 
 ## Decisions
 
@@ -31,3 +32,7 @@ date: 2026-09-07
 | Preflight | Position: review-trace | `review-trace` is advisory-stale on `.how/settings/SDD-settings.md` (changed `079ea56`, reviewed `f7760db`); scheduled `wdi-review` on it before `SPEC-4` closes rather than treating an advisory skip as green | Closing `SPEC-4` on a stale trace | A gate closes over an unreviewed SDD | pending — before spec close |
 | Iter 1 | Position: document behind code | Rewrote `codebase-stack-guide.md`'s toolkit rows from the manifest: `slint` 1.17 with its four non-default features, `winit` 0.30, `serde_json`; dropped `eframe`/`egui`/`accesskit`/`ttf-parser` (the last is absent from the whole workspace); added a section on `.slint` markup, the two-places pane declaration, and the accessible-value-vs-keystroke test gap that let `DEF-5` ship. `ratified_by` moved `67f2645` to `c803a1d` | Leaving the guide as the code's record and letting the builder discover the toolkit from `Cargo.toml` | If a claim is wrong the next builder repeats it; every figure here was read from a manifest or a source file, not carried over | `.constitution/project/codebase-stack-guide.md` |
 | Iter 1 | Publication hygiene gate | `main` is RED on `verify-public-export.ps1`: `.scratch/live-test-dec-016.md:10` hardcodes an absolute machine path, added at `079ea56` — AFTER PR #17's CI last passed at `9a7c0c6`, so nothing had run the gate since. Fixed the source to name the worktree relatively, the way `DEC-016`'s own mandate file already did | Widening the gate's pattern, which is the exact failure that file exists to prevent | None — gate re-run green, 10 checks passed | `.scratch/live-test-dec-016.md` |
+| Iter 1 | `wdi-build` Phase 3 scope | Found a second declared order the ticket did not name: `daemon`'s `Chords::in_declared_order` and `resolve_chords`'s row table order the collision unbinding that actually runs, while `ShortcutField::ALL` orders only the pane. `LBR-ST-14` forbids exactly that, naming both components. Amended `SPEC-4-01` to carry both crates plus a shared source of the order, and opened `DEC-018` for it | Shipping the ticket as written — a settings-only reorder, which leaves `DEC-014`'s recorded precedence consequence undelivered and makes the pane's `DEC-009` warning name a winner the daemon does not pick | If the unification is wrong, `DEC-018` is superseded and the constant collapses back into two lists; the reorder itself still stands | `DEC-018`, ticket amendment 1, `specs.yaml` |
+| Iter 1 | `DEC-014` internal inconsistency | `DEC-014`'s Why called Maximize's old slot "position 5" (it is index 6) and its new one "second-to-last" (its own group enumeration puts it third-to-last). Took the Decision section's group list as normative — Maximize at index 13, ahead of `MoveNextMonitor` and `Stack` — and corrected the Why prose to match, permitted because `DEC-014` is `accepted`, not `applied` | Following the Why's "second-to-last", which would put `MoveNextMonitor` ahead of Maximize and contradict the same decision's own group membership | If the owner meant the Why literally, one entry swaps and the tests move with it | `DEC-014`, ticket amendment 1 |
+| Iter 1 | `wdi-build` Step 1 authorship | Wrote the seven failing tests myself and added `SHORTCUT_DECLARED_ORDER` with them, because the constant IS the acceptance criterion expressed as data and without it the suite would fail to compile rather than fail an assertion. Every behaviour change stays `claude-byok`'s | Handing Step 1 to `claude-byok` too, against the owner's split (unit tests are the coordinator's) | If the constant's order is wrong, six tests say so immediately | `crates/shared/src/constants.rs`, `crates/settings/src/app.rs`, `crates/daemon/src/hook.rs` |
+| Iter 1 | Run-branch hygiene | Ticket work rides `ticket/SPEC-4-01` cut from the run branch and merges back only once green, so `wdi-build`'s "nothing lands on the run branch red" holds literally while TDD's red phase is still committed and handed to the builder. Same worktree, one build location — the owner's constraint — since the four tickets are a serial chain and never build concurrently | Committing red tests straight onto the run branch, or opening a second worktree per ticket | None; the branch is deleted after the merge and only the run branch is ever pushed | `ticket/SPEC-4-01` |
