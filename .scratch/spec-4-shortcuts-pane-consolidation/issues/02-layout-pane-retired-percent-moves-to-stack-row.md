@@ -9,6 +9,9 @@ tests:
   - main::tests::overlapping_stack_row_has_percent_true
   - shortcut_row_slint_snapshot::tests::stack_row_percent_commits_on_save_click
   - persistence::tests::stack_width_percent_round_trips_through_the_shortcut_row_path
+  - app::tests::pane_declaration_order_is_the_navigation_index
+  - app::tests::every_pane_index_round_trips_through_the_ui_boundary
+  - app::tests::the_stack_row_carries_its_own_percent_bounds
 ---
 
 # 02: Layout pane retired; stack width percentage moves onto the Overlapping Stack row
@@ -55,6 +58,77 @@ arrange" group, using the same `has_percent`/`percent`/`percent_changed`/`editin
 - [ ] `stack_width_percent`'s existing out-of-range-refused-not-clamped behaviour (`layout_pane.slint`'s
       `commit_typed`) is preserved exactly on the relocated control.
 - [ ] Full test suite green once, not only this ticket's own tests.
+
+## Amendment 1 — 2026-09-07, coordinator (mandate `DEC-017`)
+
+**The pane index is the same hazard `SPEC-4-01` just spent a return trip on.** That ticket needed
+two must-fixes because a positional integer — `resolved[N]` — was hand-kept in more places than
+anyone had counted. `Pane` has the identical shape, and this ticket removes a variant from the
+middle of it.
+
+Dropping `Pane::Layout` shifts `VmExceptions` 3→2 and `About` 4→3 in **four** independent places,
+none of which the compiler checks, and two of which are markup where a wrong number is silent:
+
+| Site | What it holds |
+|---|---|
+| `crates/settings/src/main.rs:136-141` | `Pane -> int`, including `Pane::Layout => 2` |
+| `crates/settings/src/main.rs:330-337` | `int -> Pane`, including `2 => Pane::Layout` |
+| `crates/settings/ui/components/sidebar.slint:125,132,139,146,153` | five hardcoded `selected: current_pane == N` |
+| `crates/settings/ui/main_window.slint:285` | `if root.current_pane == 2 : LayoutPane` |
+
+`Pane::ALL` is also declared `[Pane; 5]` (`crates/settings/src/app.rs:33`) — the hardcoded count
+this ticket's own checklist already warns about.
+
+A wrong number here does not crash and fails no test this ticket already names. It navigates to the
+wrong pane, or highlights one sidebar entry while showing another pane's content.
+
+- [ ] `crates/settings/src/main.rs`'s two index tables are **derived from `Pane::ALL`'s position**
+      rather than hand-numbered: forward by `position()`, reverse by `get()`.
+      `ShortcutField::from_index` (`crates/settings/src/app.rs:119-124`) is the prior art in this
+      same file, its out-of-range behaviour included — fall back to the first pane rather than
+      panicking, because the index arrives across a UI boundary.
+- [ ] `app::tests::pane_declaration_order_is_the_navigation_index` asserts each `Pane`'s
+      discriminant equals its position in `Pane::ALL`, exactly as
+      `field_declaration_order_is_the_precedence_order` does for `ShortcutField`.
+- [ ] `app::tests::every_pane_index_round_trips_through_the_ui_boundary` asserts `Pane -> int ->
+      Pane` is the identity for all four panes, and that an out-of-range index returns the first
+      pane instead of panicking.
+- [ ] The markup's hardcoded `current_pane == N` comparisons are renumbered for four panes and
+      **counted**: `sidebar.slint` carries exactly four nav entries, `main_window.slint` exactly
+      four pane bodies. State in the closing report how the count was verified, because no Rust
+      test can see these numbers.
+
+**Why a guard and not just care.** `SPEC-4-01`'s panel proved by mutation that swapping two
+positional indices left its own guard green while chords bound to the wrong actions. Same
+discipline here: once the guards exist, swap two pane indices, watch them go red, restore. A guard
+never seen red is a claim rather than proof.
+
+**The percent bounds trap, confirmed by reading the code.** This ticket's main list already warns
+about it; both halves are verified. `crates/settings/ui/components/shortcut_row.slint:39,46`
+hardcode `1`/`99` (`base >= 1 && base < 99`), and `crates/settings/ui/panes/layout_pane.slint:9,10`
+carry `min_percent: 10`, `max_percent: 100`. Setting `has_percent: true` on `Stack` without
+per-row bounds silently gives stack width the wrong range.
+
+- [ ] `app::tests::the_stack_row_carries_its_own_percent_bounds` pins `Stack`'s range at 10-100 and
+      the four `SnapPercent*` rows at 1-99, so the two cannot be collapsed back into one literal
+      pair.
+
+**One silent-failure seam worth knowing before you start.** `ShortcutField::set_percent`
+(`crates/settings/src/app.rs`) ends in a `_ => {}` catch-all. Adding `Stack` to `has_percent()`
+without adding it to `set_percent` therefore **fails silently** — the row draws a percent control
+that discards every edit — rather than failing to compile.
+
+## Amendment note — one existing test retires rather than migrates
+
+`app::tests::the_layout_pane_no_longer_claims_snapping` asserts `Pane::Layout.label() == "Layout"`
+and that `from_label("Layout")` resolves. It cannot survive the variant's removal. Its intent — that
+this pane does not claim to hold snapping controls — is satisfied completely by the pane no longer
+existing, so it **retires**. Say so in the closing report; do not delete it silently, and do not
+invent a replacement assertion for a pane that is gone.
+
+`m.set_pane(Pane::Layout)` sits inside an unrelated test and needs a different pane.
+`crates/settings/src/layout_pane_slint_snapshot.rs` is declared as a module in
+`crates/settings/src/main.rs`; removing the file means removing that declaration too.
 
 ## Out of scope, deliberately
 

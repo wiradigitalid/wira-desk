@@ -244,6 +244,9 @@ rtm:
   - main::tests::overlapping_stack_row_has_percent_true
   - shortcut_row_slint_snapshot::tests::stack_row_percent_commits_on_save_click
   - persistence::tests::stack_width_percent_round_trips_through_the_shortcut_row_path
+  - app::tests::pane_declaration_order_is_the_navigation_index
+  - app::tests::every_pane_index_round_trips_through_the_ui_boundary
+  - app::tests::the_stack_row_carries_its_own_percent_bounds
   status: ready-for-agent
   exempt: false
   green: false
@@ -516,6 +519,9 @@ rtm:
   - main::tests::overlapping_stack_row_has_percent_true
   - shortcut_row_slint_snapshot::tests::stack_row_percent_commits_on_save_click
   - persistence::tests::stack_width_percent_round_trips_through_the_shortcut_row_path
+  - app::tests::pane_declaration_order_is_the_navigation_index
+  - app::tests::every_pane_index_round_trips_through_the_ui_boundary
+  - app::tests::the_stack_row_carries_its_own_percent_bounds
   status: ready-for-agent
   exempt: false
   green: false
@@ -717,6 +723,9 @@ rtm:
   - main::tests::overlapping_stack_row_has_percent_true
   - shortcut_row_slint_snapshot::tests::stack_row_percent_commits_on_save_click
   - persistence::tests::stack_width_percent_round_trips_through_the_shortcut_row_path
+  - app::tests::pane_declaration_order_is_the_navigation_index
+  - app::tests::every_pane_index_round_trips_through_the_ui_boundary
+  - app::tests::the_stack_row_carries_its_own_percent_bounds
   status: ready-for-agent
   exempt: false
   green: false
