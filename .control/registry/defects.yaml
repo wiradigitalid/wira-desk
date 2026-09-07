@@ -491,8 +491,10 @@ defects:
       and omits `.slint`, so the entire Slint UI layer is never scanned by the gate `AGENTS.md`
       names as the enforcement of what may appear in this repository. It is not hypothetical: the
       gate's own `$checkLanguage` pattern would report five findings in
-      `crates/settings/ui/components/key_check.slint` today, at lines 4, 5, 18, 49 and 172 -- e.g.
-      `// harus juga ada sebagai teks -- AccessKit tidak melihat warna.`
+      `crates/settings/ui/components/key_check.slint` today, at lines 4, 5, 18, 49 and 172: five
+      source comments written in Indonesian rather than English. They are not quoted here, because
+      quoting one puts the same finding into this file -- which is exactly what happened on the
+      first attempt at this row, and the gate caught it.
     why_it_hid: >-
       The omission is invisible from either side: the gate reports a clean run because it never
       opened the files, and the files look fine because nothing ever complained about them. Three
