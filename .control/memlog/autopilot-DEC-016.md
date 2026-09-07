@@ -8,27 +8,24 @@ date: 2026-09-07
 
 ## Resume
 
-- Iteration: 14 — every spec closed; § Finish reached; smoke test dispatched.
-- Run branch: `autopilot/DEC-016`, HEAD `10eb0e6`. **PR #17 open, draft**:
-  https://github.com/wiradigitalid/wira-desk/pull/17. Not pushed since `f9840fe` — pushing once more at
-  Finish, not per intermediate commit.
-- Stopped at: **Capacity.** Both panel axes clean on `SPEC-3-02` (Standards `afc44e6affecd82f1`, Spec
-  `abc48b8283f11c210`) — closed `SPEC-3-02` and `SPEC-3`. Cleared the `review-trace` advisory
-  (`SDD-settings.md`, structure+prose, clean on the trivial delta, re-stamped `f7760db`). Ran
-  `wdi-reconcile`: found and fixed two real gaps — `BR-9`'s Enforcement still said "Not yet built" for a
-  rule that just shipped, and cited the retired one-off toggle as "today's only existing toggle";
-  `inventory-db.md`'s `[layout]` schema row still named the retired `enable_overlapping_stack` key instead
-  of the real `stack_shortcut_enabled`, and didn't mention the new per-action `*_enabled` fields at all.
-  `.control/generated/status.md` now reads `promise_progress: 100%`, RTM `28/28` green, every spec
-  `closed`, `gate_readiness: 100%` — **this is § Finish.** Dispatched the smoke test to `claude-byok`
-  (job `btmzzj4s0`, confirmed running) per `smoke_test: agent`, covering `FR-25`/`FR-28`/`FR-29` and the
-  `SPEC-2-01` UI fix, explicitly told to report honestly what this headless session cannot reach (the
-  elevated daemon, real keypress injection) rather than round up.
+- Iteration: 15 — mandate `applied`; final head pushed; waiting on CI.
+- Run branch: `autopilot/DEC-016`, HEAD `9a7c0c6`, pushed. **PR #17 open, draft**:
+  https://github.com/wiradigitalid/wira-desk/pull/17.
+- Stopped at: **Capacity.** Smoke test (`btmzzj4s0`) recorded verbatim, not rounded up: release build PASS
+  (`build.ps1`, 2m40s), full suite PASS (533/0 failed). Per FR — `FR-28`/`SPEC-2-01`/`FR-25`/`FR-29`: all
+  **PASS at code/test level**; live E2E **NOT VERIFIABLE FROM THIS SESSION** (no interactive UAC for the
+  elevated daemon, no keyboard-input-injection tooling, Slint sidebar nav has no UI-Automation invoke
+  pattern to reach non-default panes) — it did manage live UI-Automation verification of the General pane's
+  own toggle+persistence, which is more than the prior mandate reached. `wdi-report`'s `timeline.py
+  --refresh --generate` **crashed** with a Python `AttributeError` in `span_of` — a real bug in the method
+  package's own script, not touched (per repo rule against hand-patching method files); used `validate.py`'s
+  own already-fresh derived numbers instead (`promise_progress: 100%`, RTM `28/28`). Raised `DEC-016` to
+  `applied`, `touches` built from `git diff --name-only 0d3eb1f...HEAD` (37 files). Pushed the final head;
+  CI running (background wait armed, notifies on conclusion).
 - Blocked: —
 - Parked: —
-- Next: check job `btmzzj4s0`. On exit: record its result per `FR` verbatim (never rounded up), then
-  `wdi-report` intent `progress`, raise the mandate to `applied`, push, watch CI on the final head, mark
-  the PR ready only if green, cancel the loop, write the Finish report.
+- Next: on CI conclusion — green marks PR #17 **ready for review**; red keeps it **draft**, reported red,
+  not patched. Either way: cancel the loop (this mandate's own work is done), write the Finish report.
 
 ## Decisions
 
@@ -59,3 +56,6 @@ date: 2026-09-07
 | Iter 14 | Clear `review-trace` advisory | Re-ran `wdi-review` (structure+prose) on `SDD-settings.md`'s delta since its last review — a one-word pane-name correction — found clean, re-stamped | Ignoring the advisory since it doesn't fail the gate | Next reconcile pass re-flags if actually stale | `SDD-settings.md` |
 | Iter 14 | `wdi-reconcile` after `SPEC-3` | Found real drift: `BR-9` Enforcement said "Not yet built" for a shipped rule and cited the retired toggle; `inventory-db.md`'s `[layout]` row named the retired field instead of the real one, omitted the new per-action fields entirely. Fixed both, present tense | Treating either as merely "behind the code" (both were load-bearing — a reader would misjudge what's built or what key to look for) | A reader trusting either claim | `10eb0e6` |
 | Iter 14 | Reached § Finish | `status.md`: 100% promise progress, RTM 28/28 green, every spec closed. Dispatched the smoke test to `claude-byok` per `smoke_test: agent`, told explicitly to report what's unreachable from this headless session rather than round up | Coordinator running the smoke test itself (mandate reserves it for claude-byok only) | None — matches the mandate's own setting | `btmzzj4s0`, `.scratch/smoke-test-dec-016.md` |
+| Iter 15 | Smoke test recorded honestly | `btmzzj4s0`'s report accepted verbatim: build/test green, live E2E genuinely blocked (no UAC, no input injection, Slint nav has no invoke pattern) — not rounded up to "verified live" | Treating "the code is tested" as equivalent to "the feature was smoke-tested live" | The owner runs the live test script in the Finish report to close this gap | `btmzzj4s0`, this ledger |
+| Iter 15 | `wdi-report` tool crash | `timeline.py --refresh --generate` raised a Python `AttributeError` (`span_of`, tuple has no `.get`) — a method-package bug, not this product's code. Did not patch it (method files are fixed upstream, then updated in via `npx wdi-method update`); used `validate.py`'s own fresh numbers instead | Hand-patching the method script to unblock the report | The method package's own maintainers fix it upstream | This row |
+| Iter 15 | Mandate raised to `applied` | `touches` built from `git diff --name-only 0d3eb1f...HEAD` — every file this mandate actually changed, not guessed | Leaving `touches` empty or partial | `mandate-accept`/`applied-dec-touches` would catch an empty one; a wrong list is harder to catch | `DEC-016` file, `decisions.yaml`, `9a7c0c6` |
