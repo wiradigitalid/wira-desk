@@ -8,15 +8,19 @@ date: 2026-09-07
 
 ## Resume
 
-- Iteration 2 — **`SPEC-4-01` closed and merged.** Boundary commit: `8dac1fe` on the run branch
-  (the merge), with the ledger commit that carries this line on top.
-- Run branch: `autopilot/DEC-017`. **Not pushed yet, no PR** — the first push happens at spec
-  close, not ticket close, and `SPEC-4` still has three open tickets.
-- Stopped at: — (iteration in progress)
+- Iteration 3 — `SPEC-4-02` Steps 1 and 2 closed and judged from the artifact (builder `3b8210b`;
+  coordinator's own re-run green: fmt clean, clippy clean, 546 passed / 0 failed / 2 ignored, no
+  `Layout` reference left in `crates/`). **Step 3 panel IN FLIGHT.**
+- Run branch: `autopilot/DEC-017` at `3b1cb32`; ticket work on `ticket/SPEC-4-02` at `3b8210b`,
+  merges back only green. Not pushed, no PR — first push is at spec close.
+- Stopped at: — (iteration in progress, waiting on the Step 3 panel)
 - Blocked: —
 - Parked: —
-- Next: `SPEC-4-02` — apply the pane-index amendment drafted for it, then `wdi-build` Step 1
-  (coordinator writes the failing tests), then dispatch `claude-byok` for Step 2.
+- **IN FLIGHT:** two review agents, Standards and Spec, neither the builder. Build lock is FREE.
+  The worktree MUST stay on `ticket/SPEC-4-02` until they return — a branch switch changes the
+  files they are reading.
+- Next: adjudicate by reading the cited lines, starting with the accessible-label mechanism the
+  coordinator already flagged; then ticket close, merge, and `SPEC-4-03`.
 
 ## Decisions
 
@@ -46,3 +50,9 @@ date: 2026-09-07
 | Iter 2 | Panic arm, adjudicated | Left the derived `field_for`'s `panic!` fallback as is and recorded which existing test covers it, rather than adding a second test asserting what `default_config_passes_its_own_validation` already traverses. Failing open would leave a field silently unvalidated — the worse trade | Adding a named guard duplicating existing coverage, or returning an error and skipping the key | A seventeenth key added without an arm fails the suite loudly instead of at compile time | `persistence.rs` |
 | Iter 2 | Two stale comments | Fixed `key()`'s doc, which still described persistence keeping a parallel ordered table and so read as licence to re-add the one `LBR-ST-14` forbids; and noted at `main.rs`'s `GROUPS[n]` block that the index order is hard-bound to the markup's group order and nothing can prove it | Filing both as follow-ups for a later ticket | Both are wrong-repair risk, which the repo's rules put ahead of tidiness | `app.rs`, `main.rs` |
 | Iter 2 | Ticket close | Answered the three-item closing checklist; verified all nine `specs.yaml` test names against the tests that actually ran rather than by eye; merged `ticket/SPEC-4-01` green and deleted it. Run branch still unpushed — the first push is at spec close | Pushing at ticket close, which would open the PR three tickets early | None | `8dac1fe` |
+| Iter 3 | `wdi-build` Step 1 authorship | Added `Pane::from_index` and `ShortcutField::percent_bounds` alongside the tests, as the criterion expressed in data — the numbers and the lookup shape ARE the specification, and without them the suite would fail to compile rather than fail an assertion. Every behaviour change stayed the builder's | Handing Step 1 to `claude-byok` as well, against the owner's split | If a bound or a fallback is wrong, a test says so in the same turn | `app.rs`, `1051f10` |
+| Iter 3 | A test that could not fail | Caught my own `every_pane_index_round_trips_through_the_ui_boundary` asserting `from_index(i) == ALL[i]` — but `from_index` reads `ALL` by position, so it holds for any ordering whatsoever. Rewritten to assert against the discriminant, the value `main.rs` actually sends across the boundary | Committing it as written, which the panel would have returned as a must-fix | An assertion that cannot fail, which is worse than none | `app.rs`, mutation run |
+| Iter 3 | Where the percent bounds live | Put them in Rust (`percent_bounds()`), not as markup literals, because markup cannot be asserted on — which is exactly how `shortcut_row.slint`'s 1/99 and `layout_pane.slint`'s 10/100 came to disagree | Slint default properties per row, the ticket's first reading | If markup needs its own defaults later, they read from the same source | `app.rs`, ticket amendment 2 |
+| Iter 3 | Two ticket test names | `main::tests::overlapping_stack_row_has_percent_true` moved to `app::tests::` (`has_percent` is a `ShortcutField` method and `main.rs` has no tests module); `stack_row_percent_commits_on_save_click` reassigned to the builder under `tdd`, since it cannot exist before the control it tests | Standing up a Slint window in `main.rs` tests, or dropping the snapshot test as unwritable at Step 1 | Names drift from `specs.yaml` and the RTM chain breaks | ticket, `specs.yaml` |
+| Iter 3 | Coordinator error, recorded | Wrote the in-flight Resume note uncommitted, to avoid a git race with the builder. The builder restored the working tree and the note was silently discarded. No work lost, and the double-dispatch it guarded against did not happen | Repeating either failed approach — stashing under a live builder, or leaving Resume uncommitted | Already spent. Rule adopted: Resume is written INTO the Step 1 commit, before dispatch, which is what the skill said all along | this ledger |
+| Iter 3 | `DEF-5` is reproducible in-suite | Established before reaching `SPEC-4-04` that `shortcut_row_slint_snapshot.rs` already dispatches `WindowEvent::KeyPressed`, whose `text` is a `SharedString` — so a digit keystroke is one line's variation, not a harness to build. `DEF-5`'s root cause can be chased against a failing test instead of a live window, which is what defeated both previous attempts | Assuming the ticket's premise that a real-keystroke harness might not exist | If the in-suite keystroke works while the live one does not, that IS the root-cause signal and must be reported as such, never as "`DEF-5` fixed" | scratch plan, `SPEC-4-04` |
