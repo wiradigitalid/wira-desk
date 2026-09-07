@@ -229,10 +229,13 @@ rtm:
   - app::tests::snap_custom_labels_no_longer_repeat_the_group_name
   - app::tests::the_declared_sequence_matches_the_shared_source
   - hook::tests::the_daemon_precedence_order_matches_the_shared_source
-  status: ready-for-agent
+  - app::tests::the_group_headings_have_one_home
+  - hook::tests::the_row_table_binds_every_chord_to_its_own_action
+  - persistence::tests::a_duplicate_names_the_holder_by_the_shared_declared_order
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-5
   FR: FR-18
@@ -699,10 +702,13 @@ rtm:
   - app::tests::snap_custom_labels_no_longer_repeat_the_group_name
   - app::tests::the_declared_sequence_matches_the_shared_source
   - hook::tests::the_daemon_precedence_order_matches_the_shared_source
-  status: ready-for-agent
+  - app::tests::the_group_headings_have_one_home
+  - hook::tests::the_row_table_binds_every_chord_to_its_own_action
+  - persistence::tests::a_duplicate_names_the_holder_by_the_shared_declared_order
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-3
   FR: FR-7

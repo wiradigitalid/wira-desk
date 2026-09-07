@@ -563,15 +563,17 @@ Secondary interaction is accessed via right-clicking the System Tray icon to sum
 
 Structure of the Settings Window (`wiradesk-settings.exe`):
 - **General**: Auto-start on boot toggle (Task Scheduler integration), Spatial Lock, Virtual Desktop isolation, and UX Honesty controls.
-- **Shortcuts**: Every editable chord, and the only pane that holds any. Sixteen rows in three labelled groups that scroll, above a Key check readout pinned in place:
+- **Shortcuts**: Every editable chord, and the only pane that holds any. Sixteen rows in five labelled groups that scroll, above a Key check readout pinned in place:
 
   | Group | Rows | Reads as |
   | --- | --- | --- |
   | Switching | Switch windows of the same application · Fallback switch shortcut | Which window has focus |
-  | Snap & resize | Snap to left half · right half · top half · bottom half · Maximize · left third · middle third · right third | One window, one monitor, a fraction of it |
-  | Move & arrange | Move to next monitor · custom-percentage left/right/top/bottom edge · Overlapping stack | More than one window, or more than one screen |
+  | Snap to half | Snap to left half · right half · top half · bottom half | Half a monitor, against one edge |
+  | Snap to third | Snap to left third · middle third · right third | A named third of a monitor |
+  | Snap to custom | Snap to left edge · right edge · top edge · bottom edge, each carrying its own percentage inline | An edge, at a fraction the user picks |
+  | Resize, move & arrange | Maximize · Move to next monitor · Overlapping stack | The whole monitor, a different monitor, or several windows at once |
 
-  The groups are the three configuration sections the product already keeps on disk, so what a user sees and what the product stores stop telling different stories. The Key check readout stays put while they scroll: it reports what the keyboard just did, so it has to be readable at the moment a chord is pressed rather than wherever the list happens to end. Inside *Snap & resize* the rows follow the arrow keys — left, right, top, bottom — with Maximize last as the "all of it" case; the order is the declared sequence, not the enum's numbering, and grouping never reorders it.
+  The groups name the literal shape of what an action snaps to, which is how someone hunting for "the one that puts a window on the left third" actually looks for it — the four percentage rows belong beside the halves and thirds they resemble, not filed under moving windows around. A row's title does not repeat its group: under *Snap to custom* a row reads `Snap to left edge`, because the heading already says custom. The Key check readout stays put while they scroll: it reports what the keyboard just did, so it has to be readable at the moment a chord is pressed rather than wherever the list happens to end. Within a group the rows follow the arrow keys — left, right, top, bottom; the order is the declared sequence, not the enum's numbering, and grouping never reorders it.
 - **Layout**: The overlapping stack toggle and its width slider. No chord lives here — the pane was called *Layout & Snapping* while holding no snapping control at all.
 - **VM & Exceptions**: Virtualization and Remote Desktop passthrough rules (`mstsc.exe`, `vmconnect.exe`, `VMwareUnityWindow`).
 - **About**: Version information, project links, active typeface loader status, and diagnostic build metadata.

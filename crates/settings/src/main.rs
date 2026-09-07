@@ -192,9 +192,16 @@ pub(crate) fn sync_model_to_ui(window: &MainWindow, model: &SettingsModel) {
                 .collect();
             slint::ModelRc::new(slint::VecModel::from(rows))
         };
-        window.set_rows_switching(group_rows("Switching"));
-        window.set_rows_snap(group_rows("Snap & resize"));
-        window.set_rows_move(group_rows("Move & arrange"));
+        // The index order here MUST track the `ShortcutGroup` order in
+        // `ui/panes/shortcuts_pane.slint`, because each setter is hard-bound to one heading in
+        // the markup and markup cannot read a Rust const. `the_group_headings_have_one_home`
+        // proves `GROUPS` matches `group()`; nothing can prove this pairing, so reordering
+        // `GROUPS` means reordering the five lines below and the five markup blocks together.
+        window.set_rows_switching(group_rows(ShortcutField::GROUPS[0]));
+        window.set_rows_snap_half(group_rows(ShortcutField::GROUPS[1]));
+        window.set_rows_snap_third(group_rows(ShortcutField::GROUPS[2]));
+        window.set_rows_snap_custom(group_rows(ShortcutField::GROUPS[3]));
+        window.set_rows_arrange(group_rows(ShortcutField::GROUPS[4]));
 
         // Listening index is the action's position in the declared sequence, which is exactly
         // its discriminant — so the pane, the focus order, and the collision precedence all

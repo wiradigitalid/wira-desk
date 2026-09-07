@@ -31,6 +31,16 @@ changes. Not yet released — tracked here per `AGENTS.md`'s versioning rule unt
 
 ### Changed
 
+- The Shortcuts pane is grouped by what an action snaps *to*: **Switching**, **Snap to half**,
+  **Snap to third**, **Snap to custom**, and **Resize, move & arrange**. The four custom-percentage
+  rows now sit beside the halves and thirds they resemble instead of under moving windows around,
+  and a row no longer repeats its group's name — under *Snap to custom* a row reads "Snap to left
+  edge". See `DEC-014`.
+- If you have bound two actions to the same chord, the one that keeps it may have changed.
+  Maximize now sits behind every snap variant in the order that resolves a collision, so a snap
+  action wins where Maximize used to. Nothing is migrated and no chord is renamed; on the shipped
+  defaults nothing collides, so most installs see no difference. See `DEC-014` for why the order
+  moved and `DEC-009` for how a collision is reported.
 - Overlapping Stack's default shortcut moved from `Ctrl+Alt+Shift+Down` to `Ctrl+Alt+Shift+S`,
   freeing the arrow keys under `Ctrl+Alt+Shift` for the custom-percentage snap above. See
   `DEC-011`. An install that already customized (or kept) the old default is not migrated; see
