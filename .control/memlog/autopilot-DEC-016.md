@@ -8,12 +8,12 @@ date: 2026-09-07
 
 ## Resume
 
-- Iteration: 1 — dispatched the `SPEC-2-01` builder, waiting on it.
-- Run branch: `autopilot/DEC-016`, HEAD `43c6189` (mandate acceptance commit; no ticket work landed yet).
+- Iteration: 2 — still waiting on the `SPEC-2-01` builder.
+- Run branch: `autopilot/DEC-016`, HEAD `2678fac` (iteration-1 ledger commit; no ticket work landed yet).
   No PR opened yet — opens as a draft at the first spec close.
-- Stopped at: **Capacity.** `wdi-build` invoked for `SPEC-2-01`; Steps 1+2 (tdd, then implement) dispatched
-  as one headless `claude-byok` background job (`bafaw9fiy`, confirmed running via `TaskOutput`, not by
-  reading its log) in this worktree — this can run far longer than one iteration window.
+- Stopped at: **Capacity.** Re-checked job `bafaw9fiy` via `TaskOutput` (blocking, up to 5 more minutes) —
+  still `running`, no new output since dispatch. A real Step 1+2 run legitimately outlives one iteration
+  window; this is not a repeat capacity failure (it never failed to spawn), so it stays Capacity, not Blocked.
 - Blocked: —
 - Parked: —
 - Next: check job `bafaw9fiy` via `TaskOutput(block:false)`. If it has exited: read the actual diff and
