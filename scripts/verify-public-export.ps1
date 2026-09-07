@@ -153,6 +153,9 @@ $checkVocabulary = @{
         if ($file -like '.claude/skills/*' -or $file -like '.agents/skills/*') { return $true }
         if ($file -like '.control/memlog/*') { return $true }
         if ($file -like '.constitution/method/*') { return $true }
+        # `.scratch/*` is `_bmad-output/specs/*`'s replacement as of `wdi-method 0.6.8` -- the same
+        # planning-archive category, same reason, `DEC-015`.
+        if ($file -like '.scratch/*') { return $true }
         # The WDI corpus, added when it landed rather than when it started failing CI --
         # it landed one commit after this gate was last aligned, and went red immediately.
         #

@@ -213,3 +213,13 @@ decisions:
     file: decisions/DEC-014-the-shortcuts-pane-regroups-into-five-taxonomic-groups.md
     created: '2026-09-07'
     touches: []
+
+  - id: DEC-015
+    title: The hygiene gate permits internal ids under .scratch/
+    status: applied
+    file: decisions/DEC-015-the-hygiene-gate-permits-internal-ids-under-scratch.md
+    created: '2026-09-07'
+    touches:
+      - .control/decisions/DEC-015-the-hygiene-gate-permits-internal-ids-under-scratch.md
+      - .control/registry/decisions.yaml
+      - scripts/verify-public-export.ps1
