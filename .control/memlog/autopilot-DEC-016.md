@@ -8,22 +8,23 @@ date: 2026-09-07
 
 ## Resume
 
-- Iteration: 8 — `SPEC-2-01` fix-round verified, re-review dispatched.
-- Run branch: `autopilot/DEC-016`, HEAD `867a509` (fix commit). No PR opened yet — opens as a draft at the
-  first spec close.
-- Stopped at: **Capacity.** Job `bq40cmkpl` exited (code 0). Did NOT trust its report: read `git show
-  867a509` myself — the `on_percent_changed` fix drains the shared slot and applies a *different* pending
-  field before applying the new one, exactly closing the reported bug without double-applying the
-  same-field case; `DEFAULT_STACK_WIDTH_PERCENT` now wired into `LayoutConfig::default()`; no corpus file
-  touched. Independently re-ran fmt/clippy/full suite (520 passed/0 failed, new reproduction test present
-  and green) and the export gate (10/10). Re-dispatched the panel fresh on this new commit (Standards
-  `a96267b6e0bba1ad0`, Spec `a13e70ff3d92f7f89`), per the engine rule that a fix round MUST re-run the
-  whole panel, not just re-check the one finding.
+- Iteration: 9 — `SPEC-2` closed; `SPEC-3-01` builder dispatched.
+- Run branch: `autopilot/DEC-016`, HEAD `f7760db` (reconcile fixes). No PR opened yet — opens as a draft at
+  the first spec close (next push).
+- Stopped at: **Capacity.** Both re-review agents came back clean (Standards `a96267b6e0bba1ad0`, Spec
+  `a13e70ff3d92f7f89`) — return trip 1 succeeded, no trip 2 needed. Closed `SPEC-2-01` (registry test list
+  updated, status `done`, checkboxes checked) and `SPEC-2` (`inventory.py`: 0 gaps; RTM green for both its
+  tickets; `specs.yaml` status `closed`). Ran `wdi-reconcile` over the `settings` component: found real
+  drift — the pane's heading changed `"Layout & Snapping"` → `"Layout"` this spec, but
+  `LC-settings-shell.md`, `SDD-settings.md`, and `design-system.md` still listed the old name in their pane
+  enumerations (checked `EXPERIENCE.md`/`DESIGN.md` too — already correct, no change needed there). Fixed
+  all three. Dispatched `SPEC-3-01` (per-action enable flag, `UC-11`/`FR-28`) to a fresh `claude-byok`
+  session (job `bd03n1l84`, confirmed running).
 - Blocked: —
 - Parked: —
-- Next: read both re-review verdicts. Clean on both → close `SPEC-2-01` (this is return trip 1 succeeding,
-  no trip 2 needed), move to the `SPEC-3-01` frontier. A new must-fix → return trip 2/2 (cap reached after
-  this one — a third failure escalates rather than opening a fourth variant).
+- Next: check job `bd03n1l84`. On exit: verify independently (never the report), dispatch the review panel.
+  `SPEC-3-02` (hook registration exclusion) is next after `SPEC-3-01` closes — it's `blocked_by:
+  [SPEC-3-01]`, so it was not started in parallel.
 
 ## Decisions
 
@@ -42,3 +43,6 @@ date: 2026-09-07
 | Iter 7 | Return trip 1/2 | Amended the ticket in place with a dated "Return trip 1/2" section (reproduction, fix instruction, bundled constant fix); status stays `ready-for-agent` (never left it — builder doesn't touch ticket status). Redispatched `claude-byok` fresh (`bq40cmkpl`) rather than reusing `bafaw9fiy`'s context | Giving the fix as a chat instruction instead of a ticket amendment | Cap is 2 return trips; a second failure escalates | ticket file, `bq40cmkpl` |
 | Iter 8 | Fix-round verification | Read `git show 867a509` myself before trusting `bq40cmkpl`'s report; independently re-ran fmt/clippy/full suite (520/0 failed)/export gate | Trusting the completion summary | A false-green ticket if the report and artifact disagree | `867a509`, this ledger |
 | Iter 8 | Panel re-dispatch on fix round | Re-ran the WHOLE panel fresh (Standards `a96267b6e0bba1ad0`, Spec `a13e70ff3d92f7f89`) rather than only re-checking the one prior finding — a fix can introduce its own defects | Spot-checking just the fixed line | A new regression the fix itself introduced going unreviewed | This ledger |
+| Iter 9 | Close `SPEC-2-01` / `SPEC-2` | Both re-review agents clean; closed the ticket (registry + status `done`) and the spec (`inventory.py` 0 gaps, RTM green, `specs.yaml` → `closed`) | Trusting the panel's self-report alone | Reopen if a later finding contradicts it | ticket file, `specs.yaml`, `d54c209` |
+| Iter 9 | `wdi-reconcile` after spec close | Found real drift: 3 corpus files (`LC-settings-shell.md`, `SDD-settings.md`, `design-system.md`) still named the pane `"Layout & Snapping"` after this spec renamed it to `"Layout"`. Checked `EXPERIENCE.md`/`DESIGN.md` too — already correct, left untouched. Fixed all 3, present tense | Leaving the stale name since it's "just a label" | A reader looking for a tab that no longer exists under that name | `f7760db` |
+| Iter 9 | `SPEC-3-01` dispatch | Dispatched fresh `claude-byok` (`bd03n1l84`) for the per-action enable-flag ticket; `SPEC-3-02` not started in parallel since it's `blocked_by: [SPEC-3-01]` | Building both `SPEC-3` tickets at once | None — just the correct dependency order | `bd03n1l84` |
