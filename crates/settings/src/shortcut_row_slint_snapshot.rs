@@ -3,6 +3,7 @@
 #[cfg(test)]
 pub(crate) mod tests {
     use crate::app::{Pane, SaveFeedback, SettingsModel, ShortcutField};
+    use crate::theme;
     use crate::{bind_callbacks, sync_model_to_ui, MainWindow};
     use i_slint_backend_testing::{ElementHandle, TestingBackend, TestingBackendOptions};
     use shared::Config;
@@ -513,6 +514,293 @@ pub(crate) mod tests {
                 model.borrow().saved.layout.stack_width_percent,
                 65,
                 "Typing 65 then clicking Save must save 65 to config"
+            );
+
+            let _ = std::fs::remove_file(&save_path);
+        });
+    }
+
+    #[test]
+    fn description_renders_as_a_tooltip_not_a_visible_line() {
+        run_on_ui_thread(|| {
+            let (window, _model, save_path) = setup_shortcuts_window();
+
+            // Scroll to the top so Switcher row is at the top
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::PointerScrolled {
+                    position: slint::LogicalPosition::new(300.0, 300.0),
+                    delta_x: 0.0,
+                    delta_y: 1200.0,
+                });
+
+            let desc = ShortcutField::Switcher.description();
+
+            // 1. When pointer and focus are elsewhere, the description is NOT rendered in the tree
+            let initial_desc = ElementHandle::find_by_accessible_label(&window, desc).next();
+            assert!(
+                initial_desc.is_none(),
+                "Description must not be rendered as an always-visible line when pointer and focus are elsewhere"
+            );
+
+            // 2. Reachable by keyboard focus: Tab navigation reaches the title block and surfaces tooltip
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::KeyPressed {
+                    text: slint::platform::Key::Tab.into(),
+                });
+
+            let focused_desc = ElementHandle::find_by_accessible_label(&window, desc).next();
+            assert!(
+                focused_desc.is_some(),
+                "Description must surface as a tooltip on keyboard focus"
+            );
+
+            // 3. Clear focus away via keyboard Tab: advancing focus to next row hides description
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::PointerMoved {
+                    position: slint::LogicalPosition::new(0.0, 0.0),
+                });
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::KeyPressed {
+                    text: slint::platform::Key::Tab.into(),
+                });
+            let cleared_desc = ElementHandle::find_by_accessible_label(&window, desc).next();
+            assert!(
+                cleared_desc.is_none(),
+                "Description must cease rendering when focus advances away from the title block"
+            );
+
+            // 4. Reachable by mouse hover: hovering the title block surfaces the tooltip
+            let switcher_desc_label =
+                theme::shortcut_description_label(ShortcutField::Switcher.label());
+            let mut title_blocks =
+                ElementHandle::find_by_accessible_label(&window, &switcher_desc_label);
+            let switcher_title = title_blocks
+                .next()
+                .expect("Shortcut description block found");
+            let title_pos = switcher_title.absolute_position();
+            let title_sz = switcher_title.size();
+            let hover_pos = slint::LogicalPosition::new(
+                title_pos.x + title_sz.width / 2.0,
+                title_pos.y + title_sz.height / 2.0,
+            );
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::PointerMoved {
+                    position: hover_pos,
+                });
+
+            let hovered_desc = ElementHandle::find_by_accessible_label(&window, desc).next();
+            assert!(
+                hovered_desc.is_some(),
+                "Description must surface as a tooltip on mouse hover"
+            );
+
+            // 5. Moving pointer away hides the tooltip again
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::PointerMoved {
+                    position: slint::LogicalPosition::new(0.0, 0.0),
+                });
+            let cleared_desc = ElementHandle::find_by_accessible_label(&window, desc).next();
+            assert!(
+                cleared_desc.is_none(),
+                "Description must cease rendering when pointer leaves the title block"
+            );
+
+            let _ = std::fs::remove_file(&save_path);
+        });
+    }
+
+    /// The row pitch of one group, measured between two of its visible group headings.
+    ///
+    /// No element spans a row, so a row's height cannot be read directly. Consecutive keycaps sit
+    /// at a fixed offset inside their rows, so the distance between two keycaps IS the height of
+    /// the row between them — but only for keycaps in the SAME group: a gap across a group
+    /// boundary additionally spans a heading and the card's padding.
+    ///
+    /// Which rows are instantiated depends on the scroll position, and the visible run does not
+    /// begin at the first declared row. So the group is bounded by reading its own heading and the
+    /// next one out of the rendered tree, and both MUST be present — an earlier version derived
+    /// the boundaries by index arithmetic over the declared sequence, went red under a mutation
+    /// that changed only which rows were in view, and blamed the description for it.
+    fn group_row_pitches(window: &MainWindow, group: &str, next_group: &str) -> Vec<f32> {
+        let heading_y = |label: &str| -> f32 {
+            ElementHandle::find_by_accessible_label(window, label)
+                .next()
+                .unwrap_or_else(|| {
+                    panic!("heading '{label}' is not in view, so no row of '{group}' is bracketed")
+                })
+                .absolute_position()
+                .y
+        };
+        let (top, bottom) = (heading_y(group), heading_y(next_group));
+        let mut rows: Vec<f32> = ShortcutField::ALL
+            .into_iter()
+            .filter(|f| f.group() == group)
+            .filter_map(|f| {
+                let label = theme::shortcut_keycap_label(f.label());
+                let y = ElementHandle::find_by_accessible_label(window, &label)
+                    .next()
+                    .map(|k| k.absolute_position().y);
+                y
+            })
+            .filter(|y| *y > top && *y < bottom)
+            .collect();
+        rows.sort_by(|a, b| a.partial_cmp(b).expect("keycap positions are comparable"));
+        assert!(
+            rows.len() >= 3,
+            "group '{group}' shows {} rows before '{next_group}'; need 3 for two pitches",
+            rows.len()
+        );
+        eprintln!("MEASUREMENT: group '{group}' keycap ys={rows:?}");
+        rows.windows(2).map(|w| w[1] - w[0]).collect()
+    }
+
+    #[test]
+    fn row_height_is_independent_of_description_length() {
+        // The criterion is that removing the always-visible description leaves the row's height
+        // deterministic. Two earlier versions of this check could not fail for that reason:
+        //
+        //  - the first compared two *title blocks*, which after this change are structurally
+        //    identical by construction — one `Text`, no conflict, both enabled — so no change to
+        //    row height, padding or `min-height` could have made them differ;
+        //  - the second compared real row pitches, but relied on the four descriptions of the
+        //    group in view differing in length. They are "Snaps the window to the {left,right,
+        //    top,bottom} edge at its configured percentage." — same length to within a word. A
+        //    description rendered inline would wrap identically on all four and the pitches would
+        //    stay uniform, so the defect would pass.
+        //
+        // So the length is not hoped for, it is IMPOSED: one row's description is replaced with a
+        // pathologically long one and the group's pitches must not move.
+        //
+        // WHAT THIS CAN AND CANNOT SEE, established by running the mutations rather than by
+        // reasoning, because two of the three readings above looked like proof and were not:
+        //
+        //  - Restoring the always-visible wrapping description does NOT move the pitch, and the
+        //    injection above does not either. The component's header comment says why: Slint
+        //    computes the row's preferred height at the text's UNWRAPPED width, so a wrapping
+        //    description reports a one-line height, the row stays 50px, and the extra lines
+        //    overflow the row instead of growing it. That was the historic defect - text drawn
+        //    over the next row's divider - and it is invisible to geometry. The description's
+        //    absence is proven by `description_renders_as_a_tooltip_not_a_visible_line`, which
+        //    reads the tree; the overflow risk is a smoke-test item, recorded on the ticket.
+        //  - It DOES fail when row height genuinely varies across a group. Verified by keying
+        //    `min-height` to `description.character-count`: the pitches went [63, 57, 57] and
+        //    the assertion named the group and both numbers. That is the property in the name,
+        //    and the mutation is the most direct possible statement of it.
+        run_on_ui_thread(|| {
+            let (window, _model, save_path) = setup_shortcuts_window();
+            let (group, next_group) = (ShortcutField::GROUPS[3], ShortcutField::GROUPS[4]);
+
+            let before = group_row_pitches(&window, group, next_group);
+
+            // Impose the length. `rows_snap_custom` is the same model `sync_model_to_ui` fills,
+            // so this is the production data path with one field made hostile.
+            let rows: Vec<crate::ShortcutRowData> =
+                slint::Model::iter(&window.get_rows_snap_custom()).collect();
+            let mut hostile = rows.clone();
+            hostile[1].description = slint::SharedString::from(
+                "This description is deliberately long enough to wrap onto several lines at any                  plausible row width, which is the whole point of it: if the row still renders                  its description inline, this row grows and its neighbours do not.",
+            );
+            window.set_rows_snap_custom(slint::ModelRc::new(slint::VecModel::from(hostile)));
+
+            let after = group_row_pitches(&window, group, next_group);
+            eprintln!("MEASUREMENT: pitches before={before:?} after={after:?}");
+
+            const TOLERANCE: f32 = 1.0;
+            let baseline = before[0];
+            for (label, pitches) in [("before", &before), ("after", &after)] {
+                for (i, p) in pitches.iter().enumerate() {
+                    assert!(
+                        (p - baseline).abs() <= TOLERANCE,
+                        "{label} the long description, pitch {i} of '{group}' is {p}, not {baseline}"
+                    );
+                }
+            }
+
+            let _ = std::fs::remove_file(&save_path);
+        });
+    }
+    #[test]
+    fn control_cluster_and_toggle_share_one_vertical_centre() {
+        run_on_ui_thread(|| {
+            let (window, _model, save_path) = setup_shortcuts_window();
+
+            // Scroll to the top so Switcher row is in view
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::PointerScrolled {
+                    position: slint::LogicalPosition::new(300.0, 300.0),
+                    delta_x: 0.0,
+                    delta_y: 1200.0,
+                });
+
+            // Find keycap and toggle for Switcher
+            let switcher_kc_label = theme::shortcut_keycap_label(ShortcutField::Switcher.label());
+            let mut keycaps = ElementHandle::find_by_accessible_label(&window, &switcher_kc_label);
+            let keycap = keycaps.next().expect("First row keycap found");
+
+            let label = format!("Enable {}", ShortcutField::Switcher.label());
+            let mut toggles = ElementHandle::find_by_accessible_label(&window, &label);
+            let toggle = toggles.next().expect("First row toggle switch found");
+
+            let keycap_pos = keycap.absolute_position();
+            let keycap_sz = keycap.size();
+            let keycap_centre_y = keycap_pos.y + keycap_sz.height / 2.0;
+
+            let toggle_pos = toggle.absolute_position();
+            let toggle_sz = toggle.size();
+            let toggle_centre_y = toggle_pos.y + toggle_sz.height / 2.0;
+
+            eprintln!(
+                "MEASUREMENT: keycap y={}, h={}, centre_y={}; toggle y={}, h={}, centre_y={}; diff={}",
+                keycap_pos.y, keycap_sz.height, keycap_centre_y,
+                toggle_pos.y, toggle_sz.height, toggle_centre_y,
+                (keycap_centre_y - toggle_centre_y).abs()
+            );
+
+            // Stated tolerance: within 1.0 logical pixel
+            const TOLERANCE: f32 = 1.0;
+            assert!(
+                (keycap_centre_y - toggle_centre_y).abs() <= TOLERANCE,
+                "Keycap centre ({keycap_centre_y}) and toggle centre ({toggle_centre_y}) must share one vertical centre within {TOLERANCE}px, but differed by {}px",
+                (keycap_centre_y - toggle_centre_y).abs()
+            );
+
+            // Also test a row with percent control (SnapPercentLeft) to verify alignment holds
+            // when bounded numeric stepper controls are present in the cluster.
+            // Scroll down so Snap to custom group is in view.
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::PointerScrolled {
+                    position: slint::LogicalPosition::new(300.0, 300.0),
+                    delta_x: 0.0,
+                    delta_y: -600.0,
+                });
+
+            let snap_label = format!("Enable {}", ShortcutField::SnapPercentLeft.label());
+            let mut snap_toggles = ElementHandle::find_by_accessible_label(&window, &snap_label);
+            let snap_toggle = snap_toggles.next().expect("Snap toggle switch found");
+            let snap_toggle_pos = snap_toggle.absolute_position();
+            let snap_toggle_sz = snap_toggle.size();
+            let snap_toggle_centre_y = snap_toggle_pos.y + snap_toggle_sz.height / 2.0;
+
+            let snap_kc_label =
+                theme::shortcut_keycap_label(ShortcutField::SnapPercentLeft.label());
+            let snap_keycap = ElementHandle::find_by_accessible_label(&window, &snap_kc_label)
+                .find(|k| (k.absolute_position().y - snap_toggle_pos.y).abs() < 10.0)
+                .expect("SnapPercentLeft keycap found");
+            let snap_kc_pos = snap_keycap.absolute_position();
+            let snap_kc_sz = snap_keycap.size();
+            let snap_kc_centre_y = snap_kc_pos.y + snap_kc_sz.height / 2.0;
+
+            assert!(
+                (snap_kc_centre_y - snap_toggle_centre_y).abs() <= TOLERANCE,
+                "Percent row keycap centre ({snap_kc_centre_y}) and toggle centre ({snap_toggle_centre_y}) must share vertical centre within {TOLERANCE}px"
             );
 
             let _ = std::fs::remove_file(&save_path);

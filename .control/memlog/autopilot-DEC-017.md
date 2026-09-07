@@ -8,14 +8,24 @@ date: 2026-09-07
 
 ## Resume
 
-- Iteration 6 — `SPEC-4-02` merged (`79efd93`); `SPEC-4-03`'s seam agreement landed in place of a
-  red suite, with the reason recorded. Boundary commit: the commit carrying this line.
-- Run branch: `autopilot/DEC-017`. Not pushed, no PR — first push at spec close.
-- Stopped at: — (iteration in progress)
+- Iteration 15 — **`SPEC-4-03` is closed**: both panel axes adjudicated, every acceptance criterion
+  ticked, `status: done`. Suite 554/0/2, clippy and fmt clean, validators GREEN.
+- Run branch: `autopilot/DEC-017` at `398a362` until this iteration's merge; `ticket/SPEC-4-03`
+  merges into it now and is deleted. Not pushed, no PR — first push at spec close.
+- Stopped at: ticket closed, merge next, then the `SPEC-4-05` dispatch.
 - Blocked: —
 - Parked: —
-- Next: dispatch `claude-byok` for `SPEC-4-03` — it writes the four tests through `tdd` at the
-  agreed seam, then the markup. Brief still to write.
+- **Next:** merge `ticket/SPEC-4-03` into the run branch, verify the suite on the merge commit, cut
+  `ticket/SPEC-4-05`, write its builder brief, dispatch `claude-byok`.
+- **Ticket order changed this iteration:** `SPEC-4-05` (new, `DEF-9`) runs **before** `SPEC-4-04`,
+  and `SPEC-4-04`'s `depends_on` now names it. `SPEC-4-04`'s two failing tests stay drafted at
+  `<scratchpad>/spec404_tests.py` with its brief at
+  `<scratchpad>/builder-brief-spec-4-04.draft.md`; re-read them after `SPEC-4-05` lands, because
+  that ticket changes which element receives a key.
+- Follow-ups carried on the spec, not lost: the width test's bound is the window edge rather than
+  the pane's content edge; the scroll helper is still not shared into
+  `shortcut_row_slint_snapshot.rs`; the tooltip `Rectangle` declares a width but no height.
+- Build lock: mine, idle. No builder out.
 
 ## Decisions
 
@@ -61,3 +71,18 @@ date: 2026-09-07
 | Iter 6 | `wdi-build` Step 1 for `SPEC-4-03` | Landed a **seam agreement instead of a red suite**, and recorded it as a departure. All three criteria are rendered-geometry properties reachable only through `ElementHandle`, which finds elements by accessible label — and the keycap, the title/description block, and all five group headings have none today, so none is findable. Making them reachable IS the ticket's work: its own tooltip criterion requires keyboard-focus reachability (`FR-20`/`FR-21`), which means the accessible tree | Writing tests that cannot compile, or adding the accessible labels myself and crossing the owner's coding/testing split | If the seam is wrong the builder reports it before writing markup, which is cheaper than after | ticket amendment 1 |
 | Iter 6 | Near-miss on my own check | Almost concluded `ElementHandle` exposes no geometry at all, which would have mis-scoped the whole ticket — my first grep truncated at `head -25`, two lines short of `size()` and `absolute_position()`. Re-ran unfiltered before deciding | Scoping the ticket around a capability that does exist | Would have sent the builder to build the wrong thing, or parked a runnable ticket | this row |
 | Iter 6 | `SPEC-4-01`'s deferred coverage | Folded the three uncovered group headings into `SPEC-4-03`, which is where the `shortcuts_pane_slint_snapshot` module is created. Its test iterates `ShortcutField::GROUPS` rather than restating five strings — directly `theme::ALL`'s lesson, where a hand-listed array silently missed two entries | A separate ticket creating the same module, or five hardcoded heading strings | None; the module exists once and the constant stays the single source | ticket amendment 1, `specs.yaml` |
+| Iter 11 | `wdi-build` Step 3 for `SPEC-4-03` | Trip 1 is **accepted except one must-fix**, and trip 2 is opened for it — the remedy created the defect rather than missing it. | Returning the whole ticket, or absorbing the must-fix as a follow-up | A `DEC-` stays contradicted one more round | `.scratch/.../03-...md` Amendment 4 |
+| Iter 11 | Coordinator's own Amendment 2 | **Retracted** the "user-visible Tab-order regression": the probe measured the testing backend, where `key_handler` never receives keys. There was no regression; criterion 2 had simply never been delivered. | Leaving it standing, since trip 1 "fixed" it anyway | A future reader inherits a false regression and a false fix | ticket Amendment 4, `3p.md` |
+| Iter 11 | `LBR-ST-5` vs the shell | Filed the missing Tab order as **`DEF-7`** rather than widening `SPEC-4-03` or opening a `DEC-`: the code fails an active rule, which is a defect, not a decision. | A `DEC-` recording the conflict, as the builder proposed | A shell-wide accessibility gap sits in a decision record nobody treats as work | `.control/registry/defects.yaml` |
+| Iter 11 | `DEF-7`'s `violates` | Named **`FR-20`**, not `LBR-ST-5`: rules carry no registry id here and `refs-resolve` went red on it. The rule stays named in prose. | Inventing a rules registry, or dropping the reference | The defect points at a promise one level away from the rule it breaks | `.control/registry/defects.yaml` |
+| Iter 11 | The Tab/`DEC-005` must-fix | Sent it to the **smoke test** rather than giving it an automated test: `key_handler` receives no keys in the testing backend, measured with a plain `'b'`. | A test driven through the accessible layer, which is `DEF-5`'s own mechanism | A live-only regression has no automated guard | ticket Amendment 4 |
+| Iter 13 | `wdi-build` Step 3 for `SPEC-4-03` | Trip 2 **accepted from the diff**: forward-then-reject in both handlers, guarded by `listening_field == -1`, 554/0/2 with fmt and clippy clean. | Returning it again — impossible anyway, the cap is spent | A `DEC-` stays contradicted into the merge | `741ed49` |
+| Iter 13 | Coordinator's own Amendment 4 | **Corrected the reason** the Tab path has no test. It is not that keys never reach `key_handler` — they do — but that `on_key_pressed_event` is registered in `main()` and absent from `bind_callbacks`, so the callback is unset in every test. | Leaving the wrong cause standing, since the conclusion happened to be right | The next reader blames the harness and stops looking | ticket Amendment 5, `DEF-8` |
+| Iter 13 | The keyboard path's coverage | Filed **`DEF-8`** rather than fixing it here: `DEC-005`'s whole correlation table has no automated guard because the callbacks live in `main()`. | Folding a production-wiring move into `SPEC-4-03` past its cap | An applied `DEC-`'s behaviour stays unguarded until the row is picked up | `.control/registry/defects.yaml` |
+| Iter 13 | Panel timing | Ran the panel **after** trip 2 rather than per trip, and scoped it to the whole ticket diff. | Two panels, one per trip, on a moving tree | A trip-1 finding is only caught one round later than it could have been | `<scratchpad>/panel-spec-4-03-rerun.md` |
+| Iter 15 | `wdi-build` Step 3, panel adjudication | The Spec axis's `key_handler` finding is **real but pre-existing** — sibling nesting and `pct_input.focus()` both verified at `0c6f405~1` — so it is a follow-up by the list, filed as `DEF-9` (high) with its own ticket rather than a third return trip. | Blocking `SPEC-4-03` at the cap, which would also block `SPEC-4-04` and end the run with the spec incomplete | A high-severity defect rides one ticket later than it could have | `DEF-9`, `SPEC-4-05` |
+| Iter 15 | Criterion 6's reading | Read it as satisfied: its own text scopes it to *"not the pane's own vertical scroll mechanics"*, and the band is still pinned. Ticked, with `DEF-9` named beside it. | Treating the band's keyboard function as the criterion, which would make it a must-fix | The ticket closes over a criterion a reader may read more broadly | ticket Amendment 5 |
+| Iter 15 | Ticket order in `SPEC-4` | `SPEC-4-05` runs **before** `SPEC-4-04`: `DEF-5`'s candidate list includes whether a click lands focus on `pct_input`, and `SPEC-4-05` changes which element receives a key. | Running `SPEC-4-04` first, as originally sequenced | A root-cause pass gets done against a focus tree about to change, and repeated | `specs.yaml` |
+| Iter 15 | `SPEC-4-05`'s `tests:` | Named the existing mutation-verified `description_renders_as_a_tooltip_not_a_visible_line` as its regression guard, since `ticket-has-test` is red on an empty list and the new behaviour is untestable until `DEF-8`. | Inventing a test through the accessible layer to satisfy the validator | The validator is satisfied by a guard that watches the old behaviour, not the new | `specs.yaml`, ticket 05 |
+| Iter 15 | Standards finding 7 | **Half dismissed**: the 553/554 counts are different commits, not a contradiction. The stale `theme::ALL` count of 27 is real and fixed to 22. | Accepting both halves and "reconciling" numbers that already agreed | A tracker gains a correction that corrects nothing | `3p.md` |
+| Iter 15 | The publication gate's blind spot | Filed **`DEF-10`**: `.slint` is absent from `$textExtensions`, and `$checkLanguage` would report five findings in `key_check.slint` today. | Recording it as prose in a ticket nobody re-reads | An enforced gate keeps reporting green over a file type it never opens | `.control/registry/defects.yaml` |

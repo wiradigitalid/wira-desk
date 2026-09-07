@@ -24,6 +24,8 @@ export struct ShortcutRowData {
     accessible_label_field: string,
     accessible_label_input: string,
     accessible_label_increase: string,
+    accessible_label_keycap: string,
+    accessible_label_description: string,
     enabled: bool,
 }
 
@@ -43,6 +45,8 @@ component ShortcutGroup inherits VerticalLayout {
 
     Text {
         text: root.heading;
+        accessible-role: text;
+        accessible-label: root.heading;
         font-family: Typography.font_family;
         font-size: Typography.size_caption;
         font-weight: 600;
@@ -70,6 +74,8 @@ component ShortcutGroup inherits VerticalLayout {
                     accessible_label_field: row.accessible_label_field;
                     accessible_label_input: row.accessible_label_input;
                     accessible_label_increase: row.accessible_label_increase;
+                    accessible_label_keycap: row.accessible_label_keycap;
+                    accessible_label_description: row.accessible_label_description;
                     enabled: row.enabled;
                     capture_clicked => {
                         root.capture(row.index);

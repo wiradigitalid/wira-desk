@@ -102,7 +102,7 @@ pub struct ControlSemantics {
     pub description: &'static str,
 }
 
-/// The declared controls' semantics, in declaration order — currently all twenty of them.
+/// The declared controls' semantics, in declaration order — currently all twenty-two of them.
 ///
 /// The register tests below iterate THIS rather than each hand-keeping its own array. They used
 /// to, and the two arrays had drifted apart and away from the declarations: of the twenty
@@ -145,6 +145,8 @@ pub const ALL: &[ControlSemantics] = &[
     VM_BYPASS_PROCESS_LIST,
     VM_BYPASS_CLASS_LIST,
     SHORTCUT_CONFLICT_SWAP,
+    SHORTCUT_KEYCAP,
+    SHORTCUT_ROW_DESCRIPTION,
 ];
 
 pub const TOGGLE_AUTO_START: ControlSemantics = ControlSemantics {
@@ -247,6 +249,37 @@ pub const SHORTCUT_CONFLICT_SWAP: ControlSemantics = ControlSemantics {
     description: "Swaps shortcut keys between the two conflicting actions.",
 };
 
+// The two constants below are PREFIXES, not names any element carries. `shortcut_keycap_label`
+// and `shortcut_description_label` build the rendered name per row, so the tree holds
+// "Shortcut keycap: Snap to left edge" and never "Shortcut keycap".
+//
+// That matters for what the register tests below actually prove about these two: iterating `ALL`
+// shows the two PREFIXES are unique, which is not the property `DEF-2` needs. Per-row uniqueness
+// of the rendered names comes from every action having a distinct label, which
+// `app::tests::every_field_has_a_distinct_key_label_and_description` is what holds — the
+// rendered labels are that label with a fixed prefix, so distinct labels give distinct names.
+// Their `description` fields have no reader: `shortcut_row.slint` binds the row's own
+// `root.description` to `accessible-description`, not these.
+pub const SHORTCUT_KEYCAP: ControlSemantics = ControlSemantics {
+    name: "Shortcut keycap",
+    description: "Button displaying the current shortcut chord; click to record a new shortcut.",
+};
+
+pub const SHORTCUT_ROW_DESCRIPTION: ControlSemantics = ControlSemantics {
+    name: "Shortcut description",
+    description: "Focusable summary providing the full description of this shortcut action.",
+};
+
+/// Derived accessible name for a shortcut row's keycap button, from [`SHORTCUT_KEYCAP`].
+pub fn shortcut_keycap_label(action: &str) -> String {
+    format!("{}: {action}", SHORTCUT_KEYCAP.name)
+}
+
+/// Derived accessible name for a shortcut row's description block, from [`SHORTCUT_ROW_DESCRIPTION`].
+pub fn shortcut_description_label(action: &str) -> String {
+    format!("{}: {action}", SHORTCUT_ROW_DESCRIPTION.name)
+}
+
 pub const LISTENING_ANNOUNCEMENT: &str = "Listening for a key combination. Press Escape to cancel.";
 
 #[cfg(test)]
@@ -341,6 +374,17 @@ mod tests {
             seen.push(c.name);
         }
         assert_eq!(seen.len(), ALL.len());
+    }
+
+    #[test]
+    fn shortcut_per_row_labels_derive_from_theme_constants() {
+        let keycap = shortcut_keycap_label("Test Action");
+        let desc = shortcut_description_label("Test Action");
+        assert_eq!(keycap, format!("{}: Test Action", SHORTCUT_KEYCAP.name));
+        assert_eq!(
+            desc,
+            format!("{}: Test Action", SHORTCUT_ROW_DESCRIPTION.name)
+        );
     }
 
     #[test]

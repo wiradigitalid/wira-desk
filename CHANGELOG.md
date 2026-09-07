@@ -41,6 +41,11 @@ changes. Not yet released — tracked here per `AGENTS.md`'s versioning rule unt
   onto the **Overlapping Stack** row in the Shortcuts pane, beside that action's own shortcut and
   its on/off switch, so the setting sits with the action it belongs to. Nothing stored changes and
   no value is migrated; the width you had is the width you keep. See `DEC-014`.
+- A shortcut row shows its description **on hover or keyboard focus** instead of as a permanently
+  visible line. Several descriptions were longer than the space they had, so an ellipsis was the
+  only part of them some rows ever showed; the full text is now readable, and reachable without a
+  mouse. The row's controls — percentage stepper, chord keycap, and on/off switch — sit on one
+  vertical centre, and the five groups fit the default window width without sideways scrolling.
 - If you have bound two actions to the same chord, the one that keeps it may have changed.
   Maximize now sits behind every snap variant in the order that resolves a collision, so a snap
   action wins where Maximize used to. Nothing is migrated and no chord is renamed; on the shipped

@@ -636,13 +636,39 @@ specs:
         tests:
           - shortcut_row_slint_snapshot::tests::description_renders_as_a_tooltip_not_a_visible_line
           - shortcut_row_slint_snapshot::tests::control_cluster_and_toggle_share_one_vertical_centre
+          # Extracted from step 6 of the tooltip test, where it compared two title blocks that are
+          # identical by construction and so could not fail. It measures real row pitch now.
+          - shortcut_row_slint_snapshot::tests::row_height_is_independent_of_description_length
           - shortcuts_pane_slint_snapshot::tests::five_groups_fit_the_default_window_width_with_no_horizontal_scroll
           - shortcuts_pane_slint_snapshot::tests::all_five_group_headings_are_in_the_rendered_tree
+          # Guards the per-row label derivation trip 1 introduced. Registered late: the Spec-axis
+          # panel caught that the ticket added a sixth test traceable to nothing.
+          - theme::tests::shortcut_per_row_labels_derive_from_theme_constants
+      # Ordered after SPEC-4-05 as well: that ticket changes which element receives a key, and
+      # DEF-5's own candidate list includes whether a click lands focus on `pct_input` -- so a
+      # root-cause pass run first would be run against a focus tree about to change.
       - id: SPEC-4-04
         title: "Defect DEF-5 — typed digits do not reach a percentage field's value"
         spec_folder: .scratch/spec-4-shortcuts-pane-consolidation/
         component: settings
         satisfies: [UC-4]
-        depends_on: [SPEC-4-03]
+        depends_on: [SPEC-4-03, SPEC-4-05]
         tests:
           - shortcut_row_slint_snapshot::tests::a_real_keystroke_sequence_commits_a_typed_percentage
+      # Opened 2026-09-08 from the Spec-axis panel on SPEC-4-03, which found DEF-9: `key_handler`
+      # is a childless SIBLING of the content, so keys reach Rust only while it holds focus. The
+      # nesting and one route into it predate SPEC-4-03, and that ticket's two return trips were
+      # spent, so the fix lands here rather than as a third trip.
+      - id: SPEC-4-05
+        title: "Defect DEF-9 — keyboard events reach Rust only while the shell's FocusScope has focus"
+        spec_folder: .scratch/spec-4-shortcuts-pane-consolidation/
+        component: settings
+        satisfies: [UC-4]
+        depends_on: [SPEC-4-03]
+        # The ticket's NEW behaviour cannot be tested until DEF-8's seam move lands -- the keyboard
+        # callback is registered in `main()`, so it is unset in every test -- and faking a guard
+        # through the accessible layer is DEF-5's own mechanism. What IS named here is the
+        # regression guard the change must not break: it is mutation-verified, and reverting the
+        # Tab traversal reds it at shortcut_row_slint_snapshot.rs:554.
+        tests:
+          - shortcut_row_slint_snapshot::tests::description_renders_as_a_tooltip_not_a_visible_line

@@ -337,3 +337,164 @@ defects:
       Intercepted`) before the fix, green after. `cargo test --workspace`
       (`WIRADESK_SKIP_MANIFEST=1`) exits 0, 491 passing across `daemon`/`settings`/`shared`;
       `cargo clippy --workspace --all-targets -- -D warnings` clean; `cargo fmt --all` clean.
+
+  - id: DEF-7
+    title: The Settings window has no Tab order, because nothing in its shell is focusable
+    status: open
+    severity: medium
+    component: settings
+    # `LBR-ST-5` is the rule this breaks, but rules carry no registry id in this repo and
+    # `refs-resolve` requires one, so the resolvable promise behind it is named instead: FR-20 is
+    # "All interactive settings controls are fully keyboard-navigable ... via logical Tab order".
+    violates: [FR-20]
+    found_in: "0.4.0"
+    found_by: Coordinator verification of SPEC-4-03 return trip 1, 2026-09-08
+    tests: []
+    summary: >-
+      `LBR-ST-5` (`status: active`) requires "a deterministic Tab navigation order that starts with
+      navigation tabs and terminates with action buttons". The Settings shell cannot satisfy it and
+      never could: the only `FocusScope` anywhere in `crates/settings/ui/` outside a shortcut row is
+      `key_handler` in `main_window.slint`. `SidebarItem` is a `Rectangle` with a `TouchArea`, the
+      Save and Revert buttons are the same shape, and neither is reachable by keyboard at all. So
+      there is no "navigation tabs first" to start the order with and no "action buttons" to end it
+      at -- there is no order.
+    why_it_hid: >-
+      `crates/settings/src/app.rs`'s `focus_order` declares one, and `focus_order_mismatch` guards
+      it -- but that test only ever compares `focus_order`'s output to itself, and no rendered
+      element carries `f.label()` as an accessible name, so the declaration has never been checked
+      against the window. The rule therefore read as satisfied by a guard that could not fail.
+      Separately, `MainWindow` sets `forward-focus: key_handler` and that scope returned `accept`
+      for every key, so Tab was swallowed before Slint's focus traversal could run: the absence of
+      an order was invisible because Tab did nothing at all.
+    impact: >-
+      A keyboard-only user cannot reach the pane navigation or the Save and Revert buttons. Since
+      `SPEC-4-03` return trip 1 made `key_handler` reject Tab so focus traversal runs, Tab now
+      lands on the first shortcut row's description block -- which is what makes the gap visible,
+      and is an improvement on Tab doing nothing, but it is not the order the rule names.
+    fix_direction: >-
+      Give the shell real focus stops -- `SidebarItem` and the action buttons become focusable
+      controls with `focus-on-tab-navigation` -- and then declare the order where `LBR-ST-5` says
+      it starts and ends. `focus_order` MUST end up checked against the rendered tree rather than
+      against itself, or this returns the same way it hid. Deliberately NOT `SPEC-4-03`'s: it is a
+      shell-wide change across `sidebar.slint` and `main_window.slint`, the ticket's builder
+      escalated it rather than widening scope, and that was the right call.
+    owner: repo owner
+
+  - id: DEF-8
+    title: The Settings keyboard callbacks are registered only in main(), so no test can exercise them
+    status: open
+    severity: medium
+    component: settings
+    violates: [DEC-005]
+    found_in: "0.4.0"
+    found_by: Coordinator verification of SPEC-4-03 return trip 2, 2026-09-08
+    tests: []
+    summary: >-
+      `crates/settings/src/main.rs` registers `on_key_pressed_event` and `on_key_released_event`
+      inside `main()` (from line 721), not inside `bind_callbacks` (lines 322-473). Every test
+      builds its window through `bind_callbacks`, so in every test those two callbacks are unset
+      and `root.key_pressed_event(...)` from `main_window.slint` is a no-op. The entire keyboard
+      path behind them is therefore unreachable from the suite: the Key Check live diagnostic
+      `DEC-005` specifies, the `CaptureState::Listening` chord capture, the Escape cancel, and
+      onboarding step 2's Win+backtick handling.
+    why_it_hid: >-
+      `bind_callbacks` exists precisely so a test gets the production wiring, and it is easy to
+      assume anything reachable from the window is inside it. The keyboard registration simply
+      never moved there. Nothing fails as a result -- an unset Slint callback returning no value is
+      a silent no-op, not an error -- so the gap presents as "these behaviours have no tests"
+      rather than as a broken test.
+    impact: >-
+      `DEC-005`'s four-row correlation table, which is the only set of claims the key check may
+      make, has no automated guard of any kind. `SPEC-4-03` return trip 2 was a real regression in
+      exactly that area -- `key_handler` had stopped forwarding Tab to Rust, which would have made
+      the check report a third-party claim that did not exist -- and no test could have caught it,
+      which is why the fix's verification had to be a smoke-test step instead.
+    fix_direction: >-
+      Extract the keyboard registration into a function `bind_callbacks` also calls (or move it
+      there outright, if nothing in it depends on `main()`'s locals beyond what `bind_callbacks`
+      already receives), then write the tests the path has never had: a real
+      `WindowEvent::KeyPressed` sequence asserting `key_check.last_display`, a `Ctrl+Alt+Tab`
+      capture asserting the chord is recorded, and Escape cancelling a capture. Keys DO reach
+      `key_handler` in the testing backend -- proven by reverting `SPEC-4-03`'s `reject` lines and
+      watching `shortcut_row_slint_snapshot.rs:554` go red -- so the harness is not the obstacle
+      and MUST NOT be blamed for it. This is deliberately NOT `SPEC-4-03`'s: its two return trips
+      were spent, and moving production wiring is not a coordinator's unit-test work.
+    owner: repo owner
+
+  - id: DEF-9
+    title: Keyboard events reach the Settings Rust layer only while the window's own FocusScope holds focus
+    status: open
+    severity: high
+    component: settings
+    violates: [DEC-005]
+    found_in: "0.4.0"
+    found_by: Spec-axis review panel on SPEC-4-03, 2026-09-08
+    tests: []
+    summary: >-
+      `crates/settings/ui/main_window.slint` declares `key_handler := FocusScope` (line 149) as a
+      SIBLING of the outer `Rectangle` that holds every pane (line 179) -- both are direct children
+      of the `Window`, and `key_handler` has no children of its own. Slint delivers a key event to
+      the focused element and bubbles it up that element's ANCESTORS, so a sibling subtree never
+      receives it. `root.key_pressed_event(...)` therefore fires only while `key_handler` itself
+      holds focus, and it is the sole entry point for four behaviours: the Key Check live
+      diagnostic `DEC-005` specifies, Escape-cancels-capture, `CaptureState::Listening` chord
+      capture, and onboarding step 2's Win+backtick.
+    why_it_hid: >-
+      `MainWindow` sets `forward-focus: key_handler`, so a freshly opened window has focus there
+      and everything works. Nothing took focus away in normal use until a control asked for it,
+      and the only pre-existing route was `pct_input.focus()` in `shortcut_row.slint` -- clicking
+      a percentage field. Both the structure and that route predate `SPEC-4-03` (verified at
+      `0c6f405~1`), so this is not a regression that ticket introduced. What that ticket changed is
+      reachability: making `key_handler` reject Tab so focus traversal runs means ONE Tab press now
+      moves focus to a row's description block, and it is the intended behaviour of its own
+      criterion 2. No test could see any of it -- see `DEF-8`, which is why.
+    impact: >-
+      Press Tab once in Settings, then click a keycap to rebind a shortcut: the row sits in
+      "Listening..." forever, no chord is ever recorded, and Escape cannot cancel it. The Key Check
+      band goes blind at the same moment, and because `DEC-005` reads hook-saw against window-saw,
+      a chord pressed in that state reports as "another application claimed it" -- a fabricated
+      third party, which is the one verdict `DEC-005` exists to refuse. The same happens after
+      clicking any percentage field, which is the route that already existed.
+    fix_direction: >-
+      Nest the outer `Rectangle` INSIDE `key_handler` so every unconsumed key bubbles up to it,
+      rather than leaving it a childless sibling. Keep the Tab traversal `SPEC-4-03` added and
+      re-check it afterwards: `description_renders_as_a_tooltip_not_a_visible_line` must stay
+      green, and the `listening_field == -1` guard must still keep a mid-capture Tab out of focus
+      traversal. Verification cannot be a `#[test]` until `DEF-8`'s seam move lands, so the two
+      smoke steps in `SPEC-4-03`'s Amendment 4 MUST be re-run from a state where Tab has already
+      moved focus -- both of them start from a fresh window today, which is exactly the state that
+      still works.
+    owner: repo owner
+
+  - id: DEF-10
+    title: The publication gate cannot see .slint, and five findings its own pattern would report already sit there
+    status: open
+    severity: low
+    component: settings
+    violates: [NFR-4]
+    found_in: "0.4.0"
+    found_by: Standards-axis review panel on SPEC-4-03, 2026-09-08
+    tests: []
+    summary: >-
+      `scripts/verify-public-export.ps1`'s `$textExtensions` (line 61) lists nineteen extensions
+      and omits `.slint`, so the entire Slint UI layer is never scanned by the gate `AGENTS.md`
+      names as the enforcement of what may appear in this repository. It is not hypothetical: the
+      gate's own `$checkLanguage` pattern would report five findings in
+      `crates/settings/ui/components/key_check.slint` today, at lines 4, 5, 18, 49 and 172 -- e.g.
+      `// harus juga ada sebagai teks -- AccessKit tidak melihat warna.`
+    why_it_hid: >-
+      The omission is invisible from either side: the gate reports a clean run because it never
+      opened the files, and the files look fine because nothing ever complained about them. Three
+      `.slint` files were changed during `SPEC-4-03` and none was checked; that diff happens to be
+      clean, measured pattern by pattern, so even a careful reviewer would have seen no symptom.
+    impact: >-
+      A whole file type in product source is outside the only automated check on publication
+      hygiene, and it is the file type this product's entire user interface is written in. The five
+      existing findings are comments rather than anything sensitive, so nothing is leaking today --
+      the cost is that the gate's green means less than it claims.
+    fix_direction: >-
+      Add `.slint` to `$textExtensions`, then fix what the gate reports -- translate those five
+      comments. MUST NOT widen or exempt a pattern to make the findings disappear: `AGENTS.md`
+      names that as the failure mode the file exists to prevent, so the extension going in and the
+      comments being fixed are one change, not two.
+    owner: repo owner
