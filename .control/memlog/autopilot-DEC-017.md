@@ -8,26 +8,25 @@ date: 2026-09-07
 
 ## Resume
 
-- Iteration 11 — `SPEC-4-03` **return trip 1 judged and accepted with one must-fix**; **return trip
-  2 of 2 opened**, which is `wdi-build`'s cap. Trip 1's production half is at `aff7540`, the
-  coordinator's verification and `DEF-7` at this commit.
+- Iteration 13 — `SPEC-4-03` **return trip 2 verified and accepted** (`741ed49`, twelve lines in
+  `main_window.slint` plus its tracker entry). Both return trips are now spent. The **two-axis
+  panel is running** — owed since two fix rounds landed without one.
 - Run branch: `autopilot/DEC-017` at `398a362`; ticket work on `ticket/SPEC-4-03`, cut from it,
   merges back only green. Not pushed, no PR — first push at spec close.
-- Stopped at: verification complete, trip-2 dispatch next.
+- Stopped at: waiting on the panel; ticket amendment held so the panel's findings and the
+  coordinator's own correction land in one edit.
 - Blocked: —
 - Parked: —
-- **IN FLIGHT — do NOT re-dispatch:** `claude-byok` on trip 2, brief at
-  `.scratch/builder-brief-spec-4-03-trip2.md`. One item: `key_handler` must forward Tab to
-  `key_pressed_event` before rejecting it, and reject only when `listening_field == -1`.
-- **After trip 2, and it is not optional:** re-run the **two-axis panel** over the whole ticket —
-  `wdi-build` Step 3 requires the panel re-run after every fix round, and two rounds have now
-  landed without one. Then ticket close, merge into the run branch, `SPEC-4-04`.
-- **This is the last return trip.** A trip-2 result that still carries an unresolved must-fix is
-  **Blocked**, recorded here, and `SPEC-4-04` becomes the next runnable row — not a third trip.
-- **Build lock: SHUT.** The builder holds it; no cargo, no stash, no branch switch here.
-- Judging discipline for trip 2, earned this iteration: verify a mutation APPLIED before believing
-  a green, read the measurement before believing a red, and **do not trust a probe that measures the
-  test backend** — Amendment 2's Tab-order regression was exactly that and is retracted.
+- **Next:** adjudicate the panel by reading its cited lines, land Amendment 5, close the ticket,
+  merge `ticket/SPEC-4-03` into the run branch, then `SPEC-4-04`.
+- **The cap is spent.** A genuine must-fix from this panel makes `SPEC-4-03` **Blocked** and
+  recorded, not a third trip; `SPEC-4-04` is then the next runnable row.
+- `SPEC-4-04` is ready to start: its two failing tests are drafted at
+  `<scratchpad>/spec404_tests.py` and its builder brief at
+  `<scratchpad>/builder-brief-spec-4-04.draft.md`, both pending the two dependency checks written
+  at the brief's end.
+- Build lock: mine, but held idle while the two reviewers read the worktree — they were told to run
+  no cargo at all, and the coordinator runs none either until they return.
 
 ## Decisions
 
@@ -78,3 +77,7 @@ date: 2026-09-07
 | Iter 11 | `LBR-ST-5` vs the shell | Filed the missing Tab order as **`DEF-7`** rather than widening `SPEC-4-03` or opening a `DEC-`: the code fails an active rule, which is a defect, not a decision. | A `DEC-` recording the conflict, as the builder proposed | A shell-wide accessibility gap sits in a decision record nobody treats as work | `.control/registry/defects.yaml` |
 | Iter 11 | `DEF-7`'s `violates` | Named **`FR-20`**, not `LBR-ST-5`: rules carry no registry id here and `refs-resolve` went red on it. The rule stays named in prose. | Inventing a rules registry, or dropping the reference | The defect points at a promise one level away from the rule it breaks | `.control/registry/defects.yaml` |
 | Iter 11 | The Tab/`DEC-005` must-fix | Sent it to the **smoke test** rather than giving it an automated test: `key_handler` receives no keys in the testing backend, measured with a plain `'b'`. | A test driven through the accessible layer, which is `DEF-5`'s own mechanism | A live-only regression has no automated guard | ticket Amendment 4 |
+| Iter 13 | `wdi-build` Step 3 for `SPEC-4-03` | Trip 2 **accepted from the diff**: forward-then-reject in both handlers, guarded by `listening_field == -1`, 554/0/2 with fmt and clippy clean. | Returning it again — impossible anyway, the cap is spent | A `DEC-` stays contradicted into the merge | `741ed49` |
+| Iter 13 | Coordinator's own Amendment 4 | **Corrected the reason** the Tab path has no test. It is not that keys never reach `key_handler` — they do — but that `on_key_pressed_event` is registered in `main()` and absent from `bind_callbacks`, so the callback is unset in every test. | Leaving the wrong cause standing, since the conclusion happened to be right | The next reader blames the harness and stops looking | ticket Amendment 5, `DEF-8` |
+| Iter 13 | The keyboard path's coverage | Filed **`DEF-8`** rather than fixing it here: `DEC-005`'s whole correlation table has no automated guard because the callbacks live in `main()`. | Folding a production-wiring move into `SPEC-4-03` past its cap | An applied `DEC-`'s behaviour stays unguarded until the row is picked up | `.control/registry/defects.yaml` |
+| Iter 13 | Panel timing | Ran the panel **after** trip 2 rather than per trip, and scoped it to the whole ticket diff. | Two panels, one per trip, on a moving tree | A trip-1 finding is only caught one round later than it could have been | `<scratchpad>/panel-spec-4-03-rerun.md` |

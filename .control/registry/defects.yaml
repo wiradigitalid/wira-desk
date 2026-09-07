@@ -379,3 +379,44 @@ defects:
       shell-wide change across `sidebar.slint` and `main_window.slint`, the ticket's builder
       escalated it rather than widening scope, and that was the right call.
     owner: repo owner
+
+  - id: DEF-8
+    title: The Settings keyboard callbacks are registered only in main(), so no test can exercise them
+    status: open
+    severity: medium
+    component: settings
+    violates: [DEC-005]
+    found_in: "0.4.0"
+    found_by: Coordinator verification of SPEC-4-03 return trip 2, 2026-09-08
+    tests: []
+    summary: >-
+      `crates/settings/src/main.rs` registers `on_key_pressed_event` and `on_key_released_event`
+      inside `main()` (from line 721), not inside `bind_callbacks` (lines 322-473). Every test
+      builds its window through `bind_callbacks`, so in every test those two callbacks are unset
+      and `root.key_pressed_event(...)` from `main_window.slint` is a no-op. The entire keyboard
+      path behind them is therefore unreachable from the suite: the Key Check live diagnostic
+      `DEC-005` specifies, the `CaptureState::Listening` chord capture, the Escape cancel, and
+      onboarding step 2's Win+backtick handling.
+    why_it_hid: >-
+      `bind_callbacks` exists precisely so a test gets the production wiring, and it is easy to
+      assume anything reachable from the window is inside it. The keyboard registration simply
+      never moved there. Nothing fails as a result -- an unset Slint callback returning no value is
+      a silent no-op, not an error -- so the gap presents as "these behaviours have no tests"
+      rather than as a broken test.
+    impact: >-
+      `DEC-005`'s four-row correlation table, which is the only set of claims the key check may
+      make, has no automated guard of any kind. `SPEC-4-03` return trip 2 was a real regression in
+      exactly that area -- `key_handler` had stopped forwarding Tab to Rust, which would have made
+      the check report a third-party claim that did not exist -- and no test could have caught it,
+      which is why the fix's verification had to be a smoke-test step instead.
+    fix_direction: >-
+      Extract the keyboard registration into a function `bind_callbacks` also calls (or move it
+      there outright, if nothing in it depends on `main()`'s locals beyond what `bind_callbacks`
+      already receives), then write the tests the path has never had: a real
+      `WindowEvent::KeyPressed` sequence asserting `key_check.last_display`, a `Ctrl+Alt+Tab`
+      capture asserting the chord is recorded, and Escape cancelling a capture. Keys DO reach
+      `key_handler` in the testing backend -- proven by reverting `SPEC-4-03`'s `reject` lines and
+      watching `shortcut_row_slint_snapshot.rs:554` go red -- so the harness is not the obstacle
+      and MUST NOT be blamed for it. This is deliberately NOT `SPEC-4-03`'s: its two return trips
+      were spent, and moving production wiring is not a coordinator's unit-test work.
+    owner: repo owner
