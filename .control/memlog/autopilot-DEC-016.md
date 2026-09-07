@@ -8,23 +8,19 @@ date: 2026-09-07
 
 ## Resume
 
-- Iteration: 9 — `SPEC-2` closed; `SPEC-3-01` builder dispatched.
-- Run branch: `autopilot/DEC-016`, HEAD `f7760db` (reconcile fixes). No PR opened yet — opens as a draft at
-  the first spec close (next push).
-- Stopped at: **Capacity.** Both re-review agents came back clean (Standards `a96267b6e0bba1ad0`, Spec
-  `a13e70ff3d92f7f89`) — return trip 1 succeeded, no trip 2 needed. Closed `SPEC-2-01` (registry test list
-  updated, status `done`, checkboxes checked) and `SPEC-2` (`inventory.py`: 0 gaps; RTM green for both its
-  tickets; `specs.yaml` status `closed`). Ran `wdi-reconcile` over the `settings` component: found real
-  drift — the pane's heading changed `"Layout & Snapping"` → `"Layout"` this spec, but
-  `LC-settings-shell.md`, `SDD-settings.md`, and `design-system.md` still listed the old name in their pane
-  enumerations (checked `EXPERIENCE.md`/`DESIGN.md` too — already correct, no change needed there). Fixed
-  all three. Dispatched `SPEC-3-01` (per-action enable flag, `UC-11`/`FR-28`) to a fresh `claude-byok`
-  session (job `bd03n1l84`, confirmed running).
+- Iteration: 10 — run branch pushed at `SPEC-2` close; PR #17 opened draft; `SPEC-3-01` building.
+- Run branch: `autopilot/DEC-016`, HEAD `f9840fe`, pushed. **PR #17 open, draft**:
+  https://github.com/wiradigitalid/wira-desk/pull/17.
+- Stopped at: **Capacity.** Pushed at `SPEC-2` close per the mandate's own rule (first push opens the PR).
+  CI on `f9840fe` (run `34108292593`): `dependencies`/`publication-hygiene`/`secrets` PASS, `build` still
+  running (it typically takes ~11-12 min per `DEC-012` precedent). `SPEC-3-01` builder (`bd03n1l84`)
+  confirmed still running.
 - Blocked: —
 - Parked: —
-- Next: check job `bd03n1l84`. On exit: verify independently (never the report), dispatch the review panel.
-  `SPEC-3-02` (hook registration exclusion) is next after `SPEC-3-01` closes — it's `blocked_by:
-  [SPEC-3-01]`, so it was not started in parallel.
+- Next: check both `bd03n1l84` and PR #17's `build` check. On `bd03n1l84` exit: verify independently
+  (never the report), dispatch the review panel. Once `build` concludes: judge per Step 5 (only mark ready
+  if green; red keeps it draft, reported red, not patched to force green). `SPEC-3-02` is next after
+  `SPEC-3-01` closes — `blocked_by: [SPEC-3-01]`, not started in parallel.
 
 ## Decisions
 
@@ -46,3 +42,4 @@ date: 2026-09-07
 | Iter 9 | Close `SPEC-2-01` / `SPEC-2` | Both re-review agents clean; closed the ticket (registry + status `done`) and the spec (`inventory.py` 0 gaps, RTM green, `specs.yaml` → `closed`) | Trusting the panel's self-report alone | Reopen if a later finding contradicts it | ticket file, `specs.yaml`, `d54c209` |
 | Iter 9 | `wdi-reconcile` after spec close | Found real drift: 3 corpus files (`LC-settings-shell.md`, `SDD-settings.md`, `design-system.md`) still named the pane `"Layout & Snapping"` after this spec renamed it to `"Layout"`. Checked `EXPERIENCE.md`/`DESIGN.md` too — already correct, left untouched. Fixed all 3, present tense | Leaving the stale name since it's "just a label" | A reader looking for a tab that no longer exists under that name | `f7760db` |
 | Iter 9 | `SPEC-3-01` dispatch | Dispatched fresh `claude-byok` (`bd03n1l84`) for the per-action enable-flag ticket; `SPEC-3-02` not started in parallel since it's `blocked_by: [SPEC-3-01]` | Building both `SPEC-3` tickets at once | None — just the correct dependency order | `bd03n1l84` |
+| Iter 10 | Push + open the one PR | Pushed `autopilot/DEC-016` and opened PR #17 as **draft** at `SPEC-2`'s close, per the mandate's own rule (first push opens the PR; the coordinator pushes at every spec close, not per ticket) | Waiting until Finish to push everything at once | None — this is exactly what the rule specifies | PR #17, `f9840fe` |
