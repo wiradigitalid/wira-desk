@@ -527,7 +527,7 @@ specs:
     release: "0.3.0"
     prd: [wira-desk]
     size: M
-    status: open
+    status: closed
     depends_on: []
     spec_folder: .scratch/spec-3-per-action-shortcut-enable-disable/
     fr: [FR-28, FR-29]

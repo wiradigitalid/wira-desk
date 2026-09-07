@@ -485,10 +485,10 @@ rtm:
   - hook::tests::a_disabled_actions_chord_falls_through_to_call_next_hook_ex
   - hook::tests::a_disabled_field_shares_a_chord_with_an_enabled_field_without_collision
   - arrangement::stack::tests::stack_planner_no_longer_reads_a_layout_level_toggle
-  status: ready-for-agent
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-8
   FR: FR-3
