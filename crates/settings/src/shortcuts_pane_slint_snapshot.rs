@@ -4,19 +4,39 @@
 pub(crate) mod tests {
     use crate::app::ShortcutField;
     use crate::shortcut_row_slint_snapshot::tests::{run_on_ui_thread, setup_shortcuts_window};
+    use crate::theme;
     use i_slint_backend_testing::ElementHandle;
     use slint::ComponentHandle;
 
-    fn scroll_through_all_groups(window: &crate::MainWindow) {
-        for delta_y in [1200.0, -200.0, -400.0, -600.0, -800.0, -1000.0] {
-            window
-                .window()
-                .dispatch_event(slint::platform::WindowEvent::PointerScrolled {
-                    position: slint::LogicalPosition::new(300.0, 300.0),
-                    delta_x: 0.0,
-                    delta_y,
-                });
+    fn scroll_by(window: &crate::MainWindow, delta_y: f32) {
+        window
+            .window()
+            .dispatch_event(slint::platform::WindowEvent::PointerScrolled {
+                position: slint::LogicalPosition::new(300.0, 300.0),
+                delta_x: 0.0,
+                delta_y,
+            });
+    }
+
+    /// Find an element by accessible label, scrolling down until it is instantiated.
+    ///
+    /// Two properties of Slint's testing backend make this necessary, and both were learned the
+    /// expensive way: an element inside a scroll area does not exist in the accessible tree until
+    /// it is scrolled into view, AND scrolling to the bottom recycles the ones at the top back out
+    /// of it. So there is no scroll position from which all five groups are simultaneously
+    /// present, and any test that measures them must measure each one while it is in view.
+    fn find_scrolling_down(window: &crate::MainWindow, label: &str) -> Option<ElementHandle> {
+        scroll_by(window, 1200.0); // back to the top
+        if let Some(el) = ElementHandle::find_by_accessible_label(window, label).next() {
+            return Some(el);
         }
+        for delta_y in [-200.0, -400.0, -600.0, -800.0, -1000.0] {
+            scroll_by(window, delta_y);
+            if let Some(el) = ElementHandle::find_by_accessible_label(window, label).next() {
+                return Some(el);
+            }
+        }
+        None
     }
 
     #[test]
@@ -24,38 +44,9 @@ pub(crate) mod tests {
         run_on_ui_thread(|| {
             let (window, _model, save_path) = setup_shortcuts_window();
 
-            // Scroll to the very top first so the initial groups are in view
-            window
-                .window()
-                .dispatch_event(slint::platform::WindowEvent::PointerScrolled {
-                    position: slint::LogicalPosition::new(300.0, 300.0),
-                    delta_x: 0.0,
-                    delta_y: 1200.0,
-                });
-
             for heading in ShortcutField::GROUPS {
-                let mut found = ElementHandle::find_by_accessible_label(&window, heading).next();
-                if found.is_none() {
-                    // Slint testing backend instantiates elements in a scroll area only once
-                    // scrolled into view. Scroll incrementally down to reveal subsequent groups.
-                    for delta_y in [-200.0, -400.0, -600.0, -800.0, -1000.0] {
-                        window.window().dispatch_event(
-                            slint::platform::WindowEvent::PointerScrolled {
-                                position: slint::LogicalPosition::new(300.0, 300.0),
-                                delta_x: 0.0,
-                                delta_y,
-                            },
-                        );
-                        if let Some(el) =
-                            ElementHandle::find_by_accessible_label(&window, heading).next()
-                        {
-                            found = Some(el);
-                            break;
-                        }
-                    }
-                }
                 assert!(
-                    found.is_some(),
+                    find_scrolling_down(&window, heading).is_some(),
                     "Group heading '{heading}' must be findable in the rendered accessible tree"
                 );
             }
@@ -76,47 +67,65 @@ pub(crate) mod tests {
                 .window()
                 .set_size(slint::LogicalSize::new(window_width, window_height));
 
-            // Scroll through the entire pane so that all 5 groups and their rows are instantiated
-            scroll_through_all_groups(&window);
-
-            // Verify all 5 group headings fit within the window width
+            // Every heading, measured WHILE it is in view. Counted, because a loop that skips
+            // what it cannot find is a loop that passes when it finds nothing: emptying the
+            // heading labels made all three loops here no-ops and this test still went green.
+            let mut headings_measured = 0;
             for heading in ShortcutField::GROUPS {
-                let mut headings = ElementHandle::find_by_accessible_label(&window, heading);
-                if let Some(h) = headings.next() {
-                    let pos = h.absolute_position();
-                    let sz = h.size();
-                    assert!(
-                        pos.x + sz.width <= window_width,
-                        "Heading '{heading}' right edge ({}) exceeds window width ({window_width})",
-                        pos.x + sz.width
-                    );
-                }
-            }
-
-            // Verify all right-hand cluster elements (keycaps, toggles) fit within window_width
-            for keycap in ElementHandle::find_by_accessible_label(&window, "Shortcut keycap") {
-                let pos = keycap.absolute_position();
-                let sz = keycap.size();
+                let h = find_scrolling_down(&window, heading).unwrap_or_else(|| {
+                    panic!("heading '{heading}' was never instantiated, so its width is unmeasured")
+                });
+                let right = h.absolute_position().x + h.size().width;
                 assert!(
-                    pos.x + sz.width <= window_width,
-                    "Keycap right edge ({}) exceeds window width ({window_width})",
-                    pos.x + sz.width
+                    right <= window_width,
+                    "Heading '{heading}' right edge ({right}) exceeds window width ({window_width})"
                 );
+                headings_measured += 1;
             }
+            assert_eq!(
+                headings_measured,
+                ShortcutField::GROUPS.len(),
+                "every group heading must be measured, not skipped"
+            );
 
-            for field in ShortcutField::ALL {
-                let toggle_label = format!("Enable {}", field.label());
-                for toggle in ElementHandle::find_by_accessible_label(&window, &toggle_label) {
-                    let pos = toggle.absolute_position();
-                    let sz = toggle.size();
+            // The right-hand cluster. Recycling means only the rows currently in view exist, so
+            // the honest assertion is that at least one of each was actually measured — never
+            // that a loop ran zero times without complaint.
+            let mut keycaps_measured = 0;
+            let mut toggles_measured = 0;
+            for delta_y in [1200.0, -300.0, -600.0, -900.0, -1200.0] {
+                scroll_by(&window, delta_y);
+                for keycap in
+                    ElementHandle::find_by_accessible_label(&window, theme::SHORTCUT_KEYCAP.name)
+                {
+                    let right = keycap.absolute_position().x + keycap.size().width;
                     assert!(
-                        pos.x + sz.width <= window_width,
-                        "Toggle for '{}' right edge ({}) exceeds window width ({window_width})",
-                        field.label(),
-                        pos.x + sz.width
+                        right <= window_width,
+                        "Keycap right edge ({right}) exceeds window width ({window_width})"
                     );
+                    keycaps_measured += 1;
+                }
+                for field in ShortcutField::ALL {
+                    let toggle_label = format!("Enable {}", field.label());
+                    for toggle in ElementHandle::find_by_accessible_label(&window, &toggle_label) {
+                        let right = toggle.absolute_position().x + toggle.size().width;
+                        assert!(
+                            right <= window_width,
+                            "Toggle for '{}' right edge ({right}) exceeds window width ({window_width})",
+                            field.label()
+                        );
+                        toggles_measured += 1;
+                    }
                 }
             }
+            assert!(
+                keycaps_measured > 0,
+                "no keycap was measured — the loop found nothing and would have passed silently"
+            );
+            assert!(
+                toggles_measured > 0,
+                "no toggle was measured — the loop found nothing and would have passed silently"
+            );
 
             let _ = std::fs::remove_file(&save_path);
         });
