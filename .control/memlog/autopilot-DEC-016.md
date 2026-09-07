@@ -8,19 +8,23 @@ date: 2026-09-07
 
 ## Resume
 
-- Iteration: 10 — run branch pushed at `SPEC-2` close; PR #17 opened draft; `SPEC-3-01` building.
-- Run branch: `autopilot/DEC-016`, HEAD `f9840fe`, pushed. **PR #17 open, draft**:
-  https://github.com/wiradigitalid/wira-desk/pull/17.
-- Stopped at: **Capacity.** Pushed at `SPEC-2` close per the mandate's own rule (first push opens the PR).
-  CI on `f9840fe` (run `34108292593`): `dependencies`/`publication-hygiene`/`secrets` PASS, `build` still
-  running (it typically takes ~11-12 min per `DEC-012` precedent). `SPEC-3-01` builder (`bd03n1l84`)
-  confirmed still running.
+- Iteration: 11 — CI green on the last push; `SPEC-3-01` verified, panel dispatched.
+- Run branch: `autopilot/DEC-016`, HEAD `5c9c8ac` (builder's commit, not yet a ledger boundary). **PR #17
+  open, draft**: https://github.com/wiradigitalid/wira-desk/pull/17.
+- Stopped at: **Capacity.** CI on `f9840fe` (run `34108292593`) concluded **all 4 checks green** (`build`
+  13m22s). PR stays draft regardless — only Finish marks it ready. `SPEC-3-01` builder (`bd03n1l84`) exited
+  code 0, commit `5c9c8ac`; did NOT trust its report (it claimed to have run its own Standards/Spec review —
+  self-review by construction, does not count). Independently re-ran fmt/clippy/full suite (529 passed/0
+  failed, all 6 named ticket tests present and green) and the export gate (10/10); confirmed no corpus file
+  touched. Dispatched the real panel fresh (Standards `a6f2d1479688fb5c9`, Spec `a7e725bf847e12c3f`),
+  specifically asked to scrutinize the trickiest criterion — the `enable_overlapping_stack` migration's
+  three cases (old key `true`/`false`/absent).
 - Blocked: —
 - Parked: —
-- Next: check both `bd03n1l84` and PR #17's `build` check. On `bd03n1l84` exit: verify independently
-  (never the report), dispatch the review panel. Once `build` concludes: judge per Step 5 (only mark ready
-  if green; red keeps it draft, reported red, not patched to force green). `SPEC-3-02` is next after
-  `SPEC-3-01` closes — `blocked_by: [SPEC-3-01]`, not started in parallel.
+- Advisory (not blocking): `review-trace` flags `SDD-settings.md` stale (changed at `f7760db`'s reconcile
+  fix, last reviewed at `f989238`) — re-run `wdi-review` before `SPEC-3`'s close.
+- Next: read both panel verdicts. Clean → close `SPEC-3-01`, dispatch `SPEC-3-02` (now unblocked). A
+  must-fix → return trip 1/2 for this ticket.
 
 ## Decisions
 
@@ -43,3 +47,5 @@ date: 2026-09-07
 | Iter 9 | `wdi-reconcile` after spec close | Found real drift: 3 corpus files (`LC-settings-shell.md`, `SDD-settings.md`, `design-system.md`) still named the pane `"Layout & Snapping"` after this spec renamed it to `"Layout"`. Checked `EXPERIENCE.md`/`DESIGN.md` too — already correct, left untouched. Fixed all 3, present tense | Leaving the stale name since it's "just a label" | A reader looking for a tab that no longer exists under that name | `f7760db` |
 | Iter 9 | `SPEC-3-01` dispatch | Dispatched fresh `claude-byok` (`bd03n1l84`) for the per-action enable-flag ticket; `SPEC-3-02` not started in parallel since it's `blocked_by: [SPEC-3-01]` | Building both `SPEC-3` tickets at once | None — just the correct dependency order | `bd03n1l84` |
 | Iter 10 | Push + open the one PR | Pushed `autopilot/DEC-016` and opened PR #17 as **draft** at `SPEC-2`'s close, per the mandate's own rule (first push opens the PR; the coordinator pushes at every spec close, not per ticket) | Waiting until Finish to push everything at once | None — this is exactly what the rule specifies | PR #17, `f9840fe` |
+| Iter 11 | CI verdict, `f9840fe` | All 4 checks green — recorded, PR stays draft anyway (only Finish un-drafts it) | Marking ready early since it's green | None — matches the rule exactly | run `34108292593` |
+| Iter 11 | `SPEC-3-01` verification | Independently re-ran fmt/clippy/full suite/export-gate before trusting `bd03n1l84`'s report; its claimed internal review does not count as Step 3 | Accepting the builder's self-review as the panel | A false-green ticket if the report and artifact disagree | `5c9c8ac`, this ledger |
