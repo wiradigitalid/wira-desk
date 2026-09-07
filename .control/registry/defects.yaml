@@ -381,7 +381,7 @@ defects:
     owner: repo owner
 
   - id: DEF-8
-    title: The Settings keyboard callbacks are registered only in main(), so no test can exercise them
+    title: The Settings keyboard callbacks are registered only in main(), so main()'s wiring and handler are untested
     status: open
     severity: medium
     component: settings
@@ -403,21 +403,29 @@ defects:
       never moved there. Nothing fails as a result -- an unset Slint callback returning no value is
       a silent no-op, not an error -- so the gap presents as "these behaviours have no tests"
       rather than as a broken test.
+
+      CORRECTED 2026-09-08, and the correction narrows this row: the original wording said no test
+      could exercise this path at all, and that was too strong. A test can register its own
+      `on_key_pressed_event` listener, and two now do (see `SPEC-4-05`'s tests), which guards the
+      MARKUP's forwarding contract. What remains untested is `main()`'s own registration and the
+      handler behind it -- the Key Check recording, the `Listening` capture branch, the Escape
+      cancel, and onboarding step 2. That is what this row is now about.
     impact: >-
       `DEC-005`'s four-row correlation table, which is the only set of claims the key check may
       make, has no automated guard of any kind. `SPEC-4-03` return trip 2 was a real regression in
       exactly that area -- `key_handler` had stopped forwarding Tab to Rust, which would have made
-      the check report a third-party claim that did not exist -- and no test could have caught it,
-      which is why the fix's verification had to be a smoke-test step instead.
+      the check report a third-party claim that did not exist -- and nothing in the suite caught it
+      at the time. It would be caught now: `SPEC-4-05` added the two guards that were wrongly
+      believed impossible. The handler's own behaviour is still unguarded.
     fix_direction: >-
       Extract the keyboard registration into a function `bind_callbacks` also calls (or move it
       there outright, if nothing in it depends on `main()`'s locals beyond what `bind_callbacks`
       already receives), then write the tests the path has never had: a real
       `WindowEvent::KeyPressed` sequence asserting `key_check.last_display`, a `Ctrl+Alt+Tab`
       capture asserting the chord is recorded, and Escape cancelling a capture. Keys DO reach
-      `key_handler` in the testing backend -- proven by reverting `SPEC-4-03`'s `reject` lines and
-      watching `shortcut_row_slint_snapshot.rs:554` go red -- so the harness is not the obstacle
-      and MUST NOT be blamed for it. This is deliberately NOT `SPEC-4-03`'s: its two return trips
+      `key_handler` in the testing backend -- proven twice over: reverting `SPEC-4-03`'s `reject`
+      lines reds `shortcut_row_slint_snapshot.rs:554`, and `SPEC-4-05`'s two guards observe
+      forwarded keys directly. The harness is not the obstacle and MUST NOT be blamed for it. This is deliberately NOT `SPEC-4-03`'s: its two return trips
       were spent, and moving production wiring is not a coordinator's unit-test work.
     owner: repo owner
 
@@ -460,10 +468,13 @@ defects:
       rather than leaving it a childless sibling. Keep the Tab traversal `SPEC-4-03` added and
       re-check it afterwards: `description_renders_as_a_tooltip_not_a_visible_line` must stay
       green, and the `listening_field == -1` guard must still keep a mid-capture Tab out of focus
-      traversal. Verification cannot be a `#[test]` until `DEF-8`'s seam move lands, so the two
-      smoke steps in `SPEC-4-03`'s Amendment 4 MUST be re-run from a state where Tab has already
-      moved focus -- both of them start from a fresh window today, which is exactly the state that
-      still works.
+      traversal. Verification of the BUBBLING is a `#[test]` after all:
+      `an_unconsumed_key_still_reaches_rust_after_focus_moves_into_a_row` registers its own
+      callback and reds on the sibling structure with forwarded keys `[]`. What a test still cannot
+      reach is what `main()`'s handler then DOES with the key, so `SPEC-4-05`'s three smoke steps
+      remain the only check on chord capture and Escape-cancel from a moved-focus state. They MUST
+      NOT be replaced by `SPEC-4-03` Amendment 4's pair, which both start from a fresh window --
+      exactly the state that already worked.
     owner: repo owner
 
   - id: DEF-10
