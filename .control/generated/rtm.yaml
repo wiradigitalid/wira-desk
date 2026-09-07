@@ -282,10 +282,12 @@ rtm:
   release: 0.5.0
   test:
   - shortcut_row_slint_snapshot::tests::a_real_keystroke_sequence_commits_a_typed_percentage
-  status: ready-for-agent
+  - shortcut_row_slint_snapshot::tests::a_real_keystroke_sequence_out_of_range_is_refused
+  - shortcut_row_slint_snapshot::tests::a_real_keystroke_sequence_commits_a_typed_stack_percentage
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-5
   FR: FR-18
@@ -787,10 +789,12 @@ rtm:
   release: 0.5.0
   test:
   - shortcut_row_slint_snapshot::tests::a_real_keystroke_sequence_commits_a_typed_percentage
-  status: ready-for-agent
+  - shortcut_row_slint_snapshot::tests::a_real_keystroke_sequence_out_of_range_is_refused
+  - shortcut_row_slint_snapshot::tests::a_real_keystroke_sequence_commits_a_typed_stack_percentage
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-3
   FR: FR-7

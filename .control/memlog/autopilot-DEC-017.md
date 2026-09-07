@@ -8,26 +8,24 @@ date: 2026-09-07
 
 ## Resume
 
-- Iteration 18 — **`SPEC-4-05` closed** (`DEF-9` fixed at `d26c416`, two coordinator guards on top).
-  Suite 556/0/2, clippy and fmt clean, validators GREEN.
-- Run branch: `autopilot/DEC-017` at `0fc6e8d`; `ticket/SPEC-4-05` merges into it this iteration
-  and is deleted. Not pushed, no PR — first push at spec close.
-- Stopped at: ticket closed; merge, then `SPEC-4-04`, the last ticket in the spec.
+- Iteration 20 — **`SPEC-4-04` closed and `SPEC-4` closed.** Every ticket in the spec is `done`;
+  suite 559/0/2, clippy and fmt clean, validators GREEN with the spec closed.
+- Run branch: `autopilot/DEC-017`; `ticket/SPEC-4-04` merges into it this iteration and is deleted.
+  **Not yet pushed, no PR** — the first push is this iteration.
+- Stopped at: spec closed, merge and first push next.
 - Blocked: —
 - Parked: —
-- **Next, in order:** merge `ticket/SPEC-4-05`, verify the merge commit green, cut
-  `ticket/SPEC-4-04`, apply the drafted `DEF-5` tests and **see them red** — Step 1 is the
-  coordinator's on that ticket — commit them, then dispatch `claude-byok` with the brief.
-- `SPEC-4-04` inputs are ready: tests at `<scratchpad>/spec404_tests.py`, brief at
-  `<scratchpad>/builder-brief-spec-4-04.draft.md`. Its first dependency check is closed: trip 1 did
-  not move `"Snap percentage field"` or `"Snap percentage input"`, so those tests will fail on
-  `DEF-5` itself rather than at `.expect(...)`.
-- No panel for these tickets unless a diff earns it: `settings` is `risk_accepted: medium`, so
-  `wdi-build` makes the two-reviewer panel available rather than required, and neither diff touches
-  money, personal data, or a third party.
-- After `SPEC-4-04`: spec close, `wdi-reconcile`, the stale `review-trace` on
-  `.how/settings/SDD-settings.md`, first push, one draft PR, CI, smoke test (`claude-byok` only —
-  script drafted at `<scratchpad>/finish-inventory-and-smoke.md`), then Finish.
+- **Next, in order:** merge `ticket/SPEC-4-04`, verify the merge commit green, push the run branch
+  for the first time, open **one draft PR**, watch CI on the pushed head SHA, then the smoke test.
+- **Smoke test is `claude-byok`'s alone, by mandate.** Fourteen steps drafted at
+  `<scratchpad>/finish-inventory-and-smoke.md`; `SPEC-4-05`'s three keyboard steps replace
+  `SPEC-4-03` Amendment 4's pair, which both started from a fresh window — the one state that
+  already worked.
+- Then § Finish: `wdi-report` intent `progress`, mandate to `applied` with `touches` naming the
+  ledger, final `## Resume`, cancel the loop, final report.
+- For the final report: `FR-8`, `FR-9`, `FR-24` sit in no spec's `fr:` list yet are implemented —
+  a traceability gap, evidence in `<scratchpad>/finish-inventory-and-smoke.md`. Open defects
+  outside this spec: `DEF-6`, `DEF-7`, `DEF-8`, `DEF-10`.
 - Build lock: mine, idle. No builder out.
 
 ## Decisions
@@ -93,3 +91,9 @@ date: 2026-09-07
 | Iter 18 | Coordinator's own testability claim | **Corrected in four places.** A test CAN reach the keyboard path by registering its own `on_key_pressed_event`; I had recorded the opposite. Two guards written, both seen red. | Leaving "untestable" standing and relying on smoke steps alone | An applied `DEC-`'s only signal stays unguarded, and the next reader inherits a false limit | `DEF-8`, `DEF-9`, `main_window.slint`, `specs.yaml` |
 | Iter 18 | `DEF-8`'s scope | **Narrowed, not closed**: the markup contract is guarded now, but `main()`'s registration and its handler — Key Check recording, capture branch, Escape cancel — are still untested. | Closing it as solved by the two new guards | The handler's behaviour looks covered when only the forwarding is | `.control/registry/defects.yaml` |
 | Iter 18 | `SPEC-4-05`'s Escape criterion | Left **open and marked smoke-only**: what `main()`'s handler does with a bubbled key is behind `DEF-8`. | Ticking it on the strength of the bubbling guard | A criterion reads satisfied when only its precondition is | ticket 05 |
+| Iter 18 | `wdi-build` Step 1 for `SPEC-4-04` | Wrote both `DEF-5` tests myself and saw them red at the right assertions — the mandate gives unit tests to the coordinator, so the builder gets a red suite handed down rather than writing its own. | Letting the builder encode the criteria, as `SPEC-4-03` had to | A defect's test is written by whoever also fixes it | `shortcut_row_slint_snapshot.rs`, `specs.yaml` |
+| Iter 18 | `SPEC-4-04`'s search space | Told the builder that `SPEC-4-05`'s nesting did **not** fix `DEF-5` — tests re-run after that merge are still red — so one of the ticket's five candidates is ruled out before it starts. | Letting it rediscover that by root-causing against a tree that had just changed | A root-cause pass spends time on a branch already excluded | `.scratch/builder-brief-spec-4-04.md` |
+| Iter 20 | `wdi-build` Step 3 for `SPEC-4-04` | Accepted from the diff: one markup line, 68 added test lines, **zero deletions**, and restoring `accept` reds all three keystroke tests. No panel — `risk_accepted: medium` makes one available, not required. | A two-axis panel on a one-word fix | A one-line change goes unseen by a second pair of eyes | `753b1fb` |
+| Iter 20 | The pattern behind `DEF-5` and `DEF-9` | Recorded them as **one shape, two instances**: a handler returning `accept` for what it did not handle tells the framework it consumed the event. Audited for a third — there are only two `key-pressed` handlers in the UI. | Filing them as two unrelated defects and moving on | The shape recurs in the next handler somebody writes | `3p.md` |
+| Iter 20 | `SPEC-4` close | Closed it: every ticket `done`, validators GREEN with the close, and the four defects it surfaced are filed rather than carried inside it. | Holding the spec open until `DEF-6`/`DEF-7`/`DEF-8`/`DEF-10` are fixed | Four out-of-scope defects gate a spec whose own promises are met | `specs.yaml` |
+| Iter 20 | The stale `review-trace` | Re-reviewed `SDD-settings.md` with the `edge-case-hunter` lens the risk level demands and corrected four false claims, rather than re-stamping the date and sha. | Stamping the trace so the advisory cleared | An SDD keeps citing a deleted file and calling an unenforced guard "Verified" | `.how/settings/SDD-settings.md` |

@@ -2,10 +2,12 @@
 id: SPEC-4-04
 component: settings
 satisfies: [UC-4]
-blocked_by: [SPEC-4-03]
-status: ready-for-agent
+blocked_by: [SPEC-4-03, SPEC-4-05]
+status: done
 tests:
   - shortcut_row_slint_snapshot::tests::a_real_keystroke_sequence_commits_a_typed_percentage
+  - shortcut_row_slint_snapshot::tests::a_real_keystroke_sequence_out_of_range_is_refused
+  - shortcut_row_slint_snapshot::tests::a_real_keystroke_sequence_commits_a_typed_stack_percentage
 ---
 
 # 04: Defect DEF-5 — typed digits do not reach a percentage field's value
@@ -22,7 +24,7 @@ before starting.
 Landing `03` first and rebasing this fix onto its shape is a smaller conflict surface than the reverse; this
 is an enforced ordering, not an optional suggestion, so the two are never picked up in parallel.
 
-- [ ] **Root-cause with `wdi-systematic-debugging` before writing any fix.** This repo's own standing rule
+- [x] **Root-cause with `wdi-systematic-debugging` before writing any fix.** This repo's own standing rule
       for a bug with an unknown cause applies here without exception — do not guess at `input-type: number`,
       focus/z-order between `pct_field_touch`'s `TouchArea` and the `TextInput` beneath it, or anything else,
       and patch blind. Candidates worth ruling in or out, not a prescription of which is right:
@@ -40,7 +42,7 @@ is an enforced ordering, not an optional suggestion, so the two are never picked
         live-test attempts produced different outcomes across those two modes for unrelated reasons
         (foreground-lock/UIA access), so ruling this in or out explicitly, rather than assuming one mode's
         root cause generalizes to the other, is part of this ticket's own root-cause pass.
-- [ ] Once root-caused, the fix makes a **real simulated key-press sequence** (not
+- [x] Once root-caused, the fix makes a **real simulated key-press sequence** (not
       `set_accessible_value`) — typing individual digit characters into a focused, empty-or-partially-typed
       field — result in the typed digits appearing in `typed_text` and, on departure, committing exactly as
       `SPEC-2-01` already proved for the accessible-value path. This explicitly includes the refusal half of
@@ -48,26 +50,26 @@ is an enforced ordering, not an optional suggestion, so the two are never picked
       (e.g. outside 1–99, or outside 10–100 on the `Stack` row once `SPEC-4-02` lands) and departs the field
       must be refused with the same actionable message `SPEC-2-01` already proved for the accessible-value
       path, never silently clamped or silently accepted just because this defect's fix made the digits land.
-- [ ] A new test asserts the out-of-range-refused behaviour specifically for a real-keystroke-typed value —
+- [x] A new test asserts the out-of-range-refused behaviour specifically for a real-keystroke-typed value —
       `persistence::tests::an_out_of_range_percentage_typed_then_saved_is_refused` is prior art for the
       accessible-value path; this ticket needs its own version driven by the real keystroke path, not a reuse
       of that test's existing assertion under a new name.
-- [ ] The existing accessible-value-driven tests (`typed_percentage_commits_on_save_click` and its four
+- [x] The existing accessible-value-driven tests (`typed_percentage_commits_on_save_click` and its four
       siblings) are unchanged and still green — they cover the automation/assistive-technology path, which
       this ticket does not touch, and MUST NOT be weakened or deleted to make room for the new test.
-- [ ] The new test drives the field through whatever this repo's test harness uses for simulated character
+- [x] The new test drives the field through whatever this repo's test harness uses for simulated character
       input to a Slint `TextInput` (a keyboard event dispatched through `slint::platform::WindowEvent`, or
       the equivalent this harness already has elsewhere) — not through the accessible-value setter, since
       that is exactly the path this defect exists in the gap between.
-- [ ] If the fix touches `SPEC-4-02`'s relocated `Stack`-row percent control (once that ticket has landed),
+- [x] If the fix touches `SPEC-4-02`'s relocated `Stack`-row percent control (once that ticket has landed),
       the same real-keystroke test is added there too — this defect is a property of the shared
       `ShortcutRow` percent control, not of any one row.
-- [ ] The fix and its new test run under standalone launch
+- [x] The fix and its new test run under standalone launch
       (`WIRADESK_SETTINGS_ALLOW_NO_DAEMON=1`, this repo's normal automated-test seam). Verifying it live under
       a real daemon-attached, elevated launch is `smoke_test`/owner territory per this repo's own build-safety
       rules, not something this ticket's own automated test can reach — say plainly in the closing report
       that only the standalone mode was verified automatically, rather than implying both were.
-- [ ] Full test suite green once, not only this ticket's own tests.
+- [x] Full test suite green once, not only this ticket's own tests.
 
 ## Out of scope, deliberately
 

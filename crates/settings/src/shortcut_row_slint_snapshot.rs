@@ -241,6 +241,127 @@ pub(crate) mod tests {
         });
     }
 
+    /// Type a value into the focused percentage field the way a person does: one character
+    /// event per digit, through the window's real event queue.
+    ///
+    /// This is the whole point of `DEF-5`. Every other percentage test in this file reaches the
+    /// value through `set_accessible_value`, which is the UI Automation `RangeValuePattern` path
+    /// — a different code path from a keystroke arriving at Slint's `TextInput`. Those tests
+    /// prove the commit-on-departure LOGIC is right once a value has landed in `typed_text`;
+    /// none of them proves a keystroke can put one there, and on the live build it could not.
+    ///
+    /// Focusing is deliberately NOT part of what this helper exercises: it uses the same
+    /// accessible default action the sibling tests use, so that a failure here is a failure of
+    /// character entry and not of the click-to-focus mechanics. If the root-cause pass finds the
+    /// defect is in focus after all, this helper is the wrong shape and should say so loudly
+    /// rather than be quietly widened.
+    fn type_digits(window: &crate::MainWindow, digits: &str) {
+        for ch in digits.chars() {
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::KeyPressed {
+                    text: slint::SharedString::from(ch.to_string()),
+                });
+        }
+    }
+
+    #[test]
+    fn a_real_keystroke_sequence_commits_a_typed_percentage() {
+        run_on_ui_thread(|| {
+            let (window, model, save_path) = setup_shortcuts_window();
+
+            let field = ElementHandle::find_by_accessible_label(&window, "Snap percentage field")
+                .next()
+                .expect("Snap percentage field element found");
+            field.invoke_accessible_default_action();
+
+            // Clear what is there, then type "70" as two character events.
+            for _ in 0..3 {
+                window
+                    .window()
+                    .dispatch_event(slint::platform::WindowEvent::KeyPressed {
+                        text: slint::platform::Key::Backspace.into(),
+                    });
+            }
+            type_digits(&window, "70");
+
+            // The digits must have reached the row's own typed state. Read it back the way a
+            // screen reader would, so the assertion does not depend on internals.
+            let input = ElementHandle::find_by_accessible_label(&window, "Snap percentage input")
+                .next()
+                .expect("Snap percentage input element found");
+            let seen = input.accessible_value().unwrap_or_default();
+            eprintln!("MEASUREMENT: field reads {seen:?} after typing 70");
+            assert_eq!(
+                seen.as_str(),
+                "70",
+                "typing '7' then '0' must land in the field; it reads {seen:?}"
+            );
+
+            assert_eq!(
+                model.borrow().draft.snapping.percent_left,
+                50,
+                "a typed value must not commit before departure"
+            );
+
+            window.invoke_save_clicked();
+
+            assert_eq!(
+                model.borrow().draft.snapping.percent_left,
+                70,
+                "typing 70 and clicking Save must commit 70 to the draft"
+            );
+            assert_eq!(
+                model.borrow().saved.snapping.percent_left,
+                70,
+                "typing 70 and clicking Save must save 70 to the config"
+            );
+
+            let _ = std::fs::remove_file(&save_path);
+        });
+    }
+
+    #[test]
+    fn a_real_keystroke_sequence_out_of_range_is_refused() {
+        use crate::app::SaveFeedback;
+        run_on_ui_thread(|| {
+            let (window, model, save_path) = setup_shortcuts_window();
+
+            let field = ElementHandle::find_by_accessible_label(&window, "Snap percentage field")
+                .next()
+                .expect("Snap percentage field element found");
+            field.invoke_accessible_default_action();
+
+            for _ in 0..3 {
+                window
+                    .window()
+                    .dispatch_event(slint::platform::WindowEvent::KeyPressed {
+                        text: slint::platform::Key::Backspace.into(),
+                    });
+            }
+            // 0 is below MIN_SNAP_PERCENT. The fix that makes digits land MUST NOT also make an
+            // out-of-range typed value silently clamp or silently save: the refusal is half of
+            // what `SPEC-2-01` promised, and it is the half a fix for this defect could quietly
+            // drop while looking correct.
+            type_digits(&window, "0");
+
+            window.invoke_save_clicked();
+
+            assert!(
+                matches!(model.borrow().feedback, SaveFeedback::Error(_)),
+                "a typed out-of-range percentage must be refused with an actionable error, \
+                 not clamped and not saved"
+            );
+            assert_eq!(
+                model.borrow().saved.snapping.percent_left,
+                50,
+                "a refused value must leave the saved config untouched"
+            );
+
+            let _ = std::fs::remove_file(&save_path);
+        });
+    }
+
     #[test]
     fn an_out_of_range_percentage_committed_via_departure_is_refused() {
         use crate::app::SaveFeedback;
@@ -514,6 +635,74 @@ pub(crate) mod tests {
                 model.borrow().saved.layout.stack_width_percent,
                 65,
                 "Typing 65 then clicking Save must save 65 to config"
+            );
+
+            let _ = std::fs::remove_file(&save_path);
+        });
+    }
+
+    #[test]
+    fn a_real_keystroke_sequence_commits_a_typed_stack_percentage() {
+        run_on_ui_thread(|| {
+            let (window, model, save_path) = setup_shortcuts_window();
+
+            // Scroll down to bring the Overlapping Stack row into view
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::PointerScrolled {
+                    position: slint::LogicalPosition::new(300.0, 300.0),
+                    delta_x: 0.0,
+                    delta_y: -600.0,
+                });
+
+            let field = ElementHandle::find_by_accessible_label(
+                &window,
+                crate::theme::STACK_WIDTH_FIELD.name,
+            )
+            .next()
+            .expect("Stack width field element found");
+            field.invoke_accessible_default_action();
+
+            // Clear what is there, then type "65" as two character events.
+            for _ in 0..3 {
+                window
+                    .window()
+                    .dispatch_event(slint::platform::WindowEvent::KeyPressed {
+                        text: slint::platform::Key::Backspace.into(),
+                    });
+            }
+            type_digits(&window, "65");
+
+            let input = ElementHandle::find_by_accessible_label(
+                &window,
+                crate::theme::STACK_WIDTH_INPUT.name,
+            )
+            .next()
+            .expect("Stack width input element found");
+            let seen = input.accessible_value().unwrap_or_default();
+            assert_eq!(
+                seen.as_str(),
+                "65",
+                "typing '6' then '5' must land in the stack width field; it reads {seen:?}"
+            );
+
+            assert_eq!(
+                model.borrow().draft.layout.stack_width_percent,
+                50,
+                "a typed stack width value must not commit before departure"
+            );
+
+            window.invoke_save_clicked();
+
+            assert_eq!(
+                model.borrow().draft.layout.stack_width_percent,
+                65,
+                "typing 65 and clicking Save must commit 65 to the draft"
+            );
+            assert_eq!(
+                model.borrow().saved.layout.stack_width_percent,
+                65,
+                "typing 65 and clicking Save must save 65 to the config"
             );
 
             let _ = std::fs::remove_file(&save_path);
