@@ -27,6 +27,14 @@ dag:
     - W1-S4
     - W1-S5
     - W1-S6
+- spec: W2
+  order:
+  - parallel:
+    - W2-S1
+- spec: W3
+  order:
+  - parallel:
+    - W3-S1
 - spec: W4
   order:
   - parallel:

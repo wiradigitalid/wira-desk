@@ -31,7 +31,7 @@ specs:
     # wrote it. DEF-1 is now `fixed` and `cargo test --workspace` exits 0 with 330 passing.
     # RTM: 14/14 green, promise progress 100%.
     depends_on: []
-    spec_folder: _bmad-output/specs/w1-verify-0-1-0/
+    spec_folder: .scratch/w1-verify-0-1-0/
     spec_reviewed:
       date: '2026-08-21'
       sha: '7a0d260'
@@ -81,7 +81,7 @@ specs:
         stories:
           - id: S1
             title: Cycling reaches every same-app window on this monitor, in order
-            spec_folder: _bmad-output/specs/w1-verify-0-1-0/
+            spec_folder: .scratch/w1-verify-0-1-0/
             component: window-management
             satisfies: [UC-1]
             depends_on: []
@@ -110,7 +110,7 @@ specs:
               - hook::tests::throttle_boundary
           - id: S2
             title: Snapping places a window in a half or the whole work area, at any DPI
-            spec_folder: _bmad-output/specs/w1-verify-0-1-0/
+            spec_folder: .scratch/w1-verify-0-1-0/
             component: window-management
             satisfies: [UC-2]
             depends_on: [S1]
@@ -133,7 +133,7 @@ specs:
               - arrangement::win32::tests::negative_monitor_coordinates_survive_conversion
           - id: S3
             title: Tray health escalates to Tier 3 once and recovers without a restart
-            spec_folder: _bmad-output/specs/w1-verify-0-1-0/
+            spec_folder: .scratch/w1-verify-0-1-0/
             component: window-management
             satisfies: [UC-3]
             depends_on: [S1]
@@ -149,7 +149,7 @@ specs:
         stories:
           - id: S4
             title: A shortcut is captured, validated, saved atomically, and the daemon signalled
-            spec_folder: _bmad-output/specs/w1-verify-0-1-0/
+            spec_folder: .scratch/w1-verify-0-1-0/
             component: settings
             satisfies: [UC-4]
             depends_on: []
@@ -175,7 +175,7 @@ specs:
               - persistence::tests::reload_signal_is_harmless_when_no_daemon_is_running
           - id: S5
             title: First run opens the tutorial, and finishing or skipping stops it returning
-            spec_folder: _bmad-output/specs/w1-verify-0-1-0/
+            spec_folder: .scratch/w1-verify-0-1-0/
             component: settings
             satisfies: [UC-5]
             depends_on: [S4]
@@ -192,7 +192,7 @@ specs:
               - persistence::tests::completing_onboarding_writes_a_valid_config_so_it_does_not_repeat
           - id: S6
             title: Auto-start registers a per-user elevated logon task, and nothing else
-            spec_folder: _bmad-output/specs/w1-verify-0-1-0/
+            spec_folder: .scratch/w1-verify-0-1-0/
             component: settings
             satisfies: [UC-6]
             depends_on: [S4]
@@ -207,7 +207,7 @@ specs:
     size: S
     status: closed
     depends_on: [W1]
-    spec_folder: _bmad-output/specs/spec-first-run-tutorial/
+    spec_folder: _bmad-output/specs/spec-first-run-tutorial/  # folder deleted 2026-09-07, distilled; never existed under .scratch/
     fr: [FR-17, FR-19, FR-20, FR-21]
     epics:
       - id: E1
@@ -215,7 +215,7 @@ specs:
         stories:
           - id: S1
             title: Interactive 3-step onboarding wizard with dummy window simulation and shortcut practice
-            spec_folder: _bmad-output/specs/spec-first-run-tutorial/
+            spec_folder: _bmad-output/specs/spec-first-run-tutorial/  # folder deleted 2026-09-07, distilled; never existed under .scratch/
             component: settings
             satisfies: [UC-5]
             depends_on: []
@@ -233,7 +233,7 @@ specs:
     size: S
     status: closed
     depends_on: [W2]
-    spec_folder: _bmad-output/specs/spec-settings-window/
+    spec_folder: _bmad-output/specs/spec-settings-window/  # folder deleted 2026-09-07, distilled; never existed under .scratch/
     fr: [FR-7, FR-13, FR-14, FR-15, FR-16, FR-18, FR-19, FR-20, FR-21]
     epics:
       - id: E1
@@ -241,7 +241,7 @@ specs:
         stories:
           - id: S1
             title: 5-Pane vertical sidebar settings window with interactive shortcut capturer, triple-modifier layout, VM exceptions, and UIA focus order
-            spec_folder: _bmad-output/specs/spec-settings-window/
+            spec_folder: _bmad-output/specs/spec-settings-window/  # folder deleted 2026-09-07, distilled; never existed under .scratch/
             component: settings
             satisfies: [UC-4, UC-6]
             depends_on: []
@@ -311,7 +311,7 @@ specs:
     # that artefact; not patched from this side. Structure maps needed no refresh — the wave
     # added one file inside an existing crate and no base folder.
     depends_on: [W3]
-    spec_folder: _bmad-output/specs/w4-arrangement/
+    spec_folder: .scratch/w4-arrangement/
     fr: [FR-14, FR-15, FR-22, FR-23]
     # Corpus for this wave landed at 79277c2 and its review traces at d36463a.
     # Stories are deliberately serial: five of the six touch `daemon/src/hook.rs`,
@@ -325,7 +325,7 @@ specs:
         stories:
           - id: S1
             title: Chord configuration travels as one struct, so adding an action is one line rather than five call sites
-            spec_folder: _bmad-output/specs/w4-arrangement/
+            spec_folder: .scratch/w4-arrangement/
             component: window-management
             satisfies: []
             depends_on: []
@@ -348,7 +348,7 @@ specs:
 
           - id: S2
             title: Snap the active window to the top or bottom half of its monitor
-            spec_folder: _bmad-output/specs/w4-arrangement/
+            spec_folder: .scratch/w4-arrangement/
             component: window-management
             satisfies: [UC-2]
             depends_on: [S1]
@@ -364,7 +364,7 @@ specs:
 
           - id: S3
             title: Move the active window to the next monitor, keeping its share of the work area
-            spec_folder: _bmad-output/specs/w4-arrangement/
+            spec_folder: .scratch/w4-arrangement/
             component: window-management
             satisfies: [UC-7]
             depends_on: [S1, S2]
@@ -378,7 +378,7 @@ specs:
 
           - id: S4
             title: A duplicate chord unbinds the later action at startup and refuses the whole reload
-            spec_folder: _bmad-output/specs/w4-arrangement/
+            spec_folder: .scratch/w4-arrangement/
             component: window-management
             satisfies: []
             depends_on: [S1, S2]
@@ -392,7 +392,7 @@ specs:
 
           - id: S5
             title: Shipped chords move to the Ctrl+Alt family, and Win+Ctrl+Arrow is refused
-            spec_folder: _bmad-output/specs/w4-arrangement/
+            spec_folder: .scratch/w4-arrangement/
             component: window-management
             satisfies: []
             depends_on: [S1, S2, S3]
@@ -406,7 +406,7 @@ specs:
 
           - id: S6
             title: The Shortcuts pane lists nine actions in three labelled groups, and the Layout pane stops claiming snapping
-            spec_folder: _bmad-output/specs/w4-arrangement/
+            spec_folder: .scratch/w4-arrangement/
             component: settings
             satisfies: [UC-4]
             depends_on: [S2, S3, S5]
@@ -424,7 +424,7 @@ specs:
     size: M
     status: closed
     depends_on: []
-    spec_folder: _bmad-output/specs/spec-1-percentage-and-thirds-snap/
+    spec_folder: .scratch/spec-1-percentage-and-thirds-snap/
     spec_reviewed:
       date: '2026-09-06'
       sha: '77bd03a'
@@ -433,7 +433,7 @@ specs:
     tickets:
       - id: SPEC-1-01
         title: Custom-percentage edge snap
-        spec_folder: _bmad-output/specs/spec-1-percentage-and-thirds-snap/
+        spec_folder: .scratch/spec-1-percentage-and-thirds-snap/
         component: window-management
         satisfies: [UC-9]
         depends_on: []
@@ -451,7 +451,7 @@ specs:
           - commands::tests::roundtrip_all_commands
       - id: SPEC-1-02
         title: Snap to thirds
-        spec_folder: _bmad-output/specs/spec-1-percentage-and-thirds-snap/
+        spec_folder: .scratch/spec-1-percentage-and-thirds-snap/
         component: window-management
         satisfies: [UC-10]
         depends_on: []
@@ -470,7 +470,7 @@ specs:
     size: S
     status: open
     depends_on: []
-    spec_folder: _bmad-output/specs/spec-2-shortcuts-pane-fixes/
+    spec_folder: .scratch/spec-2-shortcuts-pane-fixes/
     fr: []
     spec_reviewed:
       date: '2026-09-07'
@@ -492,7 +492,7 @@ specs:
     tickets:
       - id: SPEC-2-01
         title: Commit-on-departure for percentage fields, and stepper validation parity
-        spec_folder: _bmad-output/specs/spec-2-shortcuts-pane-fixes/
+        spec_folder: .scratch/spec-2-shortcuts-pane-fixes/
         component: settings
         satisfies: [UC-4, UC-9]
         depends_on: []
@@ -509,7 +509,7 @@ specs:
     size: M
     status: open
     depends_on: []
-    spec_folder: _bmad-output/specs/spec-3-per-action-shortcut-enable-disable/
+    spec_folder: .scratch/spec-3-per-action-shortcut-enable-disable/
     fr: [FR-28, FR-29]
     spec_reviewed:
       date: '2026-09-07'
@@ -524,7 +524,7 @@ specs:
     tickets:
       - id: SPEC-3-01
         title: Per-action enable flag (settings)
-        spec_folder: _bmad-output/specs/spec-3-per-action-shortcut-enable-disable/
+        spec_folder: .scratch/spec-3-per-action-shortcut-enable-disable/
         component: settings
         satisfies: [UC-11]
         depends_on: []
@@ -537,7 +537,7 @@ specs:
           - app::tests::re_enabling_an_action_restores_its_prior_chord
       - id: SPEC-3-02
         title: Hook registration exclusion (window-management)
-        spec_folder: _bmad-output/specs/spec-3-per-action-shortcut-enable-disable/
+        spec_folder: .scratch/spec-3-per-action-shortcut-enable-disable/
         component: window-management
         satisfies: [UC-12]
         depends_on: [SPEC-3-01]

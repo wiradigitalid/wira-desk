@@ -292,7 +292,11 @@ class Corpus:
 
     @property
     def spec_list(self) -> list[dict]:
-        return rows(self.specs, "specs")
+        """A repo migrated before the `waves.yaml` -> `specs.yaml` rename kept its rows' own
+        top-level key, `waves:` — the migration renamed the FILE, byte for byte, and never touched
+        what is inside it (`registry-migration.test.mjs` pins that as the contract). Reading only
+        `specs:` here would make every spec in such a repo invisible, not merely its tickets."""
+        return rows(self.specs, "specs") or rows(self.specs, "waves")
 
     @property
     def defect_list(self) -> list[dict]:
@@ -304,13 +308,54 @@ class Corpus:
         FLAT. The `epics` level between a spec and its tickets is repealed: it grouped rows and
         bought nothing, and every reader here had to walk through it to reach the row it wanted.
         A ticket names its `component` directly.
+
+        A spec still carrying the pre-rename `epics: -> stories:` nesting — a wave closed before
+        this repeal — is read here too, via `_legacy_tickets`. Nothing is rewritten in the file:
+        the `W<N>` id stays a retired alias, and flattening happens once, in memory, on every run.
         """
         out = []
         for spec in self.spec_list:
-            for ticket in sorted(spec.get("tickets") or [], key=lambda t: str(t.get("id", ""))):
-                if isinstance(ticket, dict):
-                    out.append((spec, ticket))
-        return out
+            raw = spec.get("tickets")
+            if raw:
+                for ticket in raw:
+                    if isinstance(ticket, dict):
+                        out.append((spec, ticket))
+            else:
+                out += [(spec, t) for t in _legacy_tickets(spec)]
+        return sorted(out, key=lambda pair: str(pair[1].get("id", "")))
+
+
+def _legacy_tickets(spec: dict) -> list[dict]:
+    """Flatten a pre-rename spec's `epics: -> stories:` into ticket-shaped dicts.
+
+    A story's own id (`"1"`, `"1-1"`) only ever promised uniqueness inside one epic — the new
+    convention's `<spec-id>-<NN>` is global, and this method's own graphs (`no-cycles`,
+    `refs-resolve`) key tickets by id across every spec at once. Two waves both naming a story
+    `"1"` would otherwise collide into one node the moment both were read here. So every
+    synthesized id, and every `depends_on` reference to a sibling, is prefixed with the spec's
+    own id — `W3-1`, never bare `1`.
+
+    The old story key is `depends_on`; the new ticket key is `blocked_by`. No `component` field
+    existed on a story, so it is left unset here — a synthesized ticket does not count toward
+    `uc-scheduled`'s per-component `touched` set, which is correct: that check is about work not
+    yet scheduled, and a closed wave has nothing left to schedule.
+    """
+    sid = str(spec.get("id") or "")
+    out = []
+    for epic in spec.get("epics") or []:
+        if not isinstance(epic, dict):
+            continue
+        for story in epic.get("stories") or []:
+            if not isinstance(story, dict):
+                continue
+            ticket = {k: v for k, v in story.items() if k not in ("id", "depends_on")}
+            ticket["id"] = f"{sid}-{story.get('id')}"
+            ticket["blocked_by"] = [f"{sid}-{d}" for d in (story.get("depends_on") or [])]
+            # The story's OWN id is kept because the file on disk is named after it, not after the
+            # synthesized ticket id — see `_ticket_files`.
+            ticket["_legacy_story_id"] = str(story.get("id") or "")
+            out.append(ticket)
+    return out
 
 
 def listy(row: dict, key: str) -> list[str]:
@@ -710,8 +755,13 @@ def review_trace(c: Corpus, r: Result) -> None:  # was V13
                + ", ".join(sorted(stale_advisory)))
 
 
-def cap_tickets(c: Corpus) -> dict[str, list[dict]]:
-    """CAP -> ticket, traced through CAP -> FR -> UC -> ticket. No git, no timeline."""
+def cap_tickets(c: Corpus) -> dict[str, list[tuple[dict, dict]]]:
+    """CAP -> (spec, ticket), traced through CAP -> FR -> UC -> ticket. No git, no timeline.
+
+    The SPEC travels with its ticket because a ticket's status cannot be read without it — a closed
+    spec answers for its own tickets (`_ticket_status`). Dropping it here is what made `plan-dates`
+    raise `TypeError` instead of reporting, and a raise there takes the whole run with it.
+    """
     frs_of: dict[str, list[str]] = {}
     for fr in c.frs:
         frs_of.setdefault(str(fr.get("capability", "")), []).append(str(fr.get("id")))
@@ -719,11 +769,11 @@ def cap_tickets(c: Corpus) -> dict[str, list[dict]]:
     for uc in c.ucs:
         for fid in listy(uc, "satisfies"):
             ucs_of.setdefault(fid, []).append(str(uc.get("id")))
-    out: dict[str, list[dict]] = {}
+    out: dict[str, list[tuple[dict, dict]]] = {}
     for cap in c.caps:
         cid = str(cap.get("id"))
         wanted = {u for fid in frs_of.get(cid, []) for u in ucs_of.get(fid, [])}
-        out[cid] = [t for _, t in c.tickets()
+        out[cid] = [(spec, t) for spec, t in c.tickets()
                     if wanted & set(listy(t, "satisfies"))]
     return out
 
@@ -749,7 +799,7 @@ def plan_dates(c: Corpus, r: Result, asof: dt.date) -> None:  # was V14
             r.fail("plan-dates", cid, f"`planned_end` `{end}` is not an ISO date")
             continue
         items = by_cap.get(cid, [])
-        closed = bool(items) and all(_ticket_status(c, t) == "done" for t in items)
+        closed = bool(items) and all(_ticket_status(c, spec, t) == "done" for spec, t in items)
         if closed or due >= asof:
             continue
         late = (asof - due).days
@@ -808,19 +858,28 @@ def ticket_status_one_home(c: Corpus, r: Result) -> None:  # was V18
     shape belongs to the engine that writes them — one file per ticket, numbered from `01` in
     dependency order — and that number is the tail of the ticket id, which is why `SPEC-3-01`
     finds `issues/01-*.md`.
+
+    A CLOSED spec is exempt from the file being present: Phase 4 distillation is what closed it,
+    and distillation is what may have removed the file — "dies with it" is not a defect to report
+    back at G5. `status` copied into `specs.yaml` is still checked on every ticket regardless, and a
+    file that IS present but states no status is still a finding — both are about the record lying,
+    not about whether the record still exists.
     """
     for spec, ticket in c.tickets():
         sid = str(ticket.get("id"))
         if str(ticket.get("status") or "").strip():
             r.fail("ticket-status-one-home", sid, "carries a `status` in specs.yaml — status lives in the ticket "
                                "file, and two homes for one fact is how a registry starts lying")
+        closed = str(spec.get("status") or "").strip() == "closed"
         folder = _spec_folder(spec, ticket)
         if not folder:
-            r.fail("ticket-status-one-home", sid, "its spec does not name a `spec_folder`")
+            if not closed:
+                r.fail("ticket-status-one-home", sid, "its spec does not name a `spec_folder`")
             continue
         matches = _ticket_files(c, spec, ticket)
         if not matches:
-            r.fail("ticket-status-one-home", sid, f"has no ticket file under {folder}issues/")
+            if not closed:
+                r.fail("ticket-status-one-home", sid, f"has no ticket file under {folder}issues/")
             continue
         if _read_status(matches[0]) == "unknown":
             r.fail("ticket-status-one-home", sid, "ticket file states no status — neither a `**Status:**` line nor "
@@ -1431,7 +1490,8 @@ def custom_room_declared(c: Corpus, r: Result) -> None:  # was V27
 #
 # The two rendered trees are DELIBERATELY absent from this list. They are regenerated by this
 # script, so a product that declines to commit derived output is making a choice the method allows.
-COMMITTED_DIRS = (".constitution", ".control", ".what", ".how", "_bmad-output", ".work")
+COMMITTED_DIRS = (".constitution", ".control", ".what", ".how", "_bmad-output", ".work",
+                  ".scratch")
 
 # Probed inside each directory above, and named so that no honest pattern would ever mean to match
 # it. The distinction this draws is the entire point of the check: `.work/upstream/` or
@@ -1489,6 +1549,76 @@ def corpus_in_git(c: Corpus, r: Result) -> None:
                    f"so no clone has what is in it")
 
 
+ENGINE_HOMES = (".claude", ".agents", ".agent", ".cursor", ".codex")
+ENGINE_FLAGGED = ("to-spec", "to-tickets", "implement")
+ENGINE_SKILLS = ENGINE_FLAGGED + ("tdd", "code-review", "domain-modeling")
+FLAG_RE = re.compile(r"^disable-model-invocation\s*:\s*true", re.M)
+
+
+def _engine_files(root: Path, name: str) -> list[Path]:
+    """Every copy of one engine, de-duplicated by what it resolves to.
+
+    `npx skills add` can symlink one SKILL.md into several platform folders, so the same file is
+    reachable under `.claude/skills/` and `.agents/skills/` at once. Reporting it twice would make
+    one finding read as two.
+    """
+    seen: dict[Path, Path] = {}
+    for home in ENGINE_HOMES:
+        path = root / home / "skills" / name / "SKILL.md"
+        if not path.is_file():
+            continue
+        try:
+            seen.setdefault(path.resolve(), path)
+        except OSError:
+            seen.setdefault(path, path)
+    return list(seen.values())
+
+
+def _frontmatter(text: str) -> str:
+    m = FM.match(text)
+    return m.group(1) if m else ""
+
+
+def engines_invocable(c: Corpus, r: Result) -> None:
+    """The three flagged engines MUST be invocable in the repo's own copies.
+
+    `to-spec`, `to-tickets` and `implement` ship with `disable-model-invocation: true`. Nothing
+    outside the file lifts it — Claude Code's gate reads the frontmatter and consults no setting,
+    and `skillOverrides` only ever tightens — so `wdi-method` strips the key from the copies the
+    repo owns and writes one guard line in its place. That is what lets `wdi-build` invoke an engine
+    and `wdi-autopilot` run an iteration with nobody watching.
+
+    Two things put the key back, both routine: `npx skills update`, which restores the author's file
+    byte for byte, and a fresh `npx skills add`. Neither says anything, and the failure surfaces
+    hours later as an unattended run that stalled at Phase 2 with no explanation. This is the check
+    that turns that into a line of output.
+
+    Checked in the FRONTMATTER, not the file: the guard line is prose about the key, and matching
+    the whole file would fail on the fix rather than on the defect.
+
+    A repo with no engines at all is SKIPPED, not failed. `--skip-engines-check` is a supported
+    install — CI, and a repo that will never reach G5 — and a validator that is permanently red
+    there is a validator that gets ignored everywhere else.
+    """
+    installed = {name: _engine_files(c.root, name) for name in ENGINE_SKILLS}
+    if not any(installed.values()):
+        r.skip("engines-invocable", "no engines in this repo — G5 cannot run until they are "
+                            "installed (`npx skills@latest add mattpocock/skills`), and until then "
+                            "there is nothing here to check")
+        return
+    for name in ENGINE_SKILLS:
+        if not installed[name]:
+            r.fail("engines-invocable", name, "is not installed in this repo — G5 needs all six, and "
+                              "a user-level plugin does not count: its files are not this repo's to unlock")
+    for name in ENGINE_FLAGGED:
+        for path in installed[name]:
+            if FLAG_RE.search(_frontmatter(path.read_text(encoding="utf-8", errors="replace"))):
+                r.fail("engines-invocable", name,
+                       f"{path.relative_to(c.root).as_posix()} carries `disable-model-invocation` "
+                       f"again — no skill can invoke it, so wdi-build stops at Phase 2. `npx skills "
+                       f"update` restores it; `npx wdi-method engines --fix` strips it back out")
+
+
 def id_allocated_once(c: Corpus, r: Result) -> None:  # was V28
     """One id, one row — across every file the requirement registry is split into.
 
@@ -1523,7 +1653,7 @@ def run_checks(c: Corpus, asof: dt.date) -> Result:
     # no two copies left to compare.
     # V19 is REPEALED. It checked one line item — an `RTR-` file in .control/reports/ — and the
     # retrospective it archived was the only thing spec size `L` ever decided. Both went together.
-    for fn in (goal_has_fr, fr_has_uc, uc_scheduled, ticket_has_test, nfr_has_enforcer, refs_resolve, no_cycles, applied_dec_touches, locked_gate_passed, parallel_tickets_blocked, lc_registered, review_trace, chain_links, memlog_home, spec_names_release_prd, ticket_status_one_home, defect_root_cause, entity_one_writer, spec_after_g4, high_risk_named, mandate_accept, cites_resolve, container_built, custom_room_declared, corpus_in_git, id_allocated_once):
+    for fn in (goal_has_fr, fr_has_uc, uc_scheduled, ticket_has_test, nfr_has_enforcer, refs_resolve, no_cycles, applied_dec_touches, locked_gate_passed, parallel_tickets_blocked, lc_registered, review_trace, chain_links, memlog_home, spec_names_release_prd, ticket_status_one_home, defect_root_cause, entity_one_writer, spec_after_g4, high_risk_named, mandate_accept, cites_resolve, container_built, custom_room_declared, corpus_in_git, engines_invocable, id_allocated_once):
         fn(c, r)
     plan_dates(c, r, asof)
     return r
@@ -1547,16 +1677,24 @@ def _ticket_files(c: Corpus, spec: dict, ticket: dict) -> list[Path]:
 
     The full id is tried too, so a product that names its files after the whole id is not punished
     for a convention this method never demanded of it.
+
+    `issues/` arrived WITH the flat `tickets:` shape. A pre-rename wave's files are in
+    `{spec_folder}/stories/`, named by the story's own id (`1-2-<slug>.md`) — so a synthesized
+    legacy ticket is looked up by that id, in both folders, BEFORE the tail-of-the-id fallback:
+    the tail of `W1-1-2` is `2`, which would find nothing here and `1-*.md` for every story in the
+    wave elsewhere. Reporting those as missing reports the migration, not a defect.
     """
     folder = _spec_folder(spec, ticket)
     if not folder:
         return []
     tid = str(ticket.get("id") or "")
-    issues = c.root / folder / "issues"
-    for stem in (tid.rsplit("-", 1)[-1], tid):
+    story = str(ticket.get("_legacy_story_id") or "")
+    tries = [("stories", story), ("issues", story)] if story else []
+    tries += [("issues", tid.rsplit("-", 1)[-1]), ("issues", tid)]
+    for sub_dir, stem in tries:
         if not stem:
             continue
-        found = sorted(issues.glob(f"{stem}-*.md"))
+        found = sorted((c.root / folder / sub_dir).glob(f"{stem}-*.md"))
         if found:
             return found
     return []
@@ -1593,6 +1731,12 @@ def _read_status(path: Path) -> str:
 
 
 def _ticket_status(c: Corpus, spec: dict, ticket: dict) -> str:
+    """A closed spec's tickets are done — Phase 4 gates closure on RTM already being green, and its
+    ticket files may legitimately be gone by then (distillation says they die with the spec). Asking
+    the filesystem what closure already answered is how a correct history goes red on file cleanup.
+    """
+    if str(spec.get("status") or "").strip() == "closed":
+        return "done"
     matches = _ticket_files(c, spec, ticket)
     return _read_status(matches[0]) if matches else "unknown"
 
@@ -1712,7 +1856,7 @@ def gen_status(c: Corpus, rtm: dict, result: Result) -> dict:
         per_spec.append({"spec": wid, "status": spec.get("status"),
                          "tickets_done": done, "tickets_total": len(items),
                          "work_progress": _pct(done, len(items))})
-    applicable = 26  # goal-has-fr..id-allocated-once minus V10 and V19, both repealed
+    applicable = 27  # goal-has-fr..id-allocated-once minus V10 and V19, both repealed
     return {
         "promise_progress": _pct(green, len(counted)),
         "rtm_rows": {"green": green, "counted": len(counted),
