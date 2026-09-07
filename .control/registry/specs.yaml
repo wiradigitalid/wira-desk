@@ -474,7 +474,7 @@ specs:
     fr: []
     spec_reviewed:
       date: '2026-09-07'
-      sha: 'PENDING'
+      sha: 'e91c235'
       lenses: [edge-case-hunter]
     # Size S: no SPEC.md by Phase 1's own rule (the tickets are the contract at this size). A defect fix
     # plus doc reconciliation, not a promise change (prd-guide.md's wording-vs-promise split) -- no new
@@ -508,7 +508,7 @@ specs:
     fr: [FR-28, FR-29]
     spec_reviewed:
       date: '2026-09-07'
-      sha: 'PENDING'
+      sha: 'e91c235'
       lenses: [edge-case-hunter]
     # SPEC.md written directly, same reason as SPEC-2's note above (owner-run engines, no active mandate to
     # read-and-follow them under this session). G2 (PRD §3.15, CAP-16) through G4 (UC-11/UC-12, BR-9,
