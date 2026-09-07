@@ -8,19 +8,23 @@ date: 2026-09-07
 
 ## Resume
 
-- Iteration: 0 — mandate just accepted, loop not yet iterated.
-- Run branch: `autopilot/DEC-016`, HEAD `0d3eb1f` (cut from `main` after the preflight backfill). No PR
-  opened yet — opens as a draft at the first spec close, per the skill's own rule.
-- Stopped at: — (preflight just finished).
+- Iteration: 1 — dispatched the `SPEC-2-01` builder, waiting on it.
+- Run branch: `autopilot/DEC-016`, HEAD `43c6189` (mandate acceptance commit; no ticket work landed yet).
+  No PR opened yet — opens as a draft at the first spec close.
+- Stopped at: **Capacity.** `wdi-build` invoked for `SPEC-2-01`; Steps 1+2 (tdd, then implement) dispatched
+  as one headless `claude-byok` background job (`bafaw9fiy`, confirmed running via `TaskOutput`, not by
+  reading its log) in this worktree — this can run far longer than one iteration window.
 - Blocked: —
 - Parked: —
-- Next: `SPEC-2` is open with two tickets, `SPEC-2-01` `ready-for-agent` and `SPEC-2-02` already `done`
-  (preflight backfill). Start `wdi-build` on `SPEC-2-01`.
+- Next: check job `bafaw9fiy` via `TaskOutput(block:false)`. If it has exited: read the actual diff and
+  test output (never its own report) to judge Step 1/2, then dispatch the separate Step 3 review panel
+  (two axes, two agents, neither `bafaw9fiy`). If still running: re-check next firing.
 
 ## Decisions
 
 | When | Where | Decided | Instead of | Cost if wrong | Landed in |
 |---|---|---|---|---|---|
+| Iter 1 | `wdi-build` Step 1+2 dispatch | Dispatched `claude-byok` as a detached background CLI session (PowerShell `run_in_background`, dot-sourcing the owner's own `claude-byok` profile function, `-p` with a written builder brief) rather than a synchronous call | A synchronous/blocking invocation, which would stall this iteration for the whole build | None — `TaskOutput`/the harness recovers the session at any later point | `bafaw9fiy`, `.scratch/builder-brief-spec-2-01.md` |
 | Preflight | Engines: isolated worktree | Removed the stale, already-merged `DEC-012` worktree/branch (`../wira-desk-autopilot`, `autopilot/DEC-012`, PR #16 merged) and cut a fresh sibling worktree on `autopilot/DEC-016` from `main` at `0d3eb1f` | Reusing the old worktree/branch, which would have mixed an unrelated finished PR's history with this mandate | Re-cut if the path or branch is wrong | `git worktree remove`, `git branch -d`, `git worktree add` |
 | Preflight | Position: red validator | `validate.py` reported `uc-scheduled` RED (`UC-8`/`FR-25`, "Check for updates", shipped without a ticket). Backfilled `SPEC-2-02` against the live, already-passing code/tests (`cargo test --workspace update:: updatecheck::`, 17 passing + 2 pre-existing ignored live tests), same precedent as `SPEC-1`'s `W1-S4..S6`. Committed and pushed directly to `main` (`0d3eb1f`) as preflight remediation, before this mandate's own worktree/branch existed — not run-branch work | Starting the loop over a red corpus, or inventing new behavior to "finish" `UC-8` | If wrong, a superseding `DEC-` reopens `SPEC-2-02` and reverts the backfill | `0d3eb1f`, `specs.yaml`, `.scratch/spec-2-shortcuts-pane-fixes/issues/02-check-for-updates-from-the-about-pane.md` |
 | Preflight | Settings: `smoke_test` | `agent`, delegated specifically to the `claude-byok` CLI profile, never the coordinator or the human owner — same as `DEC-012`, per the owner's own instruction this turn | Guide default of `owner` | One setting changes via a superseding `DEC-` | `DEC-016` row, `decisions.yaml` |
