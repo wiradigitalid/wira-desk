@@ -518,4 +518,181 @@ pub(crate) mod tests {
             let _ = std::fs::remove_file(&save_path);
         });
     }
+
+    #[test]
+    fn description_renders_as_a_tooltip_not_a_visible_line() {
+        run_on_ui_thread(|| {
+            let (window, _model, save_path) = setup_shortcuts_window();
+
+            // Scroll to the top so Switcher row is at the top
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::PointerScrolled {
+                    position: slint::LogicalPosition::new(300.0, 300.0),
+                    delta_x: 0.0,
+                    delta_y: 1200.0,
+                });
+
+            let desc = ShortcutField::Switcher.description();
+
+            // 1. When pointer and focus are elsewhere, the description is NOT rendered in the tree
+            let initial_desc = ElementHandle::find_by_accessible_label(&window, desc).next();
+            assert!(
+                initial_desc.is_none(),
+                "Description must not be rendered as an always-visible line when pointer and focus are elsewhere"
+            );
+
+            // 2. Reachable by keyboard focus: focusing the title block surfaces the description tooltip
+            let mut title_blocks =
+                ElementHandle::find_by_accessible_label(&window, "Shortcut description");
+            let switcher_title = title_blocks
+                .next()
+                .expect("Shortcut description block found");
+            switcher_title.invoke_accessible_default_action();
+
+            let focused_desc = ElementHandle::find_by_accessible_label(&window, desc).next();
+            assert!(
+                focused_desc.is_some(),
+                "Description must surface as a tooltip on keyboard focus"
+            );
+
+            // 3. Clear focus away: description ceases to be rendered
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::PointerMoved {
+                    position: slint::LogicalPosition::new(0.0, 0.0),
+                });
+            // Focus another control (e.g. Save button)
+            let mut save_btns = ElementHandle::find_by_accessible_label(&window, "Save Changes");
+            if let Some(save_btn) = save_btns.next() {
+                save_btn.invoke_accessible_default_action();
+            }
+
+            // 4. Reachable by mouse hover: hovering the title block surfaces the tooltip
+            let title_pos = switcher_title.absolute_position();
+            let title_sz = switcher_title.size();
+            let hover_pos = slint::LogicalPosition::new(
+                title_pos.x + title_sz.width / 2.0,
+                title_pos.y + title_sz.height / 2.0,
+            );
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::PointerMoved {
+                    position: hover_pos,
+                });
+
+            let hovered_desc = ElementHandle::find_by_accessible_label(&window, desc).next();
+            assert!(
+                hovered_desc.is_some(),
+                "Description must surface as a tooltip on mouse hover"
+            );
+
+            // 5. Moving pointer away hides the tooltip again
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::PointerMoved {
+                    position: slint::LogicalPosition::new(0.0, 0.0),
+                });
+            let cleared_desc = ElementHandle::find_by_accessible_label(&window, desc).next();
+            assert!(
+                cleared_desc.is_none(),
+                "Description must cease rendering when pointer leaves the title block"
+            );
+
+            // 6. Verify row height determinism across rows with differing description text lengths
+            let row_titles: Vec<_> =
+                ElementHandle::find_by_accessible_label(&window, "Shortcut description").collect();
+            assert!(
+                row_titles.len() >= 2,
+                "At least two rows visible in first group"
+            );
+            let h0 = row_titles[0].size().height;
+            let h1 = row_titles[1].size().height;
+            assert_eq!(
+                h0, h1,
+                "Row heights must be deterministic regardless of description length: {h0} vs {h1}"
+            );
+
+            let _ = std::fs::remove_file(&save_path);
+        });
+    }
+
+    #[test]
+    fn control_cluster_and_toggle_share_one_vertical_centre() {
+        run_on_ui_thread(|| {
+            let (window, _model, save_path) = setup_shortcuts_window();
+
+            // Scroll to the top so Switcher row is in view
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::PointerScrolled {
+                    position: slint::LogicalPosition::new(300.0, 300.0),
+                    delta_x: 0.0,
+                    delta_y: 1200.0,
+                });
+
+            // Find keycap and toggle for Switcher
+            let mut keycaps = ElementHandle::find_by_accessible_label(&window, "Shortcut keycap");
+            let keycap = keycaps.next().expect("First row keycap found");
+
+            let label = format!("Enable {}", ShortcutField::Switcher.label());
+            let mut toggles = ElementHandle::find_by_accessible_label(&window, &label);
+            let toggle = toggles.next().expect("First row toggle switch found");
+
+            let keycap_pos = keycap.absolute_position();
+            let keycap_sz = keycap.size();
+            let keycap_centre_y = keycap_pos.y + keycap_sz.height / 2.0;
+
+            let toggle_pos = toggle.absolute_position();
+            let toggle_sz = toggle.size();
+            let toggle_centre_y = toggle_pos.y + toggle_sz.height / 2.0;
+
+            eprintln!(
+                "MEASUREMENT: keycap y={}, h={}, centre_y={}; toggle y={}, h={}, centre_y={}; diff={}",
+                keycap_pos.y, keycap_sz.height, keycap_centre_y,
+                toggle_pos.y, toggle_sz.height, toggle_centre_y,
+                (keycap_centre_y - toggle_centre_y).abs()
+            );
+
+            // Stated tolerance: within 1.0 logical pixel
+            const TOLERANCE: f32 = 1.0;
+            assert!(
+                (keycap_centre_y - toggle_centre_y).abs() <= TOLERANCE,
+                "Keycap centre ({keycap_centre_y}) and toggle centre ({toggle_centre_y}) must share one vertical centre within {TOLERANCE}px, but differed by {}px",
+                (keycap_centre_y - toggle_centre_y).abs()
+            );
+
+            // Also test a row with percent control (SnapPercentLeft) to verify alignment holds
+            // when bounded numeric stepper controls are present in the cluster.
+            // Scroll down so Snap to custom group is in view.
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::PointerScrolled {
+                    position: slint::LogicalPosition::new(300.0, 300.0),
+                    delta_x: 0.0,
+                    delta_y: -600.0,
+                });
+
+            let snap_label = format!("Enable {}", ShortcutField::SnapPercentLeft.label());
+            let mut snap_toggles = ElementHandle::find_by_accessible_label(&window, &snap_label);
+            let snap_toggle = snap_toggles.next().expect("Snap toggle switch found");
+            let snap_toggle_pos = snap_toggle.absolute_position();
+            let snap_toggle_sz = snap_toggle.size();
+            let snap_toggle_centre_y = snap_toggle_pos.y + snap_toggle_sz.height / 2.0;
+
+            let snap_keycap = ElementHandle::find_by_accessible_label(&window, "Shortcut keycap")
+                .find(|k| (k.absolute_position().y - snap_toggle_pos.y).abs() < 10.0)
+                .expect("SnapPercentLeft keycap found");
+            let snap_kc_pos = snap_keycap.absolute_position();
+            let snap_kc_sz = snap_keycap.size();
+            let snap_kc_centre_y = snap_kc_pos.y + snap_kc_sz.height / 2.0;
+
+            assert!(
+                (snap_kc_centre_y - snap_toggle_centre_y).abs() <= TOLERANCE,
+                "Percent row keycap centre ({snap_kc_centre_y}) and toggle centre ({snap_toggle_centre_y}) must share vertical centre within {TOLERANCE}px"
+            );
+
+            let _ = std::fs::remove_file(&save_path);
+        });
+    }
 }

@@ -102,7 +102,7 @@ pub struct ControlSemantics {
     pub description: &'static str,
 }
 
-/// The declared controls' semantics, in declaration order — currently all twenty of them.
+/// The declared controls' semantics, in declaration order — currently all twenty-seven of them.
 ///
 /// The register tests below iterate THIS rather than each hand-keeping its own array. They used
 /// to, and the two arrays had drifted apart and away from the declarations: of the twenty
@@ -145,6 +145,13 @@ pub const ALL: &[ControlSemantics] = &[
     VM_BYPASS_PROCESS_LIST,
     VM_BYPASS_CLASS_LIST,
     SHORTCUT_CONFLICT_SWAP,
+    GROUP_HEADING_SWITCHING,
+    GROUP_HEADING_SNAP_HALF,
+    GROUP_HEADING_SNAP_THIRD,
+    GROUP_HEADING_SNAP_CUSTOM,
+    GROUP_HEADING_RESIZE_ARRANGE,
+    SHORTCUT_KEYCAP,
+    SHORTCUT_ROW_DESCRIPTION,
 ];
 
 pub const TOGGLE_AUTO_START: ControlSemantics = ControlSemantics {
@@ -245,6 +252,41 @@ pub const VM_BYPASS_CLASS_LIST: ControlSemantics = ControlSemantics {
 pub const SHORTCUT_CONFLICT_SWAP: ControlSemantics = ControlSemantics {
     name: "Swap conflicting shortcuts",
     description: "Swaps shortcut keys between the two conflicting actions.",
+};
+
+pub const GROUP_HEADING_SWITCHING: ControlSemantics = ControlSemantics {
+    name: "Switching",
+    description: "Group of shortcuts for switching between windows.",
+};
+
+pub const GROUP_HEADING_SNAP_HALF: ControlSemantics = ControlSemantics {
+    name: "Snap to half",
+    description: "Group of shortcuts for snapping windows to half-screen.",
+};
+
+pub const GROUP_HEADING_SNAP_THIRD: ControlSemantics = ControlSemantics {
+    name: "Snap to third",
+    description: "Group of shortcuts for snapping windows to screen thirds.",
+};
+
+pub const GROUP_HEADING_SNAP_CUSTOM: ControlSemantics = ControlSemantics {
+    name: "Snap to custom",
+    description: "Group of shortcuts for snapping windows to custom percentage positions.",
+};
+
+pub const GROUP_HEADING_RESIZE_ARRANGE: ControlSemantics = ControlSemantics {
+    name: "Resize, move & arrange",
+    description: "Group of shortcuts for maximizing, moving across monitors, and stacking.",
+};
+
+pub const SHORTCUT_KEYCAP: ControlSemantics = ControlSemantics {
+    name: "Shortcut keycap",
+    description: "Button displaying the current shortcut chord; click to record a new shortcut.",
+};
+
+pub const SHORTCUT_ROW_DESCRIPTION: ControlSemantics = ControlSemantics {
+    name: "Shortcut description",
+    description: "Focusable summary providing the full description of this shortcut action.",
 };
 
 pub const LISTENING_ANNOUNCEMENT: &str = "Listening for a key combination. Press Escape to cancel.";

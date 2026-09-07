@@ -10,6 +10,8 @@ mod update;
 
 #[cfg(test)]
 mod shortcut_row_slint_snapshot;
+#[cfg(test)]
+mod shortcuts_pane_slint_snapshot;
 
 slint::include_modules!();
 

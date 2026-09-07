@@ -9,6 +9,7 @@ import { ToggleSwitch } from "toggle_switch.slint";
 // over the divider into the next row. Keeping each text to one line makes the row height
 // deterministic instead of dependent on a measurement that is taken before wrapping.
 export component ShortcutRow inherits Rectangle {
+    min-height: 50px;
     in property <string> title: "Shortcut";
     in property <string> description: "Description text";
     in property <string> current_shortcut: "Win + `";
@@ -66,48 +67,52 @@ export component ShortcutRow inherits Rectangle {
         spacing: 12px;
         alignment: space-between;
 
-        // Left Content: Title + Subtext + Clean Dedicated Conflict Notice Line
-        VerticalLayout {
-            spacing: 3px;
-            alignment: center;
+        // Left Content: Title + Clean Dedicated Conflict Notice Line (Description is now a hover/focus tooltip)
+        title_block := FocusScope {
             horizontal-stretch: 1;
-
-            Text {
-                text: root.title;
-                font-family: Typography.font_family;
-                font-size: Typography.size_subheading;
-                font-weight: 600;
-                color: Palette.text_primary;
+            accessible-role: text;
+            accessible-label: "Shortcut description";
+            accessible-description: root.description;
+            accessible-action-default => {
+                self.focus();
             }
 
-            Text {
-                text: root.description;
-                font-family: Typography.font_family;
-                font-size: Typography.size_caption;
-                color: Palette.text_secondary;
-                // One line, always. See the note on this component's height above.
-                wrap: no-wrap;
-                overflow: elide;
+            title_touch := TouchArea {
+                width: 100%;
+                height: 100%;
             }
 
-            if root.has_conflict : Text {
-                text: "⚠ Conflicts with " + root.conflict_name;
-                font-family: Typography.font_family;
-                font-size: 11.5px;
-                font-weight: 600;
-                color: Palette.signal_warning;
-                wrap: no-wrap;
-                overflow: elide;
-            }
+            VerticalLayout {
+                spacing: 3px;
+                alignment: center;
 
-            if !root.enabled : Text {
-                text: "Disabled";
-                font-family: Typography.font_family;
-                font-size: 11.5px;
-                font-weight: 600;
-                color: Palette.text_tertiary;
-                wrap: no-wrap;
-                overflow: elide;
+                Text {
+                    text: root.title;
+                    font-family: Typography.font_family;
+                    font-size: Typography.size_subheading;
+                    font-weight: 600;
+                    color: Palette.text_primary;
+                }
+
+                if root.has_conflict : Text {
+                    text: "⚠ Conflicts with " + root.conflict_name;
+                    font-family: Typography.font_family;
+                    font-size: 11.5px;
+                    font-weight: 600;
+                    color: Palette.signal_warning;
+                    wrap: no-wrap;
+                    overflow: elide;
+                }
+
+                if !root.enabled : Text {
+                    text: "Disabled";
+                    font-family: Typography.font_family;
+                    font-size: 11.5px;
+                    font-weight: 600;
+                    color: Palette.text_tertiary;
+                    wrap: no-wrap;
+                    overflow: elide;
+                }
             }
         }
 
@@ -329,6 +334,12 @@ export component ShortcutRow inherits Rectangle {
                 border-width: 1px;
                 border-color: is_listening ? Palette.accent_primary : (has_conflict ? Palette.signal_warning : Palette.stroke_card);
 
+                accessible-role: button;
+                accessible-label: "Shortcut keycap";
+                accessible-action-default => {
+                    root.capture_clicked();
+                }
+
                 // A drawn dot, not an emoji. Neither loaded font carries U+1F534, and this is
                 // the state a user reaches every time they rebind a chord — the worst possible
                 // place for a tofu box.
@@ -356,13 +367,45 @@ export component ShortcutRow inherits Rectangle {
                 }
             }
 
-            ToggleSwitch {
-                checked: root.enabled;
-                accessible-label: "Enable " + root.title;
-                toggled(val) => { root.toggle_enabled(val); }
+            VerticalLayout {
+                alignment: center;
+                ToggleSwitch {
+                    checked: root.enabled;
+                    accessible-label: "Enable " + root.title;
+                    toggled(val) => { root.toggle_enabled(val); }
+                }
             }
         }
 
+        }
+    }
+
+    // Floating tooltip carrying full un-truncated description on hover/focus of title block
+    if (title_touch.has-hover || title_block.has-focus) && root.description != "" : Rectangle {
+        x: 16px;
+        y: root.height + 2px;
+        z: 100;
+        background: Palette.bg_card;
+        border-width: 1px;
+        border-color: Palette.stroke_card;
+        border-radius: 4px;
+        width: min(320px, tooltip_layout.preferred-width);
+
+        tooltip_layout := HorizontalLayout {
+            padding-left: 8px;
+            padding-right: 8px;
+            padding-top: 4px;
+            padding-bottom: 4px;
+
+            Text {
+                text: root.description;
+                font-family: Typography.font_family;
+                font-size: Typography.size_caption;
+                color: Palette.text_primary;
+                wrap: word-wrap;
+                accessible-role: text;
+                accessible-label: root.description;
+            }
         }
     }
 }

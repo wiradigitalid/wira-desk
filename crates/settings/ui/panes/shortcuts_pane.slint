@@ -43,6 +43,8 @@ component ShortcutGroup inherits VerticalLayout {
 
     Text {
         text: root.heading;
+        accessible-role: text;
+        accessible-label: root.heading;
         font-family: Typography.font_family;
         font-size: Typography.size_caption;
         font-weight: 600;
