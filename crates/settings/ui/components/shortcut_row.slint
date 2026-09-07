@@ -20,7 +20,6 @@ import { ToggleSwitch } from "toggle_switch.slint";
 // tree is (`description_renders_as_a_tooltip_not_a_visible_line`), and the overflow it used to
 // cause is a hand-verified smoke-test item.
 export component ShortcutRow inherits Rectangle {
-    min-height: 50px;
     in property <string> title: "Shortcut";
     in property <string> description: "Description text";
     in property <string> current_shortcut: "Win + `";
@@ -36,6 +35,8 @@ export component ShortcutRow inherits Rectangle {
     in property <string> accessible_label_field: "";
     in property <string> accessible_label_input: "";
     in property <string> accessible_label_increase: "";
+    in property <string> accessible_label_keycap: "";
+    in property <string> accessible_label_description: "";
     in-out property <string> typed_text: "\{root.percent}";
     in property <bool> enabled: true;
 
@@ -82,11 +83,8 @@ export component ShortcutRow inherits Rectangle {
         title_block := FocusScope {
             horizontal-stretch: 1;
             accessible-role: text;
-            accessible-label: "Shortcut description";
+            accessible-label: root.accessible_label_description;
             accessible-description: root.description;
-            accessible-action-default => {
-                self.focus();
-            }
 
             title_touch := TouchArea {
                 width: 100%;
@@ -349,7 +347,7 @@ export component ShortcutRow inherits Rectangle {
                 border-color: is_listening ? Palette.accent_primary : (has_conflict ? Palette.signal_warning : Palette.stroke_card);
 
                 accessible-role: button;
-                accessible-label: "Shortcut keycap";
+                accessible-label: root.accessible_label_keycap;
                 accessible-action-default => {
                     root.capture_clicked();
                 }

@@ -148,6 +148,9 @@ export component MainWindow inherits Window {
 
     key_handler := FocusScope {
         key-pressed(event) => {
+            if event.text == Key.Tab || event.text == Key.Backtab {
+                return reject;
+            }
             root.key_pressed_event(
                 event.text,
                 event.modifiers.control,
@@ -158,6 +161,9 @@ export component MainWindow inherits Window {
             accept
         }
         key-released(event) => {
+            if event.text == Key.Tab || event.text == Key.Backtab {
+                return reject;
+            }
             root.key_released_event(
                 event.text,
                 event.modifiers.control,

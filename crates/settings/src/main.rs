@@ -207,6 +207,12 @@ pub(crate) fn sync_model_to_ui(window: &MainWindow, model: &SettingsModel) {
                 accessible_label_field: slint::SharedString::from(label_field),
                 accessible_label_input: slint::SharedString::from(label_input),
                 accessible_label_increase: slint::SharedString::from(label_increase),
+                accessible_label_keycap: slint::SharedString::from(theme::shortcut_keycap_label(
+                    field.label(),
+                )),
+                accessible_label_description: slint::SharedString::from(
+                    theme::shortcut_description_label(field.label()),
+                ),
                 enabled: field.is_enabled(&model.draft),
             }
         };

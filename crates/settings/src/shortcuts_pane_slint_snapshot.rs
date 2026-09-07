@@ -113,17 +113,19 @@ pub(crate) mod tests {
             scroll_by(&window, SCROLL_PAST_TOP);
             for delta_y in std::iter::once(0.0).chain(SCROLL_DOWN_LADDER) {
                 scroll_by(&window, delta_y);
-                for keycap in
-                    ElementHandle::find_by_accessible_label(&window, theme::SHORTCUT_KEYCAP.name)
-                {
-                    let right = keycap.absolute_position().x + keycap.size().width;
-                    assert!(
-                        right <= window_width,
-                        "Keycap right edge ({right}) exceeds window width ({window_width})"
-                    );
-                    widest = widest.max(right);
-                    if !keycap_edges.iter().any(|e| (e - right).abs() < 0.5) {
-                        keycap_edges.push(right);
+                for field in ShortcutField::ALL {
+                    let keycap_label = theme::shortcut_keycap_label(field.label());
+                    for keycap in ElementHandle::find_by_accessible_label(&window, &keycap_label) {
+                        let right = keycap.absolute_position().x + keycap.size().width;
+                        assert!(
+                            right <= window_width,
+                            "Keycap for '{}' right edge ({right}) exceeds window width ({window_width})",
+                            field.label()
+                        );
+                        widest = widest.max(right);
+                        if !keycap_edges.iter().any(|e| (e - right).abs() < 0.5) {
+                            keycap_edges.push(right);
+                        }
                     }
                 }
                 for field in ShortcutField::ALL {

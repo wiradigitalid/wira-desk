@@ -3,6 +3,7 @@
 #[cfg(test)]
 pub(crate) mod tests {
     use crate::app::{Pane, SaveFeedback, SettingsModel, ShortcutField};
+    use crate::theme;
     use crate::{bind_callbacks, sync_model_to_ui, MainWindow};
     use i_slint_backend_testing::{ElementHandle, TestingBackend, TestingBackendOptions};
     use shared::Config;
@@ -542,13 +543,12 @@ pub(crate) mod tests {
                 "Description must not be rendered as an always-visible line when pointer and focus are elsewhere"
             );
 
-            // 2. Reachable by keyboard focus: focusing the title block surfaces the description tooltip
-            let mut title_blocks =
-                ElementHandle::find_by_accessible_label(&window, "Shortcut description");
-            let switcher_title = title_blocks
-                .next()
-                .expect("Shortcut description block found");
-            switcher_title.invoke_accessible_default_action();
+            // 2. Reachable by keyboard focus: Tab navigation reaches the title block and surfaces tooltip
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::KeyPressed {
+                    text: slint::platform::Key::Tab.into(),
+                });
 
             let focused_desc = ElementHandle::find_by_accessible_label(&window, desc).next();
             assert!(
@@ -556,19 +556,31 @@ pub(crate) mod tests {
                 "Description must surface as a tooltip on keyboard focus"
             );
 
-            // 3. Clear focus away: description ceases to be rendered
+            // 3. Clear focus away via keyboard Tab: advancing focus to next row hides description
             window
                 .window()
                 .dispatch_event(slint::platform::WindowEvent::PointerMoved {
                     position: slint::LogicalPosition::new(0.0, 0.0),
                 });
-            // Focus another control (e.g. Save button)
-            let mut save_btns = ElementHandle::find_by_accessible_label(&window, "Save Changes");
-            if let Some(save_btn) = save_btns.next() {
-                save_btn.invoke_accessible_default_action();
-            }
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::KeyPressed {
+                    text: slint::platform::Key::Tab.into(),
+                });
+            let cleared_desc = ElementHandle::find_by_accessible_label(&window, desc).next();
+            assert!(
+                cleared_desc.is_none(),
+                "Description must cease rendering when focus advances away from the title block"
+            );
 
             // 4. Reachable by mouse hover: hovering the title block surfaces the tooltip
+            let switcher_desc_label =
+                theme::shortcut_description_label(ShortcutField::Switcher.label());
+            let mut title_blocks =
+                ElementHandle::find_by_accessible_label(&window, &switcher_desc_label);
+            let switcher_title = title_blocks
+                .next()
+                .expect("Shortcut description block found");
             let title_pos = switcher_title.absolute_position();
             let title_sz = switcher_title.size();
             let hover_pos = slint::LogicalPosition::new(
@@ -626,8 +638,16 @@ pub(crate) mod tests {
                 .y
         };
         let (top, bottom) = (heading_y(group), heading_y(next_group));
-        let mut rows: Vec<f32> = ElementHandle::find_by_accessible_label(window, "Shortcut keycap")
-            .map(|k| k.absolute_position().y)
+        let mut rows: Vec<f32> = ShortcutField::ALL
+            .into_iter()
+            .filter(|f| f.group() == group)
+            .filter_map(|f| {
+                let label = theme::shortcut_keycap_label(f.label());
+                let y = ElementHandle::find_by_accessible_label(window, &label)
+                    .next()
+                    .map(|k| k.absolute_position().y);
+                y
+            })
             .filter(|y| *y > top && *y < bottom)
             .collect();
         rows.sort_by(|a, b| a.partial_cmp(b).expect("keycap positions are comparable"));
@@ -720,7 +740,8 @@ pub(crate) mod tests {
                 });
 
             // Find keycap and toggle for Switcher
-            let mut keycaps = ElementHandle::find_by_accessible_label(&window, "Shortcut keycap");
+            let switcher_kc_label = theme::shortcut_keycap_label(ShortcutField::Switcher.label());
+            let mut keycaps = ElementHandle::find_by_accessible_label(&window, &switcher_kc_label);
             let keycap = keycaps.next().expect("First row keycap found");
 
             let label = format!("Enable {}", ShortcutField::Switcher.label());
@@ -768,7 +789,9 @@ pub(crate) mod tests {
             let snap_toggle_sz = snap_toggle.size();
             let snap_toggle_centre_y = snap_toggle_pos.y + snap_toggle_sz.height / 2.0;
 
-            let snap_keycap = ElementHandle::find_by_accessible_label(&window, "Shortcut keycap")
+            let snap_kc_label =
+                theme::shortcut_keycap_label(ShortcutField::SnapPercentLeft.label());
+            let snap_keycap = ElementHandle::find_by_accessible_label(&window, &snap_kc_label)
                 .find(|k| (k.absolute_position().y - snap_toggle_pos.y).abs() < 10.0)
                 .expect("SnapPercentLeft keycap found");
             let snap_kc_pos = snap_keycap.absolute_position();
