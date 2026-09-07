@@ -54,3 +54,34 @@ the string to match what every other document already says.
 - [ ] `layout_pane.slint`'s in-pane title reads `"Layout"`, matching `Pane::label()`'s tab name and the
       reasoning already documented there and in `EXPERIENCE.md`/`DESIGN.md`.
 - [ ] Full test suite green once, not only this ticket's own tests.
+
+## Return trip 1/2 — panel must-fix, `commit fa3dddc`
+
+**Cross-row typed-value loss when departure is triggered by a *different* row's own commit path.**
+`crates/settings/src/main.rs:397-408` (`on_percent_changed`) unconditionally clears the shared
+`uncommitted_percent` slot (`*uncommitted_pct.borrow_mut() = None;`, line 398) *before* checking whether
+the value it is about to commit belongs to the field the slot was holding. The slot
+(`main.rs:291-292`) is one `Option<(ShortcutField, u32)>` for the whole Shortcuts pane, not per-row.
+
+Reproduction: type `70` into row A's percent field without blurring it (`TouchArea`s never steal keyboard
+focus — that is exactly why steppers/Save/Revert cannot blur the field on their own). Click `+`/`-` on a
+*different* row B. Row B's own commit path fires `on_percent_changed(idx=B, ...)`, which wipes the slot
+holding A's pending `(A, 70)` without ever applying it, then `sync_model_to_ui` rebuilds the row list from
+the unchanged model, silently reverting A's field. Clicking Save afterward saves A's *old* value. Every
+other departure handler in this file (`on_start_capture`, `on_swap_shortcuts`, `on_pane_selected`,
+`main.rs:317-323`, `359-373`, `375-391`) correctly does
+`if let Some((field, val)) = uncommitted_pct.borrow_mut().take() { m.set_percent(field, val); }` —
+take-and-apply. `on_percent_changed` is the one path that discards instead.
+
+- [ ] `on_percent_changed` drains the shared `uncommitted_percent` slot the same way its siblings do —
+      if the slot holds a *different* field's pending value, that value is applied to the model (not
+      discarded) before the just-changed field's own new value is applied. A new test reproduces the
+      cross-row scenario above (type in row A, trigger a stepper/commit on row B, assert row A's typed
+      value survived) and must fail before the fix and pass after.
+
+**Bundled while in this file (Standards-axis follow-up, not itself a return-trip trigger but cheap to fix
+alongside):** `crates/shared/src/constants.rs` adds `DEFAULT_STACK_WIDTH_PERCENT` but nothing references
+it — `crates/shared/src/config.rs:172`'s `LayoutConfig::default()` still hardcodes `stack_width_percent: 50`
+as a bare literal, unlike its sibling `SnappingConfig::default()` three lines above
+(`config.rs:160-163`), which correctly uses `crate::constants::DEFAULT_SNAP_PERCENT`. Wire the new
+constant into that default so it matches the established pattern in the same file.
