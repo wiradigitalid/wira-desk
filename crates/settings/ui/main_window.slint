@@ -127,9 +127,11 @@ export component MainWindow inherits Window {
     callback start_capture(int);
     callback swap_shortcuts(int);
     callback percent_changed(int, int);
+    callback editing_percent_changed(int, int);
 
     callback stack_toggled(bool);
     callback width_changed(int);
+    callback editing_width_changed(int);
 
     callback save_clicked();
     callback revert_clicked();
@@ -273,6 +275,7 @@ export component MainWindow inherits Window {
                                 start_capture(idx) => { root.start_capture(idx); }
                                 swap_shortcuts(idx) => { root.swap_shortcuts(idx); }
                                 percent_changed(idx, val) => { root.percent_changed(idx, val); }
+                                editing_percent_changed(idx, val) => { root.editing_percent_changed(idx, val); }
                             }
 
                             if root.current_pane == 2 : LayoutPane {
@@ -280,6 +283,7 @@ export component MainWindow inherits Window {
                                 stack_width_percent <=> root.stack_width_percent;
                                 stack_toggled(val) => { root.stack_toggled(val); }
                                 width_changed(val) => { root.width_changed(val); }
+                                editing_width_changed(val) => { root.editing_width_changed(val); }
                             }
 
                             if root.current_pane == 3 : VmExceptionsPane {
@@ -428,7 +432,9 @@ export component MainWindow inherits Window {
 
                             revert_touch := TouchArea {
                                 enabled: root.is_dirty;
-                                clicked => { root.revert_clicked(); }
+                                clicked => {
+                                    root.revert_clicked();
+                                }
                             }
                         }
 
@@ -438,6 +444,12 @@ export component MainWindow inherits Window {
                             y: (parent.height - 32px) / 2;
                             border-radius: 6px;
                             background: save_touch.has_hover ? Palette.accent_hover : Palette.accent_primary;
+
+                            accessible-role: button;
+                            accessible-label: "Save Changes";
+                            accessible-action-default => {
+                                root.save_clicked();
+                            }
 
                             Text {
                                 text: "Save Changes";
@@ -450,7 +462,9 @@ export component MainWindow inherits Window {
                             }
 
                             save_touch := TouchArea {
-                                clicked => { root.save_clicked(); }
+                                clicked => {
+                                    root.save_clicked();
+                                }
                             }
                         }
                     }

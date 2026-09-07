@@ -8,6 +8,11 @@ mod sha256;
 mod theme;
 mod update;
 
+#[cfg(test)]
+mod layout_pane_slint_snapshot;
+#[cfg(test)]
+mod shortcut_row_slint_snapshot;
+
 slint::include_modules!();
 
 use i_slint_backend_winit::WinitWindowAccessor;
@@ -110,7 +115,7 @@ fn is_win_key_down() -> bool {
     }
 }
 
-fn sync_model_to_ui(window: &MainWindow, model: &SettingsModel) {
+pub(crate) fn sync_model_to_ui(window: &MainWindow, model: &SettingsModel) {
     // Mode
     let is_onboarding = model.onboarding.is_some();
     window.set_is_onboarding(is_onboarding);
@@ -278,6 +283,195 @@ fn sync_model_to_ui(window: &MainWindow, model: &SettingsModel) {
     }
 }
 
+pub(crate) fn bind_callbacks(
+    main_window: &MainWindow,
+    model: &Rc<std::cell::RefCell<SettingsModel>>,
+    custom_save_path: Option<std::path::PathBuf>,
+) {
+    let uncommitted_percent: Rc<std::cell::RefCell<Option<(ShortcutField, u32)>>> =
+        Rc::new(std::cell::RefCell::new(None));
+    let uncommitted_width: Rc<std::cell::RefCell<Option<u32>>> =
+        Rc::new(std::cell::RefCell::new(None));
+
+    {
+        let uncommitted = Rc::clone(&uncommitted_percent);
+        main_window.on_editing_percent_changed(move |idx, val| {
+            let field = ShortcutField::from_index(idx);
+            if field.has_percent() {
+                let uval = if val < 0 { 0 } else { val as u32 };
+                *uncommitted.borrow_mut() = Some((field, uval));
+            }
+        });
+    }
+    {
+        let uncommitted = Rc::clone(&uncommitted_width);
+        main_window.on_editing_width_changed(move |val| {
+            let uval = if val < 0 { 0 } else { val as u32 };
+            *uncommitted.borrow_mut() = Some(uval);
+        });
+    }
+
+    // Callbacks: Navigation & General
+    {
+        let model_rc = Rc::clone(model);
+        let window_weak = main_window.as_weak();
+        let uncommitted_pct = Rc::clone(&uncommitted_percent);
+        let uncommitted_w = Rc::clone(&uncommitted_width);
+        main_window.on_pane_selected(move |idx| {
+            let mut m = model_rc.borrow_mut();
+            if let Some((field, val)) = uncommitted_pct.borrow_mut().take() {
+                m.set_percent(field, val);
+            }
+            if let Some(val) = uncommitted_w.borrow_mut().take() {
+                m.draft.layout.stack_width_percent = val;
+            }
+            let pane = match idx {
+                0 => Pane::General,
+                1 => Pane::Shortcuts,
+                2 => Pane::Layout,
+                3 => Pane::VmExceptions,
+                4 => Pane::About,
+                _ => Pane::General,
+            };
+            m.set_pane(pane);
+            if let Some(w) = window_weak.upgrade() {
+                sync_model_to_ui(&w, &m);
+            }
+        });
+    }
+    {
+        let model_rc = Rc::clone(model);
+        let window_weak = main_window.as_weak();
+        main_window.on_auto_start_toggled(move |val| {
+            let mut m = model_rc.borrow_mut();
+            m.draft.general.auto_start = val;
+            if let Some(w) = window_weak.upgrade() {
+                sync_model_to_ui(&w, &m);
+            }
+        });
+    }
+
+    // Callbacks: Shortcuts
+    {
+        let model_rc = Rc::clone(model);
+        let window_weak = main_window.as_weak();
+        let uncommitted_pct = Rc::clone(&uncommitted_percent);
+        main_window.on_start_capture(move |idx| {
+            let mut m = model_rc.borrow_mut();
+            if let Some((field, val)) = uncommitted_pct.borrow_mut().take() {
+                m.set_percent(field, val);
+            }
+            let field = ShortcutField::from_index(idx);
+            if m.capture.is_listening_for(field) {
+                m.cancel_capture();
+            } else {
+                m.begin_capture(field);
+            }
+            if let Some(w) = window_weak.upgrade() {
+                sync_model_to_ui(&w, &m);
+            }
+        });
+    }
+    {
+        let model_rc = Rc::clone(model);
+        let window_weak = main_window.as_weak();
+        let uncommitted_pct = Rc::clone(&uncommitted_percent);
+        main_window.on_swap_shortcuts(move |idx| {
+            let mut m = model_rc.borrow_mut();
+            if let Some((field, val)) = uncommitted_pct.borrow_mut().take() {
+                m.set_percent(field, val);
+            }
+            let field = ShortcutField::from_index(idx);
+            if let Some(conf) = m.find_conflict(field) {
+                m.swap_shortcuts(field, conf);
+            }
+            if let Some(w) = window_weak.upgrade() {
+                sync_model_to_ui(&w, &m);
+            }
+        });
+    }
+    {
+        let model_rc = Rc::clone(model);
+        let window_weak = main_window.as_weak();
+        let uncommitted_pct = Rc::clone(&uncommitted_percent);
+        main_window.on_percent_changed(move |idx, val| {
+            *uncommitted_pct.borrow_mut() = None;
+            let mut m = model_rc.borrow_mut();
+            let field = ShortcutField::from_index(idx);
+            if field.has_percent() {
+                let uval = if val < 0 { 0 } else { val as u32 };
+                m.set_percent(field, uval);
+            }
+            if let Some(w) = window_weak.upgrade() {
+                sync_model_to_ui(&w, &m);
+            }
+        });
+    }
+
+    // Callbacks: Layout
+    {
+        let model_rc = Rc::clone(model);
+        let window_weak = main_window.as_weak();
+        main_window.on_stack_toggled(move |val| {
+            let mut m = model_rc.borrow_mut();
+            m.draft.layout.enable_overlapping_stack = val;
+            if let Some(w) = window_weak.upgrade() {
+                sync_model_to_ui(&w, &m);
+            }
+        });
+    }
+    {
+        let model_rc = Rc::clone(model);
+        let window_weak = main_window.as_weak();
+        let uncommitted_w = Rc::clone(&uncommitted_width);
+        main_window.on_width_changed(move |val| {
+            *uncommitted_w.borrow_mut() = None;
+            let mut m = model_rc.borrow_mut();
+            m.draft.layout.stack_width_percent = if val < 0 { 0 } else { val as u32 };
+            if let Some(w) = window_weak.upgrade() {
+                sync_model_to_ui(&w, &m);
+            }
+        });
+    }
+
+    // Callbacks: Save & Revert
+    {
+        let model_rc = Rc::clone(model);
+        let window_weak = main_window.as_weak();
+        let target_path = custom_save_path.unwrap_or_else(config_path);
+        let uncommitted_pct = Rc::clone(&uncommitted_percent);
+        let uncommitted_w = Rc::clone(&uncommitted_width);
+        main_window.on_save_clicked(move || {
+            let mut m = model_rc.borrow_mut();
+            if let Some((field, val)) = uncommitted_pct.borrow_mut().take() {
+                m.set_percent(field, val);
+            }
+            if let Some(val) = uncommitted_w.borrow_mut().take() {
+                m.draft.layout.stack_width_percent = val;
+            }
+            m.save(&target_path);
+            if let Some(w) = window_weak.upgrade() {
+                sync_model_to_ui(&w, &m);
+            }
+        });
+    }
+    {
+        let model_rc = Rc::clone(model);
+        let window_weak = main_window.as_weak();
+        let uncommitted_pct = Rc::clone(&uncommitted_percent);
+        let uncommitted_w = Rc::clone(&uncommitted_width);
+        main_window.on_revert_clicked(move || {
+            *uncommitted_pct.borrow_mut() = None;
+            *uncommitted_w.borrow_mut() = None;
+            let mut m = model_rc.borrow_mut();
+            m.revert();
+            if let Some(w) = window_weak.upgrade() {
+                sync_model_to_ui(&w, &m);
+            }
+        });
+    }
+}
+
 /// Close the window and end the process, for every path that means "the user is done".
 ///
 /// **`hide()` alone is not enough, and one place in this file already knew it.** The
@@ -424,132 +618,7 @@ fn main() -> Result<(), slint::PlatformError> {
         });
     }
 
-    // Callbacks: Navigation & General
-    {
-        let model_rc = Rc::clone(&model);
-        let window_weak = main_window.as_weak();
-        main_window.on_pane_selected(move |idx| {
-            let mut m = model_rc.borrow_mut();
-            let pane = match idx {
-                0 => Pane::General,
-                1 => Pane::Shortcuts,
-                2 => Pane::Layout,
-                3 => Pane::VmExceptions,
-                4 => Pane::About,
-                _ => Pane::General,
-            };
-            m.set_pane(pane);
-            if let Some(w) = window_weak.upgrade() {
-                sync_model_to_ui(&w, &m);
-            }
-        });
-    }
-    {
-        let model_rc = Rc::clone(&model);
-        let window_weak = main_window.as_weak();
-        main_window.on_auto_start_toggled(move |val| {
-            let mut m = model_rc.borrow_mut();
-            m.draft.general.auto_start = val;
-            if let Some(w) = window_weak.upgrade() {
-                sync_model_to_ui(&w, &m);
-            }
-        });
-    }
-
-    // Callbacks: Shortcuts
-    {
-        let model_rc = Rc::clone(&model);
-        let window_weak = main_window.as_weak();
-        main_window.on_start_capture(move |idx| {
-            let mut m = model_rc.borrow_mut();
-            let field = ShortcutField::from_index(idx);
-            if m.capture.is_listening_for(field) {
-                m.cancel_capture();
-            } else {
-                m.begin_capture(field);
-            }
-            if let Some(w) = window_weak.upgrade() {
-                sync_model_to_ui(&w, &m);
-            }
-        });
-    }
-    {
-        let model_rc = Rc::clone(&model);
-        let window_weak = main_window.as_weak();
-        main_window.on_swap_shortcuts(move |idx| {
-            let mut m = model_rc.borrow_mut();
-            let field = ShortcutField::from_index(idx);
-            if let Some(conf) = m.find_conflict(field) {
-                m.swap_shortcuts(field, conf);
-            }
-            if let Some(w) = window_weak.upgrade() {
-                sync_model_to_ui(&w, &m);
-            }
-        });
-    }
-    {
-        let model_rc = Rc::clone(&model);
-        let window_weak = main_window.as_weak();
-        main_window.on_percent_changed(move |idx, val| {
-            let mut m = model_rc.borrow_mut();
-            let field = ShortcutField::from_index(idx);
-            if field.has_percent() {
-                let uval = if val < 0 { 0 } else { val as u32 };
-                m.set_percent(field, uval);
-            }
-            if let Some(w) = window_weak.upgrade() {
-                sync_model_to_ui(&w, &m);
-            }
-        });
-    }
-
-    // Callbacks: Layout
-    {
-        let model_rc = Rc::clone(&model);
-        let window_weak = main_window.as_weak();
-        main_window.on_stack_toggled(move |val| {
-            let mut m = model_rc.borrow_mut();
-            m.draft.layout.enable_overlapping_stack = val;
-            if let Some(w) = window_weak.upgrade() {
-                sync_model_to_ui(&w, &m);
-            }
-        });
-    }
-    {
-        let model_rc = Rc::clone(&model);
-        let window_weak = main_window.as_weak();
-        main_window.on_width_changed(move |val| {
-            let mut m = model_rc.borrow_mut();
-            m.draft.layout.stack_width_percent = val.clamp(10, 100) as u32;
-            if let Some(w) = window_weak.upgrade() {
-                sync_model_to_ui(&w, &m);
-            }
-        });
-    }
-
-    // Callbacks: Save & Revert
-    {
-        let model_rc = Rc::clone(&model);
-        let window_weak = main_window.as_weak();
-        main_window.on_save_clicked(move || {
-            let mut m = model_rc.borrow_mut();
-            m.save(&config_path());
-            if let Some(w) = window_weak.upgrade() {
-                sync_model_to_ui(&w, &m);
-            }
-        });
-    }
-    {
-        let model_rc = Rc::clone(&model);
-        let window_weak = main_window.as_weak();
-        main_window.on_revert_clicked(move || {
-            let mut m = model_rc.borrow_mut();
-            m.revert();
-            if let Some(w) = window_weak.upgrade() {
-                sync_model_to_ui(&w, &m);
-            }
-        });
-    }
+    bind_callbacks(&main_window, &model, None);
 
     // Callbacks: Onboarding Wizard
     {

@@ -17,10 +17,37 @@ export component ShortcutRow inherits Rectangle {
     in property <bool> can_swap: false;
     in property <bool> has_percent: false;
     in property <int> percent: 50;
+    in-out property <string> typed_text: "\{root.percent}";
 
     callback capture_clicked();
     callback swap_clicked();
     callback percent_changed(int);
+    callback editing_changed(int);
+
+    function current_value() -> int {
+        if root.typed_text.is-float() {
+            return Math.round(root.typed_text.to-float());
+        }
+        return root.percent;
+    }
+
+    public function step_plus() {
+        let base = root.current_value();
+        let next = (base >= 1 && base < 99) ? (base + 1) : base;
+        root.typed_text = "\{next}";
+        root.percent_changed(next);
+    }
+
+    public function step_minus() {
+        let base = root.current_value();
+        let next = (base > 1 && base <= 99) ? (base - 1) : base;
+        root.typed_text = "\{next}";
+        root.percent_changed(next);
+    }
+
+    changed percent => {
+        root.typed_text = "\{root.percent}";
+    }
 
     HorizontalLayout {
         padding-left: 16px;
@@ -96,6 +123,9 @@ export component ShortcutRow inherits Rectangle {
 
                     accessible-role: button;
                     accessible-label: "Decrease snap percentage";
+                    accessible-action-default => {
+                        root.step_minus();
+                    }
 
                     Text {
                         text: "−";
@@ -107,7 +137,7 @@ export component ShortcutRow inherits Rectangle {
                     }
                     pct_minus_touch := TouchArea {
                         clicked => {
-                            root.percent_changed(Math.clamp(root.percent - 1, 1, 99));
+                            root.step_minus();
                         }
                     }
                 }
@@ -120,6 +150,13 @@ export component ShortcutRow inherits Rectangle {
                     background: Palette.bg_subtle;
                     border-width: 1px;
                     border-color: pct_input.has-focus ? Palette.accent_primary : Palette.stroke_card;
+
+                    accessible-role: button;
+                    accessible-label: "Snap percentage field";
+                    accessible-action-default => {
+                        pct_input.focus();
+                        pct_input.select-all();
+                    }
 
                     pct_field_touch := TouchArea {
                         clicked => {
@@ -134,7 +171,7 @@ export component ShortcutRow inherits Rectangle {
 
                         pct_input := TextInput {
                             width: 26px;
-                            text: "\{root.percent}";
+                            text <=> root.typed_text;
                             input-type: number;
                             single-line: true;
                             font-family: Typography.font_mono;
@@ -146,23 +183,46 @@ export component ShortcutRow inherits Rectangle {
 
                             accessible-role: text;
                             accessible-label: "Snap percentage input";
+                            accessible-action-set-value(val) => {
+                                root.typed_text = val;
+                                if val.is-float() {
+                                    root.editing_changed(Math.round(val.to-float()));
+                                }
+                            }
+
+                            edited => {
+                                if root.typed_text.is-float() {
+                                    root.editing_changed(Math.round(root.typed_text.to-float()));
+                                }
+                            }
 
                             accepted => {
-                                if self.text.is-float() {
-                                    root.percent_changed(Math.round(self.text.to-float()));
+                                if root.typed_text.is-float() {
+                                    root.percent_changed(Math.round(root.typed_text.to-float()));
                                 } else {
-                                    self.text = "\{root.percent}";
+                                    root.typed_text = "\{root.percent}";
                                 }
                                 self.clear-focus();
                             }
                             changed has-focus => {
                                 if !self.has-focus {
-                                    if self.text.is-float() {
-                                        root.percent_changed(Math.round(self.text.to-float()));
+                                    if root.typed_text.is-float() {
+                                        root.percent_changed(Math.round(root.typed_text.to-float()));
                                     } else {
-                                        self.text = "\{root.percent}";
+                                        root.typed_text = "\{root.percent}";
                                     }
                                 }
+                            }
+                            key-pressed(event) => {
+                                if event.text == Key.Tab || event.text == Key.Backtab {
+                                    if root.typed_text.is-float() {
+                                        root.percent_changed(Math.round(root.typed_text.to-float()));
+                                    } else {
+                                        root.typed_text = "\{root.percent}";
+                                    }
+                                    return reject;
+                                }
+                                accept
                             }
                         }
 
@@ -188,6 +248,9 @@ export component ShortcutRow inherits Rectangle {
 
                     accessible-role: button;
                     accessible-label: "Increase snap percentage";
+                    accessible-action-default => {
+                        root.step_plus();
+                    }
 
                     Text {
                         text: "+";
@@ -199,7 +262,7 @@ export component ShortcutRow inherits Rectangle {
                     }
                     pct_plus_touch := TouchArea {
                         clicked => {
-                            root.percent_changed(Math.clamp(root.percent + 1, 1, 99));
+                            root.step_plus();
                         }
                     }
                 }

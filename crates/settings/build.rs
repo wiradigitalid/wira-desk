@@ -93,7 +93,10 @@ fn main() {
     }
 
     let slint_ui_path = std::path::Path::new(&manifest_dir).join("ui/main_window.slint");
-    slint_build::compile(slint_ui_path).expect("Slint build failed");
+    // `with_debug_info(true)` is required by `i-slint-backend-testing` so `ElementHandle`
+    // can locate elements in test snapshots.
+    let config = slint_build::CompilerConfiguration::new().with_debug_info(true);
+    slint_build::compile_with_config(slint_ui_path, config).expect("Slint build failed");
 
     report("embedded");
 }

@@ -4173,6 +4173,7 @@ name = "settings"
 version = "0.1.5"
 dependencies = [
  "embed-resource",
+ "i-slint-backend-testing",
  "i-slint-backend-winit",
  "serde",
  "serde_json",

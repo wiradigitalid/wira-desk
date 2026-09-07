@@ -167,6 +167,15 @@ pub fn validate_config(cfg: &Config) -> Result<(), (&'static str, ShortcutError)
         }
     }
 
+    if !(shared::constants::MIN_STACK_WIDTH_PERCENT..=shared::constants::MAX_STACK_WIDTH_PERCENT)
+        .contains(&cfg.layout.stack_width_percent)
+    {
+        return Err((
+            "layout.stack_width_percent",
+            ShortcutError::InvalidPercentage(cfg.layout.stack_width_percent),
+        ));
+    }
+
     Ok(())
 }
 
@@ -422,6 +431,71 @@ mod tests {
                 ShortcutError::InvalidPercentage(150)
             ))
         );
+    }
+
+    #[test]
+    fn an_out_of_range_percentage_typed_then_saved_is_refused() {
+        let dir = temp_dir();
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("reject_pct_typed.toml");
+
+        let mut cfg = Config::default();
+        cfg.snapping.percent_left = 0;
+        assert_eq!(
+            validate_config(&cfg),
+            Err(("snapping.percent_left", ShortcutError::InvalidPercentage(0)))
+        );
+        assert!(matches!(
+            save_and_notify(&cfg, &path),
+            SaveOutcome::Rejected("snapping.percent_left", ShortcutError::InvalidPercentage(0))
+        ));
+
+        cfg.snapping.percent_left = 50;
+        cfg.snapping.percent_bottom = 100;
+        assert_eq!(
+            validate_config(&cfg),
+            Err((
+                "snapping.percent_bottom",
+                ShortcutError::InvalidPercentage(100)
+            ))
+        );
+
+        cfg.snapping.percent_bottom = 50;
+        cfg.layout.stack_width_percent = 0;
+        assert_eq!(
+            validate_config(&cfg),
+            Err((
+                "layout.stack_width_percent",
+                ShortcutError::InvalidPercentage(0)
+            ))
+        );
+        assert!(matches!(
+            save_and_notify(&cfg, &path),
+            SaveOutcome::Rejected(
+                "layout.stack_width_percent",
+                ShortcutError::InvalidPercentage(0)
+            )
+        ));
+
+        cfg.layout.stack_width_percent = 5;
+        assert_eq!(
+            validate_config(&cfg),
+            Err((
+                "layout.stack_width_percent",
+                ShortcutError::InvalidPercentage(5)
+            ))
+        );
+
+        cfg.layout.stack_width_percent = 105;
+        assert_eq!(
+            validate_config(&cfg),
+            Err((
+                "layout.stack_width_percent",
+                ShortcutError::InvalidPercentage(105)
+            ))
+        );
+
+        let _ = std::fs::remove_file(&path);
     }
 
     #[test]

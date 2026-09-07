@@ -29,6 +29,7 @@ component ShortcutGroup inherits VerticalLayout {
     callback capture(int);
     callback swap(int);
     callback percent_changed(int, int);
+    callback editing_changed(int, int);
 
     spacing: 6px;
 
@@ -64,6 +65,9 @@ component ShortcutGroup inherits VerticalLayout {
                     percent_changed(val) => {
                         root.percent_changed(row.index, val);
                     }
+                    editing_changed(val) => {
+                        root.editing_changed(row.index, val);
+                    }
                 }
             }
         }
@@ -88,6 +92,7 @@ export component ShortcutsPane inherits VerticalLayout {
     callback start_capture(int);
     callback swap_shortcuts(int);
     callback percent_changed(int, int);
+    callback editing_percent_changed(int, int);
 
     spacing: 14px;
     alignment: start;
@@ -138,6 +143,9 @@ export component ShortcutsPane inherits VerticalLayout {
         percent_changed(i, val) => {
             root.percent_changed(i, val);
         }
+        editing_changed(i, val) => {
+            root.editing_percent_changed(i, val);
+        }
     }
 
     ShortcutGroup {
@@ -153,6 +161,9 @@ export component ShortcutsPane inherits VerticalLayout {
         percent_changed(i, val) => {
             root.percent_changed(i, val);
         }
+        editing_changed(i, val) => {
+            root.editing_percent_changed(i, val);
+        }
     }
 
     ShortcutGroup {
@@ -167,6 +178,9 @@ export component ShortcutsPane inherits VerticalLayout {
         }
         percent_changed(i, val) => {
             root.percent_changed(i, val);
+        }
+        editing_changed(i, val) => {
+            root.editing_percent_changed(i, val);
         }
     }
 }

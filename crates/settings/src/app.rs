@@ -501,14 +501,26 @@ pub fn describe(field: &str, err: ShortcutError) -> String {
             )
         }
         ShortcutError::InvalidPercentage(_) => {
-            let name = match field {
-                "snapping.percent_left" => "Left edge snap percentage",
-                "snapping.percent_right" => "Right edge snap percentage",
-                "snapping.percent_top" => "Top edge snap percentage",
-                "snapping.percent_bottom" => "Bottom edge snap percentage",
-                _ => label,
-            };
-            format!("{name} must be between 1% and 99%.")
+            if field == "layout.stack_width_percent" {
+                format!(
+                    "Stack width percentage must be between {}% and {}%.",
+                    shared::constants::MIN_STACK_WIDTH_PERCENT,
+                    shared::constants::MAX_STACK_WIDTH_PERCENT
+                )
+            } else {
+                let name = match field {
+                    "snapping.percent_left" => "Left edge snap percentage",
+                    "snapping.percent_right" => "Right edge snap percentage",
+                    "snapping.percent_top" => "Top edge snap percentage",
+                    "snapping.percent_bottom" => "Bottom edge snap percentage",
+                    _ => label,
+                };
+                format!(
+                    "{name} must be between {}% and {}%.",
+                    shared::constants::MIN_SNAP_PERCENT,
+                    shared::constants::MAX_SNAP_PERCENT
+                )
+            }
         }
     }
 }
