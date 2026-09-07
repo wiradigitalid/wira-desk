@@ -8,24 +8,19 @@ date: 2026-09-07
 
 ## Resume
 
-- Iteration: 15 — mandate `applied`; final head pushed; waiting on CI.
-- Run branch: `autopilot/DEC-016`, HEAD `9a7c0c6`, pushed. **PR #17 open, draft**:
-  https://github.com/wiradigitalid/wira-desk/pull/17.
-- Stopped at: **Capacity.** Smoke test (`btmzzj4s0`) recorded verbatim, not rounded up: release build PASS
-  (`build.ps1`, 2m40s), full suite PASS (533/0 failed). Per FR — `FR-28`/`SPEC-2-01`/`FR-25`/`FR-29`: all
-  **PASS at code/test level**; live E2E **NOT VERIFIABLE FROM THIS SESSION** (no interactive UAC for the
-  elevated daemon, no keyboard-input-injection tooling, Slint sidebar nav has no UI-Automation invoke
-  pattern to reach non-default panes) — it did manage live UI-Automation verification of the General pane's
-  own toggle+persistence, which is more than the prior mandate reached. `wdi-report`'s `timeline.py
-  --refresh --generate` **crashed** with a Python `AttributeError` in `span_of` — a real bug in the method
-  package's own script, not touched (per repo rule against hand-patching method files); used `validate.py`'s
-  own already-fresh derived numbers instead (`promise_progress: 100%`, RTM `28/28`). Raised `DEC-016` to
-  `applied`, `touches` built from `git diff --name-only 0d3eb1f...HEAD` (37 files). Pushed the final head;
-  CI running (background wait armed, notifies on conclusion).
+- **RUN FINISHED.** Iteration 16 — CI green, PR #17 marked ready for review, loop cancelled.
+- Run branch: `autopilot/DEC-016`, HEAD `9a7c0c6` (code-bearing; ledger commits after it are
+  record-keeping only). **PR #17 — ready for review**: https://github.com/wiradigitalid/wira-desk/pull/17.
+- Stopped at: **Done.** CI on `9a7c0c6` (run `34113583038`) concluded: `build` PASS (13m22s), `dependencies`
+  PASS, `secrets` PASS, `publication-hygiene` PASS — all 4 green. Marked PR #17 ready for review
+  (`gh pr ready 17`). Cancelled the loop (cron job `3ef639b3` deleted). Every `FR` in scope closed
+  (`FR-25`, `FR-28`, `FR-29`), both specs (`SPEC-2`, `SPEC-3`) closed, smoke test recorded honestly (build/
+  test green, live E2E not verifiable from this headless session — see Finish report for the owner's test
+  script). Mandate closed.
 - Blocked: —
 - Parked: —
-- Next: on CI conclusion — green marks PR #17 **ready for review**; red keeps it **draft**, reported red,
-  not patched. Either way: cancel the loop (this mandate's own work is done), write the Finish report.
+- Next: nothing — mandate closed. The owner reviews and merges PR #17, then runs the live test script in
+  the Finish report to close the one verification gap this session couldn't reach.
 
 ## Decisions
 
@@ -59,3 +54,4 @@ date: 2026-09-07
 | Iter 15 | Smoke test recorded honestly | `btmzzj4s0`'s report accepted verbatim: build/test green, live E2E genuinely blocked (no UAC, no input injection, Slint nav has no invoke pattern) — not rounded up to "verified live" | Treating "the code is tested" as equivalent to "the feature was smoke-tested live" | The owner runs the live test script in the Finish report to close this gap | `btmzzj4s0`, this ledger |
 | Iter 15 | `wdi-report` tool crash | `timeline.py --refresh --generate` raised a Python `AttributeError` (`span_of`, tuple has no `.get`) — a method-package bug, not this product's code. Did not patch it (method files are fixed upstream, then updated in via `npx wdi-method update`); used `validate.py`'s own fresh numbers instead | Hand-patching the method script to unblock the report | The method package's own maintainers fix it upstream | This row |
 | Iter 15 | Mandate raised to `applied` | `touches` built from `git diff --name-only 0d3eb1f...HEAD` — every file this mandate actually changed, not guessed | Leaving `touches` empty or partial | `mandate-accept`/`applied-dec-touches` would catch an empty one; a wrong list is harder to catch | `DEC-016` file, `decisions.yaml`, `9a7c0c6` |
+| Iter 16 | Run closed | CI on `9a7c0c6` fully green (4/4) — marked PR #17 ready for review, not left draft since nothing is red | Leaving it draft "to be safe" despite green CI | The owner's own review still gates the merge either way | PR #17, cron `3ef639b3` deleted |
