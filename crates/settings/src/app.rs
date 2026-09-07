@@ -14,26 +14,21 @@ use crate::persistence::{
     save_and_notify, signal_capture_lease, validate_shortcut, DaemonSignal, SaveOutcome,
     ShortcutError,
 };
-use crate::theme::{
-    self, ThemeMode, LISTENING_ANNOUNCEMENT, STACK_WIDTH_DECREASE, STACK_WIDTH_INCREASE,
-    STACK_WIDTH_INPUT, TOGGLE_AUTO_START,
-};
+use crate::theme::{self, ThemeMode, LISTENING_ANNOUNCEMENT, TOGGLE_AUTO_START};
 
 /// Which pane the shell is showing.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Pane {
     General,
     Shortcuts,
-    Layout,
     VmExceptions,
     About,
 }
 
 impl Pane {
-    pub const ALL: [Pane; 5] = [
+    pub const ALL: [Pane; 4] = [
         Pane::General,
         Pane::Shortcuts,
-        Pane::Layout,
         Pane::VmExceptions,
         Pane::About,
     ];
@@ -43,10 +38,6 @@ impl Pane {
         match self {
             Pane::General => "General",
             Pane::Shortcuts => "Shortcuts",
-            // "Layout", not "Layout & Snapping": this pane holds the overlapping-stack
-            // toggle and its width slider and no chord at all. Every chord lives in the
-            // Shortcuts pane, and the old name promised otherwise.
-            Pane::Layout => "Layout",
             Pane::VmExceptions => "VM & Exceptions",
             Pane::About => "About",
         }
@@ -335,6 +326,7 @@ impl ShortcutField {
                 | ShortcutField::SnapPercentRight
                 | ShortcutField::SnapPercentTop
                 | ShortcutField::SnapPercentBottom
+                | ShortcutField::Stack
         )
     }
 
@@ -363,6 +355,7 @@ impl ShortcutField {
             ShortcutField::SnapPercentRight => Some(cfg.snapping.percent_right),
             ShortcutField::SnapPercentTop => Some(cfg.snapping.percent_top),
             ShortcutField::SnapPercentBottom => Some(cfg.snapping.percent_bottom),
+            ShortcutField::Stack => Some(cfg.layout.stack_width_percent),
             _ => None,
         }
     }
@@ -373,6 +366,7 @@ impl ShortcutField {
             ShortcutField::SnapPercentRight => cfg.snapping.percent_right = value,
             ShortcutField::SnapPercentTop => cfg.snapping.percent_top = value,
             ShortcutField::SnapPercentBottom => cfg.snapping.percent_bottom = value,
+            ShortcutField::Stack => cfg.layout.stack_width_percent = value,
             _ => {}
         }
     }
@@ -1154,12 +1148,6 @@ pub fn focus_order(pane: Pane) -> Vec<&'static str> {
                 order.push(f.label());
             }
         }
-        Pane::Layout => {
-            // Visual order: the field sits between the two buttons.
-            order.push(STACK_WIDTH_DECREASE.name);
-            order.push(STACK_WIDTH_INPUT.name);
-            order.push(STACK_WIDTH_INCREASE.name);
-        }
         Pane::VmExceptions => {
             order.push(theme::VM_BYPASS_PROCESS_LIST.name);
             order.push(theme::VM_BYPASS_CLASS_LIST.name);
@@ -1328,7 +1316,7 @@ mod tests {
     #[test]
     fn switching_between_other_panes_does_not_disturb_an_idle_capture() {
         let mut m = model();
-        m.set_pane(Pane::Layout);
+        m.set_pane(Pane::VmExceptions);
         m.set_pane(Pane::About);
         assert_eq!(m.pane, Pane::About);
         assert_eq!(m.capture, CaptureState::Idle);
@@ -1745,12 +1733,6 @@ mod tests {
                 );
             }
         }
-    }
-
-    #[test]
-    fn the_layout_pane_no_longer_claims_snapping() {
-        assert_eq!(Pane::Layout.label(), "Layout");
-        assert_eq!(Pane::from_label("Layout"), Some(Pane::Layout));
     }
 
     #[test]

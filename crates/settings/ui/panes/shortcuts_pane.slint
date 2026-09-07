@@ -18,6 +18,8 @@ export struct ShortcutRowData {
     can_swap: bool,
     has_percent: bool,
     percent: int,
+    percent_min: int,
+    percent_max: int,
     enabled: bool,
 }
 
@@ -58,6 +60,8 @@ component ShortcutGroup inherits VerticalLayout {
                     can_swap: row.can_swap;
                     has_percent: row.has_percent;
                     percent: row.percent;
+                    percent_min: row.percent_min;
+                    percent_max: row.percent_max;
                     enabled: row.enabled;
                     capture_clicked => {
                         root.capture(row.index);

@@ -57,16 +57,7 @@ export component SidebarItem inherits Rectangle {
                 MoveTo { x: 4; y: 9; } LineTo { x: 10; y: 9; }
             }
 
-            if index == 2 : Path { // Layout & Snapping (Split Windows)
-                width: 14px; height: 14px;
-                stroke: selected ? Palette.accent_primary : Palette.text_secondary;
-                stroke-width: 1.2px;
-                MoveTo { x: 1; y: 2; } LineTo { x: 13; y: 2; }
-                LineTo { x: 13; y: 12; } LineTo { x: 1; y: 12; } LineTo { x: 1; y: 2; }
-                MoveTo { x: 7; y: 2; } LineTo { x: 7; y: 12; }
-            }
-
-            if index == 3 : Path { // VM & Exceptions (Shield / Monitor)
+            if index == 2 : Path { // VM & Exceptions (Shield / Monitor)
                 width: 14px; height: 14px;
                 stroke: selected ? Palette.accent_primary : Palette.text_secondary;
                 stroke-width: 1.2px;
@@ -75,7 +66,7 @@ export component SidebarItem inherits Rectangle {
                 LineTo { x: 2; y: 9; } LineTo { x: 2; y: 2; }
             }
 
-            if index == 4 : Path { // About (Info circle)
+            if index == 3 : Path { // About (Info circle)
                 width: 14px; height: 14px;
                 stroke: selected ? Palette.accent_primary : Palette.text_secondary;
                 stroke-width: 1.2px;
@@ -134,24 +125,17 @@ export component Sidebar inherits Rectangle {
         }
 
         SidebarItem {
-            text: "Layout & Snapping";
+            text: "VM & Exceptions";
             index: 2;
             selected: current_pane == 2;
             clicked => { root.pane_selected(2); }
         }
 
         SidebarItem {
-            text: "VM & Exceptions";
+            text: "About";
             index: 3;
             selected: current_pane == 3;
             clicked => { root.pane_selected(3); }
-        }
-
-        SidebarItem {
-            text: "About";
-            index: 4;
-            selected: current_pane == 4;
-            clicked => { root.pane_selected(4); }
         }
     }
 }
