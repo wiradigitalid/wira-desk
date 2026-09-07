@@ -24,9 +24,9 @@ four `SnapPercent*` fields drop the `(custom %)` suffix now that the group headi
 - [ ] `ShortcutField::group()` returns exactly these five strings, and every field maps to the group
       `DEC-014` names it under:
       - `"Switching"` — `Switcher`, `Fallback` (unchanged)
-      - `"Snap half"` — `SnapLeft`, `SnapRight`, `SnapTop`, `SnapBottom`
-      - `"Snap third"` — `SnapThirdLeft`, `SnapThirdMiddle`, `SnapThirdRight`
-      - `"Snap custom"` — `SnapPercentLeft`, `SnapPercentRight`, `SnapPercentTop`, `SnapPercentBottom`
+      - `"Snap to half"` — `SnapLeft`, `SnapRight`, `SnapTop`, `SnapBottom`
+      - `"Snap to third"` — `SnapThirdLeft`, `SnapThirdMiddle`, `SnapThirdRight`
+      - `"Snap to custom"` — `SnapPercentLeft`, `SnapPercentRight`, `SnapPercentTop`, `SnapPercentBottom`
       - `"Resize, move & arrange"` — `SnapMaximize`, `MoveNextMonitor`, `Stack`
 - [ ] `ShortcutField::ALL`'s declared order changes exactly as `DEC-014` describes: `SnapMaximize` moves out
       of its old position (ahead of the thirds) to sit inside the new last group, after every snap variant
@@ -50,7 +50,7 @@ four `SnapPercent*` fields drop the `(custom %)` suffix now that the group headi
 - [ ] A test asserts `SnapMaximize`'s new position relative to every `Snap*` field (its precedent test
       `assert!((ShortcutField::SnapMaximize as usize) < (ShortcutField::SnapThirdLeft as usize))` inverts —
       write the new relative-position assertion, do not just delete the old one).
-- [ ] A test asserts none of the four `Snap custom` labels contain the substring `"(custom"` any more.
+- [ ] A test asserts none of the four `Snap to custom` labels contain the substring `"(custom"` any more.
 - [ ] Any existing collision/precedence test that pins a specific winner between two default-config
       fields where one is `SnapMaximize` is checked by hand — reordering can silently flip which field
       "wins" a shared-chord test fixture, not just require new assertions for the position change itself.

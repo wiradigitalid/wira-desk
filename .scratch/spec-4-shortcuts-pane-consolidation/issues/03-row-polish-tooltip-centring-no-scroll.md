@@ -15,7 +15,7 @@ tests:
 **What to build:** Three independent visual defects the owner found on the live DEC-016 build, all in
 `crates/settings/ui/components/shortcut_row.slint` and `crates/settings/ui/panes/shortcuts_pane.slint`,
 after `SPEC-4-01`/`SPEC-4-02` have already given every row its final five-group shape and its final
-control set (a `Stack` row now carries a percent field same as a `Snap custom` row). Read
+control set (a `Stack` row now carries a percent field same as a `Snap to custom` row). Read
 `.how/settings/01-ux/DESIGN.md`'s "Row description as tooltip", "Row vertical centring", and "No horizontal
 scroll" bullets before starting — they are this ticket's design source, written for exactly this work.
 

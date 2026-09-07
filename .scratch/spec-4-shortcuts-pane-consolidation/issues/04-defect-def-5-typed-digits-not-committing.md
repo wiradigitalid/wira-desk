@@ -43,7 +43,15 @@ is an enforced ordering, not an optional suggestion, so the two are never picked
 - [ ] Once root-caused, the fix makes a **real simulated key-press sequence** (not
       `set_accessible_value`) — typing individual digit characters into a focused, empty-or-partially-typed
       field — result in the typed digits appearing in `typed_text` and, on departure, committing exactly as
-      `SPEC-2-01` already proved for the accessible-value path.
+      `SPEC-2-01` already proved for the accessible-value path. This explicitly includes the refusal half of
+      that behaviour, not only the happy path: a real keystroke sequence that types an out-of-range value
+      (e.g. outside 1–99, or outside 10–100 on the `Stack` row once `SPEC-4-02` lands) and departs the field
+      must be refused with the same actionable message `SPEC-2-01` already proved for the accessible-value
+      path, never silently clamped or silently accepted just because this defect's fix made the digits land.
+- [ ] A new test asserts the out-of-range-refused behaviour specifically for a real-keystroke-typed value —
+      `persistence::tests::an_out_of_range_percentage_typed_then_saved_is_refused` is prior art for the
+      accessible-value path; this ticket needs its own version driven by the real keystroke path, not a reuse
+      of that test's existing assertion under a new name.
 - [ ] The existing accessible-value-driven tests (`typed_percentage_commits_on_save_click` and its four
       siblings) are unchanged and still green — they cover the automation/assistive-technology path, which
       this ticket does not touch, and MUST NOT be weakened or deleted to make room for the new test.

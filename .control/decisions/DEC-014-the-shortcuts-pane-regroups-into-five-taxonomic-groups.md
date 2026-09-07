@@ -14,17 +14,17 @@ accepted_by: kodesh87, 2026-09-07
 ## Decision
 
 `ShortcutField::ALL`'s declared sequence (`LBR-ST-14`) is re-cut from three groups to five: **Switching**
-(unchanged) · **Snap half** (left/right/top/bottom half) · **Snap third** (left/middle/right third) ·
-**Snap custom** (left/right/top/bottom percentage edge, percentage inline on its own row) · **Resize, move
+(unchanged) · **Snap to half** (left/right/top/bottom half) · **Snap to third** (left/middle/right third) ·
+**Snap to custom** (left/right/top/bottom percentage edge, percentage inline on its own row) · **Resize, move
 & arrange** (Maximize, Move to next monitor, Overlapping Stack). The percentage value stays inline on its
 own action row rather than moving to the Layout pane, because `LBR-ST-14` already forbids a second,
 independently maintained list of the same actions, and a Layout-pane control would be exactly that.
 
 **Extension accepted the same day, before this decision was ever applied:** the `Layout` pane itself is
-retired, not merely left unused by `Snap custom`. Its one remaining control — `layout.stack_width_percent`
+retired, not merely left unused by `Snap to custom`. Its one remaining control — `layout.stack_width_percent`
 — was never a chord and was already the last thing keeping that pane alive once Overlapping Stack's on/off
 toggle moved to Shortcuts (`SPEC-3-01`). It moves inline onto the Overlapping Stack row in **Resize, move &
-arrange**, the same `has_percent` pattern the four `Snap custom` rows already use, so one row carries both
+arrange**, the same `has_percent` pattern the four `Snap to custom` rows already use, so one row carries both
 its toggle and its percentage. `Layout` is removed from the sidebar; Settings ships four panes (`General`,
 `Shortcuts`, `VM & Exceptions`, `About`). This is the same reasoning as the paragraph above, extended to the
 one control that reasoning had not yet reached.

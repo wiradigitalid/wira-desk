@@ -17,7 +17,7 @@ tests:
 `crates/settings/ui/panes/layout_pane.slint`, which SPEC-4-01 leaves as the sole reason `Pane::Layout`
 still exists — moves onto the `Stack` (Overlapping Stack) row in the Shortcuts pane's "Resize, move &
 arrange" group, using the same `has_percent`/`percent`/`percent_changed`/`editing_changed` plumbing
-`ShortcutRow` already gives every `Snap custom` row. The `Layout` pane, its nav entry, and
+`ShortcutRow` already gives every `Snap to custom` row. The `Layout` pane, its nav entry, and
 `layout_pane.slint` are removed entirely. Read `DEC-014`'s accepted extension paragraph (the one starting
 "Extension accepted the same day...") before starting; it names this exact change and its one open cost.
 
@@ -27,7 +27,7 @@ arrange" group, using the same `has_percent`/`percent`/`percent_changed`/`editin
 - [ ] `ShortcutField::get_percent`/`set_percent` (or their equivalent for `Stack`) read and write
       `cfg.layout.stack_width_percent` — the existing field, unrenamed; nothing here is a config migration.
 - [ ] `crates/settings/ui/components/shortcut_row.slint`'s `step_plus`/`step_minus` currently hardcode their
-      bounds as literals (`base >= 1 && base < 99`) — correct for every `Snap custom` row, wrong for `Stack`,
+      bounds as literals (`base >= 1 && base < 99`) — correct for every `Snap to custom` row, wrong for `Stack`,
       which needs 10–100 (`layout_pane.slint`'s existing `min_percent`/`max_percent`). `ShortcutRow` gains
       per-row bound properties (e.g. `in property <int> percent_min: 1; in property <int> percent_max:
       99;`, overridden to `10`/`100` on the `Stack` row only) rather than a second hardcoded literal pair —

@@ -24,10 +24,10 @@ gap, and is `SPEC-4-04`.
 ## Solution
 
 `DEC-014` (accepted 2026-09-07, same day as this spec) is applied in full: the Shortcuts pane's sixteen
-rows re-cut from three groups to five — *Switching* · *Snap half* · *Snap third* · *Snap custom* · *Resize,
+rows re-cut from three groups to five — *Switching* · *Snap to half* · *Snap to third* · *Snap to custom* · *Resize,
 move & arrange* — and the `Layout` pane, down to one control since `SPEC-3-01` moved Overlapping Stack's own
 toggle out of it, is retired: its `stack_width_percent` control folds inline onto the Overlapping Stack row,
-the same `has_percent` shape a `Snap custom` row already uses. Settings ships four panes, not five. Row-level
+the same `has_percent` shape a `Snap to custom` row already uses. Settings ships four panes, not five. Row-level
 polish — a hover tooltip instead of a truncated description, one shared vertical centre for a row's control
 cluster and its toggle, and a pane that never needs to scroll sideways — closes the remaining live-test
 findings. No `FR` or `UC` is added: this reorganises how three already-promised capabilities (`FR-15`
@@ -84,8 +84,8 @@ Modules to test, and the prior art each follows:
   `grouping_never_reorders_the_declared_sequence` and the declared-order index assertions
   (`ShortcutField::SnapThirdLeft as usize == 7`, etc.). Extended for five groups; the `SnapMaximize`
   assertion inverts rather than being deleted.
-- **`Snap custom` labels drop `(custom %)`** — prior art: `ShortcutField::label`/`from_label` round-trip
-  test. A new assertion that no `Snap custom` label contains `"(custom"`.
+- **`Snap to custom` labels drop `(custom %)`** — prior art: `ShortcutField::label`/`from_label` round-trip
+  test. A new assertion that no `Snap to custom` label contains `"(custom"`.
 - **`Stack` row gains a percent control, `Layout` pane is gone** — prior art: `SPEC-2-01`'s
   `layout_pane_slint_snapshot.rs` tests for stack-width commit-on-departure and out-of-range refusal; these
   migrate to cover the relocated control rather than being left asserting against a removed pane.
