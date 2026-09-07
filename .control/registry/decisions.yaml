@@ -281,7 +281,7 @@ decisions:
 
   - id: DEC-017
     title: Autopilot mandate for SPEC-4 delivery
-    status: accepted
+    status: applied
     file: decisions/DEC-017-autopilot-mandate-for-spec-4-delivery.md
     created: '2026-09-07'
     touches:

@@ -54,6 +54,8 @@ validators_red: []
 validators_skipped:
   custom-room-declared: the `.constitution/project/` room is empty, and that is a valid state — a generic
     rule MUST NOT be moved here just to give the room content
+  review-trace: 'advisory — trace stale, re-run before the next gate or spec close: .how/settings/SDD-settings.md
+    (changed at 70ef0da, reviewed at 13b3781)'
 open_questions:
   blocking: 0
   assumptions: 31

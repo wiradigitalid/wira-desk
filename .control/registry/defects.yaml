@@ -511,3 +511,82 @@ defects:
       names that as the failure mode the file exists to prevent, so the extension going in and the
       comments being fixed are one change, not two.
     owner: repo owner
+
+  - id: DEF-11
+    title: The daemon's memory is over the budget FR-9 promises, measured on a stale build
+    status: open
+    severity: low
+    component: window-management
+    violates: [FR-9]
+    found_in: "0.1.5"
+    found_by: Smoke test for mandate DEC-017, 2026-09-08
+    tests: []
+    summary: >-
+      `FR-9`'s `proof` reads "The background daemon runs with an active system tray icon while
+      consuming under 2 MB of static RAM." The running daemon was measured at
+      `WorkingSet64 = 31,182,848` bytes (~29.7 MB) and `PrivateMemorySize64 = 4,214,784` bytes
+      (~4.0 MB). Even the private-bytes figure, which is the fairer of the two, is double the
+      promise; the working set is fifteen times it.
+    why_it_hid: >-
+      Nothing measures it. `FR-9` is one of the eight `no_uc` rows the `DEC-017` mandate recorded as
+      RTM-exempt, it is carried by no spec, and no test or gate asserts a memory ceiling anywhere in
+      the workspace. The number therefore had no way to be contradicted until something looked.
+    impact: >-
+      A stated promise is out by more than an order of magnitude on one reading of it and by a
+      factor of two on the other. That is a documentation-versus-reality question rather than a
+      user-visible fault -- nobody has reported the daemon being heavy -- but it is exactly the kind
+      of number that gets quoted in a comparison against another tool.
+    fix_direction: >-
+      Two things to settle, and the first is the owner's rather than an engineering task. (1) Decide
+      what "static RAM" means and whether 2 MB is still the intended budget: private bytes, working
+      set, and the figure quoted in a README are three different numbers, and `FR-9`'s proof does
+      not say which it meant. (2) MEASURE THE RIGHT BINARY before acting: this reading came from a
+      daemon built 2026-08-28, three weeks before the code it is being judged against, and from a
+      process that had been resident for eight hours. A fresh idle measurement may differ
+      substantially. MUST NOT be "fixed" by editing the number in `FR-9` to match whatever is
+      measured -- that is the corpus learning to agree with whatever was built, and the promise
+      predates the measurement.
+    owner: repo owner
+
+  - id: DEF-12
+    title: An agent-driven smoke test cannot verify the key check, because the hook discards injected input
+    status: open
+    severity: medium
+    component: window-management
+    violates: [DEC-005]
+    found_in: "0.1.5"
+    found_by: Smoke test for mandate DEC-017, 2026-09-08 -- reported unprompted by the runner
+    tests: []
+    summary: >-
+      The daemon's `WH_KEYBOARD_LL` hook deliberately discards synthetic keystrokes in release
+      builds: `#[cfg(not(debug_assertions))] fn accept_injected() -> bool { false }` drops any event
+      carrying `LLKHF_INJECTED`. Every automated driver -- UI Automation, `SendInput`, a test
+      harness -- produces exactly that kind of event. So a chord injected by an agent reaches the
+      Settings window but never produces a matching hook report, and `DEC-005`'s correlation
+      resolves to `Intercepted` (an earlier third-party hook swallowed it) rather than `Received`.
+    why_it_hid: >-
+      Discarding injected input is correct behaviour, not a fault -- it is what stops the product
+      reacting to its own synthetic events and to other software's. What was never written down is
+      the consequence for verification: the one signal `DEC-005` exists to produce cannot be
+      exercised by anything that is not a physical keypress. Two mandates have now run a smoke test
+      over this area without it being stated.
+    impact: >-
+      `smoke_test: agent` cannot verify the key check's central claim, and a report saying the band
+      "did not fabricate a third-party claim" is weaker than it reads: with injected input the band
+      is expected to report interception, so the absence of one verdict does not confirm the
+      presence of the right one. Any future run that treats an agent smoke test as covering
+      `DEC-005` is claiming coverage it structurally cannot have.
+    fix_direction: >-
+      The seam ALREADY EXISTS and that changes the fix: `hook.rs:160-176` defines
+      `accept_injected()` twice -- a constant `false` under `#[cfg(not(debug_assertions))]` so the
+      branch folds away in release, and a relaxed atomic load under `#[cfg(debug_assertions)]`,
+      flipped by `debug_toggle_accept_injected()`. So an agent CAN verify the key check, but only
+      against a DEBUG daemon, and every smoke test so far has built release (`build.ps1 -Mode prod`).
+      What to do: record the constraint where a future run meets it -- `C-KeyCheck` in
+      `.how/settings/SDD-settings.md`, and the smoke script template -- and have the script build
+      the daemon with `-Mode dev` for the key-check items specifically, calling
+      `debug_toggle_accept_injected` first, while keeping every other item on the release binary.
+      MUST NOT be resolved by making the release build accept injected input: the comment beside
+      that `false` explains why the branch folds away, and the shipped keystroke path is not the
+      place to add a test hook.
+    owner: repo owner

@@ -8,22 +8,29 @@ date: 2026-09-07
 
 ## Resume
 
-- Iteration 20 — `SPEC-4` **closed and merged**; run branch **pushed for the first time** at
-  `444be47`; **PR #19 open as a draft**; CI running on that head; smoke test dispatched.
-- Run branch: `autopilot/DEC-017` at `444be47`, pushed. One PR: #19, draft until CI concludes green.
-- Stopped at: smoke test in flight, CI in flight.
-- Blocked: —
-- Parked: —
-- **IN FLIGHT — do NOT re-dispatch:** `claude-byok` on the smoke test, script at
-  `.scratch/smoke-dec-017.md`. It holds the build lock (`build.ps1` release).
-- **Build lock: SHUT.** No cargo here while it runs. CI is remote and does not conflict.
-- **Next:** read CI's verdict on `444be47` and the smoke report, then § Finish —
-  `wdi-report` intent `progress`, mandate to `applied` with `touches` naming this ledger, final
-  `## Resume`, cancel the loop, final report. **The PR moves to ready only if CI is green**; red
-  keeps it a draft and is reported red.
-- Two machine facts that shape the smoke verdicts: the running daemon is a **stale 2026-08-28
-  build**, and this session is **not elevated** with the owner absent, so no fresh elevated daemon
-  can be launched. Both are written into the script rather than left to be discovered.
+**The run is finished.** This block is its end state, not a step that never came.
+
+- `SPEC-4` closed — every one of its five tickets `done`. It was the only open spec, so the
+  mandate's `scope: all` is satisfied and the work table reached § Finish.
+- Run branch `autopilot/DEC-017`, pushed. **One PR: #19.** No other branch was ever pushed and no
+  working branch survives — `ticket/SPEC-4-03`, `-04` and `-05` were each merged and deleted.
+- Suite **559 passed / 0 failed / 2 ignored**; `clippy --workspace --all-targets -D warnings`,
+  `cargo fmt` and `validate.py` all clean; `verify-public-export.ps1` passes the ten checks CI runs.
+- **Progres janji: 40 of 48 RTM rows green.** All eight non-green rows are `exempt: true` with
+  `broken_at: no_uc`, so no traceable promise is unproven. Read from
+  `.control/generated/rtm.yaml`, refreshed at this commit.
+- Smoke test: run by `claude-byok`, per the mandate. 11 PASS, 1 FAIL (`DEF-11`), 3 NOT VERIFIABLE,
+  1 confirmed-known. Script and verdicts at `.scratch/smoke-dec-017.md`.
+- **Blocked, and it is the one thing this run could not do:** `wdi-report` intent `progress` cannot
+  publish. `timeline.py` crashes in `gen_timeline` -> `span_of` at `timeline.py:140`, because
+  `validate.cap_tickets()` returns `(spec, ticket)` pairs and `span_of` calls `.get("id")` on each
+  item. `timeline.fr_tickets` unpacks correctly; the `cap_tickets` path never learned about the
+  change. A method file MUST NOT be patched in this repo, so it is reported for the `wdi-method`
+  package. `generated/timeline.md` and `report.md` on disk are from 2026-09-07 and MUST NOT be read
+  as current.
+- Parked: nothing. `parked: [ad-n]` was never reached — no `AD-N` was narrowed.
+- Defects filed by this run: `DEF-7` through `DEF-12`. Registry now holds twelve rows, ten open.
+- The loop is cancelled. The mandate is `applied`. The owner merges; the run never does.
 
 ## Decisions
 
@@ -94,3 +101,8 @@ date: 2026-09-07
 | Iter 20 | The pattern behind `DEF-5` and `DEF-9` | Recorded them as **one shape, two instances**: a handler returning `accept` for what it did not handle tells the framework it consumed the event. Audited for a third — there are only two `key-pressed` handlers in the UI. | Filing them as two unrelated defects and moving on | The shape recurs in the next handler somebody writes | `3p.md` |
 | Iter 20 | `SPEC-4` close | Closed it: every ticket `done`, validators GREEN with the close, and the four defects it surfaced are filed rather than carried inside it. | Holding the spec open until `DEF-6`/`DEF-7`/`DEF-8`/`DEF-10` are fixed | Four out-of-scope defects gate a spec whose own promises are met | `specs.yaml` |
 | Iter 20 | The stale `review-trace` | Re-reviewed `SDD-settings.md` with the `edge-case-hunter` lens the risk level demands and corrected four false claims, rather than re-stamping the date and sha. | Stamping the trace so the advisory cleared | An SDD keeps citing a deleted file and calling an unenforced guard "Verified" | `.how/settings/SDD-settings.md` |
+| Iter 23 | § Finish, `wdi-report` `progress` | **Named the blocker and stopped** rather than hand-deriving the five composed sections: `timeline.py` crashes, so nothing can be published, and the tables on disk are from 2026-09-07. | Reporting from the stale `timeline.md`, or writing the sections myself | A report that looks authoritative and is not — the failure that skill's own rules open with | run report, ledger |
+| Iter 23 | The `timeline.py` crash | Reported it for the **`wdi-method` package** instead of fixing it here, with the one-line diagnosis. | Patching `.constitution/method/scripts/timeline.py` in this repo | The fix is lost at the next `npx wdi-method update`, which overwrites that directory in full | run report |
+| Iter 23 | `FR-9`'s memory promise | Filed **`DEF-11`** on the smoke test's one FAIL — 29.7 MB working set, 4.0 MB private, against "under 2 MB" — with the caveats that it was a stale build and that "static RAM" is undefined. | Passing it, since the build was stale; or editing `FR-9`'s number to match | Either a real overrun is dismissed, or the corpus learns to agree with whatever was measured | `.control/registry/defects.yaml` |
+| Iter 23 | The smoke runner's own finding | Filed **`DEF-12`**: the release hook discards `LLKHF_INJECTED`, so `smoke_test: agent` structurally cannot verify `DEC-005`'s correlation. Corrected its fix direction after reading `hook.rs:160-176` — the debug seam already exists. | Recording it as prose in a report nobody greps | Two mandates have already smoke-tested this area believing it covered | `.control/registry/defects.yaml` |
+| Iter 23 | The PR at Finish | Marked #19 **ready only after** CI concluded green on the head actually pushed, re-checking rather than trusting the earlier green on an older head. | Marking it ready on the previous head's green | A PR marked ready is an invitation to merge, extended over a head CI never judged | PR #19 |
