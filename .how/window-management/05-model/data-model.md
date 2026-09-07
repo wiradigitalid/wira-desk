@@ -57,7 +57,7 @@ Planning input for `LC-arrangement-engine`.
 - **`region`** names *what* is planned, not how. `next_monitor` is the one value whose plan reads two work areas; every other value reads one.
 - **`destination_monitor`** is valid only for the duration of the command that enumerated it. It is a handle, not an identity, and it MUST NOT be stored beyond that (AD-14).
 - An `arrangement-command` that yields an **empty** plan has succeeded, not failed. A disabled overlapping stack and a `next_monitor` on a single-monitor desktop both land there.
-- **`percent_left`/`percent_right`/`percent_top`/`percent_bottom`** each read their percentage from `shared::Config` (`snapping.percent_*`) at plan time rather than carrying it as a column — the wire command names only the edge, never the value. `[MISSING]` — planned by this pass.
+- **`percent_left`/`percent_right`/`percent_top`/`percent_bottom`** each read their percentage from `shared::Config` (`snapping.percent_*`) at plan time rather than carrying it as a column — the wire command names only the edge, never the value.
 
 ## monitor-set
 

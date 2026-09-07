@@ -4,7 +4,7 @@ component: window-management
 status: reviewed
 created: 2026-08-21
 updated: 2026-09-07
-realizes: [UC-1, UC-2, UC-3, UC-7, UC-9, UC-10]
+realizes: [UC-1, UC-2, UC-3, UC-7, UC-9, UC-10, UC-12]
 binds: [AD-1, AD-2, AD-3, AD-4, AD-5, AD-6, AD-7, AD-8, AD-9, AD-10, AD-12]
 reviewed:
   date: '2026-09-07'
@@ -114,7 +114,7 @@ the filter for these two grants no capability that was not already available.
 
 ## Robustness Analysis (ABCE)
 
-The Robustness Analysis classifies the technical design for all realized use cases (`UC-1`, `UC-2`, `UC-3`, `UC-7`, `UC-9`, `UC-10`) and edge-case scenarios into Boundary, Control, Entity, and Behaviour.
+The Robustness Analysis classifies the technical design for all realized use cases (`UC-1`, `UC-2`, `UC-3`, `UC-7`, `UC-9`, `UC-10`, `UC-12`) and edge-case scenarios into Boundary, Control, Entity, and Behaviour.
 
 ### 1. Boundary Objects
 
@@ -198,6 +198,16 @@ Each edge's percentage is read and applied independently — this use case does 
 6. `C-WorkerDispatcher` invokes `suppress_start_menu()`.
 
 The three columns tile the work area exactly, the same guarantee `UC-2`'s halves make for two regions instead of three (LBR-WM-10).
+
+#### UC-12: A Disabled Action's Chord Is Not Claimed
+
+1. Daemon starts, or receives `WM_APP_RELOAD_CONFIG`.
+2. `C-HookController` builds its chord set from `shared::Config`, skipping any action `settings` recorded as disabled — `[MISSING]` (`FR-29`, `BR-9`).
+3. User presses the physical key combination that was the disabled action's chord.
+4. `C-HookController` finds no match for it in the chord set — the same outcome as pressing a chord nobody ever configured — and calls `CallNextHookEx` immediately without enqueuing anything.
+5. The keystroke reaches the foreground application, or Windows itself, unmodified.
+
+No new collision-handling logic is needed for this: `match_shortcut` and `unbind_duplicates` already operate over `Option<Shortcut>`, and a disabled action's chord is simply never placed into that structure in the first place (LBR-ST-17).
 
 #### SCN-03: Duplicate Chord in Configuration
 1. `load_shortcuts` parses every configured chord at daemon start and finds two fields resolving to the same one.

@@ -21,6 +21,7 @@ created: 2026-08-21
 3. Sends `PostMessageW(FindWindowW(...), WM_APP_RELOAD_CONFIG, 0, 0)` only after the file is complete.
 4. Creates or deletes the logon scheduled task via `schtasks` with `/RU %USERNAME%` and `/RL HIGHEST` (AD-13, UC-6, SCN-02).
 5. Records onboarding completion flags so first-run does not repeat (LBR-ST-7).
+6. Persists each action's enabled/disabled flag alongside its chord, and excludes a disabled action's chord from `find_conflict`'s collision check — `[MISSING]` (`FR-28`, `LBR-ST-17`). Disabling never runs the chord back through `validate_shortcut`; the stored chord string is untouched by this flag.
 
 ## Depends on
 
@@ -36,7 +37,7 @@ created: 2026-08-21
 
 | Method | Caller | Realizes |
 | --- | --- | --- |
-| `save(config: &Config)` | `LC-settings-shell` | UC-4 |
+| `save(config: &Config)` | `LC-settings-shell` | UC-4, UC-11 |
 | `set_autostart(enabled: bool)` | `LC-settings-shell` | UC-6 |
 | `write_onboarding_flags(...)` | Onboarding flow | UC-5 |
 

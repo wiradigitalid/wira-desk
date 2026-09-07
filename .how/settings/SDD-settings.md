@@ -4,7 +4,7 @@ component: settings
 status: reviewed
 created: 2026-08-21
 updated: 2026-09-07
-realizes: [UC-4, UC-5, UC-6]
+realizes: [UC-4, UC-5, UC-6, UC-8, UC-11]
 binds: [AD-1, AD-5, AD-11, AD-11a, AD-12, AD-13]
 reviewed:
   date: '2026-09-07'
@@ -111,7 +111,7 @@ screen.
 
 ## Robustness Analysis (ABCE)
 
-The Robustness Analysis classifies the technical design for all realized use cases (`UC-4`, `UC-5`, `UC-6`) and edge-case scenarios into Boundary, Control, Entity, and Behaviour.
+The Robustness Analysis classifies the technical design for all realized use cases (`UC-4`, `UC-5`, `UC-6`, `UC-8`, `UC-11`) and edge-case scenarios into Boundary, Control, Entity, and Behaviour.
 
 ### 1. Boundary Objects
 
@@ -181,6 +181,13 @@ The Robustness Analysis classifies the technical design for all realized use cas
 5. `C-PersistenceManager` signals `WM_APP_RELOAD_CONFIG` to the daemon hidden window.
 6. The daemon reloads config and reconciles the task: if `auto_start` was enabled, `C-AutoStartController` invokes `schtasks.exe /Create /TN WiraDesk /TR "\"<exe_path>\"" /SC ONLOGON /RL HIGHEST /RU "%USERNAME%" /F`; if disabled, `schtasks.exe /Delete /TN WiraDesk /F`.
 7. The tray menu checkmark is read back from `schtasks /Query`, never from the config value.
+
+#### UC-11: Turn a Shortcut Action On or Off
+1. User clicks the on/off control on any row in the **Shortcuts** pane.
+2. `C-ShellController` updates `model.draft`'s enabled/disabled flag for that `ShortcutField`, marking `model.is_dirty() = true` — `[MISSING]` (`FR-28`). The row's own stored chord in `model.draft` is untouched.
+3. User clicks **Save**.
+4. `C-PersistenceManager` calls `validate_config(&model.draft)`, which excludes any disabled field's chord from the duplicate-chord scan — `[MISSING]` (`LBR-ST-17`) — before writing `config.toml` and signalling `WM_APP_RELOAD_CONFIG` exactly as `UC-4` does.
+5. `C-ShellController` re-renders the row, showing it as user-disabled — visually distinct from a row `SCN-03` leaves unbound over a chord collision (`BR-9`).
 
 #### SCN-01: Invalid Shortcut Combination Rejected
 1. User enters listening mode on a shortcut field and presses a bare key without modifiers (e.g. `Tab` or `A`) or a multi-key chord (`Ctrl + A + B`).

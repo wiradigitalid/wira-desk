@@ -135,7 +135,7 @@ screen.
 
 ## Robustness Analysis
 
-The Robustness Analysis classifies the technical design for all realized use cases (`UC-4`, `UC-5`, `UC-6`) and edge-case scenarios into Boundary, Control, Entity, and Behaviour.
+The Robustness Analysis classifies the technical design for all realized use cases (`UC-4`, `UC-5`, `UC-6`, `UC-8`, `UC-11`) and edge-case scenarios into Boundary, Control, Entity, and Behaviour.
 
 ### 1. Boundary Objects
 
@@ -205,6 +205,13 @@ The Robustness Analysis classifies the technical design for all realized use cas
 5. `C-PersistenceManager` signals `WM_APP_RELOAD_CONFIG` to the daemon hidden window.
 6. The daemon reloads config and reconciles the task: if `auto_start` was enabled, `C-AutoStartController` invokes `schtasks.exe /Create /TN WiraDesk /TR "\"<exe_path>\"" /SC ONLOGON /RL HIGHEST /RU "%USERNAME%" /F`; if disabled, `schtasks.exe /Delete /TN WiraDesk /F`.
 7. The tray menu checkmark is read back from `schtasks /Query`, never from the config value.
+
+#### UC-11: Turn a Shortcut Action On or Off
+1. User clicks the on/off control on any row in the **Shortcuts** pane.
+2. `C-ShellController` updates `model.draft`'s enabled/disabled flag for that `ShortcutField`, marking `model.is_dirty() = true` — `[MISSING]` (`FR-28`). The row's own stored chord in `model.draft` is untouched.
+3. User clicks **Save**.
+4. `C-PersistenceManager` calls `validate_config(&model.draft)`, which excludes any disabled field's chord from the duplicate-chord scan — `[MISSING]` (`LBR-ST-17`) — before writing `config.toml` and signalling `WM_APP_RELOAD_CONFIG` exactly as `UC-4` does.
+5. `C-ShellController` re-renders the row, showing it as user-disabled — visually distinct from a row `SCN-03` leaves unbound over a chord collision (`BR-9`).
 
 #### SCN-01: Invalid Shortcut Combination Rejected
 1. User enters listening mode on a shortcut field and presses a bare key without modifiers (e.g. `Tab` or `A`) or a multi-key chord (`Ctrl + A + B`).
@@ -393,6 +400,7 @@ Changing `WM_APP_RELOAD_CONFIG` value requires synchronized update in `shared` a
 3. Sends `PostMessageW(FindWindowW(...), WM_APP_RELOAD_CONFIG, 0, 0)` only after the file is complete.
 4. Creates or deletes the logon scheduled task via `schtasks` with `/RU %USERNAME%` and `/RL HIGHEST` (AD-13, UC-6, SCN-02).
 5. Records onboarding completion flags so first-run does not repeat (LBR-ST-7).
+6. Persists each action's enabled/disabled flag alongside its chord, and excludes a disabled action's chord from `find_conflict`'s collision check — `[MISSING]` (`FR-28`, `LBR-ST-17`). Disabling never runs the chord back through `validate_shortcut`; the stored chord string is untouched by this flag.
 
 #### Depends on
 
@@ -408,7 +416,7 @@ Changing `WM_APP_RELOAD_CONFIG` value requires synchronized update in `shared` a
 
 | Method | Caller | Realizes |
 | --- | --- | --- |
-| `save(config: &Config)` | `LC-settings-shell` | UC-4 |
+| `save(config: &Config)` | `LC-settings-shell` | UC-4, UC-11 |
 | `set_autostart(enabled: bool)` | `LC-settings-shell` | UC-6 |
 | `write_onboarding_flags(...)` | Onboarding flow | UC-5 |
 
@@ -551,14 +559,15 @@ erDiagram
 | snap_bottom | string | no | Half-bottom snap binding (FR-22) |
 | snap_maximize | string | no | Maximize binding |
 | move_next_monitor | string | no | Next-monitor move binding (FR-23) |
-| snap_percent_left | string | no | Custom-percentage left-edge snap binding. `[MISSING]` — planned by this pass (FR-26) |
-| snap_percent_right | string | no | Custom-percentage right-edge snap binding. `[MISSING]` — planned by this pass (FR-26) |
-| snap_percent_top | string | no | Custom-percentage top-edge snap binding. `[MISSING]` — planned by this pass (FR-26) |
-| snap_percent_bottom | string | no | Custom-percentage bottom-edge snap binding. `[MISSING]` — planned by this pass (FR-26) |
+| snap_percent_left | string | no | Custom-percentage left-edge snap binding (FR-26) |
+| snap_percent_right | string | no | Custom-percentage right-edge snap binding (FR-26) |
+| snap_percent_top | string | no | Custom-percentage top-edge snap binding (FR-26) |
+| snap_percent_bottom | string | no | Custom-percentage bottom-edge snap binding (FR-26) |
 | snap_stack | string | no | Overlapping stack binding. Default `ctrl+alt+shift+s` (`DEC-011`; was `ctrl+alt+shift+down` until the arrow tier above was freed for the four `snap_percent_*` rows) — placed **after** them in this declared sequence on purpose: on an install still holding the retired default, the percent-snap row must resolve the chord first, per `DEC-011`'s cost and the `DEC-009` mechanism it relies on |
-| snap_third_left | string | no | Left-third snap binding. `[MISSING]` — planned by this pass (FR-27) |
-| snap_third_middle | string | no | Middle-third snap binding. `[MISSING]` — planned by this pass (FR-27) |
-| snap_third_right | string | no | Right-third snap binding. `[MISSING]` — planned by this pass (FR-27) |
+| snap_third_left | string | no | Left-third snap binding (FR-27) |
+| snap_third_middle | string | no | Middle-third snap binding (FR-27) |
+| snap_third_right | string | no | Right-third snap binding (FR-27) |
+| `<action>`_enabled | bool | no | Per-action enabled/disabled flag, one per row above, independent of its chord string. `[MISSING]` — planned by this pass (FR-28). Disabling never clears the chord column; re-enabling reads the same stored chord back. Distinct from `unbound`, which this table never records — that state is `window-management`'s runtime derivation, not a persisted value (`BR-9`). **Must default to `true` on every existing install's config, not Rust's derived `bool` default of `false`** — `shared::Config`'s structs already carry `#[serde(default)]` at the container level, so a missing field is filled from that struct's own hand-written `Default` impl rather than the primitive default, and every one of these sixteen fields' `Default` arm must set it to `true` explicitly. Getting this wrong on any one of them silently disables that action for every config.toml written before this field existed. |
 
 ##### Dictionary
 
@@ -571,7 +580,7 @@ Schema source: `shared::Config` in `crates/shared/src/config.rs`.
 #### arrangement-percentage-preference
 
 The percentage each `snap_percent_*` chord snaps to — a value, not a chord, so it is not part of the
-declared sequence above and cannot collide with anything. `[MISSING]` — planned by this pass (FR-26).
+declared sequence above and cannot collide with anything (FR-26).
 
 | Column | Type | Nullable | Meaning |
 | --- | --- | --- | --- |

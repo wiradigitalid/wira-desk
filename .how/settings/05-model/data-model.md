@@ -24,14 +24,15 @@ erDiagram
 | snap_bottom | string | no | Half-bottom snap binding (FR-22) |
 | snap_maximize | string | no | Maximize binding |
 | move_next_monitor | string | no | Next-monitor move binding (FR-23) |
-| snap_percent_left | string | no | Custom-percentage left-edge snap binding. `[MISSING]` — planned by this pass (FR-26) |
-| snap_percent_right | string | no | Custom-percentage right-edge snap binding. `[MISSING]` — planned by this pass (FR-26) |
-| snap_percent_top | string | no | Custom-percentage top-edge snap binding. `[MISSING]` — planned by this pass (FR-26) |
-| snap_percent_bottom | string | no | Custom-percentage bottom-edge snap binding. `[MISSING]` — planned by this pass (FR-26) |
+| snap_percent_left | string | no | Custom-percentage left-edge snap binding (FR-26) |
+| snap_percent_right | string | no | Custom-percentage right-edge snap binding (FR-26) |
+| snap_percent_top | string | no | Custom-percentage top-edge snap binding (FR-26) |
+| snap_percent_bottom | string | no | Custom-percentage bottom-edge snap binding (FR-26) |
 | snap_stack | string | no | Overlapping stack binding. Default `ctrl+alt+shift+s` (`DEC-011`; was `ctrl+alt+shift+down` until the arrow tier above was freed for the four `snap_percent_*` rows) — placed **after** them in this declared sequence on purpose: on an install still holding the retired default, the percent-snap row must resolve the chord first, per `DEC-011`'s cost and the `DEC-009` mechanism it relies on |
-| snap_third_left | string | no | Left-third snap binding. `[MISSING]` — planned by this pass (FR-27) |
-| snap_third_middle | string | no | Middle-third snap binding. `[MISSING]` — planned by this pass (FR-27) |
-| snap_third_right | string | no | Right-third snap binding. `[MISSING]` — planned by this pass (FR-27) |
+| snap_third_left | string | no | Left-third snap binding (FR-27) |
+| snap_third_middle | string | no | Middle-third snap binding (FR-27) |
+| snap_third_right | string | no | Right-third snap binding (FR-27) |
+| `<action>`_enabled | bool | no | Per-action enabled/disabled flag, one per row above, independent of its chord string. `[MISSING]` — planned by this pass (FR-28). Disabling never clears the chord column; re-enabling reads the same stored chord back. Distinct from `unbound`, which this table never records — that state is `window-management`'s runtime derivation, not a persisted value (`BR-9`). **Must default to `true` on every existing install's config, not Rust's derived `bool` default of `false`** — `shared::Config`'s structs already carry `#[serde(default)]` at the container level, so a missing field is filled from that struct's own hand-written `Default` impl rather than the primitive default, and every one of these sixteen fields' `Default` arm must set it to `true` explicitly. Getting this wrong on any one of them silently disables that action for every config.toml written before this field existed. |
 
 ### Dictionary
 
@@ -44,7 +45,7 @@ Schema source: `shared::Config` in `crates/shared/src/config.rs`.
 ## arrangement-percentage-preference
 
 The percentage each `snap_percent_*` chord snaps to — a value, not a chord, so it is not part of the
-declared sequence above and cannot collide with anything. `[MISSING]` — planned by this pass (FR-26).
+declared sequence above and cannot collide with anything (FR-26).
 
 | Column | Type | Nullable | Meaning |
 | --- | --- | --- | --- |

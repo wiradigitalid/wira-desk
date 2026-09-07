@@ -134,7 +134,7 @@ the filter for these two grants no capability that was not already available.
 
 ## Robustness Analysis
 
-The Robustness Analysis classifies the technical design for all realized use cases (`UC-1`, `UC-2`, `UC-3`, `UC-7`, `UC-9`, `UC-10`) and edge-case scenarios into Boundary, Control, Entity, and Behaviour.
+The Robustness Analysis classifies the technical design for all realized use cases (`UC-1`, `UC-2`, `UC-3`, `UC-7`, `UC-9`, `UC-10`, `UC-12`) and edge-case scenarios into Boundary, Control, Entity, and Behaviour.
 
 ### 1. Boundary Objects
 
@@ -218,6 +218,16 @@ Each edge's percentage is read and applied independently — this use case does 
 6. `C-WorkerDispatcher` invokes `suppress_start_menu()`.
 
 The three columns tile the work area exactly, the same guarantee `UC-2`'s halves make for two regions instead of three (LBR-WM-10).
+
+#### UC-12: A Disabled Action's Chord Is Not Claimed
+
+1. Daemon starts, or receives `WM_APP_RELOAD_CONFIG`.
+2. `C-HookController` builds its chord set from `shared::Config`, skipping any action `settings` recorded as disabled — `[MISSING]` (`FR-29`, `BR-9`).
+3. User presses the physical key combination that was the disabled action's chord.
+4. `C-HookController` finds no match for it in the chord set — the same outcome as pressing a chord nobody ever configured — and calls `CallNextHookEx` immediately without enqueuing anything.
+5. The keystroke reaches the foreground application, or Windows itself, unmodified.
+
+No new collision-handling logic is needed for this: `match_shortcut` and `unbind_duplicates` already operate over `Option<Shortcut>`, and a disabled action's chord is simply never placed into that structure in the first place (LBR-ST-17).
 
 #### SCN-03: Duplicate Chord in Configuration
 1. `load_shortcuts` parses every configured chord at daemon start and finds two fields resolving to the same one.
@@ -422,6 +432,7 @@ The engine never installs hooks, never writes configuration, and never calls blo
 6. Enqueuing command bytes to the lock-free static 16-slot ring buffer (`ring::push(u8)`) and posting an asynchronous wake-up message (`WM_APP_COMMAND_READY`) to the worker thread.
 7. Responding to periodic heartbeat checks (`WM_APP_HOOK_CHECK`) from `health::heartbeat` and managing hook re-registration and failure escalation.
 8. Deciding, per keystroke, whether an armed capture lease (`DEC-004`) applies — and if so, reporting the observed chord back to Settings (`observe`), or reporting and additionally swallowing it (`record`) — fail-closed to no-op whenever Settings does not currently hold the foreground window.
+9. Excluding a disabled action's chord from the match set entirely when building `Chords` from a config snapshot — `[MISSING]` (`FR-29`, `BR-9`). A disabled action never reaches step 5 above: there is no configured chord for the hook to translate, so a keystroke that would have matched it falls through `match_shortcut` unmatched and is passed to `CallNextHookEx` the same as any chord Wira Desk was never configured to claim.
 
 `LC-hook-thread` never performs heap allocations during keypress processing, never invokes blocking kernel or COM APIs, never executes window enumeration, and never waits for worker thread execution.
 
@@ -441,7 +452,7 @@ The engine never installs hooks, never writes configuration, and never calls blo
 - `WM_APP_HOOK_LEASE` (from `LC-tray-controller`, relaying `WM_APP_CAPTURE_LEASE` from Settings): Updates the stored capture-lease level and holder process id (`DEC-004`).
 
 ##### Outbound Signals
-- `ring::push(u8)`: Pushes `Command` opcode (`Cycle = 1`, `SnapLeft = 2`, `SnapRight = 3`, `SnapMaximize = 4`, `OverlappingStack = 5`, `SnapTop = 6`, `SnapBottom = 7`, `MoveToNextMonitor = 8`) into the lock-free ring buffer.
+- `ring::push(u8)`: Pushes `Command` opcode (`Cycle = 1`, `SnapLeft = 2`, `SnapRight = 3`, `SnapMaximize = 4`, `OverlappingStack = 5`, `SnapTop = 6`, `SnapBottom = 7`, `MoveToNextMonitor = 8`, `SnapPercentLeft = 9`, `SnapPercentRight = 10`, `SnapPercentTop = 11`, `SnapPercentBottom = 12`, `SnapThirdLeft = 13`, `SnapThirdMiddle = 14`, `SnapThirdRight = 15`) into the lock-free ring buffer. Opcodes 9–15 were added under `FR-26`/`FR-27` (`SPEC-1`) and are recorded here now, having been missed at the time — the design record for that spec landed only in `LC-arrangement-engine.md`, not here, though this component is what actually pushes them onto the wire.
 - `PostMessageW(worker_hwnd, WM_APP_COMMAND_READY, 0, 0)`: Signals the worker thread that commands are ready for draining.
 - `PostMessageW(worker_hwnd, WM_APP_HOOK_READY, thread_id, 0)`: Notifies startup readiness with the hook thread ID.
 - `PostMessageW(worker_hwnd, WM_APP_HOOK_INIT_FAILED, 0, 0)`: Signals fatal hook installation failure.
@@ -454,6 +465,7 @@ The engine never installs hooks, never writes configuration, and never calls blo
 - **Sticky Modifier Prevention:** Swallowing `Win` key releases causes Windows to believe `Win` is permanently pressed, corrupting subsequent input. `LC-hook-thread` specifically passes all modifier `key_up` events (`VK_LWIN`, `VK_RWIN`, `VK_LCONTROL`, `VK_LMENU`, `VK_LSHIFT`) to `CallNextHookEx`, while swallowing only the main chord key down/up events (`VK_BACKTICK` or configured key).
 - **Capture lease (`DEC-004`):** The lease decision (`lease_action`) is pure and fails closed — a lease armed at level `observe` or `record` does nothing unless Settings currently holds the foreground window, checked fresh on every keystroke it reaches. `record` additionally swallows the chord; `observe` only reports it. The heartbeat thread, never the callback, reaps a lease whose holder process has exited (`lease_holder_alive`) — `OQ-17` records this narrows rather than closes the process-id-reuse window, since a recycled pid can still pass the liveness check.
 - **Pointer Provenance & Soundness:** The Hook thread's runtime address is published to a static `AtomicPtr<HookRuntime>` using `&raw mut` without creating mutable aliases. Windows guarantees callback delivery on the hook thread during message retrieval, preventing concurrent access and data races.
+- **Disabled-action exclusion (`FR-29`):** `[MISSING]` — planned, not yet built. `crates/daemon/src/hook.rs`'s `Chords` struct is already `Option<Shortcut>` per field, and a chord already absent from the struct already takes no part in `match_shortcut` or `unbind_duplicates` — both `disabled` and `unbound` collapse to the same `None` representation at this layer today, confirmed by reading both functions. What is missing is only the step that builds `Chords` from config skipping a disabled field's chord in the first place; no change to matching or collision logic itself is anticipated.
 - **Evidence:** Verified against `crates/daemon/src/hook.rs`, `crates/daemon/src/ring.rs`, and `crates/daemon/src/context/vm_bypass.rs`.
 
 
@@ -632,7 +644,7 @@ Planning input for `LC-arrangement-engine`.
 - **`region`** names *what* is planned, not how. `next_monitor` is the one value whose plan reads two work areas; every other value reads one.
 - **`destination_monitor`** is valid only for the duration of the command that enumerated it. It is a handle, not an identity, and it MUST NOT be stored beyond that (AD-14).
 - An `arrangement-command` that yields an **empty** plan has succeeded, not failed. A disabled overlapping stack and a `next_monitor` on a single-monitor desktop both land there.
-- **`percent_left`/`percent_right`/`percent_top`/`percent_bottom`** each read their percentage from `shared::Config` (`snapping.percent_*`) at plan time rather than carrying it as a column — the wire command names only the edge, never the value. `[MISSING]` — planned by this pass.
+- **`percent_left`/`percent_right`/`percent_top`/`percent_bottom`** each read their percentage from `shared::Config` (`snapping.percent_*`) at plan time rather than carrying it as a column — the wire command names only the edge, never the value.
 
 #### monitor-set
 
