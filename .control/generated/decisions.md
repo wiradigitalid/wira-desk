@@ -4,7 +4,7 @@
 
 Decisions are no longer looked up through the memlog — the memlog goes back to being just a pass log.
 
-**15 decisions** — applied: 14 · draft: 1.
+**16 decisions** — accepted: 1 · applied: 14 · draft: 1.
 
 | id | Title | Status | Type | Touches | File |
 | --- | --- | --- | --- | --- | --- |
@@ -23,3 +23,4 @@ Decisions are no longer looked up through the memlog — the memlog goes back to
 | `DEC-013` | The hygiene gate permits the maintainer handle on a decision's accepted_by line | `applied` | — | `.control/decisions/DEC-013-the-hygiene-gate-permits-the-handle-on-a-decisions-accepted-by-line.md`, `.control/questions/answered.md`, `.control/questions/assumptions.md`, `.control/registry/decisions.yaml`, `scripts/verify-public-export.ps1` | `decisions/DEC-013-the-hygiene-gate-permits-the-handle-on-a-decisions-accepted-by-line.md` |
 | `DEC-014` | The Shortcuts pane regroups into five taxonomic groups, and Maximize moves out of Snap & Resize | `draft` | — | — | `decisions/DEC-014-the-shortcuts-pane-regroups-into-five-taxonomic-groups.md` |
 | `DEC-015` | The hygiene gate permits internal ids under .scratch/ | `applied` | — | `.control/decisions/DEC-015-the-hygiene-gate-permits-internal-ids-under-scratch.md`, `.control/registry/decisions.yaml`, `scripts/verify-public-export.ps1` | `decisions/DEC-015-the-hygiene-gate-permits-internal-ids-under-scratch.md` |
+| `DEC-016` | Autopilot mandate for SPEC-2/SPEC-3 delivery | `accepted` | — | `.control/decisions/DEC-016-autopilot-mandate-for-spec-2-spec-3-delivery.md`, `.control/memlog/autopilot-DEC-016.md`, `.control/registry/decisions.yaml` | `decisions/DEC-016-autopilot-mandate-for-spec-2-spec-3-delivery.md` |
