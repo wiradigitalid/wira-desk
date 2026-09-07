@@ -8,15 +8,20 @@ date: 2026-09-07
 
 ## Resume
 
-- Iteration 1 — `SPEC-4-01` at `wdi-build` Step 1 **closed**: seven tests red at the right assertions
-  across `settings` and `daemon`. Boundary commit: the commit carrying this line.
-- Run branch: `autopilot/DEC-017`, in the sibling autopilot worktree; ticket work rides
-  `ticket/SPEC-4-01` and merges back only green, so the run branch never carries red. No PR open yet.
-- Stopped at: — (iteration in progress)
+- Iteration 1 — `SPEC-4-01` Step 1 closed (seven tests red at the right assertions, `3d3a9bf`);
+  **Step 2 dispatched and IN FLIGHT**. Boundary commit: `c8a9aad` on `ticket/SPEC-4-01`.
+- Run branch: `autopilot/DEC-017` at `c58e703`; ticket work rides `ticket/SPEC-4-01`, cut from it, and
+  merges back only green, so the run branch never carries red. No PR open yet.
+- Stopped at: — (iteration in progress, waiting on a dispatched step)
 - Blocked: —
 - Parked: —
-- Next: `wdi-build` Step 2 on `SPEC-4-01` — dispatch `claude-byok` against the amended ticket to make
-  the seven red tests green.
+- **In flight — do NOT re-dispatch:** `claude-byok` builds `SPEC-4-01` as background job `ble3851qv`,
+  brief at `.scratch/builder-brief-spec-4-01.md`. Confirmed working from the worktree itself (five
+  files modified inside ticket scope), not from its own report. The coordinator holds the build lock
+  shut while it is out: run **no** `cargo` command until this job exits.
+- Next: when `ble3851qv` exits — judge Step 2 from the artifact (re-run fmt/clippy/full suite and read
+  the diff, never the builder's summary), then Step 3's two-axis panel by agents that are not the
+  builder, then merge green into the run branch and delete `ticket/SPEC-4-01`.
 
 ## Decisions
 
