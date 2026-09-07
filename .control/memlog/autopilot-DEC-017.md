@@ -8,28 +8,26 @@ date: 2026-09-07
 
 ## Resume
 
-- Iteration 8 — `SPEC-4-03` **return trip 1 of 2**, coordinator half **done and committed**. The
-  panel's own findings, the mutations, the two stale markup comments, `CHANGELOG`, `3p.md`,
-  `specs.yaml` and Amendment 3 are all landed. Suite 553/0/2, clippy clean, validators GREEN.
+- Iteration 11 — `SPEC-4-03` **return trip 1 judged and accepted with one must-fix**; **return trip
+  2 of 2 opened**, which is `wdi-build`'s cap. Trip 1's production half is at `aff7540`, the
+  coordinator's verification and `DEF-7` at this commit.
 - Run branch: `autopilot/DEC-017` at `398a362`; ticket work on `ticket/SPEC-4-03`, cut from it,
   merges back only green. Not pushed, no PR — first push at spec close.
-- Stopped at: coordinator half complete; **builder half not yet dispatched.**
+- Stopped at: verification complete, trip-2 dispatch next.
 - Blocked: —
 - Parked: —
-- **IN FLIGHT — do NOT re-dispatch:** `claude-byok` on the production half of return trip 1, brief
-  at `.scratch/builder-brief-spec-4-03-trip1.md`. Four items, all on the ticket as
-  Amendment 2: (1) the Tab-order regression against `LBR-ST-5` — `wdi-systematic-debugging`
-  FIRST, one Tab press reaches a row's description block from a fresh window; (2) delete the five
-  `GROUP_HEADING_*` constants and plumb `SHORTCUT_KEYCAP` / `SHORTCUT_ROW_DESCRIPTION` through the
-  existing `in property` pattern; (3) per-row accessible names for keycap and description —
-  sixteen elements currently share two names, `DEF-2`'s literal shape; (4) keep-or-remove
-  `min-height: 50px`, and remove the test-only `accessible-action-default => { self.focus(); }`.
-- **Build lock: SHUT.** The builder holds it — no `cargo`, no stash, no branch switch,
-  no worktree restore by the coordinator while the builder holds it.
-- Mutation discipline for the judging pass, learned the hard way this iteration and not to be
-  re-learned: verify every mutation APPLIED (`git diff --numstat`) before believing a green, and
-  read the measurement before believing a red. One guard here went red for the wrong reason and was
-  two-thirds of the way to being accepted as working.
+- **IN FLIGHT — do NOT re-dispatch:** `claude-byok` on trip 2, brief at
+  `.scratch/builder-brief-spec-4-03-trip2.md`. One item: `key_handler` must forward Tab to
+  `key_pressed_event` before rejecting it, and reject only when `listening_field == -1`.
+- **After trip 2, and it is not optional:** re-run the **two-axis panel** over the whole ticket —
+  `wdi-build` Step 3 requires the panel re-run after every fix round, and two rounds have now
+  landed without one. Then ticket close, merge into the run branch, `SPEC-4-04`.
+- **This is the last return trip.** A trip-2 result that still carries an unresolved must-fix is
+  **Blocked**, recorded here, and `SPEC-4-04` becomes the next runnable row — not a third trip.
+- **Build lock: SHUT.** The builder holds it; no cargo, no stash, no branch switch here.
+- Judging discipline for trip 2, earned this iteration: verify a mutation APPLIED before believing
+  a green, read the measurement before believing a red, and **do not trust a probe that measures the
+  test backend** — Amendment 2's Tab-order regression was exactly that and is retracted.
 
 ## Decisions
 
@@ -75,3 +73,8 @@ date: 2026-09-07
 | Iter 6 | `wdi-build` Step 1 for `SPEC-4-03` | Landed a **seam agreement instead of a red suite**, and recorded it as a departure. All three criteria are rendered-geometry properties reachable only through `ElementHandle`, which finds elements by accessible label — and the keycap, the title/description block, and all five group headings have none today, so none is findable. Making them reachable IS the ticket's work: its own tooltip criterion requires keyboard-focus reachability (`FR-20`/`FR-21`), which means the accessible tree | Writing tests that cannot compile, or adding the accessible labels myself and crossing the owner's coding/testing split | If the seam is wrong the builder reports it before writing markup, which is cheaper than after | ticket amendment 1 |
 | Iter 6 | Near-miss on my own check | Almost concluded `ElementHandle` exposes no geometry at all, which would have mis-scoped the whole ticket — my first grep truncated at `head -25`, two lines short of `size()` and `absolute_position()`. Re-ran unfiltered before deciding | Scoping the ticket around a capability that does exist | Would have sent the builder to build the wrong thing, or parked a runnable ticket | this row |
 | Iter 6 | `SPEC-4-01`'s deferred coverage | Folded the three uncovered group headings into `SPEC-4-03`, which is where the `shortcuts_pane_slint_snapshot` module is created. Its test iterates `ShortcutField::GROUPS` rather than restating five strings — directly `theme::ALL`'s lesson, where a hand-listed array silently missed two entries | A separate ticket creating the same module, or five hardcoded heading strings | None; the module exists once and the constant stays the single source | ticket amendment 1, `specs.yaml` |
+| Iter 11 | `wdi-build` Step 3 for `SPEC-4-03` | Trip 1 is **accepted except one must-fix**, and trip 2 is opened for it — the remedy created the defect rather than missing it. | Returning the whole ticket, or absorbing the must-fix as a follow-up | A `DEC-` stays contradicted one more round | `.scratch/.../03-...md` Amendment 4 |
+| Iter 11 | Coordinator's own Amendment 2 | **Retracted** the "user-visible Tab-order regression": the probe measured the testing backend, where `key_handler` never receives keys. There was no regression; criterion 2 had simply never been delivered. | Leaving it standing, since trip 1 "fixed" it anyway | A future reader inherits a false regression and a false fix | ticket Amendment 4, `3p.md` |
+| Iter 11 | `LBR-ST-5` vs the shell | Filed the missing Tab order as **`DEF-7`** rather than widening `SPEC-4-03` or opening a `DEC-`: the code fails an active rule, which is a defect, not a decision. | A `DEC-` recording the conflict, as the builder proposed | A shell-wide accessibility gap sits in a decision record nobody treats as work | `.control/registry/defects.yaml` |
+| Iter 11 | `DEF-7`'s `violates` | Named **`FR-20`**, not `LBR-ST-5`: rules carry no registry id here and `refs-resolve` went red on it. The rule stays named in prose. | Inventing a rules registry, or dropping the reference | The defect points at a promise one level away from the rule it breaks | `.control/registry/defects.yaml` |
+| Iter 11 | The Tab/`DEC-005` must-fix | Sent it to the **smoke test** rather than giving it an automated test: `key_handler` receives no keys in the testing backend, measured with a plain `'b'`. | A test driven through the accessible layer, which is `DEF-5`'s own mechanism | A live-only regression has no automated guard | ticket Amendment 4 |

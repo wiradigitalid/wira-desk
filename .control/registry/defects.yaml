@@ -337,3 +337,45 @@ defects:
       Intercepted`) before the fix, green after. `cargo test --workspace`
       (`WIRADESK_SKIP_MANIFEST=1`) exits 0, 491 passing across `daemon`/`settings`/`shared`;
       `cargo clippy --workspace --all-targets -- -D warnings` clean; `cargo fmt --all` clean.
+
+  - id: DEF-7
+    title: The Settings window has no Tab order, because nothing in its shell is focusable
+    status: open
+    severity: medium
+    component: settings
+    # `LBR-ST-5` is the rule this breaks, but rules carry no registry id in this repo and
+    # `refs-resolve` requires one, so the resolvable promise behind it is named instead: FR-20 is
+    # "All interactive settings controls are fully keyboard-navigable ... via logical Tab order".
+    violates: [FR-20]
+    found_in: "0.4.0"
+    found_by: Coordinator verification of SPEC-4-03 return trip 1, 2026-09-08
+    tests: []
+    summary: >-
+      `LBR-ST-5` (`status: active`) requires "a deterministic Tab navigation order that starts with
+      navigation tabs and terminates with action buttons". The Settings shell cannot satisfy it and
+      never could: the only `FocusScope` anywhere in `crates/settings/ui/` outside a shortcut row is
+      `key_handler` in `main_window.slint`. `SidebarItem` is a `Rectangle` with a `TouchArea`, the
+      Save and Revert buttons are the same shape, and neither is reachable by keyboard at all. So
+      there is no "navigation tabs first" to start the order with and no "action buttons" to end it
+      at -- there is no order.
+    why_it_hid: >-
+      `crates/settings/src/app.rs`'s `focus_order` declares one, and `focus_order_mismatch` guards
+      it -- but that test only ever compares `focus_order`'s output to itself, and no rendered
+      element carries `f.label()` as an accessible name, so the declaration has never been checked
+      against the window. The rule therefore read as satisfied by a guard that could not fail.
+      Separately, `MainWindow` sets `forward-focus: key_handler` and that scope returned `accept`
+      for every key, so Tab was swallowed before Slint's focus traversal could run: the absence of
+      an order was invisible because Tab did nothing at all.
+    impact: >-
+      A keyboard-only user cannot reach the pane navigation or the Save and Revert buttons. Since
+      `SPEC-4-03` return trip 1 made `key_handler` reject Tab so focus traversal runs, Tab now
+      lands on the first shortcut row's description block -- which is what makes the gap visible,
+      and is an improvement on Tab doing nothing, but it is not the order the rule names.
+    fix_direction: >-
+      Give the shell real focus stops -- `SidebarItem` and the action buttons become focusable
+      controls with `focus-on-tab-navigation` -- and then declare the order where `LBR-ST-5` says
+      it starts and ends. `focus_order` MUST end up checked against the rendered tree rather than
+      against itself, or this returns the same way it hid. Deliberately NOT `SPEC-4-03`'s: it is a
+      shell-wide change across `sidebar.slint` and `main_window.slint`, the ticket's builder
+      escalated it rather than widening scope, and that was the right call.
+    owner: repo owner

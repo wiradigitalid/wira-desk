@@ -159,7 +159,7 @@ now lands on a row's description block instead of the navigation sidebar. That i
       before this ticket — no rendered element carries `f.label()` as an accessible name — so this
       is drift into an existing hole rather than a live guard broken. It is still the hole this
       criterion walked into.
-- [ ] Prove the final order with a **real `Key::Tab`** sequence, not
+- [x] Prove the final order with a **real `Key::Tab`** sequence, not
       `invoke_accessible_default_action()`. That call fires the
       `accessible-action-default => { self.focus(); }` hook added at `shortcut_row.slint:76-78`,
       which exists for no production purpose — it is there so the test can focus the block. That is
@@ -176,23 +176,23 @@ zero readers anywhere and the seventh is read only by a test — which makes the
 that must match markup rather than a declaration markup obeys, the coupling backwards. The strings
 appear a third and fourth time as raw literals in the new tests.
 
-- [ ] **Delete the five `GROUP_HEADING_*` constants.** `ShortcutField::GROUPS` is already the one
+- [x] **Delete the five `GROUP_HEADING_*` constants.** `ShortcutField::GROUPS` is already the one
       home for those five strings, `shortcuts_pane.slint` renders them through `root.heading`, and
       `app.rs` already guards `GROUPS` against `group()`. A second unenforced copy of a
       single-source array is what `DEC-018` exists to prevent.
-- [ ] Keep `SHORTCUT_KEYCAP` and `SHORTCUT_ROW_DESCRIPTION`, but **consume them the way this file
+- [x] Keep `SHORTCUT_KEYCAP` and `SHORTCUT_ROW_DESCRIPTION`, but **consume them the way this file
       already consumes the other four** — an `in property` on `ShortcutRow`, filled from Rust in
       `main.rs` — instead of literals in markup. That plumbing exists eleven lines away.
 
 ### Sixteen controls, two names
 
-- [ ] Both new labels are row-invariant, so the tree carries sixteen elements named
+- [x] Both new labels are row-invariant, so the tree carries sixteen elements named
       `"Shortcut keycap"` and sixteen named `"Shortcut description"`, one of them on a `FocusScope`
       and one on an `accessible-role: button`. That is `DEF-2`'s literal shape and a new instance of
       `DEF-6`'s class, citing the same `FR-20`/`FR-21` criterion 2 invokes. Eleven lines below,
       `"Enable " + root.title` does it correctly. Make them per-row.
       `accessible_names_are_unique` cannot see this: it iterates `ALL`, not the rendered tree.
-- [ ] `min-height: 50px` on the row is **inert** — the row's natural height is already 50px
+- [x] `min-height: 50px` on the row is **inert** — the row's natural height is already 50px
       (30px cluster + 10px + 10px padding), so deleting the line changes no pixel and breaks no
       test. Either give it a real assertion or remove it. Do not leave a line that looks like a
       guarantee and guarantees nothing.
@@ -300,6 +300,98 @@ the test's own comment rather than only here.
   rows, so if the builder keeps the line it is not unguarded. It gives no purchase on *deleting*
   it, which the panel's arithmetic says changes no pixel. That decision is unchanged and still the
   builder's.
+
+### Amendment 4 — 2026-09-08, coordinator verification of return trip 1
+
+Judged from the diff at `aff7540` and from re-running every command, not from the builder's report.
+**Trip 1 is accepted except for one must-fix**, and the must-fix is a consequence of the remedy
+rather than a failure to carry it out.
+
+#### Verified by measurement, not by reading the report
+
+| Claim | How it was checked | Result |
+|---|---|---|
+| Suite 554 / 0 / 2, clippy and fmt clean | re-ran all three | confirmed (347 + 149 + 58) |
+| `min-height: 50px` was inert | row pitch before and after its removal | identical: keycap ys `[148, 199, 250, 301]`, pitches `[51, 51, 51]` |
+| Five `GROUP_HEADING_*` deleted, two constants consumed | read the diff; `ALL` 27 -> 22, `in property` plumbing matches the four the file already had | confirmed |
+| Per-row labels do not blind the guards | **dropped the plumbing** in `shortcuts_pane.slint` and ran the suite | **4 guards red**: the height guard, the width test, the centring test, the tooltip test |
+| Item 1's fix is actually guarded | **reverted both `reject` lines** in `main_window.slint` | **red** at `shortcut_row_slint_snapshot.rs:554`, "Description must surface as a tooltip on keyboard focus" |
+
+The fourth row is the one the brief spent most of its length on, and the trap did not materialise:
+the labels are derived from `theme::shortcut_keycap_label` / `shortcut_description_label`, which
+both the production plumbing and the tests read, so the two cannot drift apart — and if the markup
+binding is dropped the labels go empty and the guards fail loudly instead of finding nothing.
+
+#### The coordinator's own Amendment 2 was wrong, and this is the correction
+
+Amendment 2 recorded a **user-visible Tab-order regression** on the strength of a throwaway probe
+that printed `PROBE: tooltip surfaced after Some(1) Tab presses`. That conclusion does not survive
+measurement:
+
+- With trip 1's two `reject` lines removed — which is the pre-trip-1 markup — one real `Key::Tab`
+  press does **not** surface the tooltip. The test fails at exactly that assertion.
+- `MainWindow` sets `forward-focus: key_handler`, and that scope returned `accept` for every key,
+  so Tab was swallowed before Slint's focus traversal could run.
+- In the testing backend `key_handler` never receives keys at all: a probe dispatching a plain
+  `'b'` leaves `key_check.last_display` empty, with and without `WindowActiveChanged(true)`.
+
+So the earlier probe was measuring the harness, not the product. **There was no regression.** What
+was actually true is worse and quieter: criterion 2 — *the tooltip is reachable by keyboard focus,
+not only mouse hover* — was **never delivered**, and the test that appeared to prove it drove focus
+through `invoke_accessible_default_action()`, which is `DEF-5`'s own mechanism. Trip 1 delivered
+that criterion for the first time. The builder's root cause was right and the panel's framing of it
+was not.
+
+`LBR-ST-5` is a real gap and the builder was right to escalate rather than widen: no `SidebarItem`
+and neither action button is focusable, so there is no Tab order to start with navigation tabs. Now
+filed as **`DEF-7`**, out of this ticket's scope.
+
+#### MUST-FIX — return trip 2 of 2. This is the cap
+
+`key_handler` returns `reject` for `Tab`/`Backtab` **before** calling `root.key_pressed_event(...)`
+(and the same in `key-released`), so the Rust side never sees Tab. Two things depend on it:
+
+1. **`DEC-005` (`status: applied`) is contradicted.** The key check's whole design is a correlation
+   of *what the hook saw* against *what the window saw*, and its four-row table is the only set of
+   claims it may make. The window still receives the Tab event — the markup drops it before
+   reporting it — so the "window saw" signal becomes **false**. Press `Ctrl+Alt+Tab` with the
+   daemon running and the check reads hook yes / window no, which that table defines as *"Another
+   application claimed it, but Wira Desk's hook receives it first"*. That is a fabricated diagnosis
+   about a third-party application that does not exist, and inventing a verdict from a broken signal
+   is the exact failure `DEC-005` was written to prevent.
+2. **A chord containing Tab can no longer be captured.** `map_slint_key` maps `"\t"` and `U+0009`
+   to `"tab"` in two separate deliberate arms, `app.rs`'s token map renders it as `"Tab"`, and the
+   capture branch pushes it into the combo — so Tab is a supported chord key by construction, and
+   `Ctrl+Alt+Tab` was bindable before this change.
+
+**The remedy, and it is small:** forward the event to Rust **first**, then return `reject` only when
+no capture is in progress. `MainWindow` already carries `in property <int> listening_field: -1`, so
+the markup can read it:
+
+```slint
+key-pressed(event) => {
+    root.key_pressed_event(event.text, event.modifiers.control, /* ... */);
+    if (event.text == Key.Tab || event.text == Key.Backtab) && root.listening_field == -1 {
+        return reject;
+    }
+    accept
+}
+```
+
+Same shape in `key-released`. Forwarding Tab when nothing is listening is safe: the callback's only
+other branches are Escape, the `Listening` capture, and onboarding step 2's Win+backtick, and Tab
+falls through all three.
+
+**No automated test can prove this in this harness**, because `key_handler` never receives keys
+there — measured above, and `wdi-build`'s own rule is that a criterion no test can express is
+reported rather than faked. So it goes on the smoke-test list instead of getting a test that would
+pass for the wrong reason. Two steps, on the live build with the daemon running:
+
+- Open Settings, click a shortcut's keycap to start capture, press `Ctrl+Alt+Tab`: the chord must be
+  recorded, and focus must not jump out of the row mid-capture.
+- With nothing capturing, press `Ctrl+Alt+Tab` and read the Key Check band: it must report the
+  window as having seen the key, not a third-party claim. Then press Tab alone and confirm focus
+  still advances.
 
 ### Recorded, not fixed
 
