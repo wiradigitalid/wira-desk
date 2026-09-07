@@ -3,13 +3,33 @@
 defects:
   - id: DEF-5
     title: Typing a digit by hand into a percentage field does not reach the value the stepper buttons read
-    status: open
+    status: fixed
     severity: medium
     component: settings
     violates: [SPEC-2-01]
     found_in: "0.4.0"
     found_by: Owner live manual test on the elevated build, 2026-09-07 (post-DEC-016 finish, pre-merge of PR #17)
-    tests: []
+    tests:
+      - shortcut_row_slint_snapshot::tests::a_real_keystroke_sequence_commits_a_typed_percentage
+      - shortcut_row_slint_snapshot::tests::a_real_keystroke_sequence_out_of_range_is_refused
+      - shortcut_row_slint_snapshot::tests::a_real_keystroke_sequence_commits_a_typed_stack_percentage
+    fixed_in: SPEC-4-04
+    fixed_by: >-
+      One word. `pct_input`'s `key-pressed` callback returned `accept` for every key it did not
+      special-case, and in Slint `accept` from a `TextInput`'s callback means the callback consumed
+      the event -- so `TextInput::key_event` returned `EventAccepted` immediately and none of its
+      built-in editing ran. Changed to `reject` (`shortcut_row.slint:279`, commit `753b1fb`).
+      Established from primary source rather than by trying edits: `i-slint-core-1.17.1`'s
+      `items/text.rs:958-967` for the consumption semantics, and `:2206` for the
+      `InputType::Number` filter that ruled out the first candidate. All five of this row's
+      candidates were ruled in or out explicitly.
+      Verified by the coordinator rather than from the report: restoring the `accept` reds all three
+      tests above, and the diff is one markup line plus 68 added test lines with ZERO deletions, so
+      the five `set_accessible_value` tests this row names in `summary` are untouched and green.
+    residual: >-
+      The three tests drive real character events through the window's own queue, which is the path
+      this defect lived in the gap of. What they do NOT cover is a physical keypress reaching the
+      daemon's hook: `DEF-12` records why an agent cannot test that at all.
     summary: >-
       The owner reports that on the live standalone build, typing a number directly into a Shortcuts-pane
       percentage field (`crates/settings/ui/components/shortcut_row.slint`'s `pct_input`) has no visible
@@ -431,13 +451,35 @@ defects:
 
   - id: DEF-9
     title: Keyboard events reach the Settings Rust layer only while the window's own FocusScope holds focus
-    status: open
+    status: fixed
     severity: high
     component: settings
     violates: [DEC-005]
     found_in: "0.4.0"
     found_by: Spec-axis review panel on SPEC-4-03, 2026-09-08
-    tests: []
+    tests:
+      - shortcut_row_slint_snapshot::tests::an_unconsumed_key_still_reaches_rust_after_focus_moves_into_a_row
+      - shortcut_row_slint_snapshot::tests::tab_is_forwarded_to_rust_before_it_is_rejected_for_focus_traversal
+    fixed_in: SPEC-4-05
+    fixed_by: >-
+      The outer `Rectangle` holding every pane is now nested INSIDE `key_handler`, so an unconsumed
+      key bubbles up to it instead of dying in a sibling subtree; the scope gained
+      `width: 100%; height: 100%`, which it needs once it has children (`main_window.slint`, commit
+      `d26c416`). `forward-focus: key_handler` is unchanged, so a fresh window still starts with
+      focus there. The builder confirmed the mechanism by probe BEFORE changing anything: with the
+      sibling structure an unconsumed `'y'` after a Tab press never arrived, and after the fix it
+      did.
+      The two tests above were written by the coordinator afterwards and both were seen red -- the
+      pre-fix sibling structure reds the first with no keys forwarded at all, and moving the
+      `reject` above the forward reds the second with Tab missing. They exist because an earlier
+      note of mine claimed this path could not be tested; a test can register its own
+      `on_key_pressed_event` listener, and that claim was wrong.
+    residual: >-
+      The tests guard the MARKUP's forwarding contract. What `main()`'s handler then does with a
+      bubbled key -- the Key Check recording, the `Listening` capture branch, the Escape cancel --
+      is still unguarded, because that registration sits outside `bind_callbacks` (`DEF-8`). So the
+      Escape-cancel-from-moved-focus path is verified only by `SPEC-4-05`'s smoke steps, and
+      `DEF-12` records that even those cannot exercise the hook correlation.
     summary: >-
       `crates/settings/ui/main_window.slint` declares `key_handler := FocusScope` (line 149) as a
       SIBLING of the outer `Rectangle` that holds every pane (line 179) -- both are direct children

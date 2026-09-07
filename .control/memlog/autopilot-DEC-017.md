@@ -29,7 +29,9 @@ date: 2026-09-07
   package. `generated/timeline.md` and `report.md` on disk are from 2026-09-07 and MUST NOT be read
   as current.
 - Parked: nothing. `parked: [ad-n]` was never reached — no `AD-N` was narrowed.
-- Defects filed by this run: `DEF-7` through `DEF-12`. Registry now holds twelve rows, ten open.
+- Defects filed by this run: `DEF-7` through `DEF-12`. Registry holds twelve rows, **six open** —
+  `DEF-5` and `DEF-9` are `fixed` by `SPEC-4-04` and `SPEC-4-05`, each carrying `fixed_in`,
+  `fixed_by`, its tests, and a `residual` naming what is still unguarded.
 - The loop is cancelled. The mandate is `applied`. The owner merges; the run never does.
 
 ## Decisions
@@ -106,3 +108,4 @@ date: 2026-09-07
 | Iter 23 | `FR-9`'s memory promise | Filed **`DEF-11`** on the smoke test's one FAIL — 29.7 MB working set, 4.0 MB private, against "under 2 MB" — with the caveats that it was a stale build and that "static RAM" is undefined. | Passing it, since the build was stale; or editing `FR-9`'s number to match | Either a real overrun is dismissed, or the corpus learns to agree with whatever was measured | `.control/registry/defects.yaml` |
 | Iter 23 | The smoke runner's own finding | Filed **`DEF-12`**: the release hook discards `LLKHF_INJECTED`, so `smoke_test: agent` structurally cannot verify `DEC-005`'s correlation. Corrected its fix direction after reading `hook.rs:160-176` — the debug seam already exists. | Recording it as prose in a report nobody greps | Two mandates have already smoke-tested this area believing it covered | `.control/registry/defects.yaml` |
 | Iter 23 | The PR at Finish | Marked #19 **ready only after** CI concluded green on the head actually pushed, re-checking rather than trusting the earlier green on an older head. | Marking it ready on the previous head's green | A PR marked ready is an invitation to merge, extended over a head CI never judged | PR #19 |
+| Iter 25 | § Finish, last check before the report | Caught `DEF-5` and `DEF-9` still reading `status: open` after this run fixed both, and closed them properly with `fixed_in`, `fixed_by`, tests and `residual`. | Writing the final report over a registry that contradicted it | Two defects this run fixed stay open forever, and the report inherits the error | `.control/registry/defects.yaml` |
