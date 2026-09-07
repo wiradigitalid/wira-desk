@@ -1,4 +1,4 @@
-asof: '2026-09-03'
+asof: '2026-09-07'
 capabilities:
 - id: CAP-1
   text: Cycle focus among visible windows of the active application via a precise global shortcut.
@@ -9,35 +9,39 @@ capabilities:
   planned_start: ''
   planned_end: ''
   estimate_mandays: 0
-  actual_start: ''
-  actual_end: ''
+  actual_start: '2026-09-06'
+  actual_end: '2026-09-06'
   delta_days: null
-  state: not-started
+  state: done
   children:
   - id: FR-1
     text: Cycle only among windows of the same application identity (exe name), not global Alt+Tab.
-    tickets: []
-    actual_start: ''
-    actual_end: ''
-    state: not-started
+    tickets:
+    - W1-S1
+    actual_start: '2026-09-06'
+    actual_end: '2026-09-06'
+    state: done
   - id: FR-4
     text: Bring Not Responding windows to the foreground instead of hiding them during a cycle.
-    tickets: []
-    actual_start: ''
-    actual_end: ''
-    state: not-started
+    tickets:
+    - W1-S1
+    actual_start: '2026-09-06'
+    actual_end: '2026-09-06'
+    state: done
   - id: FR-5
     text: Skip minimized, ghost, and tool-window overlays; cycle only visibly open windows.
-    tickets: []
-    actual_start: ''
-    actual_end: ''
-    state: not-started
+    tickets:
+    - W1-S1
+    actual_start: '2026-09-06'
+    actual_end: '2026-09-06'
+    state: done
   - id: FR-6
     text: Require an exact shortcut match; extra modifiers must not trigger cycling.
-    tickets: []
-    actual_start: ''
-    actual_end: ''
-    state: not-started
+    tickets:
+    - W1-S1
+    actual_start: '2026-09-06'
+    actual_end: '2026-09-06'
+    state: done
   waiting_on: []
 - id: CAP-10
   text: Launch the daemon silently at logon via a scheduled task without repeated UAC prompts.
@@ -69,17 +73,18 @@ capabilities:
   planned_start: ''
   planned_end: ''
   estimate_mandays: 0
-  actual_start: ''
-  actual_end: ''
+  actual_start: '2026-09-06'
+  actual_end: '2026-09-06'
   delta_days: null
-  state: not-started
+  state: done
   children:
   - id: FR-12
     text: Provide View Logs in the tray menu opening the silent log file location.
-    tickets: []
-    actual_start: ''
-    actual_end: ''
-    state: not-started
+    tickets:
+    - W1-S3
+    actual_start: '2026-09-06'
+    actual_end: '2026-09-06'
+    state: done
   waiting_on: []
 - id: CAP-12
   text: Move the active window to another physical monitor from the keyboard, keeping its share of the
@@ -91,21 +96,23 @@ capabilities:
   planned_start: ''
   planned_end: ''
   estimate_mandays: 0
-  actual_start: ''
-  actual_end: ''
+  actual_start: '2026-09-06'
+  actual_end: '2026-09-06'
   delta_days: null
-  state: not-started
+  state: done
   children:
   - id: FR-23
     text: Move the active window to the next physical monitor at the same proportion of the work area,
       same virtual desktop.
-    tickets: []
-    actual_start: ''
-    actual_end: ''
-    state: not-started
+    tickets:
+    - W4-S3
+    actual_start: '2026-09-06'
+    actual_end: '2026-09-06'
+    state: done
   waiting_on: []
-- id: CAP-2
-  text: Snap and resize the active window with keyboard shortcuts, DPI-aware per monitor.
+- id: CAP-13
+  text: Check whether a newer release is available, on a schedule and on request, without any other network
+    activity or identifying payload.
   size: ''
   priority: ''
   owner: ''
@@ -118,12 +125,87 @@ capabilities:
   delta_days: null
   state: not-started
   children:
-  - id: FR-14
-    text: Snap the active window to the left or right half and maximize it with Ctrl+Alt shortcuts, DPI-aware.
+  - id: FR-24
+    text: Periodically check over HTTPS whether a newer release exists, on by default and toggleable,
+      with no payload beyond the request itself.
     tickets: []
     actual_start: ''
     actual_end: ''
     state: not-started
+  - id: FR-25
+    text: Let the user check for updates on demand, and on confirmation, download, verify, and launch
+      the installer.
+    tickets: []
+    actual_start: ''
+    actual_end: ''
+    state: not-started
+  waiting_on: []
+- id: CAP-14
+  text: Snap the active window to a screen edge at a user-configurable percentage instead of a fixed half.
+  size: ''
+  priority: ''
+  owner: ''
+  target_release: ''
+  planned_start: ''
+  planned_end: ''
+  estimate_mandays: 0
+  actual_start: '2026-09-06'
+  actual_end: '2026-09-07'
+  delta_days: null
+  state: done
+  children:
+  - id: FR-26
+    text: Snap the active window to a screen edge at a percentage the user configures per direction, instead
+      of the fixed half.
+    tickets:
+    - SPEC-1-01
+    actual_start: '2026-09-06'
+    actual_end: '2026-09-07'
+    state: done
+  waiting_on: []
+- id: CAP-15
+  text: Snap the active window to one of three equal horizontal thirds of the current monitor.
+  size: ''
+  priority: ''
+  owner: ''
+  target_release: ''
+  planned_start: ''
+  planned_end: ''
+  estimate_mandays: 0
+  actual_start: '2026-09-07'
+  actual_end: '2026-09-07'
+  delta_days: null
+  state: done
+  children:
+  - id: FR-27
+    text: Snap the active window to the left, middle, or right third of the current monitor.
+    tickets:
+    - SPEC-1-02
+    actual_start: '2026-09-07'
+    actual_end: '2026-09-07'
+    state: done
+  waiting_on: []
+- id: CAP-2
+  text: Snap and resize the active window with keyboard shortcuts, DPI-aware per monitor.
+  size: ''
+  priority: ''
+  owner: ''
+  target_release: ''
+  planned_start: ''
+  planned_end: ''
+  estimate_mandays: 0
+  actual_start: '2026-09-06'
+  actual_end: '2026-09-06'
+  delta_days: null
+  state: done
+  children:
+  - id: FR-14
+    text: Snap the active window to the left or right half and maximize it with Ctrl+Alt shortcuts, DPI-aware.
+    tickets:
+    - W1-S2
+    actual_start: '2026-09-06'
+    actual_end: '2026-09-06'
+    state: done
   - id: FR-15
     text: Apply overlapping stack layout on small monitors with up to three half-width windows.
     tickets: []
@@ -132,10 +214,11 @@ capabilities:
     state: not-started
   - id: FR-22
     text: Snap the active window to the top or bottom half of the current monitor, DPI-aware.
-    tickets: []
-    actual_start: ''
-    actual_end: ''
-    state: not-started
+    tickets:
+    - W1-S2
+    actual_start: '2026-09-06'
+    actual_end: '2026-09-06'
+    state: done
   waiting_on: []
 - id: CAP-3
   text: Load user preferences from a local TOML file in a writable user directory.
@@ -194,7 +277,8 @@ capabilities:
   state: not-started
   children:
   - id: FR-16
-    text: Tray menu order Settings, View Logs, Auto-Start toggle, updates, About, Exit.
+    text: Tray menu order Settings, View Logs, Auto-Start toggle, About, Exit, with an update item shown
+      only when one is available.
     tickets: []
     actual_start: ''
     actual_end: ''
@@ -254,17 +338,18 @@ capabilities:
   planned_start: ''
   planned_end: ''
   estimate_mandays: 0
-  actual_start: ''
-  actual_end: ''
+  actual_start: '2026-09-06'
+  actual_end: '2026-09-06'
   delta_days: null
-  state: not-started
+  state: done
   children:
   - id: FR-2
     text: Lock cycling to the same physical monitor and virtual desktop as the active window.
-    tickets: []
-    actual_start: ''
-    actual_end: ''
-    state: not-started
+    tickets:
+    - W1-S1
+    actual_start: '2026-09-06'
+    actual_end: '2026-09-06'
+    state: done
   waiting_on: []
 - id: CAP-8
   text: Pass shortcuts through unchanged when the foreground window is a VM or RDP client.
@@ -275,17 +360,18 @@ capabilities:
   planned_start: ''
   planned_end: ''
   estimate_mandays: 0
-  actual_start: ''
-  actual_end: ''
+  actual_start: '2026-09-06'
+  actual_end: '2026-09-06'
   delta_days: null
-  state: not-started
+  state: done
   children:
   - id: FR-3
     text: Bypass interception when the foreground window is a known VM or Remote Desktop client.
-    tickets: []
-    actual_start: ''
-    actual_end: ''
-    state: not-started
+    tickets:
+    - W1-S1
+    actual_start: '2026-09-06'
+    actual_end: '2026-09-06'
+    state: done
   waiting_on: []
 - id: CAP-9
   text: Recover the tray icon after explorer.exe restarts and follow the three-tier error protocol.
@@ -296,23 +382,25 @@ capabilities:
   planned_start: ''
   planned_end: ''
   estimate_mandays: 0
-  actual_start: ''
-  actual_end: ''
+  actual_start: '2026-09-06'
+  actual_end: '2026-09-06'
   delta_days: null
-  state: not-started
+  state: done
   children:
   - id: FR-10
     text: Re-create the tray icon when TaskbarCreated is broadcast after explorer restarts.
-    tickets: []
-    actual_start: ''
-    actual_end: ''
-    state: not-started
+    tickets:
+    - W1-S3
+    actual_start: '2026-09-06'
+    actual_end: '2026-09-06'
+    state: done
   - id: FR-11
     text: Apply the three-tier error protocol for startup fatal, runtime warning, and hook-dead critical.
-    tickets: []
-    actual_start: ''
-    actual_end: ''
-    state: not-started
+    tickets:
+    - W1-S3
+    actual_start: '2026-09-06'
+    actual_end: '2026-09-06'
+    state: done
   - id: FR-9
     text: Run tray-resident using native Win32 APIs without a third-party GUI framework in the daemon.
     tickets: []

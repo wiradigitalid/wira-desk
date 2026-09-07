@@ -282,10 +282,10 @@ rtm:
   - persistence::tests::an_out_of_range_percentage_is_rejected_before_save
   - app::tests::field_declaration_order_places_percent_snap_ahead_of_stack
   - commands::tests::roundtrip_all_commands
-  status: ready-for-agent
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-3
   CAP: CAP-15
   FR: FR-27
@@ -301,10 +301,10 @@ rtm:
   - config::tests::third_snap_fields_roundtrip_through_toml
   - app::tests::field_declaration_order_includes_third_snap_fields
   - commands::tests::roundtrip_all_commands
-  status: ready-for-agent
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-8
   FR: FR-3

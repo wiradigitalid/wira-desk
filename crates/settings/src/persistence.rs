@@ -31,6 +31,8 @@ pub enum ShortcutError {
     Reserved(ReservedInfo),
     /// Shortcut is already assigned to another action in the configuration.
     DuplicateShortcut(&'static str),
+    /// A custom snap percentage was outside 1..=99.
+    InvalidPercentage(u32),
 }
 
 /// Validate a submitted shortcut **before** any active configuration is
@@ -99,14 +101,14 @@ fn classify_parse_failure(input: &str) -> ShortcutError {
 /// Returns the offending field name and reason on the first failure, leaving
 /// the caller's active configuration untouched.
 pub fn validate_config(cfg: &Config) -> Result<(), (&'static str, ShortcutError)> {
-    // These nine paths must match `app::ShortcutField::key()` exactly, and in the same
+    // These sixteen paths must match `app::ShortcutField::key()` exactly, and in the same
     // ORDER: `describe()` maps a rejection reported here back to a human label through that
     // table, and the order decides which of two colliding fields is named as the first
     // holder. The two are kept as separate literals so this module has no dependency on the
     // UI-facing field enum — a coupling `LBR-ST-14` accepts in exchange for the layer
     // boundary, and which `app::tests::field_declaration_order_is_the_precedence_order`
     // guards from the other side.
-    let fields: [(&'static str, &str); 9] = [
+    let fields: [(&'static str, &str); 16] = [
         ("switcher.shortcut", &cfg.switcher.shortcut),
         (
             "switcher.fallback_shortcut",
@@ -117,9 +119,28 @@ pub fn validate_config(cfg: &Config) -> Result<(), (&'static str, ShortcutError)
         ("snapping.snap_half_top", &cfg.snapping.snap_half_top),
         ("snapping.snap_half_bottom", &cfg.snapping.snap_half_bottom),
         ("snapping.snap_maximize", &cfg.snapping.snap_maximize),
+        ("snapping.snap_third_left", &cfg.snapping.snap_third_left),
+        (
+            "snapping.snap_third_middle",
+            &cfg.snapping.snap_third_middle,
+        ),
+        ("snapping.snap_third_right", &cfg.snapping.snap_third_right),
         (
             "layout.move_next_monitor_shortcut",
             &cfg.layout.move_next_monitor_shortcut,
+        ),
+        (
+            "snapping.snap_percent_left",
+            &cfg.snapping.snap_percent_left,
+        ),
+        (
+            "snapping.snap_percent_right",
+            &cfg.snapping.snap_percent_right,
+        ),
+        ("snapping.snap_percent_top", &cfg.snapping.snap_percent_top),
+        (
+            "snapping.snap_percent_bottom",
+            &cfg.snapping.snap_percent_bottom,
         ),
         ("layout.stack_shortcut", &cfg.layout.stack_shortcut),
     ];
@@ -132,6 +153,20 @@ pub fn validate_config(cfg: &Config) -> Result<(), (&'static str, ShortcutError)
         }
         seen.push((name, canonical));
     }
+
+    for (name, val) in [
+        ("snapping.percent_left", cfg.snapping.percent_left),
+        ("snapping.percent_right", cfg.snapping.percent_right),
+        ("snapping.percent_top", cfg.snapping.percent_top),
+        ("snapping.percent_bottom", cfg.snapping.percent_bottom),
+    ] {
+        if !(shared::constants::MIN_SNAP_PERCENT..=shared::constants::MAX_SNAP_PERCENT)
+            .contains(&val)
+        {
+            return Err((name, ShortcutError::InvalidPercentage(val)));
+        }
+    }
+
     Ok(())
 }
 
@@ -331,16 +366,62 @@ mod tests {
         assert_eq!(cfg.snapping.snap_half_top, "ctrl+alt+up");
         assert_eq!(cfg.snapping.snap_half_bottom, "ctrl+alt+down");
         assert_eq!(cfg.snapping.snap_maximize, "ctrl+alt+enter");
+        assert_eq!(cfg.snapping.snap_percent_left, "ctrl+alt+shift+left");
+        assert_eq!(cfg.snapping.snap_percent_right, "ctrl+alt+shift+right");
+        assert_eq!(cfg.snapping.snap_percent_top, "ctrl+alt+shift+up");
+        assert_eq!(cfg.snapping.snap_percent_bottom, "ctrl+alt+shift+down");
+        assert_eq!(cfg.snapping.percent_left, 50);
+        assert_eq!(cfg.snapping.percent_right, 50);
+        assert_eq!(cfg.snapping.percent_top, 50);
+        assert_eq!(cfg.snapping.percent_bottom, 50);
         assert_eq!(
             cfg.layout.move_next_monitor_shortcut,
             "ctrl+alt+shift+enter"
         );
-        assert_eq!(cfg.layout.stack_shortcut, "ctrl+alt+shift+down");
+        assert_eq!(cfg.layout.stack_shortcut, "ctrl+alt+shift+s");
         assert!(!cfg.general.auto_start);
         assert!(cfg.layout.enable_overlapping_stack);
         assert_eq!(cfg.layout.stack_width_percent, 50);
         assert!(!cfg.vm_bypass.bypass_processes.is_empty());
         assert!(!cfg.vm_bypass.bypass_classes.is_empty());
+    }
+
+    #[test]
+    fn an_out_of_range_percentage_is_rejected_before_save() {
+        let dir = temp_dir();
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("reject_pct.toml");
+
+        let mut cfg = Config::default();
+        cfg.snapping.percent_left = 0;
+        assert_eq!(
+            validate_config(&cfg),
+            Err(("snapping.percent_left", ShortcutError::InvalidPercentage(0)))
+        );
+        assert!(matches!(
+            save_and_notify(&cfg, &path),
+            SaveOutcome::Rejected("snapping.percent_left", ShortcutError::InvalidPercentage(0))
+        ));
+
+        cfg.snapping.percent_left = 50;
+        cfg.snapping.percent_right = 100;
+        assert_eq!(
+            validate_config(&cfg),
+            Err((
+                "snapping.percent_right",
+                ShortcutError::InvalidPercentage(100)
+            ))
+        );
+
+        cfg.snapping.percent_right = 50;
+        cfg.snapping.percent_top = 150;
+        assert_eq!(
+            validate_config(&cfg),
+            Err((
+                "snapping.percent_top",
+                ShortcutError::InvalidPercentage(150)
+            ))
+        );
     }
 
     #[test]

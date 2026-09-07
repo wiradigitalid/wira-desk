@@ -122,6 +122,13 @@ $checkIdentity = @{
         if ($file -like '_bmad/*') { return $true }
         if ($file -like '.claude/skills/*' -or $file -like '.agents/skills/*') { return $true }
         if ($file -like '.control/memlog/*') { return $true }
+        # A decision file cannot avoid naming the person who accepted it: `accepted_by` is a
+        # required field and its one alternative form is forbidden for a mandate itself, so
+        # every decision the owner accepts in person lands here. Scoped to that single line
+        # rather than to the folder, for the reason the widening above already learned the
+        # hard way -- a path-wide exemption would stop the gate seeing a private repository
+        # URL written anywhere else in the same file. `DEC-013`.
+        if ($file -like '.control/decisions/*' -and $line -match '^\s*accepted_by\s*:') { return $true }
         return $false
     }
 }

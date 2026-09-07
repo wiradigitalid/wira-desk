@@ -26,6 +26,20 @@ pub enum Command {
     /// Move the active window to the next physical monitor, keeping its share
     /// of the work area.
     MoveToNextMonitor = 8,
+    /// Snap the active window against the left edge at a configured percentage.
+    SnapPercentLeft = 9,
+    /// Snap the active window against the right edge at a configured percentage.
+    SnapPercentRight = 10,
+    /// Snap the active window against the top edge at a configured percentage.
+    SnapPercentTop = 11,
+    /// Snap the active window against the bottom edge at a configured percentage.
+    SnapPercentBottom = 12,
+    /// Snap the active window to the left third of the screen.
+    SnapThirdLeft = 13,
+    /// Snap the active window to the middle third of the screen.
+    SnapThirdMiddle = 14,
+    /// Snap the active window to the right third of the screen.
+    SnapThirdRight = 15,
 }
 
 impl Command {
@@ -41,6 +55,13 @@ impl Command {
             6 => Command::SnapTop,
             7 => Command::SnapBottom,
             8 => Command::MoveToNextMonitor,
+            9 => Command::SnapPercentLeft,
+            10 => Command::SnapPercentRight,
+            11 => Command::SnapPercentTop,
+            12 => Command::SnapPercentBottom,
+            13 => Command::SnapThirdLeft,
+            14 => Command::SnapThirdMiddle,
+            15 => Command::SnapThirdRight,
             _ => Command::Nop,
         }
     }
@@ -68,6 +89,13 @@ mod tests {
             Command::SnapTop,
             Command::SnapBottom,
             Command::MoveToNextMonitor,
+            Command::SnapPercentLeft,
+            Command::SnapPercentRight,
+            Command::SnapPercentTop,
+            Command::SnapPercentBottom,
+            Command::SnapThirdLeft,
+            Command::SnapThirdMiddle,
+            Command::SnapThirdRight,
         ] {
             assert_eq!(Command::from_u8(cmd.as_u8()), cmd);
         }
@@ -75,7 +103,7 @@ mod tests {
 
     #[test]
     fn unknown_values_map_to_nop() {
-        assert_eq!(Command::from_u8(9), Command::Nop);
+        assert_eq!(Command::from_u8(16), Command::Nop);
         assert_eq!(Command::from_u8(255), Command::Nop);
     }
 
@@ -94,5 +122,12 @@ mod tests {
         assert_eq!(Command::SnapTop.as_u8(), 6);
         assert_eq!(Command::SnapBottom.as_u8(), 7);
         assert_eq!(Command::MoveToNextMonitor.as_u8(), 8);
+        assert_eq!(Command::SnapPercentLeft.as_u8(), 9);
+        assert_eq!(Command::SnapPercentRight.as_u8(), 10);
+        assert_eq!(Command::SnapPercentTop.as_u8(), 11);
+        assert_eq!(Command::SnapPercentBottom.as_u8(), 12);
+        assert_eq!(Command::SnapThirdLeft.as_u8(), 13);
+        assert_eq!(Command::SnapThirdMiddle.as_u8(), 14);
+        assert_eq!(Command::SnapThirdRight.as_u8(), 15);
     }
 }

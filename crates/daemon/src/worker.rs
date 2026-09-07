@@ -6,7 +6,7 @@
 use shared::{Command, Config};
 
 use crate::arrangement::win32::{apply_plan, resolve_context, Win32WindowMover};
-use crate::arrangement::{monitor, snap, stack, PlacementPlan, PlanError};
+use crate::arrangement::{monitor, snap, stack, thirds, PlacementPlan, PlanError};
 use crate::context::spatial::{enumerate_monitors, index_of_window_monitor, Win32Monitors};
 use crate::context::virtual_desktop::VirtualDesktopManager;
 use crate::context::{
@@ -105,7 +105,14 @@ pub fn drain_commands() {
             | Command::SnapRight
             | Command::SnapTop
             | Command::SnapBottom
-            | Command::SnapMaximize => {
+            | Command::SnapMaximize
+            | Command::SnapPercentLeft
+            | Command::SnapPercentRight
+            | Command::SnapPercentTop
+            | Command::SnapPercentBottom
+            | Command::SnapThirdLeft
+            | Command::SnapThirdMiddle
+            | Command::SnapThirdRight => {
                 execute_snap(Command::from_u8(raw));
             }
             Command::OverlappingStack => execute_stack(),
@@ -305,6 +312,23 @@ fn execute_snap(command: Command) {
         Command::SnapTop => snap::plan_snap_top(&ctx.work_area, ctx.target),
         Command::SnapBottom => snap::plan_snap_bottom(&ctx.work_area, ctx.target),
         Command::SnapMaximize => snap::plan_snap_maximize(&ctx.work_area, ctx.target),
+        Command::SnapThirdLeft => thirds::plan_snap_third_left(&ctx.work_area, ctx.target),
+        Command::SnapThirdMiddle => thirds::plan_snap_third_middle(&ctx.work_area, ctx.target),
+        Command::SnapThirdRight => thirds::plan_snap_third_right(&ctx.work_area, ctx.target),
+        Command::SnapPercentLeft
+        | Command::SnapPercentRight
+        | Command::SnapPercentTop
+        | Command::SnapPercentBottom => {
+            let snapping = snapping_config();
+            let (edge, pct) = match command {
+                Command::SnapPercentLeft => (snap::SnapEdge::Left, snapping.percent_left),
+                Command::SnapPercentRight => (snap::SnapEdge::Right, snapping.percent_right),
+                Command::SnapPercentTop => (snap::SnapEdge::Top, snapping.percent_top),
+                Command::SnapPercentBottom => (snap::SnapEdge::Bottom, snapping.percent_bottom),
+                _ => unreachable!(),
+            };
+            snap::plan_snap_percent(&ctx.work_area, ctx.target, edge, pct)
+        }
         _ => return,
     };
 
@@ -400,24 +424,28 @@ pub fn install_config_snapshot(snapshot: crate::config::WorkerSnapshot) {
     WORKER_CONFIG.with(|slot| *slot.borrow_mut() = Some(snapshot));
 }
 
-/// The layout configuration currently in force.
-/// Falls back to a single read at first use so a daemon that has not yet
-/// received a reload behaves exactly as it did before this story. That read
-/// happens once per process, not once per command as it used to: the product
-/// forbids watching and polling, and re-reading the file on every
-/// keystroke-driven arrangement was closer to both than it needed to be.
-fn layout_config() -> shared::config::LayoutConfig {
+fn worker_snapshot() -> crate::config::WorkerSnapshot {
     WORKER_CONFIG.with(|slot| {
         let mut slot = slot.borrow_mut();
         if slot.is_none() {
             let cfg = Config::load_or_default(&shared::config_path());
-            *slot = Some(crate::config::WorkerSnapshot { layout: cfg.layout });
+            *slot = Some(crate::config::WorkerSnapshot {
+                layout: cfg.layout,
+                snapping: cfg.snapping,
+            });
         }
-        slot.as_ref()
-            .expect("populated immediately above")
-            .layout
-            .clone()
+        slot.as_ref().expect("populated immediately above").clone()
     })
+}
+
+/// The layout configuration currently in force.
+fn layout_config() -> shared::config::LayoutConfig {
+    worker_snapshot().layout
+}
+
+/// The snapping configuration currently in force.
+fn snapping_config() -> shared::config::SnappingConfig {
+    worker_snapshot().snapping
 }
 
 /// `OverlappingStack` reuses the candidate contract for live

@@ -126,6 +126,7 @@ export component MainWindow inherits Window {
 
     callback start_capture(int);
     callback swap_shortcuts(int);
+    callback percent_changed(int, int);
 
     callback stack_toggled(bool);
     callback width_changed(int);
@@ -271,6 +272,7 @@ export component MainWindow inherits Window {
 
                                 start_capture(idx) => { root.start_capture(idx); }
                                 swap_shortcuts(idx) => { root.swap_shortcuts(idx); }
+                                percent_changed(idx, val) => { root.percent_changed(idx, val); }
                             }
 
                             if root.current_pane == 2 : LayoutPane {

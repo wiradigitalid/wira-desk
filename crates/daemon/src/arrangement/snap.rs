@@ -97,6 +97,96 @@ pub fn plan_snap_maximize(work: &WorkArea, window: WindowId) -> PlanResult {
     Ok(PlacementPlan::single(window, rect))
 }
 
+/// Which edge a custom-percentage snap is anchored to.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SnapEdge {
+    Left,
+    Right,
+    Top,
+    Bottom,
+}
+
+fn calculate_extent(dimension: i32, percent: u32) -> Result<i32, PlanError> {
+    let extent = (dimension as i64 * percent as i64 / 100) as i32;
+    if extent <= 0 {
+        return Err(PlanError::EmptyOrInvertedWorkArea);
+    }
+    Ok(extent)
+}
+
+/// Snap against the named edge at `percent` percent of the work area.
+pub fn plan_snap_percent(
+    work: &WorkArea,
+    window: WindowId,
+    edge: SnapEdge,
+    percent: u32,
+) -> PlanResult {
+    ensure_usable(work)?;
+
+    if !(shared::constants::MIN_SNAP_PERCENT..=shared::constants::MAX_SNAP_PERCENT)
+        .contains(&percent)
+    {
+        return Err(PlanError::InvalidWidthPercent(percent));
+    }
+
+    let rect = match edge {
+        SnapEdge::Left => {
+            let width = work
+                .rect
+                .checked_width()
+                .ok_or(PlanError::UnrepresentableGeometry)?;
+            let extent = calculate_extent(width, percent)?;
+            let right = work
+                .rect
+                .left
+                .checked_add(extent)
+                .ok_or(PlanError::UnrepresentableGeometry)?;
+            Rect::new(work.rect.left, work.rect.top, right, work.rect.bottom)?
+        }
+        SnapEdge::Right => {
+            let width = work
+                .rect
+                .checked_width()
+                .ok_or(PlanError::UnrepresentableGeometry)?;
+            let extent = calculate_extent(width, percent)?;
+            let left = work
+                .rect
+                .right
+                .checked_sub(extent)
+                .ok_or(PlanError::UnrepresentableGeometry)?;
+            Rect::new(left, work.rect.top, work.rect.right, work.rect.bottom)?
+        }
+        SnapEdge::Top => {
+            let height = work
+                .rect
+                .checked_height()
+                .ok_or(PlanError::UnrepresentableGeometry)?;
+            let extent = calculate_extent(height, percent)?;
+            let bottom = work
+                .rect
+                .top
+                .checked_add(extent)
+                .ok_or(PlanError::UnrepresentableGeometry)?;
+            Rect::new(work.rect.left, work.rect.top, work.rect.right, bottom)?
+        }
+        SnapEdge::Bottom => {
+            let height = work
+                .rect
+                .checked_height()
+                .ok_or(PlanError::UnrepresentableGeometry)?;
+            let extent = calculate_extent(height, percent)?;
+            let top = work
+                .rect
+                .bottom
+                .checked_sub(extent)
+                .ok_or(PlanError::UnrepresentableGeometry)?;
+            Rect::new(work.rect.left, top, work.rect.right, work.rect.bottom)?
+        }
+    };
+
+    Ok(PlacementPlan::single(window, rect))
+}
+
 #[cfg(test)]
 mod tests {
     use super::super::fixtures::*;
@@ -398,5 +488,106 @@ mod tests {
             only(&plan_snap_right(&sliver, W).unwrap()),
             Rect::new(0, 0, 1, 100).unwrap()
         );
+    }
+
+    // --- custom percentage snap --------------------------------
+
+    #[test]
+    fn snap_percent_returns_configured_width_from_the_named_edge() {
+        let work = primary_work_area(); // 1920 x 1040, origin (0, 0)
+
+        // 50% left/right/top/bottom match half snap
+        let left_50 = only(&plan_snap_percent(&work, W, SnapEdge::Left, 50).unwrap());
+        assert_eq!(left_50, Rect::new(0, 0, 960, 1040).unwrap());
+
+        let right_50 = only(&plan_snap_percent(&work, W, SnapEdge::Right, 50).unwrap());
+        assert_eq!(right_50, Rect::new(960, 0, 1920, 1040).unwrap());
+
+        let top_50 = only(&plan_snap_percent(&work, W, SnapEdge::Top, 50).unwrap());
+        assert_eq!(top_50, Rect::new(0, 0, 1920, 520).unwrap());
+
+        let bottom_50 = only(&plan_snap_percent(&work, W, SnapEdge::Bottom, 50).unwrap());
+        assert_eq!(bottom_50, Rect::new(0, 520, 1920, 1040).unwrap());
+
+        // 70% left: width = 1920 * 70 / 100 = 1344
+        let left_70 = only(&plan_snap_percent(&work, W, SnapEdge::Left, 70).unwrap());
+        assert_eq!(left_70, Rect::new(0, 0, 1344, 1040).unwrap());
+
+        // 30% right: width = 1920 * 30 / 100 = 576, from right inward -> left = 1920 - 576 = 1344
+        let right_30 = only(&plan_snap_percent(&work, W, SnapEdge::Right, 30).unwrap());
+        assert_eq!(right_30, Rect::new(1344, 0, 1920, 1040).unwrap());
+
+        // 25% top: height = 1040 * 25 / 100 = 260
+        let top_25 = only(&plan_snap_percent(&work, W, SnapEdge::Top, 25).unwrap());
+        assert_eq!(top_25, Rect::new(0, 0, 1920, 260).unwrap());
+
+        // 75% bottom: height = 1040 * 75 / 100 = 780, from bottom inward -> top = 1040 - 780 = 260
+        let bottom_75 = only(&plan_snap_percent(&work, W, SnapEdge::Bottom, 75).unwrap());
+        assert_eq!(bottom_75, Rect::new(0, 260, 1920, 1040).unwrap());
+
+        // Negative origin work area: left -1920, top -200, right 0, bottom 880 (width 1920, height 1080)
+        let neg = negative_origin_work_area();
+        let neg_left_70 = only(&plan_snap_percent(&neg, W, SnapEdge::Left, 70).unwrap());
+        assert_eq!(
+            neg_left_70,
+            Rect::new(-1920, -200, -1920 + 1344, 880).unwrap()
+        );
+
+        let neg_right_30 = only(&plan_snap_percent(&neg, W, SnapEdge::Right, 30).unwrap());
+        assert_eq!(neg_right_30, Rect::new(0 - 576, -200, 0, 880).unwrap());
+    }
+
+    #[test]
+    fn snap_percent_refuses_a_zero_or_negative_extent() {
+        let work = primary_work_area();
+        // 0% requested
+        assert!(plan_snap_percent(&work, W, SnapEdge::Left, 0).is_err());
+        assert!(plan_snap_percent(&work, W, SnapEdge::Top, 0).is_err());
+
+        // 100% and greater than 100% requested (valid is 1..=99 inclusive)
+        assert!(plan_snap_percent(&work, W, SnapEdge::Left, 100).is_err());
+        assert!(plan_snap_percent(&work, W, SnapEdge::Top, 100).is_err());
+        assert!(plan_snap_percent(&work, W, SnapEdge::Left, 101).is_err());
+
+        // Work area too narrow for requested percentage: 1px wide work area at 50% yields 0px extent
+        let sliver_w = WorkArea::new(Rect::new(0, 0, 1, 100).unwrap(), 96).unwrap();
+        assert!(plan_snap_percent(&sliver_w, W, SnapEdge::Left, 50).is_err());
+        assert!(plan_snap_percent(&sliver_w, W, SnapEdge::Right, 50).is_err());
+
+        // But vertical percentage snap on a 1px-wide work area produces valid 1px-wide geometry
+        let sliver_w_top = only(&plan_snap_percent(&sliver_w, W, SnapEdge::Top, 50).unwrap());
+        assert_eq!(sliver_w_top, Rect::new(0, 0, 1, 50).unwrap());
+
+        // 1px tall work area at 50% yields 0px extent vertically
+        let sliver_h = WorkArea::new(Rect::new(0, 0, 100, 1).unwrap(), 96).unwrap();
+        assert!(plan_snap_percent(&sliver_h, W, SnapEdge::Top, 50).is_err());
+        assert!(plan_snap_percent(&sliver_h, W, SnapEdge::Bottom, 50).is_err());
+
+        // But horizontal percentage snap on a 1px-tall work area produces valid 1px-tall geometry
+        let sliver_h_left = only(&plan_snap_percent(&sliver_h, W, SnapEdge::Left, 50).unwrap());
+        assert_eq!(sliver_h_left, Rect::new(0, 0, 50, 1).unwrap());
+    }
+
+    #[test]
+    fn percent_edges_are_independent_of_each_other() {
+        let work = primary_work_area();
+        // Changing the percentage for Left (e.g. 70%) does not alter the geometry planned for Right at 30%
+        let left_plan = only(&plan_snap_percent(&work, W, SnapEdge::Left, 70).unwrap());
+        let right_plan = only(&plan_snap_percent(&work, W, SnapEdge::Right, 30).unwrap());
+        let top_plan = only(&plan_snap_percent(&work, W, SnapEdge::Top, 20).unwrap());
+        let bottom_plan = only(&plan_snap_percent(&work, W, SnapEdge::Bottom, 80).unwrap());
+
+        assert_eq!(left_plan.width(), 1344);
+        assert_eq!(right_plan.width(), 576);
+        assert_eq!(top_plan.height(), 208);
+        assert_eq!(bottom_plan.height(), 832);
+
+        // Even when Left and Right sum to something != 100 (e.g. 70% and 70%), both are computed independently
+        let left_70 = only(&plan_snap_percent(&work, W, SnapEdge::Left, 70).unwrap());
+        let right_70 = only(&plan_snap_percent(&work, W, SnapEdge::Right, 70).unwrap());
+        assert_eq!(left_70.width(), 1344);
+        assert_eq!(right_70.width(), 1344);
+        assert_eq!(left_70.left, work.rect.left);
+        assert_eq!(right_70.right, work.rect.right);
     }
 }

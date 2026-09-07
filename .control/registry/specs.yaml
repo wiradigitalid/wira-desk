@@ -405,7 +405,7 @@ specs:
     release: "0.2.0"
     prd: [wira-desk]
     size: M
-    status: open
+    status: closed
     depends_on: []
     spec_folder: _bmad-output/specs/spec-1-percentage-and-thirds-snap/
     spec_reviewed:

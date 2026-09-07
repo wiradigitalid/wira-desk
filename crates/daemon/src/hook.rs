@@ -604,7 +604,14 @@ pub struct Chords {
     pub snap_top: Option<Shortcut>,
     pub snap_bottom: Option<Shortcut>,
     pub snap_maximize: Option<Shortcut>,
+    pub snap_third_left: Option<Shortcut>,
+    pub snap_third_middle: Option<Shortcut>,
+    pub snap_third_right: Option<Shortcut>,
     pub move_next_monitor: Option<Shortcut>,
+    pub snap_percent_left: Option<Shortcut>,
+    pub snap_percent_right: Option<Shortcut>,
+    pub snap_percent_top: Option<Shortcut>,
+    pub snap_percent_bottom: Option<Shortcut>,
     pub stack: Option<Shortcut>,
 }
 
@@ -621,7 +628,7 @@ impl Chords {
     /// It exists exactly once on purpose. The order is also the Settings pane's draw order
     /// and its keyboard focus order; three independently maintained copies of it is how the
     /// visible order and the precedence order start disagreeing with nothing detecting it.
-    pub fn in_declared_order(&self) -> [ChordSlot; 9] {
+    pub fn in_declared_order(&self) -> [ChordSlot; 16] {
         [
             ChordSlot {
                 chord: self.primary,
@@ -652,8 +659,36 @@ impl Chords {
                 command: Command::SnapMaximize.as_u8(),
             },
             ChordSlot {
+                chord: self.snap_third_left,
+                command: Command::SnapThirdLeft.as_u8(),
+            },
+            ChordSlot {
+                chord: self.snap_third_middle,
+                command: Command::SnapThirdMiddle.as_u8(),
+            },
+            ChordSlot {
+                chord: self.snap_third_right,
+                command: Command::SnapThirdRight.as_u8(),
+            },
+            ChordSlot {
                 chord: self.move_next_monitor,
                 command: Command::MoveToNextMonitor.as_u8(),
+            },
+            ChordSlot {
+                chord: self.snap_percent_left,
+                command: Command::SnapPercentLeft.as_u8(),
+            },
+            ChordSlot {
+                chord: self.snap_percent_right,
+                command: Command::SnapPercentRight.as_u8(),
+            },
+            ChordSlot {
+                chord: self.snap_percent_top,
+                command: Command::SnapPercentTop.as_u8(),
+            },
+            ChordSlot {
+                chord: self.snap_percent_bottom,
+                command: Command::SnapPercentBottom.as_u8(),
             },
             ChordSlot {
                 chord: self.stack,
@@ -896,7 +931,7 @@ fn load_shortcuts(worker_hwnd: HWND) -> Chords {
     // shipped default, and its diagnostic name appear together. The six hand-written
     // blocks this replaces each repeated that triple, and a new chord meant writing a
     // seventh block correctly rather than adding a row.
-    let rows: [(&str, &str, &str); 9] = [
+    let rows: [(&str, &str, &str); 16] = [
         (
             "switcher.shortcut",
             &cfg.switcher.shortcut,
@@ -933,9 +968,44 @@ fn load_shortcuts(worker_hwnd: HWND) -> Chords {
             &snap_defaults.snap_maximize,
         ),
         (
+            "snapping.snap_third_left",
+            &cfg.snapping.snap_third_left,
+            &snap_defaults.snap_third_left,
+        ),
+        (
+            "snapping.snap_third_middle",
+            &cfg.snapping.snap_third_middle,
+            &snap_defaults.snap_third_middle,
+        ),
+        (
+            "snapping.snap_third_right",
+            &cfg.snapping.snap_third_right,
+            &snap_defaults.snap_third_right,
+        ),
+        (
             "layout.move_next_monitor_shortcut",
             &cfg.layout.move_next_monitor_shortcut,
             &layout_defaults.move_next_monitor_shortcut,
+        ),
+        (
+            "snapping.snap_percent_left",
+            &cfg.snapping.snap_percent_left,
+            &snap_defaults.snap_percent_left,
+        ),
+        (
+            "snapping.snap_percent_right",
+            &cfg.snapping.snap_percent_right,
+            &snap_defaults.snap_percent_right,
+        ),
+        (
+            "snapping.snap_percent_top",
+            &cfg.snapping.snap_percent_top,
+            &snap_defaults.snap_percent_top,
+        ),
+        (
+            "snapping.snap_percent_bottom",
+            &cfg.snapping.snap_percent_bottom,
+            &snap_defaults.snap_percent_bottom,
         ),
         (
             "layout.stack_shortcut",
@@ -944,7 +1014,7 @@ fn load_shortcuts(worker_hwnd: HWND) -> Chords {
         ),
     ];
 
-    let mut resolved: [Option<Shortcut>; 9] = [None; 9];
+    let mut resolved: [Option<Shortcut>; 16] = [None; 16];
     for (i, (field, configured, default)) in rows.iter().enumerate() {
         resolved[i] = Some(resolve_one(worker_hwnd, field, configured, default));
     }
@@ -974,8 +1044,15 @@ fn load_shortcuts(worker_hwnd: HWND) -> Chords {
         snap_top: resolved[4],
         snap_bottom: resolved[5],
         snap_maximize: resolved[6],
-        move_next_monitor: resolved[7],
-        stack: resolved[8],
+        snap_third_left: resolved[7],
+        snap_third_middle: resolved[8],
+        snap_third_right: resolved[9],
+        move_next_monitor: resolved[10],
+        snap_percent_left: resolved[11],
+        snap_percent_right: resolved[12],
+        snap_percent_top: resolved[13],
+        snap_percent_bottom: resolved[14],
+        stack: resolved[15],
     }
 }
 
@@ -1384,6 +1461,13 @@ mod tests {
             snap_bottom: Shortcut::parse(&cfg.snapping.snap_half_bottom),
             snap_maximize: Shortcut::parse(&cfg.snapping.snap_maximize),
             move_next_monitor: Shortcut::parse(&cfg.layout.move_next_monitor_shortcut),
+            snap_percent_left: Shortcut::parse(&cfg.snapping.snap_percent_left),
+            snap_percent_right: Shortcut::parse(&cfg.snapping.snap_percent_right),
+            snap_percent_top: Shortcut::parse(&cfg.snapping.snap_percent_top),
+            snap_percent_bottom: Shortcut::parse(&cfg.snapping.snap_percent_bottom),
+            snap_third_left: Shortcut::parse(&cfg.snapping.snap_third_left),
+            snap_third_middle: Shortcut::parse(&cfg.snapping.snap_third_middle),
+            snap_third_right: Shortcut::parse(&cfg.snapping.snap_third_right),
             stack: Shortcut::parse(&cfg.layout.stack_shortcut),
         }
     }
@@ -1407,6 +1491,58 @@ mod tests {
         assert_eq!(
             match_shortcut(&chords, mods_of(snap_left), snap_left.vk),
             Some(Command::SnapLeft.as_u8())
+        );
+    }
+
+    #[test]
+    fn exact_snap_percent_matches() {
+        let chords = shipped_chords();
+
+        let left = chords.snap_percent_left.expect("parses");
+        assert_eq!(
+            match_shortcut(&chords, mods_of(left), left.vk),
+            Some(Command::SnapPercentLeft.as_u8())
+        );
+
+        let right = chords.snap_percent_right.expect("parses");
+        assert_eq!(
+            match_shortcut(&chords, mods_of(right), right.vk),
+            Some(Command::SnapPercentRight.as_u8())
+        );
+
+        let top = chords.snap_percent_top.expect("parses");
+        assert_eq!(
+            match_shortcut(&chords, mods_of(top), top.vk),
+            Some(Command::SnapPercentTop.as_u8())
+        );
+
+        let bottom = chords.snap_percent_bottom.expect("parses");
+        assert_eq!(
+            match_shortcut(&chords, mods_of(bottom), bottom.vk),
+            Some(Command::SnapPercentBottom.as_u8())
+        );
+    }
+
+    #[test]
+    fn exact_snap_third_matches() {
+        let chords = shipped_chords();
+
+        let left = chords.snap_third_left.expect("parses");
+        assert_eq!(
+            match_shortcut(&chords, mods_of(left), left.vk),
+            Some(Command::SnapThirdLeft.as_u8())
+        );
+
+        let middle = chords.snap_third_middle.expect("parses");
+        assert_eq!(
+            match_shortcut(&chords, mods_of(middle), middle.vk),
+            Some(Command::SnapThirdMiddle.as_u8())
+        );
+
+        let right = chords.snap_third_right.expect("parses");
+        assert_eq!(
+            match_shortcut(&chords, mods_of(right), right.vk),
+            Some(Command::SnapThirdRight.as_u8())
         );
     }
 
@@ -1445,6 +1581,44 @@ mod tests {
         assert_eq!(resolved[0], Shortcut::parse("win+backtick"));
         assert_eq!(resolved[2], Shortcut::parse("ctrl+alt+left"));
         assert_eq!(resolved[6], Shortcut::parse("ctrl+alt+enter"));
+    }
+
+    #[test]
+    fn dec_011_collision_favors_percent_snap_bottom_over_legacy_stack_default() {
+        // DEC-011: An install carrying legacy `ctrl+alt+shift+down` on stack collides with
+        // `snap_percent_bottom`. Because `snap_percent_bottom` is declared ahead of `stack`,
+        // `snap_percent_bottom` keeps the chord and `stack` is unbound.
+        let mut chords = shipped_chords();
+        chords.stack = Shortcut::parse("ctrl+alt+shift+down");
+        let mut resolved = [
+            chords.primary,
+            chords.fallback,
+            chords.snap_left,
+            chords.snap_right,
+            chords.snap_top,
+            chords.snap_bottom,
+            chords.snap_maximize,
+            chords.snap_third_left,
+            chords.snap_third_middle,
+            chords.snap_third_right,
+            chords.move_next_monitor,
+            chords.snap_percent_left,
+            chords.snap_percent_right,
+            chords.snap_percent_top,
+            chords.snap_percent_bottom,
+            chords.stack,
+        ];
+        let collisions = unbind_duplicates(&mut resolved);
+        assert_eq!(collisions, vec![(14, 15)]);
+        assert!(resolved[14].is_some());
+        assert_eq!(resolved[15], None);
+
+        chords.stack = resolved[15];
+        let clash = chords.snap_percent_bottom.unwrap();
+        assert_eq!(
+            match_shortcut(&chords, mods_of(clash), clash.vk),
+            Some(Command::SnapPercentBottom.as_u8())
+        );
     }
 
     #[test]

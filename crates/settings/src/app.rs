@@ -79,12 +79,19 @@ pub enum ShortcutField {
     SnapTop,
     SnapBottom,
     SnapMaximize,
+    SnapThirdLeft,
+    SnapThirdMiddle,
+    SnapThirdRight,
     MoveNextMonitor,
+    SnapPercentLeft,
+    SnapPercentRight,
+    SnapPercentTop,
+    SnapPercentBottom,
     Stack,
 }
 
 impl ShortcutField {
-    pub const ALL: [ShortcutField; 9] = [
+    pub const ALL: [ShortcutField; 16] = [
         ShortcutField::Switcher,
         ShortcutField::Fallback,
         ShortcutField::SnapLeft,
@@ -92,7 +99,14 @@ impl ShortcutField {
         ShortcutField::SnapTop,
         ShortcutField::SnapBottom,
         ShortcutField::SnapMaximize,
+        ShortcutField::SnapThirdLeft,
+        ShortcutField::SnapThirdMiddle,
+        ShortcutField::SnapThirdRight,
         ShortcutField::MoveNextMonitor,
+        ShortcutField::SnapPercentLeft,
+        ShortcutField::SnapPercentRight,
+        ShortcutField::SnapPercentTop,
+        ShortcutField::SnapPercentBottom,
         ShortcutField::Stack,
     ];
 
@@ -119,7 +133,24 @@ impl ShortcutField {
             ShortcutField::SnapTop => "Snaps the window to the top half of this monitor.",
             ShortcutField::SnapBottom => "Snaps the window to the bottom half of this monitor.",
             ShortcutField::SnapMaximize => "Expands the window to fill this monitor.",
+            ShortcutField::SnapThirdLeft => "Snaps the window to the left third of this monitor.",
+            ShortcutField::SnapThirdMiddle => {
+                "Snaps the window to the middle third of this monitor."
+            }
+            ShortcutField::SnapThirdRight => "Snaps the window to the right third of this monitor.",
             ShortcutField::MoveNextMonitor => "Moves the window to the next monitor, same share.",
+            ShortcutField::SnapPercentLeft => {
+                "Snaps the window to the left edge at its configured percentage."
+            }
+            ShortcutField::SnapPercentRight => {
+                "Snaps the window to the right edge at its configured percentage."
+            }
+            ShortcutField::SnapPercentTop => {
+                "Snaps the window to the top edge at its configured percentage."
+            }
+            ShortcutField::SnapPercentBottom => {
+                "Snaps the window to the bottom edge at its configured percentage."
+            }
             ShortcutField::Stack => "Arranges windows of this app in a clickable stack.",
         }
     }
@@ -136,8 +167,16 @@ impl ShortcutField {
             | ShortcutField::SnapRight
             | ShortcutField::SnapTop
             | ShortcutField::SnapBottom
-            | ShortcutField::SnapMaximize => "Snap & resize",
-            ShortcutField::MoveNextMonitor | ShortcutField::Stack => "Move & arrange",
+            | ShortcutField::SnapMaximize
+            | ShortcutField::SnapThirdLeft
+            | ShortcutField::SnapThirdMiddle
+            | ShortcutField::SnapThirdRight => "Snap & resize",
+            ShortcutField::MoveNextMonitor
+            | ShortcutField::SnapPercentLeft
+            | ShortcutField::SnapPercentRight
+            | ShortcutField::SnapPercentTop
+            | ShortcutField::SnapPercentBottom
+            | ShortcutField::Stack => "Move & arrange",
         }
     }
 
@@ -150,7 +189,14 @@ impl ShortcutField {
             ShortcutField::SnapTop => "Snap to top half",
             ShortcutField::SnapBottom => "Snap to bottom half",
             ShortcutField::SnapMaximize => "Maximize",
+            ShortcutField::SnapThirdLeft => "Snap to left third",
+            ShortcutField::SnapThirdMiddle => "Snap to middle third",
+            ShortcutField::SnapThirdRight => "Snap to right third",
             ShortcutField::MoveNextMonitor => "Move to next monitor",
+            ShortcutField::SnapPercentLeft => "Snap to left edge (custom %)",
+            ShortcutField::SnapPercentRight => "Snap to right edge (custom %)",
+            ShortcutField::SnapPercentTop => "Snap to top edge (custom %)",
+            ShortcutField::SnapPercentBottom => "Snap to bottom edge (custom %)",
             ShortcutField::Stack => "Overlapping stack",
         }
     }
@@ -173,7 +219,14 @@ impl ShortcutField {
             ShortcutField::SnapTop => &cfg.snapping.snap_half_top,
             ShortcutField::SnapBottom => &cfg.snapping.snap_half_bottom,
             ShortcutField::SnapMaximize => &cfg.snapping.snap_maximize,
+            ShortcutField::SnapThirdLeft => &cfg.snapping.snap_third_left,
+            ShortcutField::SnapThirdMiddle => &cfg.snapping.snap_third_middle,
+            ShortcutField::SnapThirdRight => &cfg.snapping.snap_third_right,
             ShortcutField::MoveNextMonitor => &cfg.layout.move_next_monitor_shortcut,
+            ShortcutField::SnapPercentLeft => &cfg.snapping.snap_percent_left,
+            ShortcutField::SnapPercentRight => &cfg.snapping.snap_percent_right,
+            ShortcutField::SnapPercentTop => &cfg.snapping.snap_percent_top,
+            ShortcutField::SnapPercentBottom => &cfg.snapping.snap_percent_bottom,
             ShortcutField::Stack => &cfg.layout.stack_shortcut,
         }
     }
@@ -187,8 +240,45 @@ impl ShortcutField {
             ShortcutField::SnapTop => cfg.snapping.snap_half_top = value,
             ShortcutField::SnapBottom => cfg.snapping.snap_half_bottom = value,
             ShortcutField::SnapMaximize => cfg.snapping.snap_maximize = value,
+            ShortcutField::SnapThirdLeft => cfg.snapping.snap_third_left = value,
+            ShortcutField::SnapThirdMiddle => cfg.snapping.snap_third_middle = value,
+            ShortcutField::SnapThirdRight => cfg.snapping.snap_third_right = value,
             ShortcutField::MoveNextMonitor => cfg.layout.move_next_monitor_shortcut = value,
+            ShortcutField::SnapPercentLeft => cfg.snapping.snap_percent_left = value,
+            ShortcutField::SnapPercentRight => cfg.snapping.snap_percent_right = value,
+            ShortcutField::SnapPercentTop => cfg.snapping.snap_percent_top = value,
+            ShortcutField::SnapPercentBottom => cfg.snapping.snap_percent_bottom = value,
             ShortcutField::Stack => cfg.layout.stack_shortcut = value,
+        }
+    }
+
+    pub fn has_percent(self) -> bool {
+        matches!(
+            self,
+            ShortcutField::SnapPercentLeft
+                | ShortcutField::SnapPercentRight
+                | ShortcutField::SnapPercentTop
+                | ShortcutField::SnapPercentBottom
+        )
+    }
+
+    pub fn percent(self, cfg: &Config) -> Option<u32> {
+        match self {
+            ShortcutField::SnapPercentLeft => Some(cfg.snapping.percent_left),
+            ShortcutField::SnapPercentRight => Some(cfg.snapping.percent_right),
+            ShortcutField::SnapPercentTop => Some(cfg.snapping.percent_top),
+            ShortcutField::SnapPercentBottom => Some(cfg.snapping.percent_bottom),
+            _ => None,
+        }
+    }
+
+    pub fn set_percent(self, cfg: &mut Config, value: u32) {
+        match self {
+            ShortcutField::SnapPercentLeft => cfg.snapping.percent_left = value,
+            ShortcutField::SnapPercentRight => cfg.snapping.percent_right = value,
+            ShortcutField::SnapPercentTop => cfg.snapping.percent_top = value,
+            ShortcutField::SnapPercentBottom => cfg.snapping.percent_bottom = value,
+            _ => {}
         }
     }
 
@@ -208,7 +298,14 @@ impl ShortcutField {
             ShortcutField::SnapTop => "snapping.snap_half_top",
             ShortcutField::SnapBottom => "snapping.snap_half_bottom",
             ShortcutField::SnapMaximize => "snapping.snap_maximize",
+            ShortcutField::SnapThirdLeft => "snapping.snap_third_left",
+            ShortcutField::SnapThirdMiddle => "snapping.snap_third_middle",
+            ShortcutField::SnapThirdRight => "snapping.snap_third_right",
             ShortcutField::MoveNextMonitor => "layout.move_next_monitor_shortcut",
+            ShortcutField::SnapPercentLeft => "snapping.snap_percent_left",
+            ShortcutField::SnapPercentRight => "snapping.snap_percent_right",
+            ShortcutField::SnapPercentTop => "snapping.snap_percent_top",
+            ShortcutField::SnapPercentBottom => "snapping.snap_percent_bottom",
             ShortcutField::Stack => "layout.stack_shortcut",
         }
     }
@@ -402,6 +499,16 @@ pub fn describe(field: &str, err: ShortcutError) -> String {
             format!(
                 "{label} conflicts with {other_label}. Each action must have a unique shortcut."
             )
+        }
+        ShortcutError::InvalidPercentage(_) => {
+            let name = match field {
+                "snapping.percent_left" => "Left edge snap percentage",
+                "snapping.percent_right" => "Right edge snap percentage",
+                "snapping.percent_top" => "Top edge snap percentage",
+                "snapping.percent_bottom" => "Bottom edge snap percentage",
+                _ => label,
+            };
+            format!("{name} must be between 1% and 99%.")
         }
     }
 }
@@ -758,6 +865,12 @@ impl SettingsModel {
         // stale error) is no longer the truth about it.
         self.feedback = SaveFeedback::None;
         Ok(())
+    }
+
+    /// Set a numeric snap percentage on the draft.
+    pub fn set_percent(&mut self, field: ShortcutField, value: u32) {
+        field.set_percent(&mut self.draft, value);
+        self.feedback = SaveFeedback::None;
     }
 
     /// Check if a field currently conflicts with any other field in the draft.
@@ -1198,6 +1311,25 @@ mod tests {
                 "round trip through the UI index must return the same field"
             );
         }
+    }
+
+    #[test]
+    fn field_declaration_order_places_percent_snap_ahead_of_stack() {
+        assert!((ShortcutField::SnapPercentLeft as usize) < (ShortcutField::Stack as usize));
+        assert!((ShortcutField::SnapPercentRight as usize) < (ShortcutField::Stack as usize));
+        assert!((ShortcutField::SnapPercentTop as usize) < (ShortcutField::Stack as usize));
+        assert!((ShortcutField::SnapPercentBottom as usize) < (ShortcutField::Stack as usize));
+    }
+
+    #[test]
+    fn field_declaration_order_includes_third_snap_fields() {
+        assert_eq!(ShortcutField::SnapThirdLeft as usize, 7);
+        assert_eq!(ShortcutField::SnapThirdMiddle as usize, 8);
+        assert_eq!(ShortcutField::SnapThirdRight as usize, 9);
+        assert!((ShortcutField::SnapMaximize as usize) < (ShortcutField::SnapThirdLeft as usize));
+        assert!(
+            (ShortcutField::SnapThirdRight as usize) < (ShortcutField::MoveNextMonitor as usize)
+        );
     }
 
     #[test]
@@ -1682,6 +1814,34 @@ mod tests {
         assert!(matches!(m.feedback, SaveFeedback::Error(_)));
         assert_eq!(m.saved.switcher.shortcut, "win+backtick");
         let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn an_out_of_range_percentage_save_reports_actionable_error() {
+        let mut m = model();
+        m.draft.snapping.percent_left = 0;
+        let mut path = std::env::temp_dir();
+        path.push(format!("wiradesk-app-pct-test-{}.toml", std::process::id()));
+        m.save(&path);
+        if let SaveFeedback::Error(msg) = &m.feedback {
+            assert!(msg.contains("Left edge snap percentage"));
+            assert!(msg.contains("between 1% and 99%"));
+        } else {
+            panic!("expected SaveFeedback::Error");
+        }
+        assert_eq!(m.saved.snapping.percent_left, 50);
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn percent_get_and_set_updates_draft_and_marks_dirty() {
+        let mut m = model();
+        assert_eq!(ShortcutField::SnapPercentLeft.percent(&m.draft), Some(50));
+        assert_eq!(ShortcutField::Switcher.percent(&m.draft), None);
+
+        ShortcutField::SnapPercentLeft.set_percent(&mut m.draft, 70);
+        assert_eq!(m.draft.snapping.percent_left, 70);
+        assert!(m.is_dirty());
     }
 
     #[test]

@@ -151,12 +151,12 @@ The Robustness Analysis classifies the technical design for all realized use cas
 - **`C-HookController` (`LC-hook-thread`):** Owns hook lifecycle, QPC anti-macro throttle check (50 ms), bypass classification, raw byte serialization to the ring buffer, and the capture lease. The lease is three independent decisions rather than one switch — report the chord to Settings, withhold Wira Desk's own action, withhold the keystroke from Windows — and two named combinations of them: **observe** (`yes / yes / no`) while the Shortcuts pane is visible, **record** (`yes / yes / yes`) while a field is listening. Both require the settings process to hold the foreground window, both fire only on a non-modifier key-down carrying at least one modifier, and the comparison sits above `match_shortcut` so it is reached by a chord that is not yet configured. Withholding the keystroke exists only to record; no chord is ever claimed for a Wira Desk action on the strength of a lease (`DEC-004`, LBR-ST-11).
 - **`C-WorkerDispatcher` (`LC-worker-thread`):** Dispatches ring-buffer command opcodes on thread wake-up, orchestrates candidate collection, filters candidates, and applies activation or geometry updates.
 - **`C-CyclingSelector` (`daemon::cycling`):** Evaluates same-app candidate eligibility (exe name match, style filters), spatial alignment (monitor matching, virtual desktop isolation), and selects the next Z-order target.
-- **`C-ArrangementPlanner` (`LC-arrangement-engine`):** Resolves monitor work-area bounds and DPI scale factors to plan coordinate rectangles for half-screen snaps on either axis (left, right, top, bottom), full maximize, overlapping cascade stacks, a move to the next monitor, a custom-percentage edge snap, and a thirds snap. The monitor-move plan is the only one that reads two work areas: it expresses the window's rectangle as a share of the source and maps that share onto the destination, so an arrangement survives a difference in size or scaling (LBR-WM-7). It holds no state between invocations, including no monitor list (AD-14). `Win32WindowMover::apply` clamps the frame-inset-compensated rect against the monitor containing the *planned* (destination) rect, not the monitor the window is still on when `apply` runs — resolving from the window would aim the clamp at the monitor being left, and a compensated rect touching a different-DPI monitor is what Windows uses as its own cue to relocate and rescale the window (`DEC-010`). The percentage-edge and thirds plans are each derived from one boundary computed fresh per invocation, the same tiling discipline the half-snap already uses, so neither reinvents `LBR-WM-8`'s guarantee (LBR-WM-9, LBR-WM-10). `[MISSING]` — planned by this pass, not yet implemented.
+- **`C-ArrangementPlanner` (`LC-arrangement-engine`):** Resolves monitor work-area bounds and DPI scale factors to plan coordinate rectangles for half-screen snaps on either axis (left, right, top, bottom), full maximize, overlapping cascade stacks, a move to the next monitor, a custom-percentage edge snap, and a thirds snap. The monitor-move plan is the only one that reads two work areas: it expresses the window's rectangle as a share of the source and maps that share onto the destination, so an arrangement survives a difference in size or scaling (LBR-WM-7). It holds no state between invocations, including no monitor list (AD-14). `Win32WindowMover::apply` clamps the frame-inset-compensated rect against the monitor containing the *planned* (destination) rect, not the monitor the window is still on when `apply` runs — resolving from the window would aim the clamp at the monitor being left, and a compensated rect touching a different-DPI monitor is what Windows uses as its own cue to relocate and rescale the window (`DEC-010`). The percentage-edge and thirds plans are each derived from one boundary computed fresh per invocation, the same tiling discipline the half-snap already uses, so neither reinvents `LBR-WM-8`'s guarantee (LBR-WM-9, LBR-WM-10).
 - **`C-TrayHealthStateMachine` (`LC-tray-controller`):** Manages the 3-Tier error state transitions, updates icon overlays, latches warning states, and throttles toast notifications to exactly one dispatch per critical failure.
 
 ### 3. Entity Objects
 
-- **`E-HookCommand` (`hook-command`):** Ephemeral command transfer entity represented as a `u8` byte (`0`=Nop, `1`=Cycle, `2`=SnapLeft, `3`=SnapRight, `4`=SnapMaximize, `5`=OverlappingStack, `6`=SnapTop, `7`=SnapBottom, `8`=MoveToNextMonitor, `9`=SnapPercentLeft, `10`=SnapPercentRight, `11`=SnapPercentTop, `12`=SnapPercentBottom, `13`=SnapThirdLeft, `14`=SnapThirdMiddle, `15`=SnapThirdRight). Values 9-15 are `[MISSING]` — planned by this pass. Any byte outside the assigned set decodes to `Nop`.
+- **`E-HookCommand` (`hook-command`):** Ephemeral command transfer entity represented as a `u8` byte (`0`=Nop, `1`=Cycle, `2`=SnapLeft, `3`=SnapRight, `4`=SnapMaximize, `5`=OverlappingStack, `6`=SnapTop, `7`=SnapBottom, `8`=MoveToNextMonitor, `9`=SnapPercentLeft, `10`=SnapPercentRight, `11`=SnapPercentTop, `12`=SnapPercentBottom, `13`=SnapThirdLeft, `14`=SnapThirdMiddle, `15`=SnapThirdRight). Any byte outside the assigned set decodes to `Nop`.
 - **`E-ActiveContext` (`window-focus-state`):** In-memory capture of the origin window state prior to cycling (`HWND`, executable basename, `HMONITOR`, virtual desktop membership).
 - **`E-TrayHealthState` (`tray-health-state`):** Current status of the tray icon (`Normal`, `Warning`, `Critical`), `warning_latched` boolean, and `hook_dead_toast_sent` single-shot guard.
 - **`E-PlacementPlan` (`arrangement-command`):** Calculated target window bounds (`RECT`), DPI scale, target `HWND`, and placement flags for `SetWindowPos`. An **empty** plan is a successful no-op rather than a failure — a disabled stack and a single-monitor move both land there.
@@ -197,7 +197,7 @@ The Robustness Analysis classifies the technical design for all realized use cas
 
 Step 4 is where this use case differs from every other arrangement command: it is the only one whose destination work area is not the one the foreground window sits on, and the only one that reads the display set at all.
 
-#### UC-9: Snap Active Window to a Custom-Percentage Edge `[MISSING]`
+#### UC-9: Snap Active Window to a Custom-Percentage Edge
 
 1. User presses `Ctrl + Alt + Shift + Left` (or `Right` / `Up` / `Down`).
 2. `C-HookController` translates the chord to `Command::SnapPercentLeft` (`9`), `SnapPercentRight` (`10`), `SnapPercentTop` (`11`), or `SnapPercentBottom` (`12`), pushes to `ring.rs`, and wakes `C-WorkerDispatcher`.
@@ -208,7 +208,7 @@ Step 4 is where this use case differs from every other arrangement command: it i
 
 Each edge's percentage is read and applied independently — this use case does not pair opposite edges the way `UC-2`'s halves are paired (LBR-WM-9).
 
-#### UC-10: Snap Active Window to a Third `[MISSING]`
+#### UC-10: Snap Active Window to a Third
 
 1. User presses `Ctrl + Alt + 1` (or `2` / `3`).
 2. `C-HookController` translates the chord to `Command::SnapThirdLeft` (`13`), `SnapThirdMiddle` (`14`), or `SnapThirdRight` (`15`), pushes to `ring.rs`, and wakes `C-WorkerDispatcher`.
@@ -356,8 +356,8 @@ silently dead. Either change moves a number the user feels, so both belong in th
 3. Computing half-screen placements for all four halves — left, right, top, bottom — and maximize, without activating the window during geometry application (`SWP_NOACTIVATE`). Both halves of an axis derive from one boundary computed once, so they tile the work area exactly (LBR-WM-8, FR-14, FR-22).
 4. Enumerating the live monitor set and planning a move to the next monitor by mapping the window's share of its source work area onto the destination work area (LBR-WM-7, FR-23, AD-14).
 5. Planning overlapping stack layouts for up to three half-width windows with visible leading edges on small monitors (FR-15).
-6. Computing edge placements at the percentage Settings configures for that edge — of work-area width for left/right, of work-area height for top/bottom — independent of every other edge's configured percentage (LBR-WM-9, FR-26). `[MISSING]` — not yet implemented.
-7. Computing thirds placements by dividing work-area width into three columns, remainder to the middle column, and selecting the column the command named (LBR-WM-10, FR-27). `[MISSING]` — not yet implemented.
+6. Computing edge placements at the percentage Settings configures for that edge — of work-area width for left/right, of work-area height for top/bottom — independent of every other edge's configured percentage (LBR-WM-9, FR-26).
+7. Computing thirds placements by dividing work-area width into three columns, remainder to the middle column, and selecting the column the command named (LBR-WM-10, FR-27).
 8. Returning `PlacementPlan` structs consumed by `Win32WindowMover` (`SetWindowPos`).
 
 The engine never installs hooks, never writes configuration, and never calls blocking enumeration beyond what the worker already collected.
@@ -365,13 +365,14 @@ The engine never installs hooks, never writes configuration, and never calls blo
 #### Depends on
 
 - `crates/daemon/src/arrangement/mod.rs` — public planning API.
-- `crates/daemon/src/arrangement/snap.rs` — half-screen and maximize math, both axes.
+- `crates/daemon/src/arrangement/snap.rs` — half-screen and maximize math, both axes, plus percentage-edge math (`plan_snap_percent`, FR-26).
+- `crates/daemon/src/arrangement/thirds.rs` — thirds-column math (`plan_snap_third`, FR-27). A separate module from `snap.rs` for the same reason `monitor.rs` is: a different input shape (an edge-and-percentage pair vs. a named column) rather than a variant of the half-screen planner.
 - `crates/daemon/src/arrangement/monitor.rs` — next-monitor selection and proportional remapping. Deliberately a separate module because every function in `snap.rs` takes exactly one `WorkArea`, and this operation needs two plus a monitor list (DEC-007).
 - `crates/daemon/src/arrangement/stack.rs` — three-window cascade geometry.
 - `crates/daemon/src/arrangement/win32.rs` — `SetWindowPos` application.
 - `crates/daemon/src/context/spatial.rs` — monitor work area, DPI, and the live monitor set (`enumerate_monitors()`, `EnumDisplayMonitors`, fresh per invocation).
-- `shared::Command` — `SnapLeft`, `SnapRight`, `SnapMaximize`, `OverlappingStack` opcodes, plus `SnapTop`, `SnapBottom`, `MoveToNextMonitor` at wire values 6, 7, and 8 (AD-2). `SnapPercentLeft`, `SnapPercentRight`, `SnapPercentTop`, `SnapPercentBottom` at wire values 9-12, and `SnapThirdLeft`, `SnapThirdMiddle`, `SnapThirdRight` at wire values 13-15 (FR-26, FR-27), extending rather than renumbering per AD-2. `[MISSING]` — not yet implemented.
-- `shared::Config` — `snapping.percent_left/right/top/bottom` (FR-26's per-edge percentage), read by the planner at plan time rather than carried on the wire, since the ring buffer holds only a `u8` opcode with no payload. `[MISSING]` — not yet implemented.
+- `shared::Command` — `SnapLeft`, `SnapRight`, `SnapMaximize`, `OverlappingStack` opcodes, plus `SnapTop`, `SnapBottom`, `MoveToNextMonitor` at wire values 6, 7, and 8 (AD-2). `SnapPercentLeft`, `SnapPercentRight`, `SnapPercentTop`, `SnapPercentBottom` at wire values 9-12, and `SnapThirdLeft`, `SnapThirdMiddle`, `SnapThirdRight` at wire values 13-15 (FR-26, FR-27), extending rather than renumbering per AD-2.
+- `shared::Config` — `snapping.percent_left/right/top/bottom` (FR-26's per-edge percentage), read by the planner at plan time rather than carried on the wire, since the ring buffer holds only a `u8` opcode with no payload.
 
 #### Interface
 
@@ -386,8 +387,8 @@ The engine never installs hooks, never writes configuration, and never calls blo
 | `plan_snap_maximize(hwnd)` | `LC-worker-thread` | Foreground window |
 | `plan_move_next_monitor(hwnd)` | `LC-worker-thread` | Foreground window, plus the live monitor set |
 | `plan_stack(windows[])` | `LC-worker-thread` | Up to 3 eligible HWNDs |
-| `plan_snap_percent(hwnd, edge, percent)` | `LC-worker-thread` | Foreground window, the named edge, its configured percentage. `[MISSING]` |
-| `plan_snap_third(hwnd, column)` | `LC-worker-thread` | Foreground window, the named column (left/middle/right). `[MISSING]` |
+| `plan_snap_percent(hwnd, edge, percent)` | `LC-worker-thread` | Foreground window, the named edge, its configured percentage |
+| `plan_snap_third(hwnd, column)` | `LC-worker-thread` | Foreground window, the named column (left/middle/right) |
 
 ##### Outbound
 
@@ -403,7 +404,7 @@ The engine never installs hooks, never writes configuration, and never calls blo
 - **Monitor set:** never cached. Enumerated fresh per invocation, because an `HMONITOR` is a handle rather than an identity and a cached list survives an unplug the handle does not (AD-14).
 - **Single monitor:** `plan_move_next_monitor` returns an empty plan, which is a successful no-op rather than a failure — the same convention the stack planner already uses when it is disabled.
 - **A share too thin for the destination is refused, not clamped.** When the window's mapped share rounds to a zero-pixel width or height on a much smaller destination monitor, the plan is refused rather than inventing a minimum size the window never asked for — unlike the half-screen snap, which instead respects the window's own enforced minimum size. `Rect::new` is what refuses it, by construction (`crates/daemon/src/arrangement/monitor.rs`).
-- **Evidence:** Verified against `crates/daemon/src/arrangement/`, `crates/daemon/src/context/spatial.rs`. The percentage-snap and thirds-snap responsibilities, commands, and interface methods above are design only — `[MISSING]` from the code, not yet raised to verified.
+- **Evidence:** Verified against `crates/daemon/src/arrangement/`, `crates/daemon/src/context/spatial.rs`, including `snap.rs`'s `plan_snap_percent` and the new `thirds.rs`'s `plan_snap_third` (`SPEC-1`, 2026-09-07).
 
 
 ### `LC-hook-thread.md`
