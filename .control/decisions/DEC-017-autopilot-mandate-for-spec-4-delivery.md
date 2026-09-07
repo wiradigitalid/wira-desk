@@ -35,12 +35,17 @@ both proved out and which the owner restated this turn: coding and the smoke tes
 `claude` CLI profile (`CLAUDE_CONFIG_DIR=~/.claude-byok`), invoked headlessly by the coordinator; the
 coordinator keeps specs, documents, registry writes, this ledger, unit tests, review, and every merge.
 
-One change from `DEC-016`, at the owner's explicit instruction: **there is exactly one build location.**
-The run's isolated sibling worktree (see `worktree` on this decision's row) is pinned to the main
-checkout's already-warm target directory (see `build_target_dir`), so dependencies stay compiled, no
-second target tree is ever created, and cargo's own lock serialises anything that would otherwise race.
-The coordinator holds every `cargo` invocation; claude-byok receives source and the smoke test, never a
-concurrent build of its own.
+One change from `DEC-016`, at the owner's explicit instruction: **there is exactly one build location,
+and one build at a time.** The run's isolated sibling worktree (see `worktree` on this decision's row) is
+pinned to the main checkout's already-warm target directory (see `build_target_dir`), so dependencies
+stay compiled and no second target tree is ever created.
+
+The owner's constraint is about concurrency, not about who is allowed to compile: two sessions MUST NOT
+build at once, and there MUST NOT be two target trees. So the rule is a lock, not a role. Whoever holds
+a dispatched step runs `cargo` for it — a builder that cannot run its own tests cannot do TDD at all, and
+`wdi-build` Step 2 requires the full suite green from the builder's own run — and while a builder is
+dispatched the coordinator runs no `cargo` command of its own. `build.ps1` and any launch of the
+application are `claude-byok`'s alone, as under `DEC-016`.
 
 Because `claude-byok` resolves to a non-Claude model through 9router, every step it produces is judged
 from the artifact — the diff, the suite, the export gate — and never from its own completion report.
