@@ -8,25 +8,22 @@ date: 2026-09-07
 
 ## Resume
 
-- Iteration 20 — **`SPEC-4-04` closed and `SPEC-4` closed.** Every ticket in the spec is `done`;
-  suite 559/0/2, clippy and fmt clean, validators GREEN with the spec closed.
-- Run branch: `autopilot/DEC-017`; `ticket/SPEC-4-04` merges into it this iteration and is deleted.
-  **Not yet pushed, no PR** — the first push is this iteration.
-- Stopped at: spec closed, merge and first push next.
+- Iteration 20 — `SPEC-4` **closed and merged**; run branch **pushed for the first time** at
+  `444be47`; **PR #19 open as a draft**; CI running on that head; smoke test dispatched.
+- Run branch: `autopilot/DEC-017` at `444be47`, pushed. One PR: #19, draft until CI concludes green.
+- Stopped at: smoke test in flight, CI in flight.
 - Blocked: —
 - Parked: —
-- **Next, in order:** merge `ticket/SPEC-4-04`, verify the merge commit green, push the run branch
-  for the first time, open **one draft PR**, watch CI on the pushed head SHA, then the smoke test.
-- **Smoke test is `claude-byok`'s alone, by mandate.** Fourteen steps drafted at
-  `<scratchpad>/finish-inventory-and-smoke.md`; `SPEC-4-05`'s three keyboard steps replace
-  `SPEC-4-03` Amendment 4's pair, which both started from a fresh window — the one state that
-  already worked.
-- Then § Finish: `wdi-report` intent `progress`, mandate to `applied` with `touches` naming the
-  ledger, final `## Resume`, cancel the loop, final report.
-- For the final report: `FR-8`, `FR-9`, `FR-24` sit in no spec's `fr:` list yet are implemented —
-  a traceability gap, evidence in `<scratchpad>/finish-inventory-and-smoke.md`. Open defects
-  outside this spec: `DEF-6`, `DEF-7`, `DEF-8`, `DEF-10`.
-- Build lock: mine, idle. No builder out.
+- **IN FLIGHT — do NOT re-dispatch:** `claude-byok` on the smoke test, script at
+  `.scratch/smoke-dec-017.md`. It holds the build lock (`build.ps1` release).
+- **Build lock: SHUT.** No cargo here while it runs. CI is remote and does not conflict.
+- **Next:** read CI's verdict on `444be47` and the smoke report, then § Finish —
+  `wdi-report` intent `progress`, mandate to `applied` with `touches` naming this ledger, final
+  `## Resume`, cancel the loop, final report. **The PR moves to ready only if CI is green**; red
+  keeps it a draft and is reported red.
+- Two machine facts that shape the smoke verdicts: the running daemon is a **stale 2026-08-28
+  build**, and this session is **not elevated** with the owner absent, so no fresh elevated daemon
+  can be launched. Both are written into the script rather than left to be discovered.
 
 ## Decisions
 
