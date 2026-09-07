@@ -1,7 +1,53 @@
 # defects.yaml — SSOT for defects: ordinary bugs and hotfixes.
 
 defects:
-  - id: DEF-1
+  - id: DEF-5
+    title: Typing a digit by hand into a percentage field does not reach the value the stepper buttons read
+    status: open
+    severity: medium
+    component: settings
+    violates: [SPEC-2-01]
+    found_in: "0.4.0"
+    found_by: Owner live manual test on the elevated build, 2026-09-07 (post-DEC-016 finish, pre-merge of PR #17)
+    tests: []
+    summary: >-
+      The owner reports that on the live standalone build, typing a number directly into a Shortcuts-pane
+      percentage field (`crates/settings/ui/components/shortcut_row.slint`'s `pct_input`) has no visible
+      effect -- only the `+`/`-` stepper buttons change the value. Every existing automated test for
+      `SPEC-2-01`'s commit-on-departure behaviour (`typed_percentage_commits_on_save_click` and its four
+      siblings in `shortcut_row_slint_snapshot.rs`) drives the field through
+      `ElementHandle::set_accessible_value`, i.e. the UI Automation `RangeValuePattern` /
+      `accessible-action-set-value` path -- not through simulated character key presses reaching the
+      `TextInput`'s native text-entry handling. Those tests prove the commit-on-departure LOGIC is correct
+      once a value lands in `root.typed_text`; they do not prove a physical keystroke gets a digit into
+      `typed_text` in the first place. The two paths are different code, and only one of them has ever
+      been exercised by a test or by automation (the live smoke test in `.scratch/live-test-dec-016.md`
+      hit the same live standalone binary and independently could not drive real keyboard input into this
+      window either, for an unrelated automation-side reason -- `SetForegroundWindow` refused to a
+      background process -- which is not this defect, but left this exact path untested from both sides
+      until the owner tried it by hand).
+    why_it_hid: >-
+      Every seam this feature was tested at (`shortcut_row_slint_snapshot.rs`, `layout_pane_slint_snapshot.rs`)
+      drives values in through the accessible-value setter because that is the only reliable way to script
+      a Slint `TextInput` from a `#[test]`. Nothing in the suite types a character and checks it landed.
+      `pct_input`'s own `key-pressed` handler only special-cases `Tab`/`Backtab`; ordinary character keys
+      fall through to Slint's built-in `TextInput` editing, which was never separately asserted on.
+    impact: >-
+      A user who tries to type "68" into a snap-percentage or (once `DEC-014` ships) the Overlapping Stack
+      width field, expecting free-text entry, sees nothing happen and has to discover the stepper buttons
+      instead -- the opposite of what `SPEC-2-01`'s own acceptance criteria promised ("should be able to
+      type freetext, with validation"). Whether this is `input-type: number` narrowing accepted characters,
+      a focus/z-order gap between `pct_field_touch`'s `TouchArea` and the `TextInput` beneath it, or
+      something else entirely is not yet known -- this row is deliberately not naming a root cause it
+      has not verified.
+    fix_direction: >-
+      Root-cause with `wdi-systematic-debugging` before proposing a fix, per this repo's own standing rule
+      for any bug with an unknown cause -- do not guess at `input-type` or focus/z-order and patch blind.
+      Whatever the cause, the fix MUST be provable by a test that drives the field the way this one wasn't:
+      a real simulated key-press sequence (not `set_accessible_value`) that types digits and asserts they
+      land in `typed_text`/commit, in addition to the existing accessible-value tests, which stay -- they
+      cover the automation/assistive-technology path and MUST NOT be weakened to make room for the new one.
+    owner: repo owner
     title: Two hook tests depend on the live desktop and fail with no foreground window
     status: fixed
     severity: high

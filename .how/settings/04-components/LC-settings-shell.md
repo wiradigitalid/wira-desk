@@ -16,7 +16,7 @@ created: 2026-08-21
 
 `LC-settings-shell` is the Slint presentation layer for `wiradesk-settings.exe`: the declared UI in `ui/*.slint` (compiled by `slint-build`) plus the Rust-side application state and model it binds to. It owns:
 
-1. Application frameless shell (`no-frame: true`), navigation tabs (General, Shortcuts, Layout, VM & Exceptions, About), and adaptive light/dark theming (FR-19, AD-11a).
+1. Application frameless shell (`no-frame: true`), navigation tabs (General, Shortcuts, VM & Exceptions, About — `Layout` retired by `DEC-014`), and adaptive light/dark theming (FR-19, AD-11a).
 2. Wiring shortcut fields to `LC-shortcut-capturer` listening mode (FR-18).
 3. Tab order across all interactive controls (FR-20, LBR-ST-5).
 4. First-run onboarding panels when launched with `--onboarding` (FR-17, UC-5).

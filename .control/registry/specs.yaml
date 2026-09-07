@@ -566,3 +566,72 @@ specs:
           - hook::tests::a_disabled_actions_chord_falls_through_to_call_next_hook_ex
           - hook::tests::a_disabled_field_shares_a_chord_with_an_enabled_field_without_collision
           - arrangement::stack::tests::stack_planner_no_longer_reads_a_layout_level_toggle
+
+  - id: SPEC-4
+    release: "0.5.0"
+    prd: [wira-desk]
+    size: M
+    status: open
+    depends_on: []
+    spec_folder: .scratch/spec-4-shortcuts-pane-consolidation/
+    fr: [FR-15, FR-26, FR-28]
+    spec_reviewed:
+      date: '2026-09-07'
+      sha: 'eb667fa'
+      lenses: [edge-case-hunter]
+    # Reviewed by the coordinator directly (bmad-review, edge-case-hunter) at contract-authoring time --
+    # 6 findings, all resolved in the same pass: SnapMaximize collision-test risk (SPEC-4-01), ShortcutRow's
+    # hardcoded 1-99 step bounds needing per-row min/max for Stack's 10-100 range (SPEC-4-02), a possible
+    # hardcoded pane-count assumption and stale onboarding copy (SPEC-4-02), the no-scroll criterion's
+    # unpinned width now naming main_window.slint:44's 760px (SPEC-4-03), and DEF-5's launch-mode blind
+    # spot plus its unenforced ordering against SPEC-4-03, now blocked_by (SPEC-4-04). No deferred findings.
+    # Applies DEC-014 (accepted 2026-09-07, same day as this spec opened): the Shortcuts pane's declared
+    # sequence re-cuts from three groups to five, and the Layout pane -- down to one control since
+    # SPEC-3-01 moved Overlapping Stack's toggle out of it -- is retired, its stack-width-percent control
+    # folded inline onto the Overlapping Stack row. No new FR/UC: this is how three already-promised
+    # capabilities (FR-15, FR-26, FR-28) are organised on screen, not a new promise. Raised from the
+    # owner's live manual test of the DEC-016 build, pre-merge of PR #17 (2026-09-07) -- see
+    # `.scratch/live-test-dec-016.md` for the automated pass that could not reach this UI at all, and
+    # `.control/registry/defects.yaml`'s DEF-5 for the one finding here that IS a defect rather than a
+    # design gap (typed digits not reaching a percentage field by hand).
+    tickets:
+      - id: SPEC-4-01
+        title: Shortcuts pane regroups per DEC-014, and Snap-custom row labels drop their group's own name
+        spec_folder: .scratch/spec-4-shortcuts-pane-consolidation/
+        component: settings
+        satisfies: [UC-4]
+        depends_on: []
+        tests:
+          - app::tests::shortcut_field_group_declares_five_taxonomic_groups
+          - app::tests::snap_maximize_now_sorts_after_every_snap_variant
+          - app::tests::grouping_never_reorders_the_declared_sequence
+          - app::tests::snap_custom_labels_no_longer_repeat_the_group_name
+      - id: SPEC-4-02
+        title: Layout pane retired; stack width percentage moves onto the Overlapping Stack row
+        spec_folder: .scratch/spec-4-shortcuts-pane-consolidation/
+        component: settings
+        satisfies: [UC-4, UC-9]
+        depends_on: [SPEC-4-01]
+        tests:
+          - app::tests::pane_enum_no_longer_declares_layout
+          - main::tests::overlapping_stack_row_has_percent_true
+          - shortcut_row_slint_snapshot::tests::stack_row_percent_commits_on_save_click
+          - persistence::tests::stack_width_percent_round_trips_through_the_shortcut_row_path
+      - id: SPEC-4-03
+        title: Row polish — tooltip description, centred control cluster, no horizontal scroll
+        spec_folder: .scratch/spec-4-shortcuts-pane-consolidation/
+        component: settings
+        satisfies: [UC-4, UC-11]
+        depends_on: [SPEC-4-01, SPEC-4-02]
+        tests:
+          - shortcut_row_slint_snapshot::tests::description_renders_as_a_tooltip_not_a_visible_line
+          - shortcut_row_slint_snapshot::tests::control_cluster_and_toggle_share_one_vertical_centre
+          - shortcuts_pane_slint_snapshot::tests::five_groups_fit_the_default_window_width_with_no_horizontal_scroll
+      - id: SPEC-4-04
+        title: "Defect DEF-5 — typed digits do not reach a percentage field's value"
+        spec_folder: .scratch/spec-4-shortcuts-pane-consolidation/
+        component: settings
+        satisfies: [UC-4]
+        depends_on: [SPEC-4-03]
+        tests:
+          - shortcut_row_slint_snapshot::tests::a_real_keystroke_sequence_commits_a_typed_percentage
