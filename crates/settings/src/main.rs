@@ -172,12 +172,16 @@ pub(crate) fn sync_model_to_ui(window: &MainWindow, model: &SettingsModel) {
                     theme::STACK_WIDTH_INPUT.name,
                     theme::STACK_WIDTH_INCREASE.name,
                 ),
-                _ => (
+                ShortcutField::SnapPercentLeft
+                | ShortcutField::SnapPercentRight
+                | ShortcutField::SnapPercentTop
+                | ShortcutField::SnapPercentBottom => (
                     theme::SNAP_PERCENT_DECREASE.name,
                     theme::SNAP_PERCENT_FIELD.name,
                     theme::SNAP_PERCENT_INPUT.name,
                     theme::SNAP_PERCENT_INCREASE.name,
                 ),
+                _ => ("", "", "", ""),
             };
             ShortcutRowData {
                 index: field as i32,
