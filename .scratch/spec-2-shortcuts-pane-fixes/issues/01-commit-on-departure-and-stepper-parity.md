@@ -3,7 +3,7 @@ id: SPEC-2-01
 component: settings
 satisfies: [UC-4, UC-9]
 blocked_by: []
-status: ready-for-agent
+status: done
 tests:
   - shortcut_row_slint_snapshot::tests::typed_percentage_commits_on_save_click
   - shortcut_row_slint_snapshot::tests::typed_percentage_commits_on_stepper_click
@@ -36,25 +36,25 @@ the string to match what every other document already says.
 
 **Blocked by:** None (can start immediately)
 
-- [ ] Typing a percentage value and clicking **Save** (with no Enter pressed first) commits the typed value
+- [x] Typing a percentage value and clicking **Save** (with no Enter pressed first) commits the typed value
       — verified by a test driving the row's model without going through Enter.
-- [ ] Typing a percentage value and clicking `+` or `-` computes from the just-typed value, not the last
+- [x] Typing a percentage value and clicking `+` or `-` computes from the just-typed value, not the last
       committed one (typing `70` then clicking `+` yields `71`, not `51`).
-- [ ] Typing a percentage value and clicking anywhere that moves focus away from the field — another row's
+- [x] Typing a percentage value and clicking anywhere that moves focus away from the field — another row's
       shortcut button, another pane's tab — commits the typed value, the same as pressing Enter or the
       existing blur handler already does.
-- [ ] Typing a percentage value and pressing Tab or Shift+Tab to move focus away commits the typed value —
+- [x] Typing a percentage value and pressing Tab or Shift+Tab to move focus away commits the typed value —
       keyboard-only navigation must not be a second path that still discards it (`FR-20`, `FR-21`).
-- [ ] An out-of-range value typed into the percentage field and committed via any of the above departures is
+- [x] An out-of-range value typed into the percentage field and committed via any of the above departures is
       refused with the existing actionable message, not silently accepted or clamped — the same behavior
       `SPEC-1-01` already established for Enter/blur, now reachable from every departure path.
-- [ ] `layout_pane.slint`'s `stack_width_percent` stepper refuses an out-of-range value with an actionable
+- [x] `layout_pane.slint`'s `stack_width_percent` stepper refuses an out-of-range value with an actionable
       message instead of silently clamping it via `Math.clamp` — matching the percentage field's philosophy,
       not the reverse. `LBR-ST-13` is the closest prior art for "a boundary is enforced by refusal, not by
       silently coercing the value" in this same pane family.
-- [ ] `layout_pane.slint`'s in-pane title reads `"Layout"`, matching `Pane::label()`'s tab name and the
+- [x] `layout_pane.slint`'s in-pane title reads `"Layout"`, matching `Pane::label()`'s tab name and the
       reasoning already documented there and in `EXPERIENCE.md`/`DESIGN.md`.
-- [ ] Full test suite green once, not only this ticket's own tests.
+- [x] Full test suite green once, not only this ticket's own tests.
 
 ## Return trip 1/2 — panel must-fix, `commit fa3dddc`
 
