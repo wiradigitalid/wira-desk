@@ -13,6 +13,7 @@ dag:
   order:
   - parallel:
     - SPEC-2-01
+    - SPEC-2-02
 - spec: SPEC-3
   order:
   - parallel:

@@ -382,14 +382,22 @@ rtm:
   FR: FR-25
   DEC: []
   UC: UC-8
-  ticket: ''
-  spec: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: SPEC-2-02
+  spec: SPEC-2
+  release: 0.3.0
+  test:
+  - update::tests::a_checksum_that_is_not_sha256_is_refused
+  - update::tests::a_download_url_off_this_repository_is_refused
+  - update::tests::the_real_workflow_url_shape_is_accepted
+  - update::tests::a_newer_version_is_offered
+  - update::tests::an_older_version_is_never_offered
+  - updatecheck::tests::a_version_is_announced_once_however_often_it_is_found
+  - updatecheck::tests::a_run_of_failures_announces_once
+  - updatecheck::tests::a_success_ends_the_failure_run
+  status: done
   exempt: false
-  broken_at: ticket
+  green: true
+  broken_at: ''
 - BG: BG-3
   CAP: CAP-14
   FR: FR-26
