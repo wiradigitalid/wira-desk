@@ -8,17 +8,14 @@ date: 2026-09-07
 
 ## Resume
 
-- Iteration 6 — **`SPEC-4-02` closed and merged.** `SPEC-4` at 2 of 4 tickets. Boundary commit:
-  `79efd93` on the run branch (the merge), with the ledger commit carrying this line on top.
-- Run branch: `autopilot/DEC-017`. **Not pushed, no PR** — the first push is at spec close, and
-  `SPEC-4` still has `SPEC-4-03` and `SPEC-4-04` open.
+- Iteration 6 — `SPEC-4-02` merged (`79efd93`); `SPEC-4-03`'s seam agreement landed in place of a
+  red suite, with the reason recorded. Boundary commit: the commit carrying this line.
+- Run branch: `autopilot/DEC-017`. Not pushed, no PR — first push at spec close.
 - Stopped at: — (iteration in progress)
 - Blocked: —
 - Parked: —
-- Next: `SPEC-4-03` — `wdi-build` Step 1, coordinator writes the failing tests. Two facts already
-  established for it: it needs the new `shortcuts_pane_slint_snapshot` module (which also takes
-  `SPEC-4-01`'s deferred heading coverage, so the file is created once), and Slint's testing
-  backend only instantiates accessible elements once scrolled into view.
+- Next: dispatch `claude-byok` for `SPEC-4-03` — it writes the four tests through `tdd` at the
+  agreed seam, then the markup. Brief still to write.
 
 ## Decisions
 
@@ -61,3 +58,6 @@ date: 2026-09-07
 | Iter 6 | `DEF-6` filed and corrected | Filed the accessibility gap Standards found — four custom-percentage rows announcing one name set — then fixed two errors the panel found in my own row: `why_it_hid` sent readers to a deleted file for strings that lived in `shortcut_row.slint`, and `impact` justified `low` by contrast with a `DEF-2` severity that is also `low` | Filing it once and not re-reading it | A defect row that misdirects the person who picks it up | `defects.yaml` |
 | Iter 6 | Guard strength over guard count | Turned `every_rendered_percent_control_name_comes_from_theme` from set membership into per-row family/slot assignment, and deliberately did not restate which field maps to which family — a test repeating the production mapping proves only that the mapping equals itself. Asserts instead that a row never mixes families or slots and that exactly one row wears the stack family | Adding a second membership test, or mirroring the `match` in the test | Standards judged the cardinality invariant sound: it can only fail loudly, unlike the numeric one it replaced | `theme.rs`, two mutations |
 | Iter 6 | Return-trip cap respected | Fixed my own `ALL` error myself rather than opening a third builder trip. The cap governs sending the ticket back to Step 2; a coordinator repairing coordinator work is not that, and saying so explicitly is cheaper than letting the distinction blur | Escalating the ticket under Blocked, or quietly running a third trip | If the distinction is wrong, the ticket should have escalated — recorded here so the owner can say so | this row |
+| Iter 6 | `wdi-build` Step 1 for `SPEC-4-03` | Landed a **seam agreement instead of a red suite**, and recorded it as a departure. All three criteria are rendered-geometry properties reachable only through `ElementHandle`, which finds elements by accessible label — and the keycap, the title/description block, and all five group headings have none today, so none is findable. Making them reachable IS the ticket's work: its own tooltip criterion requires keyboard-focus reachability (`FR-20`/`FR-21`), which means the accessible tree | Writing tests that cannot compile, or adding the accessible labels myself and crossing the owner's coding/testing split | If the seam is wrong the builder reports it before writing markup, which is cheaper than after | ticket amendment 1 |
+| Iter 6 | Near-miss on my own check | Almost concluded `ElementHandle` exposes no geometry at all, which would have mis-scoped the whole ticket — my first grep truncated at `head -25`, two lines short of `size()` and `absolute_position()`. Re-ran unfiltered before deciding | Scoping the ticket around a capability that does exist | Would have sent the builder to build the wrong thing, or parked a runnable ticket | this row |
+| Iter 6 | `SPEC-4-01`'s deferred coverage | Folded the three uncovered group headings into `SPEC-4-03`, which is where the `shortcuts_pane_slint_snapshot` module is created. Its test iterates `ShortcutField::GROUPS` rather than restating five strings — directly `theme::ALL`'s lesson, where a hand-listed array silently missed two entries | A separate ticket creating the same module, or five hardcoded heading strings | None; the module exists once and the constant stays the single source | ticket amendment 1, `specs.yaml` |

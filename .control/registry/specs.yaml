@@ -637,6 +637,7 @@ specs:
           - shortcut_row_slint_snapshot::tests::description_renders_as_a_tooltip_not_a_visible_line
           - shortcut_row_slint_snapshot::tests::control_cluster_and_toggle_share_one_vertical_centre
           - shortcuts_pane_slint_snapshot::tests::five_groups_fit_the_default_window_width_with_no_horizontal_scroll
+          - shortcuts_pane_slint_snapshot::tests::all_five_group_headings_are_in_the_rendered_tree
       - id: SPEC-4-04
         title: "Defect DEF-5 — typed digits do not reach a percentage field's value"
         spec_folder: .scratch/spec-4-shortcuts-pane-consolidation/
