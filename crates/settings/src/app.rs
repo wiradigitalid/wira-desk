@@ -16,7 +16,7 @@ use crate::persistence::{
 };
 use crate::theme::{
     self, ThemeMode, LISTENING_ANNOUNCEMENT, STACK_WIDTH_DECREASE, STACK_WIDTH_INCREASE,
-    STACK_WIDTH_INPUT, TOGGLE_AUTO_START, TOGGLE_OVERLAPPING_STACK,
+    STACK_WIDTH_INPUT, TOGGLE_AUTO_START,
 };
 
 /// Which pane the shell is showing.
@@ -249,6 +249,50 @@ impl ShortcutField {
             ShortcutField::SnapPercentTop => cfg.snapping.snap_percent_top = value,
             ShortcutField::SnapPercentBottom => cfg.snapping.snap_percent_bottom = value,
             ShortcutField::Stack => cfg.layout.stack_shortcut = value,
+        }
+    }
+
+    pub fn is_enabled(self, cfg: &Config) -> bool {
+        match self {
+            ShortcutField::Switcher => cfg.switcher.shortcut_enabled,
+            ShortcutField::Fallback => cfg.switcher.fallback_shortcut_enabled,
+            ShortcutField::SnapLeft => cfg.snapping.snap_half_left_enabled,
+            ShortcutField::SnapRight => cfg.snapping.snap_half_right_enabled,
+            ShortcutField::SnapTop => cfg.snapping.snap_half_top_enabled,
+            ShortcutField::SnapBottom => cfg.snapping.snap_half_bottom_enabled,
+            ShortcutField::SnapMaximize => cfg.snapping.snap_maximize_enabled,
+            ShortcutField::SnapThirdLeft => cfg.snapping.snap_third_left_enabled,
+            ShortcutField::SnapThirdMiddle => cfg.snapping.snap_third_middle_enabled,
+            ShortcutField::SnapThirdRight => cfg.snapping.snap_third_right_enabled,
+            ShortcutField::MoveNextMonitor => cfg.layout.move_next_monitor_shortcut_enabled,
+            ShortcutField::SnapPercentLeft => cfg.snapping.snap_percent_left_enabled,
+            ShortcutField::SnapPercentRight => cfg.snapping.snap_percent_right_enabled,
+            ShortcutField::SnapPercentTop => cfg.snapping.snap_percent_top_enabled,
+            ShortcutField::SnapPercentBottom => cfg.snapping.snap_percent_bottom_enabled,
+            ShortcutField::Stack => cfg.layout.stack_shortcut_enabled,
+        }
+    }
+
+    pub fn set_enabled(self, cfg: &mut Config, enabled: bool) {
+        match self {
+            ShortcutField::Switcher => cfg.switcher.shortcut_enabled = enabled,
+            ShortcutField::Fallback => cfg.switcher.fallback_shortcut_enabled = enabled,
+            ShortcutField::SnapLeft => cfg.snapping.snap_half_left_enabled = enabled,
+            ShortcutField::SnapRight => cfg.snapping.snap_half_right_enabled = enabled,
+            ShortcutField::SnapTop => cfg.snapping.snap_half_top_enabled = enabled,
+            ShortcutField::SnapBottom => cfg.snapping.snap_half_bottom_enabled = enabled,
+            ShortcutField::SnapMaximize => cfg.snapping.snap_maximize_enabled = enabled,
+            ShortcutField::SnapThirdLeft => cfg.snapping.snap_third_left_enabled = enabled,
+            ShortcutField::SnapThirdMiddle => cfg.snapping.snap_third_middle_enabled = enabled,
+            ShortcutField::SnapThirdRight => cfg.snapping.snap_third_right_enabled = enabled,
+            ShortcutField::MoveNextMonitor => {
+                cfg.layout.move_next_monitor_shortcut_enabled = enabled
+            }
+            ShortcutField::SnapPercentLeft => cfg.snapping.snap_percent_left_enabled = enabled,
+            ShortcutField::SnapPercentRight => cfg.snapping.snap_percent_right_enabled = enabled,
+            ShortcutField::SnapPercentTop => cfg.snapping.snap_percent_top_enabled = enabled,
+            ShortcutField::SnapPercentBottom => cfg.snapping.snap_percent_bottom_enabled = enabled,
+            ShortcutField::Stack => cfg.layout.stack_shortcut_enabled = enabled,
         }
     }
 
@@ -885,13 +929,22 @@ impl SettingsModel {
         self.feedback = SaveFeedback::None;
     }
 
+    /// Set the enabled state of a shortcut action on the draft.
+    pub fn set_action_enabled(&mut self, field: ShortcutField, enabled: bool) {
+        field.set_enabled(&mut self.draft, enabled);
+        self.feedback = SaveFeedback::None;
+    }
+
     /// Check if a field currently conflicts with any other field in the draft.
     /// Returns the conflicting field if any.
     pub fn find_conflict(&self, field: ShortcutField) -> Option<ShortcutField> {
+        if !field.is_enabled(&self.draft) {
+            return None;
+        }
         let val = field.get(&self.draft);
-        ShortcutField::ALL
-            .into_iter()
-            .find(|&other| other != field && other.get(&self.draft) == val)
+        ShortcutField::ALL.into_iter().find(|&other| {
+            other != field && other.is_enabled(&self.draft) && other.get(&self.draft) == val
+        })
     }
 
     /// Check if any shortcut conflict exists across the draft.
@@ -1045,7 +1098,6 @@ pub fn focus_order(pane: Pane) -> Vec<&'static str> {
             }
         }
         Pane::Layout => {
-            order.push(TOGGLE_OVERLAPPING_STACK.name);
             // Visual order: the field sits between the two buttons.
             order.push(STACK_WIDTH_DECREASE.name);
             order.push(STACK_WIDTH_INPUT.name);
@@ -1577,6 +1629,59 @@ mod tests {
             m.find_conflict(ShortcutField::SnapLeft),
             Some(ShortcutField::Switcher)
         );
+    }
+
+    #[test]
+    fn disabling_an_action_retains_its_stored_chord() {
+        let mut m = model();
+        let original_chord = ShortcutField::SnapLeft.get(&m.draft).to_string();
+        assert!(!original_chord.is_empty());
+        assert!(ShortcutField::SnapLeft.is_enabled(&m.draft));
+
+        ShortcutField::SnapLeft.set_enabled(&mut m.draft, false);
+        assert!(!ShortcutField::SnapLeft.is_enabled(&m.draft));
+        assert_eq!(
+            ShortcutField::SnapLeft.get(&m.draft),
+            original_chord,
+            "disabling an action must retain its stored chord"
+        );
+    }
+
+    #[test]
+    fn re_enabling_an_action_restores_its_prior_chord() {
+        let mut m = model();
+        let original_chord = ShortcutField::SnapThirdLeft.get(&m.draft).to_string();
+
+        ShortcutField::SnapThirdLeft.set_enabled(&mut m.draft, false);
+        assert!(!ShortcutField::SnapThirdLeft.is_enabled(&m.draft));
+
+        ShortcutField::SnapThirdLeft.set_enabled(&mut m.draft, true);
+        assert!(ShortcutField::SnapThirdLeft.is_enabled(&m.draft));
+        assert_eq!(
+            ShortcutField::SnapThirdLeft.get(&m.draft),
+            original_chord,
+            "re-enabling an action must restore its prior chord"
+        );
+    }
+
+    #[test]
+    fn find_conflict_excludes_disabled_actions() {
+        let mut m = model();
+        m.draft.snapping.snap_half_left = "win+backtick".to_string();
+        assert_eq!(
+            m.find_conflict(ShortcutField::Switcher),
+            Some(ShortcutField::SnapLeft)
+        );
+        assert_eq!(
+            m.find_conflict(ShortcutField::SnapLeft),
+            Some(ShortcutField::Switcher)
+        );
+
+        // Disable SnapLeft
+        ShortcutField::SnapLeft.set_enabled(&mut m.draft, false);
+        assert_eq!(m.find_conflict(ShortcutField::Switcher), None);
+        assert_eq!(m.find_conflict(ShortcutField::SnapLeft), None);
+        assert!(!m.has_any_conflict());
     }
 
     #[test]

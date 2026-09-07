@@ -268,7 +268,7 @@ mod tests {
     #[test]
     fn stack_is_enabled_by_default_at_fifty_percent() {
         let layout = LayoutConfig::default();
-        assert!(layout.enable_overlapping_stack);
+        assert!(layout.stack_shortcut_enabled);
         assert_eq!(layout.stack_width_percent, 50);
     }
 

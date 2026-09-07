@@ -74,7 +74,6 @@ export component MainWindow inherits Window {
     in property <bool> kc_beat: false;
 
     // Layout Pane Properties
-    in-out property <bool> enable_stack: false;
     in-out property <int> stack_width_percent: 50;
 
     // VM Exceptions Pane Properties
@@ -128,8 +127,8 @@ export component MainWindow inherits Window {
     callback swap_shortcuts(int);
     callback percent_changed(int, int);
     callback editing_percent_changed(int, int);
+    callback shortcut_enabled_toggled(int, bool);
 
-    callback stack_toggled(bool);
     callback width_changed(int);
     callback editing_width_changed(int);
 
@@ -276,12 +275,11 @@ export component MainWindow inherits Window {
                                 swap_shortcuts(idx) => { root.swap_shortcuts(idx); }
                                 percent_changed(idx, val) => { root.percent_changed(idx, val); }
                                 editing_percent_changed(idx, val) => { root.editing_percent_changed(idx, val); }
+                                toggle_enabled(idx, val) => { root.shortcut_enabled_toggled(idx, val); }
                             }
 
                             if root.current_pane == 2 : LayoutPane {
-                                enable_stack <=> root.enable_stack;
                                 stack_width_percent <=> root.stack_width_percent;
-                                stack_toggled(val) => { root.stack_toggled(val); }
                                 width_changed(val) => { root.width_changed(val); }
                                 editing_width_changed(val) => { root.editing_width_changed(val); }
                             }

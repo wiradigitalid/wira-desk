@@ -1,4 +1,5 @@
 import { Palette, Typography } from "../theme.slint";
+import { ToggleSwitch } from "toggle_switch.slint";
 
 // One editable action.
 //
@@ -18,11 +19,13 @@ export component ShortcutRow inherits Rectangle {
     in property <bool> has_percent: false;
     in property <int> percent: 50;
     in-out property <string> typed_text: "\{root.percent}";
+    in property <bool> enabled: true;
 
     callback capture_clicked();
     callback swap_clicked();
     callback percent_changed(int);
     callback editing_changed(int);
+    callback toggle_enabled(bool);
 
     function current_value() -> int {
         if root.typed_text.is-float() {
@@ -87,6 +90,16 @@ export component ShortcutRow inherits Rectangle {
                 font-size: 11.5px;
                 font-weight: 600;
                 color: Palette.signal_warning;
+                wrap: no-wrap;
+                overflow: elide;
+            }
+
+            if !root.enabled : Text {
+                text: "Disabled";
+                font-family: Typography.font_family;
+                font-size: 11.5px;
+                font-weight: 600;
+                color: Palette.text_tertiary;
                 wrap: no-wrap;
                 overflow: elide;
             }
@@ -306,7 +319,7 @@ export component ShortcutRow inherits Rectangle {
                 width: max(135px, lbl.width + 24px);
                 height: 30px;
                 border-radius: 6px;
-                background: is_listening ? Palette.accent_primary : (has_conflict ? Palette.bg_conflict_keycap : Palette.bg_keycap);
+                background: is_listening ? Palette.accent_primary : (has_conflict ? Palette.bg_conflict_keycap : (root.enabled ? Palette.bg_keycap : Palette.bg_subtle));
                 border-width: 1px;
                 border-color: is_listening ? Palette.accent_primary : (has_conflict ? Palette.signal_warning : Palette.stroke_card);
 
@@ -327,7 +340,7 @@ export component ShortcutRow inherits Rectangle {
                     font-family: Typography.font_family;
                     font-size: 12.5px;
                     font-weight: 600;
-                    color: is_listening ? #FFFFFF : (has_conflict ? Palette.signal_warning : Palette.text_primary);
+                    color: is_listening ? #FFFFFF : (has_conflict ? Palette.signal_warning : (root.enabled ? Palette.text_primary : Palette.text_tertiary));
                     x: (parent.width - self.width) / 2 + (root.is_listening ? 6px : 0px);
                     y: (parent.height - self.height) / 2;
                 }
@@ -335,6 +348,12 @@ export component ShortcutRow inherits Rectangle {
                 btn_touch := TouchArea {
                     clicked => { root.capture_clicked(); }
                 }
+            }
+
+            ToggleSwitch {
+                checked: root.enabled;
+                accessible-label: "Enable " + root.title;
+                toggled(val) => { root.toggle_enabled(val); }
             }
         }
 

@@ -182,6 +182,7 @@ pub(crate) fn sync_model_to_ui(window: &MainWindow, model: &SettingsModel) {
             percent: field
                 .percent(&model.draft)
                 .unwrap_or(shared::constants::DEFAULT_SNAP_PERCENT) as i32,
+            enabled: field.is_enabled(&model.draft),
         };
         let group_rows = |heading: &str| -> slint::ModelRc<ShortcutRowData> {
             let rows: Vec<ShortcutRowData> = ShortcutField::ALL
@@ -215,7 +216,6 @@ pub(crate) fn sync_model_to_ui(window: &MainWindow, model: &SettingsModel) {
         window.set_kc_beat(model.key_check.beat);
 
         // Layout
-        window.set_enable_stack(model.draft.layout.enable_overlapping_stack);
         window.set_stack_width_percent(model.draft.layout.stack_width_percent as i32);
 
         // About
@@ -411,19 +411,20 @@ pub(crate) fn bind_callbacks(
             }
         });
     }
-
-    // Callbacks: Layout
     {
         let model_rc = Rc::clone(model);
         let window_weak = main_window.as_weak();
-        main_window.on_stack_toggled(move |val| {
+        main_window.on_shortcut_enabled_toggled(move |idx, val| {
             let mut m = model_rc.borrow_mut();
-            m.draft.layout.enable_overlapping_stack = val;
+            let field = ShortcutField::from_index(idx);
+            m.set_action_enabled(field, val);
             if let Some(w) = window_weak.upgrade() {
                 sync_model_to_ui(&w, &m);
             }
         });
     }
+
+    // Callbacks: Layout
     {
         let model_rc = Rc::clone(model);
         let window_weak = main_window.as_weak();

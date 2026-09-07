@@ -12,9 +12,6 @@ use super::{Placement, PlacementPlan, PlanError, PlanResult, Rect, WorkArea, STA
 
 /// Plan an overlapping stack for `candidates` in their accepted live order.
 pub fn plan_stack(layout: &LayoutConfig, work: &WorkArea, candidates: &[WindowId]) -> PlanResult {
-    if !layout.enable_overlapping_stack {
-        return Ok(PlacementPlan::empty());
-    }
     work.rect.validate()?;
 
     let percent = layout.stack_width_percent;
@@ -22,8 +19,6 @@ pub fn plan_stack(layout: &LayoutConfig, work: &WorkArea, candidates: &[WindowId
         return Err(PlanError::InvalidWidthPercent(percent));
     }
 
-    // A disabled stack short-circuits above, so an empty candidate list here is
-    // still a success — there is simply nothing to arrange.
     if candidates.is_empty() {
         return Ok(PlacementPlan::empty());
     }
@@ -86,37 +81,20 @@ mod tests {
 
     fn enabled(percent: u32) -> LayoutConfig {
         LayoutConfig {
-            enable_overlapping_stack: true,
             stack_width_percent: percent,
             ..LayoutConfig::default()
         }
     }
 
-    // --- disabled and empty are successful no-ops --------------
+    // --- unconditional planning and empty are successful no-ops --------------
 
-    /// Explicitly disabled, not defaulted. The default is now `true`, and writing
-    /// `LayoutConfig::default()` here would have quietly turned this test into a test of
-    /// the enabled path under a name that says the opposite.
     #[test]
-    fn disabled_stack_is_a_successful_noop() {
-        let layout = LayoutConfig {
-            enable_overlapping_stack: false,
-            ..LayoutConfig::default()
-        };
+    fn stack_planner_no_longer_reads_a_layout_level_toggle() {
+        // Overlapping stack planning is now unconditional at the planner layer;
+        // exclusion of disabled actions happens at hook registration.
+        let layout = enabled(50);
         let plan = plan_stack(&layout, &primary_work_area(), &windows(3)).unwrap();
-        assert!(plan.is_noop());
-    }
-
-    #[test]
-    fn disabled_stack_ignores_even_invalid_width() {
-        let layout = LayoutConfig {
-            enable_overlapping_stack: false,
-            stack_width_percent: 0,
-            ..LayoutConfig::default()
-        };
-        assert!(plan_stack(&layout, &primary_work_area(), &windows(2))
-            .unwrap()
-            .is_noop());
+        assert_eq!(plan.placements.len(), 3);
     }
 
     #[test]

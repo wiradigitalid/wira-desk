@@ -18,6 +18,7 @@ export struct ShortcutRowData {
     can_swap: bool,
     has_percent: bool,
     percent: int,
+    enabled: bool,
 }
 
 // A labelled group of rows: one card, one heading.
@@ -30,6 +31,7 @@ component ShortcutGroup inherits VerticalLayout {
     callback swap(int);
     callback percent_changed(int, int);
     callback editing_changed(int, int);
+    callback toggle_enabled(int, bool);
 
     spacing: 6px;
 
@@ -56,6 +58,7 @@ component ShortcutGroup inherits VerticalLayout {
                     can_swap: row.can_swap;
                     has_percent: row.has_percent;
                     percent: row.percent;
+                    enabled: row.enabled;
                     capture_clicked => {
                         root.capture(row.index);
                     }
@@ -67,6 +70,9 @@ component ShortcutGroup inherits VerticalLayout {
                     }
                     editing_changed(val) => {
                         root.editing_changed(row.index, val);
+                    }
+                    toggle_enabled(val) => {
+                        root.toggle_enabled(row.index, val);
                     }
                 }
             }
@@ -93,6 +99,7 @@ export component ShortcutsPane inherits VerticalLayout {
     callback swap_shortcuts(int);
     callback percent_changed(int, int);
     callback editing_percent_changed(int, int);
+    callback toggle_enabled(int, bool);
 
     spacing: 14px;
     alignment: start;
@@ -146,6 +153,9 @@ export component ShortcutsPane inherits VerticalLayout {
         editing_changed(i, val) => {
             root.editing_percent_changed(i, val);
         }
+        toggle_enabled(i, val) => {
+            root.toggle_enabled(i, val);
+        }
     }
 
     ShortcutGroup {
@@ -164,6 +174,9 @@ export component ShortcutsPane inherits VerticalLayout {
         editing_changed(i, val) => {
             root.editing_percent_changed(i, val);
         }
+        toggle_enabled(i, val) => {
+            root.toggle_enabled(i, val);
+        }
     }
 
     ShortcutGroup {
@@ -181,6 +194,9 @@ export component ShortcutsPane inherits VerticalLayout {
         }
         editing_changed(i, val) => {
             root.editing_percent_changed(i, val);
+        }
+        toggle_enabled(i, val) => {
+            root.toggle_enabled(i, val);
         }
     }
 }

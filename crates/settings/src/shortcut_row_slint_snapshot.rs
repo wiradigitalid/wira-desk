@@ -348,4 +348,50 @@ pub(crate) mod tests {
             let _ = std::fs::remove_file(&save_path);
         });
     }
+
+    #[test]
+    fn toggling_action_enable_switch_updates_draft_and_saves() {
+        run_on_ui_thread(|| {
+            let (window, model, save_path) = setup_shortcuts_window();
+
+            // All actions start enabled
+            assert!(model.borrow().draft.snapping.snap_percent_left_enabled);
+
+            // Find the toggle switch for SnapPercentLeft
+            let label = format!("Enable {}", ShortcutField::SnapPercentLeft.label());
+            let mut toggles = ElementHandle::find_by_accessible_label(&window, &label);
+            let switch = toggles
+                .next()
+                .expect("SnapPercentLeft enable toggle switch found");
+
+            // Toggle off
+            switch.invoke_accessible_default_action();
+
+            assert!(
+                !model.borrow().draft.snapping.snap_percent_left_enabled,
+                "Toggling switch off must disable SnapPercentLeft in draft"
+            );
+            assert!(
+                model.borrow().is_dirty(),
+                "Disabling an action must mark draft dirty"
+            );
+
+            // Save is clicked
+            window.invoke_save_clicked();
+
+            assert!(
+                !model.borrow().saved.snapping.snap_percent_left_enabled,
+                "Saving must persist disabled action state"
+            );
+
+            // Toggle back on
+            switch.invoke_accessible_default_action();
+            assert!(
+                model.borrow().draft.snapping.snap_percent_left_enabled,
+                "Toggling switch on must enable SnapPercentLeft in draft"
+            );
+
+            let _ = std::fs::remove_file(&save_path);
+        });
+    }
 }
