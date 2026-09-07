@@ -8,25 +8,24 @@ date: 2026-09-07
 
 ## Resume
 
-- Iteration: 12 — `SPEC-3-01` closed; `SPEC-3-02` builder dispatched.
-- Run branch: `autopilot/DEC-016`, HEAD `9c1257b`. **PR #17 open, draft**:
-  https://github.com/wiradigitalid/wira-desk/pull/17. CI green on the last pushed head (`f9840fe`); nothing
-  new pushed since (waiting for the next spec close per the mandate's own cadence).
-- Stopped at: **Capacity.** Both panel agents clean (Standards `a6f2d1479688fb5c9`, Spec
-  `a7e725bf847e12c3f`) — independently found the same follow-up (orphaned `TOGGLE_OVERLAPPING_STACK`
-  accessible-name constant, no behaviour delta), confirmed real, not a return-trip trigger. Closed
-  `SPEC-3-01` (checkboxes, status `done`), carried the follow-up into `SPEC-3-02`'s builder brief as a
-  bundled cleanup rather than a separate trip. Dispatched `SPEC-3-02` (hook registration exclusion,
-  `UC-12`/`FR-29`, now unblocked) to a fresh `claude-byok` session (job `bcthvyq4n`, confirmed running) —
-  noted that one of its checkboxes (stack.rs no longer reading the retired field) may already be satisfied
-  by `SPEC-3-01`'s own commit, to confirm rather than redo.
+- Iteration: 13 — `SPEC-3-02` verified, panel dispatched.
+- Run branch: `autopilot/DEC-016`, HEAD `c803a1d` (builder's commit, not yet a ledger boundary). **PR #17
+  open, draft**: https://github.com/wiradigitalid/wira-desk/pull/17. CI green on the last pushed head
+  (`f9840fe`); nothing new pushed since (next push is at this spec's close).
+- Stopped at: **Capacity.** `SPEC-3-02` builder (`bcthvyq4n`) exited code 0, commit `c803a1d`. Did NOT
+  trust its report: independently re-ran fmt/clippy/full suite (533 passed/0 failed, all 4 named ticket
+  tests green) and the export gate (10/10); confirmed no corpus file touched; confirmed
+  `TOGGLE_OVERLAPPING_STACK` is genuinely gone and the remaining `enable_overlapping_stack` hits are only
+  the intentional legacy-migration shim from `SPEC-3-01`, not the retired schema field. Dispatched the real
+  panel fresh (Standards `afc44e6affecd82f1`, Spec `abc48b8283f11c210`), asked to scrutinize the
+  keyboard-hook fall-through behaviour specifically (this is Win32 hook code).
 - Blocked: —
 - Parked: —
 - Advisory (not blocking): `review-trace` still flags `SDD-settings.md` stale — re-run `wdi-review` before
-  `SPEC-3`'s close (next: after `SPEC-3-02`).
-- Next: check job `bcthvyq4n`. On exit: verify independently (never the report), dispatch the review
-  panel. Clean → close `SPEC-3-02`/`SPEC-3`, run `wdi-review` for the advisory, push at spec close, then
-  check whether every `FR` in scope is closed (§ Finish) or more remains.
+  this spec's close.
+- Next: read both panel verdicts. Clean → close `SPEC-3-02`/`SPEC-3` (last ticket in scope), run
+  `wdi-review` for the advisory, `wdi-reconcile`, push at spec close, then check whether every `FR` in
+  scope is closed (§ Finish) or more remains.
 
 ## Decisions
 
@@ -53,3 +52,4 @@ date: 2026-09-07
 | Iter 11 | `SPEC-3-01` verification | Independently re-ran fmt/clippy/full suite/export-gate before trusting `bd03n1l84`'s report; its claimed internal review does not count as Step 3 | Accepting the builder's self-review as the panel | A false-green ticket if the report and artifact disagree | `5c9c8ac`, this ledger |
 | Iter 12 | Close `SPEC-3-01` | Both panel axes clean, same follow-up independently found (orphaned constant) — confirmed real by reading `theme.rs` myself, no behaviour delta, not a return-trip trigger | Treating a duplicate follow-up as two separate findings, or triggering a return trip for a non-behavioural issue | If wrong, a later ticket removes the dead code anyway | ticket file, `9c1257b` |
 | Iter 12 | Bundle the follow-up | Carried the orphaned-constant cleanup into `SPEC-3-02`'s builder brief instead of a dedicated dispatch | A separate tiny dispatch just for dead-code removal | None — cheap either way | `.scratch/builder-brief-spec-3-02.md` |
+| Iter 13 | `SPEC-3-02` verification | Independently re-ran fmt/clippy/full suite/export-gate, and grepped for the retired field/constant myself, before trusting `bcthvyq4n`'s report | Accepting the builder's self-review as Step 3 | A false-green ticket if the report and artifact disagree | `c803a1d`, this ledger |
