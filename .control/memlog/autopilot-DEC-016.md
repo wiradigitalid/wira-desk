@@ -8,12 +8,15 @@ date: 2026-09-07
 
 ## Resume
 
-- Iteration: 2 — still waiting on the `SPEC-2-01` builder.
-- Run branch: `autopilot/DEC-016`, HEAD `2678fac` (iteration-1 ledger commit; no ticket work landed yet).
+- Iteration: 3 — still waiting on the `SPEC-2-01` builder; confirmed real progress, not a stall.
+- Run branch: `autopilot/DEC-016`, HEAD `1dcd26a` (iteration-2 ledger commit; no ticket work landed yet).
   No PR opened yet — opens as a draft at the first spec close.
-- Stopped at: **Capacity.** Re-checked job `bafaw9fiy` via `TaskOutput` (blocking, up to 5 more minutes) —
-  still `running`, no new output since dispatch. A real Step 1+2 run legitimately outlives one iteration
-  window; this is not a repeat capacity failure (it never failed to spawn), so it stays Capacity, not Blocked.
+- Stopped at: **Capacity.** Job `bafaw9fiy` still `running` after ~3 blocking re-checks this turn (~15 min).
+  Confirmed genuine progress from the worktree's own `git status` (not the job's self-report): uncommitted
+  changes across `persistence.rs`, `shortcut_row.slint`, `layout_pane.slint`, `main.rs`, `build.rs`,
+  `Cargo.toml`, plus two new files matching the ticket's own test names —
+  `shortcut_row_slint_snapshot.rs`, `layout_pane_slint_snapshot.rs`. This is Step 1 (tdd) in progress, not
+  a dead job. Still not a repeat capacity failure (never failed to spawn), so stays Capacity.
 - Blocked: —
 - Parked: —
 - Next: check job `bafaw9fiy` via `TaskOutput(block:false)`. If it has exited: read the actual diff and
