@@ -8,14 +8,19 @@ date: 2026-09-07
 
 ## Resume
 
-- Iteration 6 — `SPEC-4-02` merged (`79efd93`); `SPEC-4-03`'s seam agreement landed in place of a
-  red suite, with the reason recorded. Boundary commit: the commit carrying this line.
-- Run branch: `autopilot/DEC-017`. Not pushed, no PR — first push at spec close.
+- Iteration 7 — `SPEC-4-03` brief written; **Step 2 dispatch imminent**. No red suite handed down,
+  by the seam agreement in the ticket's Amendment 1 — the builder writes all four tests via `tdd`.
+- Run branch: `autopilot/DEC-017` at `398a362`; ticket work on `ticket/SPEC-4-03`, cut from it,
+  merges back only green. Not pushed, no PR — first push at spec close.
 - Stopped at: — (iteration in progress)
 - Blocked: —
 - Parked: —
-- Next: dispatch `claude-byok` for `SPEC-4-03` — it writes the four tests through `tdd` at the
-  agreed seam, then the markup. Brief still to write.
+- **IN FLIGHT once dispatched — do NOT re-dispatch:** `claude-byok` on `SPEC-4-03`, brief at
+  `.scratch/builder-brief-spec-4-03.md`. Build lock shut while it is out: no `cargo`, no stash, no
+  branch switch, no worktree restore.
+- Next: when it exits — judge from the artifact, and judge the MUTATIONS hardest, because this
+  ticket's guards are the builder's own and nothing red was handed down to check them against.
+  Then the two-axis panel, ticket close, merge, and `SPEC-4-04`.
 
 ## Decisions
 
