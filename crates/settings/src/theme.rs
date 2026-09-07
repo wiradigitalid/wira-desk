@@ -102,6 +102,40 @@ pub struct ControlSemantics {
     pub description: &'static str,
 }
 
+/// Every declared control's semantics, in declaration order.
+///
+/// The register tests below iterate THIS rather than each hand-keeping its own array.
+/// They used to, and the two arrays had drifted apart and away from the declarations: of the
+/// eighteen constants, twelve were covered for a non-empty name and eleven for uniqueness.
+/// `ONBOARDING_BACK_BUTTON` was in neither and `SHORTCUT_CONFLICT_SWAP` was missing from the
+/// uniqueness check, both long before the percentage names were added. A guard that has to be
+/// remembered is a guard that will be forgotten, which is the same reasoning that put the
+/// shortcut sequence in `SHORTCUT_DECLARED_ORDER` (`DEC-018`).
+///
+/// `accessible_names_are_unique` is named in `defects.yaml` as `DEF-2`'s regression test, so
+/// what it covers is not a housekeeping question: a control missing from here is a control
+/// that defect can silently come back through.
+pub const ALL: &[ControlSemantics] = &[
+    TOGGLE_AUTO_START,
+    STACK_WIDTH_DECREASE,
+    STACK_WIDTH_FIELD,
+    STACK_WIDTH_INPUT,
+    STACK_WIDTH_INCREASE,
+    SNAP_PERCENT_DECREASE,
+    SNAP_PERCENT_FIELD,
+    SNAP_PERCENT_INPUT,
+    SNAP_PERCENT_INCREASE,
+    SHORTCUT_SWITCHER,
+    ONBOARDING_BACK_BUTTON,
+    ONBOARDING_FINISH_BUTTON,
+    ONBOARDING_NEXT_BUTTON,
+    ONBOARDING_SKIP_BUTTON,
+    ONBOARDING_SIMULATE_BUTTON,
+    VM_BYPASS_PROCESS_LIST,
+    VM_BYPASS_CLASS_LIST,
+    SHORTCUT_CONFLICT_SWAP,
+];
+
 pub const TOGGLE_AUTO_START: ControlSemantics = ControlSemantics {
     name: "Start Wira Desk with Windows",
     description: "When enabled, Wira Desk starts automatically at sign-in.",
@@ -259,26 +293,14 @@ mod tests {
 
     #[test]
     fn every_control_has_a_non_empty_accessible_name() {
-        for c in [
-            TOGGLE_AUTO_START,
-            STACK_WIDTH_DECREASE,
-            STACK_WIDTH_INPUT,
-            STACK_WIDTH_INCREASE,
-            SHORTCUT_SWITCHER,
-            ONBOARDING_FINISH_BUTTON,
-            ONBOARDING_NEXT_BUTTON,
-            ONBOARDING_SKIP_BUTTON,
-            ONBOARDING_DUMMY_WIN_1,
-            ONBOARDING_DUMMY_WIN_2,
-            ONBOARDING_SIMULATE_BUTTON,
-            VM_BYPASS_PROCESS_LIST,
-            VM_BYPASS_CLASS_LIST,
-            SHORTCUT_CONFLICT_SWAP,
-        ] {
-            assert!(!c.name.trim().is_empty(), "control has no accessible name");
+        for c in ALL {
+            assert!(
+                !c.name.trim().is_empty(),
+                "a control has an empty accessible name"
+            );
             assert!(
                 !c.description.trim().is_empty(),
-                "control {} has no description",
+                "control '{}' has an empty accessible description",
                 c.name
             );
         }
@@ -295,26 +317,19 @@ mod tests {
 
     #[test]
     fn accessible_names_are_unique() {
-        let names = [
-            TOGGLE_AUTO_START.name,
-            STACK_WIDTH_DECREASE.name,
-            STACK_WIDTH_INPUT.name,
-            STACK_WIDTH_INCREASE.name,
-            SHORTCUT_SWITCHER.name,
-            ONBOARDING_FINISH_BUTTON.name,
-            ONBOARDING_NEXT_BUTTON.name,
-            ONBOARDING_SKIP_BUTTON.name,
-            ONBOARDING_DUMMY_WIN_1.name,
-            ONBOARDING_DUMMY_WIN_2.name,
-            ONBOARDING_SIMULATE_BUTTON.name,
-            VM_BYPASS_PROCESS_LIST.name,
-            VM_BYPASS_CLASS_LIST.name,
-        ];
-        for (i, a) in names.iter().enumerate() {
-            for b in names.iter().skip(i + 1) {
-                assert_ne!(a, b, "duplicate accessible name");
-            }
+        // `DEF-2` was two focusable controls sharing one accessible name. Iterating `ALL` means a
+        // control added to the file is covered by the time it compiles, rather than when someone
+        // remembers to extend an array here.
+        let mut seen: Vec<&str> = Vec::with_capacity(ALL.len());
+        for c in ALL {
+            assert!(
+                !seen.contains(&c.name),
+                "two controls share the accessible name '{}'",
+                c.name
+            );
+            seen.push(c.name);
         }
+        assert_eq!(seen.len(), ALL.len());
     }
 
     #[test]
@@ -324,11 +339,26 @@ mod tests {
             let (window, _model, save_path) =
                 crate::shortcut_row_slint_snapshot::tests::setup_shortcuts_window();
 
-            const ALLOWED_THEME_NAMES: &[&str] = &[
+            // The two families, each in slot order: decrease, field, input, increase.
+            //
+            // Membership alone is not enough, and that gap was real: a review found that a SNAP
+            // row handed the STACK set passes a membership check, because every name still
+            // renders somewhere. That is `DEF-2`'s symptom — two focusable controls sharing a
+            // name — slipping through the guard meant to catch it. So this asserts ASSIGNMENT:
+            // each row's four labels are one family's four slots, in order.
+            //
+            // Which family a given field should get is deliberately NOT restated here. A test
+            // that repeats the production mapping only proves the mapping equals itself. What is
+            // asserted instead are two properties that hold regardless of the mapping: a row
+            // never mixes families or slots, and exactly one row wears the stack family, because
+            // there is exactly one Overlapping Stack action.
+            const STACK_FAMILY: [&str; 4] = [
                 STACK_WIDTH_DECREASE.name,
                 STACK_WIDTH_FIELD.name,
                 STACK_WIDTH_INPUT.name,
                 STACK_WIDTH_INCREASE.name,
+            ];
+            const SNAP_FAMILY: [&str; 4] = [
                 SNAP_PERCENT_DECREASE.name,
                 SNAP_PERCENT_FIELD.name,
                 SNAP_PERCENT_INPUT.name,
@@ -344,6 +374,7 @@ mod tests {
             ];
 
             let mut checked_percent_rows = 0;
+            let mut stack_family_rows = 0;
             for group in row_groups {
                 for row in group.iter() {
                     if !row.has_percent {
@@ -356,18 +387,30 @@ mod tests {
                         row.accessible_label_input.as_str(),
                         row.accessible_label_increase.as_str(),
                     ];
-                    for label in labels {
-                        assert!(
-                            ALLOWED_THEME_NAMES.contains(&label),
-                            "rendered percent control label '{label}' does not come from a theme.rs constant"
-                        );
-                    }
+                    let family = if labels == STACK_FAMILY {
+                        stack_family_rows += 1;
+                        "stack"
+                    } else if labels == SNAP_FAMILY {
+                        "snap"
+                    } else {
+                        panic!(
+                            "row {} does not carry one family's four slots in order: {labels:?}",
+                            row.index
+                        )
+                    };
+                    let _ = family;
                 }
             }
 
             assert!(
                 checked_percent_rows > 0,
                 "at least one percentage row must be rendered"
+            );
+            // Exactly one, because there is exactly one Overlapping Stack action. Two means a
+            // snap row was handed the stack family, which is what membership could not see.
+            assert_eq!(
+                stack_family_rows, 1,
+                "exactly one rendered percentage row carries the stack-width label family"
             );
 
             // Verify the snap percentage controls are in the rendered tree

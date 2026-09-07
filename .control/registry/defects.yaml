@@ -106,6 +106,39 @@ defects:
       explicitly and none of them reads the desktop. Assertion and failure message unchanged.
 
 
+  - id: DEF-6
+    title: All four custom-percentage rows announce the same accessible name
+    status: open
+    severity: low
+    component: settings
+    violates: [FR-20, FR-21]
+    found_in: "0.4.0"
+    found_by: Standards-axis review of SPEC-4-02, 2026-09-07 (pre-existing, not introduced by it)
+    tests: []
+    summary: >-
+      `SnapPercentLeft`, `SnapPercentRight`, `SnapPercentTop` and `SnapPercentBottom` each render
+      the same four accessible names — "Decrease snap percentage", "Snap percentage field",
+      "Snap percentage input", "Increase snap percentage". A screen-reader user moving through the
+      Shortcuts pane therefore cannot tell the left-edge percentage control from the top-edge one:
+      four focusable controls, one name each, repeated four times over.
+    why_it_hid: >-
+      The retired `layout_pane.slint` conditional produced exactly the same strings, so nothing
+      changed when `SPEC-4-02` moved them into declared `theme.rs` vocabulary. And
+      `theme::tests::accessible_names_are_unique` compares the CONSTANTS to each other, where each
+      name appears once and is genuinely unique. The duplication is in the RENDERED tree, across
+      rows, which that guard does not look at. `DEF-2` was the same class of fault — two focusable
+      controls sharing a name — caught then because both controls sat in one pane.
+    impact: >-
+      Accessibility only; no functional defect and nothing is mis-saved. The four rows are still
+      distinguishable by their row title, which a screen reader reads, so this degrades navigation
+      rather than blocking it — which is why it is `low` and not the severity `DEF-2` carried.
+    fix_direction: >-
+      Per-direction names, e.g. "Left edge percentage input", rather than one shared set for the
+      family. That needs a `ShortcutField`-keyed label set rather than the two-family split
+      `SPEC-4-02` introduced, so it is a design change and belongs to its own ticket rather than
+      to `SPEC-4`, whose remaining two tickets are both already scope-guarded against it.
+    owner: repo owner
+
   - id: DEF-2
     title: Two focusable controls share the accessible name "Stack width percent"
     status: fixed

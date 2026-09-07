@@ -8,18 +8,21 @@ date: 2026-09-07
 
 ## Resume
 
-- Iteration 4 — `SPEC-4-02` panel adjudicated (`359a12c`): one must-fix, coordinator-owned fixes
-  landed, suite 547 passed / 0 failed / 2 ignored. **Return trip 1 of 2 dispatched.**
+- Iteration 5 — `SPEC-4-02` re-panel adjudicated: no must-fix on the mechanism, two on what it left
+  behind, both taken. Coordinator's half landed (derived `theme::ALL`, per-row assignment guard,
+  `DEF-6` filed), suite 548 passed / 0 failed / 2 ignored. **Return trip 2 of 2 dispatched.**
 - Run branch: `autopilot/DEC-017` at `3b1cb32`; ticket work on `ticket/SPEC-4-02`. Not pushed, no
   PR — first push is at spec close.
 - Stopped at: — (iteration in progress, waiting on a dispatched step)
 - Blocked: —
 - Parked: —
-- **IN FLIGHT — do NOT re-dispatch:** `claude-byok` on return trip 1, brief at
-  `.scratch/builder-brief-spec-4-02-fix1.md`. Build lock shut: run no `cargo`, and do not stash,
-  switch branches, or restore the worktree until it exits.
-- Next: when it exits — judge from the artifact, re-run the WHOLE panel (a fix round requires it),
-  then ticket close, merge, and `SPEC-4-03`.
+- **IN FLIGHT — do NOT re-dispatch:** `claude-byok` on return trip 2, brief at
+  `.scratch/builder-brief-spec-4-02-fix2.md`, one four-line change. Build lock shut: no `cargo`, no
+  stash, no branch switch, no worktree restore until it exits.
+- **This is the CAP.** A must-fix surviving this trip is escalated and recorded under Blocked — it
+  does NOT open a third trip.
+- Next: when it exits — judge from the artifact, re-run the whole panel, then ticket close, merge,
+  and `SPEC-4-03`.
 
 ## Decisions
 

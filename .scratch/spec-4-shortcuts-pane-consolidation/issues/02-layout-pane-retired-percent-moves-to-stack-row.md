@@ -253,6 +253,59 @@ names. This is about the guard, and about identity being inferred from a number.
 - `percent_bounds`'s `Option<(u32, u32)>` shape is Primitive Obsession by the smell baseline;
   naming a type for it is out of scope here.
 
+## Amendment 4 — 2026-09-07, return trip 2 of 2 (the cap)
+
+The re-panel returned **no must-fix on the mechanism** — identity from range is genuinely gone, all
+eight names are live and rendered, the Stack tests select by identity, and no assertion was
+weakened. Both axes then converged on two things the fix left behind. Standards scored both
+must-fix; Spec scored the first follow-up only because this brief's "do not edit existing tests"
+collided with Amendment 3's intent. **Adjudicated must-fix**: extending a test's coverage is not
+weakening it — that rule exists to stop guards being softened, not to freeze them.
+
+### Landed by the coordinator in this trip
+
+- [x] Both register tests in `crates/settings/src/theme.rs` now iterate one `pub const ALL:
+      &[ControlSemantics]` instead of hand-keeping their own arrays. They had drifted badly: of
+      eighteen declared constants, **twelve** were covered for a non-empty name and **eleven** for
+      uniqueness. `ONBOARDING_BACK_BUTTON` was in neither and `SHORTCUT_CONFLICT_SWAP` missing
+      from uniqueness — both long before this ticket. Standards proposed the derived array over
+      simply adding five lines, and it is the better fix for the reason `DEC-018` already gives.
+- [x] Proven: renaming `SNAP_PERCENT_INPUT` to `"Stack width input"` — `DEF-2`'s literal symptom —
+      now fails `accessible_names_are_unique`. Under the hand-kept array it passed green.
+- [x] `every_rendered_percent_control_name_comes_from_theme` asserts **assignment**, not set
+      membership. Spec named two mutations that passed the membership version: a snap row handed
+      the stack family (which reproduces `DEF-2` *and* re-breaks the Stack tests' row selection),
+      and an intra-row slot swap. Both now fail. The intra-row swap fails **only** this test, so
+      it is the sole guard for that class.
+- [x] The stronger check deliberately does **not** restate which field gets which family — a test
+      that repeats the production mapping proves only that the mapping equals itself. It asserts
+      two properties that hold whatever the mapping is: a row never mixes families or slots, and
+      exactly one row wears the stack family.
+- [x] `DEF-6` filed for the accessibility gap Standards found: all four custom-percentage rows
+      announce the same four names, so a screen-reader user cannot tell the left-edge control from
+      the top-edge one. Pre-existing — the retired pane produced the same strings — and out of
+      `SPEC-4`'s remaining scope, so it is recorded rather than folded in.
+
+### Coordinator error in this trip, recorded
+
+Rewriting the two register tests by splicing between them **deleted**
+`theme::tests::listening_state_has_a_spoken_announcement`. The suite still went green, and the
+deletion was caught only by comparing the test count against `12708f1` (143 → 142). Restored
+verbatim. It is the exact fault this brief forbids a builder from committing, and it was mine.
+
+### The one item left for the builder
+
+- [ ] `crates/settings/src/main.rs`'s label match uses `_ =>` for the snap family, so it covers the
+      four `SnapPercent*` **and** eleven non-percent fields — identity derived from "not Stack".
+      Every sibling percent match on this enum enumerates instead: `has_percent`, `percent_bounds`,
+      `percent` and `set_percent` each list the four explicitly and reserve `_` for the no-percent
+      rest. `3p.md`'s own entry for this ticket credits removing a `_ => {}` as the root cause it
+      was caught on, and a new one now sits beside that sentence. Enumerate
+      `SnapPercentLeft|Right|Top|Bottom`; keep `_` for the rest.
+
+**This is the second and final return trip.** A must-fix surviving it escalates rather than opening
+a third.
+
 ## Out of scope, deliberately
 
 - The five-group taxonomy and label changes — `SPEC-4-01`, already landed by the time this starts.
