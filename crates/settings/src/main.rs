@@ -165,6 +165,20 @@ pub(crate) fn sync_model_to_ui(window: &MainWindow, model: &SettingsModel) {
                 shared::constants::MIN_SNAP_PERCENT,
                 shared::constants::MAX_SNAP_PERCENT,
             ));
+            let (label_decrease, label_field, label_input, label_increase) = match field {
+                ShortcutField::Stack => (
+                    theme::STACK_WIDTH_DECREASE.name,
+                    theme::STACK_WIDTH_FIELD.name,
+                    theme::STACK_WIDTH_INPUT.name,
+                    theme::STACK_WIDTH_INCREASE.name,
+                ),
+                _ => (
+                    theme::SNAP_PERCENT_DECREASE.name,
+                    theme::SNAP_PERCENT_FIELD.name,
+                    theme::SNAP_PERCENT_INPUT.name,
+                    theme::SNAP_PERCENT_INCREASE.name,
+                ),
+            };
             ShortcutRowData {
                 index: field as i32,
                 title: slint::SharedString::from(field.label()),
@@ -183,6 +197,10 @@ pub(crate) fn sync_model_to_ui(window: &MainWindow, model: &SettingsModel) {
                     as i32,
                 percent_min: min as i32,
                 percent_max: max as i32,
+                accessible_label_decrease: slint::SharedString::from(label_decrease),
+                accessible_label_field: slint::SharedString::from(label_field),
+                accessible_label_input: slint::SharedString::from(label_input),
+                accessible_label_increase: slint::SharedString::from(label_increase),
                 enabled: field.is_enabled(&model.draft),
             }
         };

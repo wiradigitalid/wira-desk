@@ -52,7 +52,8 @@ pub(crate) mod tests {
         }
     }
 
-    fn setup_shortcuts_window() -> (MainWindow, Rc<RefCell<SettingsModel>>, std::path::PathBuf) {
+    pub(crate) fn setup_shortcuts_window(
+    ) -> (MainWindow, Rc<RefCell<SettingsModel>>, std::path::PathBuf) {
         let main_window = MainWindow::new().expect("MainWindow creation");
         let mut path = std::env::temp_dir();
         path.push(format!(
@@ -410,12 +411,18 @@ pub(crate) mod tests {
                 });
 
             // Focus the stack width field on the Overlapping Stack row
-            let mut fields = ElementHandle::find_by_accessible_label(&window, "Stack width field");
+            let mut fields = ElementHandle::find_by_accessible_label(
+                &window,
+                crate::theme::STACK_WIDTH_FIELD.name,
+            );
             let field_btn = fields.next().expect("Stack width field element found");
             field_btn.invoke_accessible_default_action();
 
             // Find stack width input element
-            let mut inputs = ElementHandle::find_by_accessible_label(&window, "Stack width input");
+            let mut inputs = ElementHandle::find_by_accessible_label(
+                &window,
+                crate::theme::STACK_WIDTH_INPUT.name,
+            );
             let width_input = inputs.next().expect("Stack width input element found");
 
             // Type out-of-range percentage 150
@@ -477,7 +484,10 @@ pub(crate) mod tests {
                 });
 
             // Find the percentage input for the Overlapping Stack row
-            let mut inputs = ElementHandle::find_by_accessible_label(&window, "Stack width input");
+            let mut inputs = ElementHandle::find_by_accessible_label(
+                &window,
+                crate::theme::STACK_WIDTH_INPUT.name,
+            );
             let stack_input = inputs.next().expect("Stack width input element found");
 
             // Type '65' into the percentage field without pressing Enter

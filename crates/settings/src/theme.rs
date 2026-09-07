@@ -112,6 +112,11 @@ pub const STACK_WIDTH_DECREASE: ControlSemantics = ControlSemantics {
     description: "Lowers the width percentage of stacked windows by one point.",
 };
 
+pub const STACK_WIDTH_FIELD: ControlSemantics = ControlSemantics {
+    name: "Stack width field",
+    description: "Focuses the stack width percentage input field.",
+};
+
 pub const STACK_WIDTH_INPUT: ControlSemantics = ControlSemantics {
     name: "Stack width input",
     description: "Enter the exact width percentage of stacked windows.",
@@ -120,6 +125,26 @@ pub const STACK_WIDTH_INPUT: ControlSemantics = ControlSemantics {
 pub const STACK_WIDTH_INCREASE: ControlSemantics = ControlSemantics {
     name: "Increase stack width",
     description: "Raises the width percentage of stacked windows by one point.",
+};
+
+pub const SNAP_PERCENT_DECREASE: ControlSemantics = ControlSemantics {
+    name: "Decrease snap percentage",
+    description: "Lowers the snap percentage by one point.",
+};
+
+pub const SNAP_PERCENT_FIELD: ControlSemantics = ControlSemantics {
+    name: "Snap percentage field",
+    description: "Focuses the snap percentage input field.",
+};
+
+pub const SNAP_PERCENT_INPUT: ControlSemantics = ControlSemantics {
+    name: "Snap percentage input",
+    description: "Enter the exact snap percentage.",
+};
+
+pub const SNAP_PERCENT_INCREASE: ControlSemantics = ControlSemantics {
+    name: "Increase snap percentage",
+    description: "Raises the snap percentage by one point.",
 };
 
 pub const SHORTCUT_SWITCHER: ControlSemantics = ControlSemantics {
@@ -290,5 +315,106 @@ mod tests {
                 assert_ne!(a, b, "duplicate accessible name");
             }
         }
+    }
+
+    #[test]
+    fn every_rendered_percent_control_name_comes_from_theme() {
+        use slint::{ComponentHandle, Model};
+        crate::shortcut_row_slint_snapshot::tests::run_on_ui_thread(|| {
+            let (window, _model, save_path) =
+                crate::shortcut_row_slint_snapshot::tests::setup_shortcuts_window();
+
+            const ALLOWED_THEME_NAMES: &[&str] = &[
+                STACK_WIDTH_DECREASE.name,
+                STACK_WIDTH_FIELD.name,
+                STACK_WIDTH_INPUT.name,
+                STACK_WIDTH_INCREASE.name,
+                SNAP_PERCENT_DECREASE.name,
+                SNAP_PERCENT_FIELD.name,
+                SNAP_PERCENT_INPUT.name,
+                SNAP_PERCENT_INCREASE.name,
+            ];
+
+            let row_groups = [
+                window.get_rows_switching(),
+                window.get_rows_snap_half(),
+                window.get_rows_snap_third(),
+                window.get_rows_snap_custom(),
+                window.get_rows_arrange(),
+            ];
+
+            let mut checked_percent_rows = 0;
+            for group in row_groups {
+                for row in group.iter() {
+                    if !row.has_percent {
+                        continue;
+                    }
+                    checked_percent_rows += 1;
+                    let labels = [
+                        row.accessible_label_decrease.as_str(),
+                        row.accessible_label_field.as_str(),
+                        row.accessible_label_input.as_str(),
+                        row.accessible_label_increase.as_str(),
+                    ];
+                    for label in labels {
+                        assert!(
+                            ALLOWED_THEME_NAMES.contains(&label),
+                            "rendered percent control label '{label}' does not come from a theme.rs constant"
+                        );
+                    }
+                }
+            }
+
+            assert!(
+                checked_percent_rows > 0,
+                "at least one percentage row must be rendered"
+            );
+
+            // Verify the snap percentage controls are in the rendered tree
+            for &snap_label in &[
+                SNAP_PERCENT_DECREASE.name,
+                SNAP_PERCENT_FIELD.name,
+                SNAP_PERCENT_INPUT.name,
+                SNAP_PERCENT_INCREASE.name,
+            ] {
+                assert!(
+                    i_slint_backend_testing::ElementHandle::find_by_accessible_label(
+                        &window, snap_label,
+                    )
+                    .next()
+                    .is_some(),
+                    "theme constant '{snap_label}' is not rendered in the UI"
+                );
+            }
+
+            // Scroll to the bottom to bring Overlapping Stack into view
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::PointerScrolled {
+                    position: slint::LogicalPosition::new(300.0, 300.0),
+                    delta_x: 0.0,
+                    delta_y: -600.0,
+                });
+
+            // Verify the stack width percentage controls are in the rendered tree
+            for &stack_label in &[
+                STACK_WIDTH_DECREASE.name,
+                STACK_WIDTH_FIELD.name,
+                STACK_WIDTH_INPUT.name,
+                STACK_WIDTH_INCREASE.name,
+            ] {
+                assert!(
+                    i_slint_backend_testing::ElementHandle::find_by_accessible_label(
+                        &window,
+                        stack_label,
+                    )
+                    .next()
+                    .is_some(),
+                    "theme constant '{stack_label}' is not rendered in the UI"
+                );
+            }
+
+            let _ = std::fs::remove_file(&save_path);
+        });
     }
 }

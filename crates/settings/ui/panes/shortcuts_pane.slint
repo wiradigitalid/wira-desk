@@ -20,6 +20,10 @@ export struct ShortcutRowData {
     percent: int,
     percent_min: int,
     percent_max: int,
+    accessible_label_decrease: string,
+    accessible_label_field: string,
+    accessible_label_input: string,
+    accessible_label_increase: string,
     enabled: bool,
 }
 
@@ -62,6 +66,10 @@ component ShortcutGroup inherits VerticalLayout {
                     percent: row.percent;
                     percent_min: row.percent_min;
                     percent_max: row.percent_max;
+                    accessible_label_decrease: row.accessible_label_decrease;
+                    accessible_label_field: row.accessible_label_field;
+                    accessible_label_input: row.accessible_label_input;
+                    accessible_label_increase: row.accessible_label_increase;
                     enabled: row.enabled;
                     capture_clicked => {
                         root.capture(row.index);
