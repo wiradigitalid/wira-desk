@@ -147,6 +147,9 @@ export component MainWindow inherits Window {
     forward-focus: key_handler;
 
     key_handler := FocusScope {
+        width: 100%;
+        height: 100%;
+
         // The forward happens BEFORE the reject below, and that order is load-bearing.
         //
         // `DEC-005` (applied) reports the key check as a correlation of what the daemon's hook saw
@@ -188,15 +191,14 @@ export component MainWindow inherits Window {
             }
             accept
         }
-    }
 
-    // Outer Container
-    Rectangle {
-        width: parent.width;
-        height: parent.height;
-        background: Palette.bg_page;
-        border-radius: is_onboarding ? 12px : 8px;
-        clip: true;
+        // Outer Container
+        Rectangle {
+            width: parent.width;
+            height: parent.height;
+            background: Palette.bg_page;
+            border-radius: is_onboarding ? 12px : 8px;
+            clip: true;
 
         // No titlebar during onboarding, and that is a deliberate difference from
         // Settings rather than an omission. The tutorial already offers its own way out
@@ -484,4 +486,5 @@ export component MainWindow inherits Window {
             }
         }
     }
+}
 }
