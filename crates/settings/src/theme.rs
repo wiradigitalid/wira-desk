@@ -102,15 +102,24 @@ pub struct ControlSemantics {
     pub description: &'static str,
 }
 
-/// Every declared control's semantics, in declaration order.
+/// The declared controls' semantics, in declaration order — currently all twenty of them.
 ///
-/// The register tests below iterate THIS rather than each hand-keeping its own array.
-/// They used to, and the two arrays had drifted apart and away from the declarations: of the
-/// eighteen constants, twelve were covered for a non-empty name and eleven for uniqueness.
+/// The register tests below iterate THIS rather than each hand-keeping its own array. They used
+/// to, and the two arrays had drifted apart and away from the declarations: of the twenty
+/// constants, fourteen were covered for a non-empty name and thirteen for uniqueness.
 /// `ONBOARDING_BACK_BUTTON` was in neither and `SHORTCUT_CONFLICT_SWAP` was missing from the
 /// uniqueness check, both long before the percentage names were added. A guard that has to be
 /// remembered is a guard that will be forgotten, which is the same reasoning that put the
 /// shortcut sequence in `SHORTCUT_DECLARED_ORDER` (`DEC-018`).
+///
+/// **This array is still hand-maintained, and nothing enforces that it is complete.** Rust cannot
+/// enumerate a module's items without a macro, and this workspace deliberately contains none, so
+/// the honest statement is that a constant declared and not added here is invisible to both tests
+/// — which is exactly what happened when this array was first written: it was generated with a
+/// pattern that excluded digits, so `ONBOARDING_DUMMY_WIN_1` and `_2` were dropped and two
+/// assertions they already had were lost. Add a new constant here in the same edit that declares
+/// it. `#![allow(dead_code)]` at the top of this file means an omitted, otherwise-unread constant
+/// will not even warn.
 ///
 /// `accessible_names_are_unique` is named in `defects.yaml` as `DEF-2`'s regression test, so
 /// what it covers is not a housekeeping question: a control missing from here is a control
@@ -130,6 +139,8 @@ pub const ALL: &[ControlSemantics] = &[
     ONBOARDING_FINISH_BUTTON,
     ONBOARDING_NEXT_BUTTON,
     ONBOARDING_SKIP_BUTTON,
+    ONBOARDING_DUMMY_WIN_1,
+    ONBOARDING_DUMMY_WIN_2,
     ONBOARDING_SIMULATE_BUTTON,
     VM_BYPASS_PROCESS_LIST,
     VM_BYPASS_CLASS_LIST,
@@ -387,18 +398,14 @@ mod tests {
                         row.accessible_label_input.as_str(),
                         row.accessible_label_increase.as_str(),
                     ];
-                    let family = if labels == STACK_FAMILY {
+                    if labels == STACK_FAMILY {
                         stack_family_rows += 1;
-                        "stack"
-                    } else if labels == SNAP_FAMILY {
-                        "snap"
-                    } else {
+                    } else if labels != SNAP_FAMILY {
                         panic!(
                             "row {} does not carry one family's four slots in order: {labels:?}",
                             row.index
-                        )
-                    };
-                    let _ = family;
+                        );
+                    }
                 }
             }
 

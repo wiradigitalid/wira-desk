@@ -48,6 +48,13 @@ defects:
       land in `typed_text`/commit, in addition to the existing accessible-value tests, which stay -- they
       cover the automation/assistive-technology path and MUST NOT be weakened to make room for the new one.
     owner: repo owner
+
+  # The `- id: DEF-1` marker below was missing, so every field of DEF-1 was parsed as a
+  # continuation of DEF-5's mapping and won on last-wins. The consequences were not cosmetic:
+  # DEF-1 did not exist as a row at all, and DEF-5 -- the defect `SPEC-4-04` is open to fix --
+  # read back as `status: fixed`, `severity: high`, `component: window-management`. `validate.py`
+  # was GREEN throughout, so nothing in the corpus checks that a defect row is its own row.
+  - id: DEF-1
     title: Two hook tests depend on the live desktop and fail with no foreground window
     status: fixed
     severity: high
@@ -122,8 +129,10 @@ defects:
       Shortcuts pane therefore cannot tell the left-edge percentage control from the top-edge one:
       four focusable controls, one name each, repeated four times over.
     why_it_hid: >-
-      The retired `layout_pane.slint` conditional produced exactly the same strings, so nothing
-      changed when `SPEC-4-02` moved them into declared `theme.rs` vocabulary. And
+      `shortcut_row.slint` already hardcoded exactly these four strings, unconditionally, for every
+      percentage row -- so nothing changed when `SPEC-4-02` moved them into declared `theme.rs`
+      vocabulary. (The range-based conditional that briefly chose between the two families existed
+      only mid-ticket and was removed in the same ticket; it is not where these strings came from.) And
       `theme::tests::accessible_names_are_unique` compares the CONSTANTS to each other, where each
       name appears once and is genuinely unique. The duplication is in the RENDERED tree, across
       rows, which that guard does not look at. `DEF-2` was the same class of fault — two focusable
@@ -131,7 +140,8 @@ defects:
     impact: >-
       Accessibility only; no functional defect and nothing is mis-saved. The four rows are still
       distinguishable by their row title, which a screen reader reads, so this degrades navigation
-      rather than blocking it — which is why it is `low` and not the severity `DEF-2` carried.
+      rather than blocking it. `DEF-2` carried `low` for the same fault class, so this row matches
+      that precedent rather than departing from it.
     fix_direction: >-
       Per-direction names, e.g. "Left edge percentage input", rather than one shared set for the
       family. That needs a `ShortcutField`-keyed label set rather than the two-family split
