@@ -11,6 +11,9 @@ tests:
   - app::tests::snap_custom_labels_no_longer_repeat_the_group_name
   - app::tests::the_declared_sequence_matches_the_shared_source
   - hook::tests::the_daemon_precedence_order_matches_the_shared_source
+  - app::tests::the_group_headings_have_one_home
+  - hook::tests::the_row_table_binds_every_chord_to_its_own_action
+  - persistence::tests::a_duplicate_names_the_holder_by_the_shared_declared_order
 ---
 
 # 01: Shortcuts pane regroups per DEC-014, and Snap-custom row labels drop their group's own name
@@ -102,6 +105,73 @@ loose figures are explanatory prose and do not bind; they are corrected in `DEC-
 which is permitted because `DEC-014` is `accepted` and not yet `applied`.
 
 - [ ] Full test suite green once, not only this ticket's own tests.
+
+## Amendment 2 — 2026-09-07, return trip 1 of 2 (`wdi-build` Step 3 panel)
+
+Both review axes independently returned the same must-fix, and the Spec axis found a second one
+Amendment 1 had missed. Status stays `ready-for-agent`; the tests below are already committed and
+one of them is **red**.
+
+**There were three lists of the sixteen, not two.** `DEC-018` and Amendment 1 both say two. The
+third is `crates/settings/src/persistence.rs:111-192` — `validate_config`'s own `fields` literal,
+which orders the **save-time duplicate rejection**. That file's own header already stated the
+invariant ("These sixteen paths must match `app::ShortcutField::key()` exactly, and in the same
+ORDER") and claimed `app::tests::field_declaration_order_is_the_precedence_order` guarded it "from
+the other side" — it does not; that test only compares discriminants to `ALL`'s indices and never
+reads this literal. `DEC-018` is corrected in the same change.
+
+This one is a **live, user-visible inversion**, not a latent hazard. Proof, already failing:
+`persistence::tests::a_duplicate_names_the_holder_by_the_shared_declared_order` reports Settings
+refusing `snapping.snap_third_left` and naming `snapping.snap_maximize` as the chord's holder,
+while the daemon's reordered precedence unbinds `snap_maximize` and keeps the third. The pane and
+the daemon disagree about who wins — exactly what `DEC-018` exists to foreclose, reached through
+the Save path instead of the startup warning.
+
+- [ ] **Derive `validate_config`'s field order from `shared::constants::SHORTCUT_DECLARED_ORDER`
+      rather than reordering its literal.** Reordering leaves a third copy that the next taxonomy
+      change breaks again; deriving it means the order has one home, which is what `LBR-ST-14`
+      asks for. Map each key to its `(&str, bool)` pair — a key-to-value mapping is not a second
+      declared order, because the iteration order comes from the constant. This preserves the
+      layer boundary the file's header defends: `shared` is already imported here, and depending
+      on it is not depending on the UI-facing `ShortcutField`.
+- [ ] `persistence::tests::a_duplicate_names_the_holder_by_the_shared_declared_order` goes green.
+      It asserts the behaviour over three pairs whose relative order `DEC-014` changed, and it
+      deliberately does not re-list the sequence — a test that restates the order is another copy.
+
+**The row-table guard Amendment 1 asked for was not delivered, and Amendment 1's chosen test could
+not deliver it.** `the_daemon_precedence_order_matches_the_shared_source` reads
+`in_declared_order()`, whose command bytes come from field identity, so it stays green even when
+`load_shortcuts_from_config`'s row table and the positional `Chords { .. resolved[N] }` mapping
+disagree with each other. That was verified by mutation, not argued: swapping `resolved[13]` and
+`resolved[14]` leaves that test **green** while chords bind to the wrong actions.
+
+- [x] `hook::tests::the_row_table_binds_every_chord_to_its_own_action` now closes it — sixteen
+      distinct chords through `load_shortcuts_from_config`, each action asserted to come back
+      holding its own. Seen red under the swapped-index mutation and restored. Already committed;
+      nothing to build. It also subsumes the switcher blind spot the Spec axis raised, since slots
+      0 and 1 now carry different chords.
+
+**The five group headings were a fourth hand-kept list.** `group()`, `main.rs`'s `group_rows(...)`
+arguments, and the markup each carried their own copy. A typo in the middle one makes `group_rows`
+return an **empty model**, drawing an empty group with no error anywhere.
+
+- [ ] `main.rs` selects rows by indexing `ShortcutField::GROUPS` instead of passing its own string
+      literals. The const and its guard (`the_group_headings_have_one_home`) are already committed;
+      what remains is deleting `main.rs`'s copies in favour of it.
+- [ ] Move `snap_maximize` and `move_next_monitor` to their new positions in the `Chords` **struct
+      field declaration** (`crates/daemon/src/hook.rs:606-614`). Named fields, so no semantics —
+      but `hook.rs` now presents two different orders for the same sixteen actions and the struct
+      is the first one a reader meets, in a file that leans hard on "the declared sequence".
+
+Not in this return trip, recorded as follow-up rather than silently dropped:
+
+- `unbinding_makes_the_loser_unreachable_end_to_end` (`hook.rs:1782-1792`) builds a 9-slot fixture
+  in pre-`DEC-014` positions. It passes and its property does not hinge on Maximize, so it is
+  misleading to a reader rather than wrong. Pre-existing; this ticket did not touch it.
+- Three of the five groups have no real-window coverage. `SPEC-4-03` already plans a
+  `shortcuts_pane_slint_snapshot` module; the heading-presence check belongs there rather than
+  having two tickets create the same file.
+- Five near-identical 21-line `ShortcutGroup` blocks in the markup. Out of scope here.
 
 ## Out of scope, deliberately
 

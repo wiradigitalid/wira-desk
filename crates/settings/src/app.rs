@@ -155,6 +155,23 @@ impl ShortcutField {
         }
     }
 
+    /// The five group headings, in the order the pane draws them.
+    ///
+    /// One home for the heading strings. `group()` returns a member of this array, the pane's
+    /// Rust side selects rows by indexing it, and `the_group_headings_have_one_home` proves the
+    /// two agree. Before this existed the same five literals were typed out in three places —
+    /// here, in `main.rs`'s `group_rows` calls, and in the markup — and a single typo in the
+    /// middle one made `group_rows` return an empty model, which draws an empty group with no
+    /// error anywhere. That is the same failure `LBR-ST-14` forbids for the actions themselves,
+    /// one level up.
+    pub const GROUPS: [&'static str; 5] = [
+        "Switching",
+        "Snap to half",
+        "Snap to third",
+        "Snap to custom",
+        "Resize, move & arrange",
+    ];
+
     /// The heading this field sits under in the Shortcuts pane.
     ///
     /// Presentation only. Grouping gathers rows that are already adjacent in [`ALL`]; it
@@ -1480,6 +1497,17 @@ mod tests {
             ],
             "the pane headings, in declared order, are exactly the five `DEC-014` names"
         );
+    }
+
+    #[test]
+    fn the_group_headings_have_one_home() {
+        // `ShortcutField::GROUPS` is that home. Walking `ALL` and deduplicating the headings
+        // must reproduce it exactly — which is only true while every heading `group()` returns
+        // is a member, in the drawn order, with each group's rows contiguous. A heading typed
+        // out somewhere else and misspelled selects no rows and draws an empty group silently.
+        let mut walked: Vec<&str> = ShortcutField::ALL.iter().map(|f| f.group()).collect();
+        walked.dedup();
+        assert_eq!(walked, ShortcutField::GROUPS.to_vec());
     }
 
     #[test]

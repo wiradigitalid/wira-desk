@@ -1820,6 +1820,108 @@ mod tests {
     }
 
     #[test]
+    fn the_row_table_binds_every_chord_to_its_own_action() {
+        // The guard `the_daemon_precedence_order_matches_the_shared_source` cannot reach this.
+        // It reads `in_declared_order()`, whose command bytes come from field identity, so it
+        // stays green even if `load_shortcuts_from_config`'s row table and the positional
+        // `Chords { .. resolved[N] }` mapping stop agreeing with each other — and that
+        // disagreement binds chords to the wrong actions. `DEC-014` moved eight of those
+        // sixteen indices, and before this test the only case exercising that function touched
+        // indices 5 and 15, the two that did not move.
+        //
+        // Sixteen distinct chords, end to end: every action must come back holding its own.
+        let mut cfg = Config::default();
+        cfg.switcher.shortcut = "ctrl+alt+f1".to_string();
+        cfg.switcher.fallback_shortcut = "ctrl+alt+f2".to_string();
+        cfg.snapping.snap_half_left = "ctrl+alt+f3".to_string();
+        cfg.snapping.snap_half_right = "ctrl+alt+f4".to_string();
+        cfg.snapping.snap_half_top = "ctrl+alt+f5".to_string();
+        cfg.snapping.snap_half_bottom = "ctrl+alt+f6".to_string();
+        cfg.snapping.snap_third_left = "ctrl+alt+f7".to_string();
+        cfg.snapping.snap_third_middle = "ctrl+alt+f8".to_string();
+        cfg.snapping.snap_third_right = "ctrl+alt+f9".to_string();
+        cfg.snapping.snap_percent_left = "ctrl+alt+f10".to_string();
+        cfg.snapping.snap_percent_right = "ctrl+alt+f11".to_string();
+        cfg.snapping.snap_percent_top = "ctrl+alt+f12".to_string();
+        cfg.snapping.snap_percent_bottom = "ctrl+alt+a".to_string();
+        cfg.snapping.snap_maximize = "ctrl+alt+b".to_string();
+        cfg.layout.move_next_monitor_shortcut = "ctrl+alt+c".to_string();
+        cfg.layout.stack_shortcut = "ctrl+alt+d".to_string();
+
+        let chords = load_shortcuts_from_config(0, &cfg);
+
+        // Paired by config key so a failure names the action that got the wrong chord, and so
+        // the expectations are read off the same strings set above rather than an index.
+        let expected: [(&str, Option<Shortcut>, &str); 16] = [
+            ("switcher.shortcut", chords.primary, "ctrl+alt+f1"),
+            ("switcher.fallback_shortcut", chords.fallback, "ctrl+alt+f2"),
+            ("snapping.snap_half_left", chords.snap_left, "ctrl+alt+f3"),
+            ("snapping.snap_half_right", chords.snap_right, "ctrl+alt+f4"),
+            ("snapping.snap_half_top", chords.snap_top, "ctrl+alt+f5"),
+            (
+                "snapping.snap_half_bottom",
+                chords.snap_bottom,
+                "ctrl+alt+f6",
+            ),
+            (
+                "snapping.snap_third_left",
+                chords.snap_third_left,
+                "ctrl+alt+f7",
+            ),
+            (
+                "snapping.snap_third_middle",
+                chords.snap_third_middle,
+                "ctrl+alt+f8",
+            ),
+            (
+                "snapping.snap_third_right",
+                chords.snap_third_right,
+                "ctrl+alt+f9",
+            ),
+            (
+                "snapping.snap_percent_left",
+                chords.snap_percent_left,
+                "ctrl+alt+f10",
+            ),
+            (
+                "snapping.snap_percent_right",
+                chords.snap_percent_right,
+                "ctrl+alt+f11",
+            ),
+            (
+                "snapping.snap_percent_top",
+                chords.snap_percent_top,
+                "ctrl+alt+f12",
+            ),
+            (
+                "snapping.snap_percent_bottom",
+                chords.snap_percent_bottom,
+                "ctrl+alt+a",
+            ),
+            ("snapping.snap_maximize", chords.snap_maximize, "ctrl+alt+b"),
+            (
+                "layout.move_next_monitor_shortcut",
+                chords.move_next_monitor,
+                "ctrl+alt+c",
+            ),
+            ("layout.stack_shortcut", chords.stack, "ctrl+alt+d"),
+        ];
+        for (key, got, want) in expected {
+            assert_eq!(
+                got,
+                Shortcut::parse(want),
+                "{key} did not come back holding its own chord — the row table and the \
+                 resolved[N] mapping disagree"
+            );
+        }
+        // No two actions share a chord here, so nothing may be unbound as a collision loser.
+        assert!(
+            expected.iter().all(|(_, got, _)| got.is_some()),
+            "a distinct configuration must produce no unbinding"
+        );
+    }
+
+    #[test]
     fn the_daemon_precedence_order_matches_the_shared_source() {
         // `LBR-ST-14` / `DEC-018`. This crate cannot see `settings`' `ShortcutField`, which is
         // why the two declared orders drifted apart with nothing to notice: `ShortcutField::ALL`

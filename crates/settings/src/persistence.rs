@@ -511,6 +511,60 @@ mod tests {
     }
 
     #[test]
+    fn a_duplicate_names_the_holder_by_the_shared_declared_order() {
+        // `LBR-ST-14`: one declared sequence decides which of two colliding actions is named
+        // as the holder. This module walks its own table to find that holder, so its order is
+        // part of that sequence — and until `DEC-018` it was a third, separately kept copy
+        // that `DEC-014`'s reorder missed. The consequence is user-visible on the Save path:
+        // Settings would refuse the save naming one action as the holder while the daemon's
+        // precedence unbound the other.
+        //
+        // Asserted through the behaviour rather than by re-listing the order, because a test
+        // that restates the sequence is itself another copy of it.
+        for (earlier, later, set) in [
+            (
+                "snapping.snap_third_left",
+                "snapping.snap_maximize",
+                (|c: &mut Config, v: &str| {
+                    c.snapping.snap_third_left = v.to_string();
+                    c.snapping.snap_maximize = v.to_string();
+                }) as fn(&mut Config, &str),
+            ),
+            (
+                "snapping.snap_percent_left",
+                "snapping.snap_maximize",
+                |c: &mut Config, v: &str| {
+                    c.snapping.snap_percent_left = v.to_string();
+                    c.snapping.snap_maximize = v.to_string();
+                },
+            ),
+            (
+                "snapping.snap_percent_left",
+                "layout.move_next_monitor_shortcut",
+                |c: &mut Config, v: &str| {
+                    c.snapping.snap_percent_left = v.to_string();
+                    c.layout.move_next_monitor_shortcut = v.to_string();
+                },
+            ),
+        ] {
+            let mut cfg = Config::default();
+            set(&mut cfg, "ctrl+alt+f9");
+            let err = validate_config(&cfg).expect_err("a shared chord must be refused");
+            assert_eq!(
+                err.0, later,
+                "the later action in the declared sequence is the one refused"
+            );
+            match err.1 {
+                ShortcutError::DuplicateShortcut(holder) => assert_eq!(
+                    holder, earlier,
+                    "the earlier action in the declared sequence keeps the chord"
+                ),
+                other => panic!("expected a duplicate rejection, got {other:?}"),
+            }
+        }
+    }
+
+    #[test]
     fn a_disabled_action_is_excluded_from_collision_detection() {
         let mut cfg = Config::default();
         cfg.switcher.shortcut = "ctrl+alt+left".to_string();

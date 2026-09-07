@@ -18,9 +18,14 @@ The declared order of the sixteen editable chord actions becomes one constant in
 each keep their own typed list, and each **asserts its list against that constant** rather than against a
 literal of its own.
 
-`SPEC-4-01` is amended to carry this: the `DEC-014` reorder is applied to `ShortcutField::ALL`
-(`settings`) **and** to `Chords::in_declared_order` plus `resolve_chords`'s row table (`daemon`) in the
-same ticket, with the guard test that holds them together.
+`SPEC-4-01` is amended to carry this: the `DEC-014` reorder reaches **every** list in the same ticket
+— `ShortcutField::ALL` (`settings`), `Chords::in_declared_order` plus `load_shortcuts_from_config`'s
+row table and its positional mapping (`daemon`), and `validate_config`'s field table (`settings`) —
+each with a guard that holds it to the constant.
+
+Where a list can be **derived** from the constant instead of ordered to match it, it is derived.
+`validate_config` is that case: a key-to-value mapping is not a second declared order, because the
+iteration order comes from the constant. Deriving removes the copy; reordering only postpones it.
 
 ## Why
 
@@ -29,10 +34,20 @@ of the pane's draw order, its keyboard focus order, **and the precedence order t
 collision**, and *a second, independently maintained list of the same actions must not exist*. Its scope
 line names both `settings` and `window-management`.
 
-Two such lists exist today. `ShortcutField::ALL` orders the pane and the save-time duplicate rejection;
-`Chords::in_declared_order` and the row table in `resolve_chords` order the collision unbinding that
-actually runs. They agree only by coincidence — nothing reads one from the other, no test compares them,
-and `daemon` cannot even see `ShortcutField`. The agreement has survived on discipline.
+**Three** such lists exist today, one more than this decision first counted — the miscount is recorded
+rather than quietly corrected, because it is why `SPEC-4-01`'s first build reordered two of them and
+left the third behind:
+
+- `ShortcutField::ALL` (`settings`) orders the pane and its keyboard focus.
+- `Chords::in_declared_order` and the row table in `load_shortcuts_from_config` (`daemon`) order the
+  collision unbinding that actually runs.
+- `validate_config`'s own `fields` literal (`crates/settings/src/persistence.rs`) orders the
+  **save-time duplicate rejection** — which action Settings names as a chord's holder when it refuses
+  a save. Not `ShortcutField::ALL`, as this decision originally claimed.
+
+They agree only by coincidence — nothing reads one from the other, no test compared them, and `daemon`
+cannot even see `ShortcutField`. The agreement survived on discipline until `DEC-014` asked for a
+reorder, and then it did not.
 
 `SPEC-4-01` is where the discipline would have run out. `DEC-014` moves Maximize behind every snap
 variant and records the consequence it accepts: *the day a user's own edit puts two of these chords in
@@ -44,7 +59,7 @@ it is the horizontal slice `wdi-build` refuses.
 
 ## Cost
 
-One constant and two assertions, and the reorder becomes a four-file change instead of two. Nothing
+One constant and three assertions, and the reorder becomes a five-file change instead of two. Nothing
 stored moves: this is in-memory declared order, so no `config.toml` migration and no chord rename —
 the same price `DEC-014` already accepted.
 
