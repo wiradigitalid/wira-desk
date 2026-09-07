@@ -207,12 +207,13 @@ rtm:
   - shortcut_row_slint_snapshot::tests::typed_percentage_commits_on_save_click
   - shortcut_row_slint_snapshot::tests::typed_percentage_commits_on_stepper_click
   - shortcut_row_slint_snapshot::tests::typed_percentage_commits_on_focus_change_to_another_row
+  - shortcut_row_slint_snapshot::tests::typed_percentage_survives_cross_row_stepper_click
   - persistence::tests::an_out_of_range_percentage_typed_then_saved_is_refused
   - layout_pane_slint_snapshot::tests::out_of_range_stack_width_is_refused_not_clamped
-  status: ready-for-agent
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-5
   FR: FR-18
@@ -431,12 +432,13 @@ rtm:
   - shortcut_row_slint_snapshot::tests::typed_percentage_commits_on_save_click
   - shortcut_row_slint_snapshot::tests::typed_percentage_commits_on_stepper_click
   - shortcut_row_slint_snapshot::tests::typed_percentage_commits_on_focus_change_to_another_row
+  - shortcut_row_slint_snapshot::tests::typed_percentage_survives_cross_row_stepper_click
   - persistence::tests::an_out_of_range_percentage_typed_then_saved_is_refused
   - layout_pane_slint_snapshot::tests::out_of_range_stack_width_is_refused_not_clamped
-  status: ready-for-agent
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-3
   CAP: CAP-15
   FR: FR-27
@@ -471,10 +473,10 @@ rtm:
   - persistence::tests::a_config_predating_the_enabled_field_loads_every_action_enabled
   - app::tests::disabling_an_action_retains_its_stored_chord
   - app::tests::re_enabling_an_action_restores_its_prior_chord
-  status: ready-for-agent
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-3
   CAP: CAP-16
   FR: FR-29
@@ -488,10 +490,10 @@ rtm:
   - hook::tests::a_disabled_actions_chord_falls_through_to_call_next_hook_ex
   - hook::tests::a_disabled_field_shares_a_chord_with_an_enabled_field_without_collision
   - arrangement::stack::tests::stack_planner_no_longer_reads_a_layout_level_toggle
-  status: ready-for-agent
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-8
   FR: FR-3
@@ -576,12 +578,13 @@ rtm:
   - shortcut_row_slint_snapshot::tests::typed_percentage_commits_on_save_click
   - shortcut_row_slint_snapshot::tests::typed_percentage_commits_on_stepper_click
   - shortcut_row_slint_snapshot::tests::typed_percentage_commits_on_focus_change_to_another_row
+  - shortcut_row_slint_snapshot::tests::typed_percentage_survives_cross_row_stepper_click
   - persistence::tests::an_out_of_range_percentage_typed_then_saved_is_refused
   - layout_pane_slint_snapshot::tests::out_of_range_stack_width_is_refused_not_clamped
-  status: ready-for-agent
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-3
   FR: FR-7

@@ -108,50 +108,98 @@ pub fn validate_config(cfg: &Config) -> Result<(), (&'static str, ShortcutError)
     // UI-facing field enum — a coupling `LBR-ST-14` accepts in exchange for the layer
     // boundary, and which `app::tests::field_declaration_order_is_the_precedence_order`
     // guards from the other side.
-    let fields: [(&'static str, &str); 16] = [
-        ("switcher.shortcut", &cfg.switcher.shortcut),
+    let fields: [(&'static str, &str, bool); 16] = [
+        (
+            "switcher.shortcut",
+            &cfg.switcher.shortcut,
+            cfg.switcher.shortcut_enabled,
+        ),
         (
             "switcher.fallback_shortcut",
             &cfg.switcher.fallback_shortcut,
+            cfg.switcher.fallback_shortcut_enabled,
         ),
-        ("snapping.snap_half_left", &cfg.snapping.snap_half_left),
-        ("snapping.snap_half_right", &cfg.snapping.snap_half_right),
-        ("snapping.snap_half_top", &cfg.snapping.snap_half_top),
-        ("snapping.snap_half_bottom", &cfg.snapping.snap_half_bottom),
-        ("snapping.snap_maximize", &cfg.snapping.snap_maximize),
-        ("snapping.snap_third_left", &cfg.snapping.snap_third_left),
+        (
+            "snapping.snap_half_left",
+            &cfg.snapping.snap_half_left,
+            cfg.snapping.snap_half_left_enabled,
+        ),
+        (
+            "snapping.snap_half_right",
+            &cfg.snapping.snap_half_right,
+            cfg.snapping.snap_half_right_enabled,
+        ),
+        (
+            "snapping.snap_half_top",
+            &cfg.snapping.snap_half_top,
+            cfg.snapping.snap_half_top_enabled,
+        ),
+        (
+            "snapping.snap_half_bottom",
+            &cfg.snapping.snap_half_bottom,
+            cfg.snapping.snap_half_bottom_enabled,
+        ),
+        (
+            "snapping.snap_maximize",
+            &cfg.snapping.snap_maximize,
+            cfg.snapping.snap_maximize_enabled,
+        ),
+        (
+            "snapping.snap_third_left",
+            &cfg.snapping.snap_third_left,
+            cfg.snapping.snap_third_left_enabled,
+        ),
         (
             "snapping.snap_third_middle",
             &cfg.snapping.snap_third_middle,
+            cfg.snapping.snap_third_middle_enabled,
         ),
-        ("snapping.snap_third_right", &cfg.snapping.snap_third_right),
+        (
+            "snapping.snap_third_right",
+            &cfg.snapping.snap_third_right,
+            cfg.snapping.snap_third_right_enabled,
+        ),
         (
             "layout.move_next_monitor_shortcut",
             &cfg.layout.move_next_monitor_shortcut,
+            cfg.layout.move_next_monitor_shortcut_enabled,
         ),
         (
             "snapping.snap_percent_left",
             &cfg.snapping.snap_percent_left,
+            cfg.snapping.snap_percent_left_enabled,
         ),
         (
             "snapping.snap_percent_right",
             &cfg.snapping.snap_percent_right,
+            cfg.snapping.snap_percent_right_enabled,
         ),
-        ("snapping.snap_percent_top", &cfg.snapping.snap_percent_top),
+        (
+            "snapping.snap_percent_top",
+            &cfg.snapping.snap_percent_top,
+            cfg.snapping.snap_percent_top_enabled,
+        ),
         (
             "snapping.snap_percent_bottom",
             &cfg.snapping.snap_percent_bottom,
+            cfg.snapping.snap_percent_bottom_enabled,
         ),
-        ("layout.stack_shortcut", &cfg.layout.stack_shortcut),
+        (
+            "layout.stack_shortcut",
+            &cfg.layout.stack_shortcut,
+            cfg.layout.stack_shortcut_enabled,
+        ),
     ];
     let mut seen: Vec<(&'static str, String)> = Vec::with_capacity(fields.len());
 
-    for (name, value) in fields {
+    for (name, value, enabled) in fields {
         let canonical = validate_shortcut(value).map_err(|e| (name, e))?;
-        if let Some((first_name, _)) = seen.iter().find(|(_, s)| *s == canonical) {
-            return Err((name, ShortcutError::DuplicateShortcut(first_name)));
+        if enabled {
+            if let Some((first_name, _)) = seen.iter().find(|(_, s)| *s == canonical) {
+                return Err((name, ShortcutError::DuplicateShortcut(first_name)));
+            }
+            seen.push((name, canonical));
         }
-        seen.push((name, canonical));
     }
 
     for (name, val) in [
@@ -165,6 +213,15 @@ pub fn validate_config(cfg: &Config) -> Result<(), (&'static str, ShortcutError)
         {
             return Err((name, ShortcutError::InvalidPercentage(val)));
         }
+    }
+
+    if !(shared::constants::MIN_STACK_WIDTH_PERCENT..=shared::constants::MAX_STACK_WIDTH_PERCENT)
+        .contains(&cfg.layout.stack_width_percent)
+    {
+        return Err((
+            "layout.stack_width_percent",
+            ShortcutError::InvalidPercentage(cfg.layout.stack_width_percent),
+        ));
     }
 
     Ok(())
@@ -361,6 +418,8 @@ mod tests {
         let cfg = Config::default();
         assert_eq!(cfg.switcher.shortcut, "win+backtick");
         assert_eq!(cfg.switcher.fallback_shortcut, "alt+backtick");
+        assert!(cfg.switcher.shortcut_enabled);
+        assert!(cfg.switcher.fallback_shortcut_enabled);
         assert_eq!(cfg.snapping.snap_half_left, "ctrl+alt+left");
         assert_eq!(cfg.snapping.snap_half_right, "ctrl+alt+right");
         assert_eq!(cfg.snapping.snap_half_top, "ctrl+alt+up");
@@ -370,6 +429,21 @@ mod tests {
         assert_eq!(cfg.snapping.snap_percent_right, "ctrl+alt+shift+right");
         assert_eq!(cfg.snapping.snap_percent_top, "ctrl+alt+shift+up");
         assert_eq!(cfg.snapping.snap_percent_bottom, "ctrl+alt+shift+down");
+        assert_eq!(cfg.snapping.snap_third_left, "ctrl+alt+1");
+        assert_eq!(cfg.snapping.snap_third_middle, "ctrl+alt+2");
+        assert_eq!(cfg.snapping.snap_third_right, "ctrl+alt+3");
+        assert!(cfg.snapping.snap_half_left_enabled);
+        assert!(cfg.snapping.snap_half_right_enabled);
+        assert!(cfg.snapping.snap_half_top_enabled);
+        assert!(cfg.snapping.snap_half_bottom_enabled);
+        assert!(cfg.snapping.snap_maximize_enabled);
+        assert!(cfg.snapping.snap_percent_left_enabled);
+        assert!(cfg.snapping.snap_percent_right_enabled);
+        assert!(cfg.snapping.snap_percent_top_enabled);
+        assert!(cfg.snapping.snap_percent_bottom_enabled);
+        assert!(cfg.snapping.snap_third_left_enabled);
+        assert!(cfg.snapping.snap_third_middle_enabled);
+        assert!(cfg.snapping.snap_third_right_enabled);
         assert_eq!(cfg.snapping.percent_left, 50);
         assert_eq!(cfg.snapping.percent_right, 50);
         assert_eq!(cfg.snapping.percent_top, 50);
@@ -378,12 +452,90 @@ mod tests {
             cfg.layout.move_next_monitor_shortcut,
             "ctrl+alt+shift+enter"
         );
+        assert!(cfg.layout.move_next_monitor_shortcut_enabled);
         assert_eq!(cfg.layout.stack_shortcut, "ctrl+alt+shift+s");
+        assert!(cfg.layout.stack_shortcut_enabled);
         assert!(!cfg.general.auto_start);
-        assert!(cfg.layout.enable_overlapping_stack);
         assert_eq!(cfg.layout.stack_width_percent, 50);
         assert!(!cfg.vm_bypass.bypass_processes.is_empty());
         assert!(!cfg.vm_bypass.bypass_classes.is_empty());
+    }
+
+    #[test]
+    fn a_config_predating_the_enabled_field_loads_every_action_enabled() {
+        let toml = r#"
+            [switcher]
+            shortcut = "win+backtick"
+            fallback_shortcut = "alt+backtick"
+
+            [snapping]
+            snap_half_left = "ctrl+alt+left"
+            snap_half_right = "ctrl+alt+right"
+            snap_half_top = "ctrl+alt+up"
+            snap_half_bottom = "ctrl+alt+down"
+            snap_maximize = "ctrl+alt+enter"
+            snap_percent_left = "ctrl+alt+shift+left"
+            snap_percent_right = "ctrl+alt+shift+right"
+            snap_percent_top = "ctrl+alt+shift+up"
+            snap_percent_bottom = "ctrl+alt+shift+down"
+            snap_third_left = "ctrl+alt+1"
+            snap_third_middle = "ctrl+alt+2"
+            snap_third_right = "ctrl+alt+3"
+            percent_left = 50
+            percent_right = 50
+            percent_top = 50
+            percent_bottom = 50
+
+            [layout]
+            stack_shortcut = "ctrl+alt+shift+s"
+            move_next_monitor_shortcut = "ctrl+alt+shift+enter"
+            stack_width_percent = 50
+        "#;
+        let cfg = Config::from_toml_str(toml).unwrap();
+        assert!(cfg.switcher.shortcut_enabled);
+        assert!(cfg.switcher.fallback_shortcut_enabled);
+        assert!(cfg.snapping.snap_half_left_enabled);
+        assert!(cfg.snapping.snap_half_right_enabled);
+        assert!(cfg.snapping.snap_half_top_enabled);
+        assert!(cfg.snapping.snap_half_bottom_enabled);
+        assert!(cfg.snapping.snap_maximize_enabled);
+        assert!(cfg.snapping.snap_percent_left_enabled);
+        assert!(cfg.snapping.snap_percent_right_enabled);
+        assert!(cfg.snapping.snap_percent_top_enabled);
+        assert!(cfg.snapping.snap_percent_bottom_enabled);
+        assert!(cfg.snapping.snap_third_left_enabled);
+        assert!(cfg.snapping.snap_third_middle_enabled);
+        assert!(cfg.snapping.snap_third_right_enabled);
+        assert!(cfg.layout.move_next_monitor_shortcut_enabled);
+        assert!(cfg.layout.stack_shortcut_enabled);
+    }
+
+    #[test]
+    fn a_disabled_action_is_excluded_from_collision_detection() {
+        let mut cfg = Config::default();
+        cfg.switcher.shortcut = "ctrl+alt+left".to_string();
+        cfg.snapping.snap_half_left = "ctrl+alt+left".to_string();
+
+        assert_eq!(
+            validate_config(&cfg),
+            Err((
+                "snapping.snap_half_left",
+                ShortcutError::DuplicateShortcut("switcher.shortcut")
+            ))
+        );
+
+        // Disabled field produces no collision
+        cfg.snapping.snap_half_left_enabled = false;
+        assert!(validate_config(&cfg).is_ok());
+
+        // First field disabled: second registers normally
+        cfg.snapping.snap_half_left_enabled = true;
+        cfg.switcher.shortcut_enabled = false;
+        assert!(validate_config(&cfg).is_ok());
+
+        // Both disabled: no collision
+        cfg.snapping.snap_half_left_enabled = false;
+        assert!(validate_config(&cfg).is_ok());
     }
 
     #[test]
@@ -422,6 +574,71 @@ mod tests {
                 ShortcutError::InvalidPercentage(150)
             ))
         );
+    }
+
+    #[test]
+    fn an_out_of_range_percentage_typed_then_saved_is_refused() {
+        let dir = temp_dir();
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("reject_pct_typed.toml");
+
+        let mut cfg = Config::default();
+        cfg.snapping.percent_left = 0;
+        assert_eq!(
+            validate_config(&cfg),
+            Err(("snapping.percent_left", ShortcutError::InvalidPercentage(0)))
+        );
+        assert!(matches!(
+            save_and_notify(&cfg, &path),
+            SaveOutcome::Rejected("snapping.percent_left", ShortcutError::InvalidPercentage(0))
+        ));
+
+        cfg.snapping.percent_left = 50;
+        cfg.snapping.percent_bottom = 100;
+        assert_eq!(
+            validate_config(&cfg),
+            Err((
+                "snapping.percent_bottom",
+                ShortcutError::InvalidPercentage(100)
+            ))
+        );
+
+        cfg.snapping.percent_bottom = 50;
+        cfg.layout.stack_width_percent = 0;
+        assert_eq!(
+            validate_config(&cfg),
+            Err((
+                "layout.stack_width_percent",
+                ShortcutError::InvalidPercentage(0)
+            ))
+        );
+        assert!(matches!(
+            save_and_notify(&cfg, &path),
+            SaveOutcome::Rejected(
+                "layout.stack_width_percent",
+                ShortcutError::InvalidPercentage(0)
+            )
+        ));
+
+        cfg.layout.stack_width_percent = 5;
+        assert_eq!(
+            validate_config(&cfg),
+            Err((
+                "layout.stack_width_percent",
+                ShortcutError::InvalidPercentage(5)
+            ))
+        );
+
+        cfg.layout.stack_width_percent = 105;
+        assert_eq!(
+            validate_config(&cfg),
+            Err((
+                "layout.stack_width_percent",
+                ShortcutError::InvalidPercentage(105)
+            ))
+        );
+
+        let _ = std::fs::remove_file(&path);
     }
 
     #[test]
@@ -521,7 +738,8 @@ mod tests {
 
         let mut cfg = Config::default();
         cfg.general.auto_start = true;
-        cfg.layout.enable_overlapping_stack = true;
+        cfg.snapping.snap_third_left_enabled = false;
+        cfg.layout.stack_shortcut_enabled = false;
         cfg.layout.stack_width_percent = 70;
         cfg.vm_bypass.bypass_classes.push("CustomClass".to_string());
 

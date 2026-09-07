@@ -107,11 +107,6 @@ pub const TOGGLE_AUTO_START: ControlSemantics = ControlSemantics {
     description: "When enabled, Wira Desk starts automatically at sign-in.",
 };
 
-pub const TOGGLE_OVERLAPPING_STACK: ControlSemantics = ControlSemantics {
-    name: "Enable overlapping stack layout",
-    description: "Arranges up to three windows of the active application in a clickable stack.",
-};
-
 pub const STACK_WIDTH_DECREASE: ControlSemantics = ControlSemantics {
     name: "Decrease stack width",
     description: "Lowers the width percentage of stacked windows by one point.",
@@ -241,7 +236,6 @@ mod tests {
     fn every_control_has_a_non_empty_accessible_name() {
         for c in [
             TOGGLE_AUTO_START,
-            TOGGLE_OVERLAPPING_STACK,
             STACK_WIDTH_DECREASE,
             STACK_WIDTH_INPUT,
             STACK_WIDTH_INCREASE,
@@ -278,7 +272,6 @@ mod tests {
     fn accessible_names_are_unique() {
         let names = [
             TOGGLE_AUTO_START.name,
-            TOGGLE_OVERLAPPING_STACK.name,
             STACK_WIDTH_DECREASE.name,
             STACK_WIDTH_INPUT.name,
             STACK_WIDTH_INCREASE.name,

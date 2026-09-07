@@ -696,6 +696,95 @@ impl Chords {
             },
         ]
     }
+
+    /// Construct chords from a configuration snapshot.
+    ///
+    /// Skips a disabled field's chord entirely, leaving it `None` so it takes no
+    /// part in matching or collision unbinding.
+    pub fn from_config(cfg: &Config) -> Self {
+        Self {
+            primary: if cfg.switcher.shortcut_enabled {
+                Shortcut::parse(&cfg.switcher.shortcut)
+            } else {
+                None
+            },
+            fallback: if cfg.switcher.fallback_shortcut_enabled {
+                Shortcut::parse(&cfg.switcher.fallback_shortcut)
+            } else {
+                None
+            },
+            snap_left: if cfg.snapping.snap_half_left_enabled {
+                Shortcut::parse(&cfg.snapping.snap_half_left)
+            } else {
+                None
+            },
+            snap_right: if cfg.snapping.snap_half_right_enabled {
+                Shortcut::parse(&cfg.snapping.snap_half_right)
+            } else {
+                None
+            },
+            snap_top: if cfg.snapping.snap_half_top_enabled {
+                Shortcut::parse(&cfg.snapping.snap_half_top)
+            } else {
+                None
+            },
+            snap_bottom: if cfg.snapping.snap_half_bottom_enabled {
+                Shortcut::parse(&cfg.snapping.snap_half_bottom)
+            } else {
+                None
+            },
+            snap_maximize: if cfg.snapping.snap_maximize_enabled {
+                Shortcut::parse(&cfg.snapping.snap_maximize)
+            } else {
+                None
+            },
+            snap_third_left: if cfg.snapping.snap_third_left_enabled {
+                Shortcut::parse(&cfg.snapping.snap_third_left)
+            } else {
+                None
+            },
+            snap_third_middle: if cfg.snapping.snap_third_middle_enabled {
+                Shortcut::parse(&cfg.snapping.snap_third_middle)
+            } else {
+                None
+            },
+            snap_third_right: if cfg.snapping.snap_third_right_enabled {
+                Shortcut::parse(&cfg.snapping.snap_third_right)
+            } else {
+                None
+            },
+            move_next_monitor: if cfg.layout.move_next_monitor_shortcut_enabled {
+                Shortcut::parse(&cfg.layout.move_next_monitor_shortcut)
+            } else {
+                None
+            },
+            snap_percent_left: if cfg.snapping.snap_percent_left_enabled {
+                Shortcut::parse(&cfg.snapping.snap_percent_left)
+            } else {
+                None
+            },
+            snap_percent_right: if cfg.snapping.snap_percent_right_enabled {
+                Shortcut::parse(&cfg.snapping.snap_percent_right)
+            } else {
+                None
+            },
+            snap_percent_top: if cfg.snapping.snap_percent_top_enabled {
+                Shortcut::parse(&cfg.snapping.snap_percent_top)
+            } else {
+                None
+            },
+            snap_percent_bottom: if cfg.snapping.snap_percent_bottom_enabled {
+                Shortcut::parse(&cfg.snapping.snap_percent_bottom)
+            } else {
+                None
+            },
+            stack: if cfg.layout.stack_shortcut_enabled {
+                Shortcut::parse(&cfg.layout.stack_shortcut)
+            } else {
+                None
+            },
+        }
+    }
 }
 
 /// One resolved collision: the field that kept the chord, and the field that lost it.
@@ -923,6 +1012,10 @@ fn resolve_shortcut(configured: &str, default: &str) -> Shortcut {
 
 fn load_shortcuts(worker_hwnd: HWND) -> Chords {
     let cfg = Config::load_or_default(&config_path());
+    load_shortcuts_from_config(worker_hwnd, &cfg)
+}
+
+fn load_shortcuts_from_config(worker_hwnd: HWND, cfg: &Config) -> Chords {
     let defaults = SwitcherConfig::default();
     let snap_defaults = shared::config::SnappingConfig::default();
     let layout_defaults = shared::config::LayoutConfig::default();
@@ -931,92 +1024,110 @@ fn load_shortcuts(worker_hwnd: HWND) -> Chords {
     // shipped default, and its diagnostic name appear together. The six hand-written
     // blocks this replaces each repeated that triple, and a new chord meant writing a
     // seventh block correctly rather than adding a row.
-    let rows: [(&str, &str, &str); 16] = [
+    let rows: [(&str, &str, &str, bool); 16] = [
         (
             "switcher.shortcut",
             &cfg.switcher.shortcut,
             &defaults.shortcut,
+            cfg.switcher.shortcut_enabled,
         ),
         (
             "switcher.fallback_shortcut",
             &cfg.switcher.fallback_shortcut,
             &defaults.fallback_shortcut,
+            cfg.switcher.fallback_shortcut_enabled,
         ),
         (
             "snapping.snap_half_left",
             &cfg.snapping.snap_half_left,
             &snap_defaults.snap_half_left,
+            cfg.snapping.snap_half_left_enabled,
         ),
         (
             "snapping.snap_half_right",
             &cfg.snapping.snap_half_right,
             &snap_defaults.snap_half_right,
+            cfg.snapping.snap_half_right_enabled,
         ),
         (
             "snapping.snap_half_top",
             &cfg.snapping.snap_half_top,
             &snap_defaults.snap_half_top,
+            cfg.snapping.snap_half_top_enabled,
         ),
         (
             "snapping.snap_half_bottom",
             &cfg.snapping.snap_half_bottom,
             &snap_defaults.snap_half_bottom,
+            cfg.snapping.snap_half_bottom_enabled,
         ),
         (
             "snapping.snap_maximize",
             &cfg.snapping.snap_maximize,
             &snap_defaults.snap_maximize,
+            cfg.snapping.snap_maximize_enabled,
         ),
         (
             "snapping.snap_third_left",
             &cfg.snapping.snap_third_left,
             &snap_defaults.snap_third_left,
+            cfg.snapping.snap_third_left_enabled,
         ),
         (
             "snapping.snap_third_middle",
             &cfg.snapping.snap_third_middle,
             &snap_defaults.snap_third_middle,
+            cfg.snapping.snap_third_middle_enabled,
         ),
         (
             "snapping.snap_third_right",
             &cfg.snapping.snap_third_right,
             &snap_defaults.snap_third_right,
+            cfg.snapping.snap_third_right_enabled,
         ),
         (
             "layout.move_next_monitor_shortcut",
             &cfg.layout.move_next_monitor_shortcut,
             &layout_defaults.move_next_monitor_shortcut,
+            cfg.layout.move_next_monitor_shortcut_enabled,
         ),
         (
             "snapping.snap_percent_left",
             &cfg.snapping.snap_percent_left,
             &snap_defaults.snap_percent_left,
+            cfg.snapping.snap_percent_left_enabled,
         ),
         (
             "snapping.snap_percent_right",
             &cfg.snapping.snap_percent_right,
             &snap_defaults.snap_percent_right,
+            cfg.snapping.snap_percent_right_enabled,
         ),
         (
             "snapping.snap_percent_top",
             &cfg.snapping.snap_percent_top,
             &snap_defaults.snap_percent_top,
+            cfg.snapping.snap_percent_top_enabled,
         ),
         (
             "snapping.snap_percent_bottom",
             &cfg.snapping.snap_percent_bottom,
             &snap_defaults.snap_percent_bottom,
+            cfg.snapping.snap_percent_bottom_enabled,
         ),
         (
             "layout.stack_shortcut",
             &cfg.layout.stack_shortcut,
             &layout_defaults.stack_shortcut,
+            cfg.layout.stack_shortcut_enabled,
         ),
     ];
 
     let mut resolved: [Option<Shortcut>; 16] = [None; 16];
-    for (i, (field, configured, default)) in rows.iter().enumerate() {
-        resolved[i] = Some(resolve_one(worker_hwnd, field, configured, default));
+    for (i, (field, configured, default, enabled)) in rows.iter().enumerate() {
+        if *enabled {
+            resolved[i] = Some(resolve_one(worker_hwnd, field, configured, default));
+        }
     }
 
     // Two actions on one chord. The earlier field keeps it; the later one is unbound and its
@@ -1062,8 +1173,8 @@ fn load_shortcuts(worker_hwnd: HWND) -> Chords {
 /// message quotes what the user actually wrote in `config.toml` and they can find it. Falls
 /// back to the canonical form when the configured text did not parse and a default was
 /// substituted, because in that case what they wrote is not what took effect.
-fn resolved_display(rows: &[(&str, &str, &str)], index: usize) -> String {
-    let (_, configured, default) = rows[index];
+fn resolved_display(rows: &[(&str, &str, &str, bool)], index: usize) -> String {
+    let (_, configured, default, _) = rows[index];
     match Shortcut::parse(configured) {
         Some(_) => configured.to_string(),
         None => default.to_string(),
@@ -2091,5 +2202,72 @@ mod tests {
         // it freed on a failed compare-exchange this would be a double free.
         unstage_snapshot(raw);
         assert!(take_staged_snapshot().is_none());
+    }
+
+    #[test]
+    fn a_disabled_action_is_absent_from_chords() {
+        let mut cfg = Config::default();
+        cfg.snapping.snap_half_left_enabled = false;
+        cfg.layout.stack_shortcut_enabled = false;
+        let chords = Chords::from_config(&cfg);
+        assert_eq!(chords.snap_left, None);
+        assert_eq!(chords.stack, None);
+        assert_eq!(
+            chords.snap_right,
+            Shortcut::parse(&cfg.snapping.snap_half_right)
+        );
+        assert_eq!(chords.primary, Shortcut::parse(&cfg.switcher.shortcut));
+    }
+
+    #[test]
+    fn a_disabled_actions_chord_falls_through_to_call_next_hook_ex() {
+        let mut cfg = Config::default();
+        cfg.snapping.snap_half_left_enabled = false;
+        let chords = Chords::from_config(&cfg);
+        let disabled_chord = Shortcut::parse(&cfg.snapping.snap_half_left).expect("parses");
+
+        // The specific chord produces no match against Chords
+        assert_eq!(
+            match_shortcut(&chords, mods_of(disabled_chord), disabled_chord.vk),
+            None
+        );
+
+        // Keystroke matching the disabled action's stored chord is not recognized
+        // as any Wira Desk action and produces PassToNext (falling through to CallNextHookEx)
+        let mut rt = test_runtime(
+            Shortcut::parse(&cfg.switcher.shortcut).unwrap(),
+            Shortcut::parse(&cfg.switcher.fallback_shortcut).unwrap(),
+        );
+        rt.chords = chords;
+
+        let _ = handle_key_event_with_bypass(&mut rt, VK_LCONTROL, true, |_| false, |_| 0);
+        let _ = handle_key_event_with_bypass(&mut rt, VK_LMENU, true, |_| false, |_| 0);
+        const VK_LEFT: u32 = 0x25;
+        let outcome = handle_key_event_with_bypass(&mut rt, VK_LEFT, true, |_| false, |_| 0);
+        assert_eq!(outcome.disposition, KeyHandleResult::PassToNext);
+        assert!(!outcome.enqueued);
+    }
+
+    #[test]
+    fn a_disabled_field_shares_a_chord_with_an_enabled_field_without_collision() {
+        let mut cfg = Config::default();
+        cfg.snapping.snap_half_bottom = "ctrl+alt+down".to_string();
+        cfg.layout.stack_shortcut = "ctrl+alt+down".to_string();
+
+        // Earlier action disabled, later action enabled:
+        cfg.snapping.snap_half_bottom_enabled = false;
+        cfg.layout.stack_shortcut_enabled = true;
+
+        let chords = load_shortcuts_from_config(0, &cfg);
+        assert_eq!(chords.snap_bottom, None);
+        assert_eq!(chords.stack, Shortcut::parse("ctrl+alt+down"));
+
+        // Earlier action enabled, later action disabled:
+        cfg.snapping.snap_half_bottom_enabled = true;
+        cfg.layout.stack_shortcut_enabled = false;
+
+        let chords2 = load_shortcuts_from_config(0, &cfg);
+        assert_eq!(chords2.snap_bottom, Shortcut::parse("ctrl+alt+down"));
+        assert_eq!(chords2.stack, None);
     }
 }

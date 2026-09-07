@@ -107,7 +107,7 @@ Wira Desk adheres to native Windows 11 Fluent 2 Design and Mica Material design 
 * **Background**: `#15181E`.
 * **Navigation Item**: Width `165 px`, Height `36 px`, Radius `6 px`.
 * **Active Indicator Bar**: Vertical pill bar (Width `3.5 px`, Height `20 px`, Radius `2 px`, Color `#4CC2FF`) positioned at the left edge of the active item.
-* **Panes (5)**: `General`, `Shortcuts`, `Layout & Snapping`, `VM & Exceptions`, `About`.
+* **Panes (5)**: `General`, `Shortcuts`, `Layout`, `VM & Exceptions`, `About`.
 
 ### D. Settings Card Container
 * **Background**: `#20242B`.

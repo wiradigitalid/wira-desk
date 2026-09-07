@@ -6,6 +6,15 @@ export component ToggleSwitch inherits Rectangle {
 
     callback toggled(bool);
 
+    accessible-role: checkbox;
+    accessible-checked: root.checked;
+    accessible-action-default => {
+        if root.enabled {
+            root.checked = !root.checked;
+            root.toggled(root.checked);
+        }
+    }
+
     width: 40px;
     height: 20px;
     border-radius: 10px;

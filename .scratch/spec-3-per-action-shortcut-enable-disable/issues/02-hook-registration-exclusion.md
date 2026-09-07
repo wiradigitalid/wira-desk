@@ -3,7 +3,7 @@ id: SPEC-3-02
 component: window-management
 satisfies: [UC-12, FR-29]
 blocked_by: [SPEC-3-01]
-status: ready-for-agent
+status: done
 tests:
   - hook::tests::a_disabled_action_is_absent_from_chords
   - hook::tests::a_disabled_actions_chord_falls_through_to_call_next_hook_ex
@@ -22,19 +22,26 @@ keystroke — the defect this ticket exists to close.
 
 **Blocked by:** `SPEC-3-01` — needs the sixteen per-action enabled fields to exist in `shared::Config`.
 
-- [ ] `crates/daemon/src/hook.rs`'s `Chords` construction (wherever it builds from a config snapshot) skips
+- [x] `crates/daemon/src/hook.rs`'s `Chords` construction (wherever it builds from a config snapshot) skips
       a disabled field's chord entirely, so it is absent from the struct the same way an unconfigured field
       already is. No change to `match_shortcut` or `unbind_duplicates` themselves — both already operate
       over `Option<Shortcut>`, and a disabled action's chord is simply never placed into the structure they
       read.
-- [ ] A keystroke matching a disabled action's stored chord is not recognized as any Wira Desk action and is
+- [x] A keystroke matching a disabled action's stored chord is not recognized as any Wira Desk action and is
       passed to `CallNextHookEx` unmodified — verified by a test asserting the specific chord produces no
       match against a `Chords` built from a config with that action disabled.
-- [ ] A disabled action sharing a chord with an enabled action produces no collision diagnostic and no
+- [x] A disabled action sharing a chord with an enabled action produces no collision diagnostic and no
       unbinding — the enabled action registers exactly as if the disabled one were not configured at all.
-- [ ] `crates/daemon/src/arrangement/stack.rs`'s planner no longer reads `layout.enable_overlapping_stack`
+- [x] `crates/daemon/src/arrangement/stack.rs`'s planner no longer reads `layout.enable_overlapping_stack`
       (field removed in `SPEC-3-01`); Overlapping Stack's arrangement behavior when its action is *enabled*
       is otherwise unchanged — this ticket only removes the now-redundant planner-level check, matching
       `SPEC-3-01`'s Overlapping Stack field removal so no reference to the retired field survives in either
       crate.
-- [ ] Full test suite green once, not only this ticket's own tests.
+- [x] Full test suite green once, not only this ticket's own tests.
+
+## Panel follow-ups, not return-trip triggers
+
+Both review axes clean. Two non-blocking notes carried to the final report rather than fixed here: `3p.md`
+states 534 tests where the coordinator's independent run on this exact commit shows 533 (progress-tracker
+accuracy, not a code defect); `Chords::from_config` and `load_shortcuts_from_config` hand-encode the same
+16-field mapping in two places — a maintenance note for whoever adds a 17th field, not a ticket defect.

@@ -50,36 +50,50 @@ impl Default for GeneralConfig {
 pub struct SwitcherConfig {
     /// Primary same-app switcher shortcut (e.g. "win+backtick").
     pub shortcut: String,
+    pub shortcut_enabled: bool,
     /// Fallback shortcut (e.g. "alt+backtick").
     pub fallback_shortcut: String,
+    pub fallback_shortcut_enabled: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct SnappingConfig {
     pub snap_half_left: String,
+    pub snap_half_left_enabled: bool,
     pub snap_half_right: String,
+    pub snap_half_right_enabled: bool,
     /// Top half. Added after the original freeze; legacy config without it keeps
     /// every value it holds and gains this default, because every field on this
     /// struct carries `#[serde(default)]`.
     pub snap_half_top: String,
+    pub snap_half_top_enabled: bool,
     /// Bottom half, the complement of `snap_half_top`.
     pub snap_half_bottom: String,
+    pub snap_half_bottom_enabled: bool,
     pub snap_maximize: String,
+    pub snap_maximize_enabled: bool,
     /// Custom percentage snap against the left edge.
     pub snap_percent_left: String,
+    pub snap_percent_left_enabled: bool,
     /// Custom percentage snap against the right edge.
     pub snap_percent_right: String,
+    pub snap_percent_right_enabled: bool,
     /// Custom percentage snap against the top edge.
     pub snap_percent_top: String,
+    pub snap_percent_top_enabled: bool,
     /// Custom percentage snap against the bottom edge.
     pub snap_percent_bottom: String,
+    pub snap_percent_bottom_enabled: bool,
     /// Snap the active window to the left third of the work area.
     pub snap_third_left: String,
+    pub snap_third_left_enabled: bool,
     /// Snap the active window to the middle third of the work area.
     pub snap_third_middle: String,
+    pub snap_third_middle_enabled: bool,
     /// Snap the active window to the right third of the work area.
     pub snap_third_right: String,
+    pub snap_third_right_enabled: bool,
     /// Percentage of work-area width for left-edge snap (default 50).
     pub percent_left: u32,
     /// Percentage of work-area width for right-edge snap (default 50).
@@ -91,32 +105,64 @@ pub struct SnappingConfig {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(default)]
+#[serde(from = "LayoutConfigDe")]
 pub struct LayoutConfig {
-    /// Enable the overlapping stack arrangement. **Defaults to `true`.**
-    ///
-    /// It used to default to `false`, described as a P2 feature, and that was the wrong
-    /// shape for what the flag actually gates: it guards `plan_stack` and nothing else,
-    /// so `false` does not mean "the feature is off" in any way a user can perceive — it
-    /// means pressing the stack shortcut produces an empty plan and **nothing happens, with
-    /// no explanation**. A chord that silently does nothing reads as broken, not as
-    /// disabled.
-    ///
-    /// `true` changes nothing passively either. The arrangement only ever runs when the
-    /// shortcut is pressed, so switching the default on cannot surprise anyone who does
-    /// not press it.
-    pub enable_overlapping_stack: bool,
     /// Width of each window as a percentage of screen width (default 50).
     pub stack_width_percent: u32,
     /// Overlapping stack shortcut. The field name is part of the frozen contract and must
     /// not be renumbered or reinterpreted; its *default* moved to `ctrl+alt+shift+s` (DEC-011)
     /// to free the arrow tier for custom-percentage edge snaps.
     pub stack_shortcut: String,
+    pub stack_shortcut_enabled: bool,
     /// Move the active window to the next monitor. Lives in `[layout]` rather than
     /// `[snapping]` because it arranges *across* screens rather than dividing one, which
     /// keeps the three config sections mapping one-to-one onto the three groups the
     /// Shortcuts pane draws.
     pub move_next_monitor_shortcut: String,
+    pub move_next_monitor_shortcut_enabled: bool,
+}
+
+#[derive(Deserialize)]
+#[serde(default)]
+struct LayoutConfigDe {
+    stack_width_percent: u32,
+    stack_shortcut: String,
+    stack_shortcut_enabled: Option<bool>,
+    move_next_monitor_shortcut: String,
+    move_next_monitor_shortcut_enabled: bool,
+    enable_overlapping_stack: Option<bool>,
+}
+
+impl Default for LayoutConfigDe {
+    fn default() -> Self {
+        let def = LayoutConfig::default();
+        Self {
+            stack_width_percent: def.stack_width_percent,
+            stack_shortcut: def.stack_shortcut,
+            stack_shortcut_enabled: None,
+            move_next_monitor_shortcut: def.move_next_monitor_shortcut,
+            move_next_monitor_shortcut_enabled: def.move_next_monitor_shortcut_enabled,
+            enable_overlapping_stack: None,
+        }
+    }
+}
+
+impl From<LayoutConfigDe> for LayoutConfig {
+    fn from(de: LayoutConfigDe) -> Self {
+        let stack_shortcut_enabled = match (de.stack_shortcut_enabled, de.enable_overlapping_stack)
+        {
+            (Some(enabled), _) => enabled,
+            (None, Some(old)) => old,
+            (None, None) => true,
+        };
+        LayoutConfig {
+            stack_width_percent: de.stack_width_percent,
+            stack_shortcut: de.stack_shortcut,
+            stack_shortcut_enabled,
+            move_next_monitor_shortcut: de.move_next_monitor_shortcut,
+            move_next_monitor_shortcut_enabled: de.move_next_monitor_shortcut_enabled,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -137,7 +183,9 @@ impl Default for SwitcherConfig {
     fn default() -> Self {
         Self {
             shortcut: "win+backtick".to_string(),
+            shortcut_enabled: true,
             fallback_shortcut: "alt+backtick".to_string(),
+            fallback_shortcut_enabled: true,
         }
     }
 }
@@ -146,17 +194,29 @@ impl Default for SnappingConfig {
     fn default() -> Self {
         Self {
             snap_half_left: "ctrl+alt+left".to_string(),
+            snap_half_left_enabled: true,
             snap_half_right: "ctrl+alt+right".to_string(),
+            snap_half_right_enabled: true,
             snap_half_top: "ctrl+alt+up".to_string(),
+            snap_half_top_enabled: true,
             snap_half_bottom: "ctrl+alt+down".to_string(),
+            snap_half_bottom_enabled: true,
             snap_maximize: "ctrl+alt+enter".to_string(),
+            snap_maximize_enabled: true,
             snap_percent_left: "ctrl+alt+shift+left".to_string(),
+            snap_percent_left_enabled: true,
             snap_percent_right: "ctrl+alt+shift+right".to_string(),
+            snap_percent_right_enabled: true,
             snap_percent_top: "ctrl+alt+shift+up".to_string(),
+            snap_percent_top_enabled: true,
             snap_percent_bottom: "ctrl+alt+shift+down".to_string(),
+            snap_percent_bottom_enabled: true,
             snap_third_left: "ctrl+alt+1".to_string(),
+            snap_third_left_enabled: true,
             snap_third_middle: "ctrl+alt+2".to_string(),
+            snap_third_middle_enabled: true,
             snap_third_right: "ctrl+alt+3".to_string(),
+            snap_third_right_enabled: true,
             percent_left: crate::constants::DEFAULT_SNAP_PERCENT,
             percent_right: crate::constants::DEFAULT_SNAP_PERCENT,
             percent_top: crate::constants::DEFAULT_SNAP_PERCENT,
@@ -168,10 +228,11 @@ impl Default for SnappingConfig {
 impl Default for LayoutConfig {
     fn default() -> Self {
         Self {
-            enable_overlapping_stack: true,
-            stack_width_percent: 50,
+            stack_width_percent: crate::constants::DEFAULT_STACK_WIDTH_PERCENT,
             stack_shortcut: "ctrl+alt+shift+s".to_string(),
+            stack_shortcut_enabled: true,
             move_next_monitor_shortcut: "ctrl+alt+shift+enter".to_string(),
+            move_next_monitor_shortcut_enabled: true,
         }
     }
 }
@@ -319,6 +380,80 @@ mod tests {
         assert_eq!(parsed.snapping.snap_third_right, "ctrl+alt+shift+3");
     }
 
+    #[test]
+    fn action_enabled_fields_roundtrip_through_toml() {
+        let mut cfg = Config::default();
+        cfg.switcher.shortcut_enabled = false;
+        cfg.switcher.fallback_shortcut_enabled = false;
+        cfg.snapping.snap_half_left_enabled = false;
+        cfg.snapping.snap_half_right_enabled = false;
+        cfg.snapping.snap_half_top_enabled = false;
+        cfg.snapping.snap_half_bottom_enabled = false;
+        cfg.snapping.snap_maximize_enabled = false;
+        cfg.snapping.snap_third_left_enabled = false;
+        cfg.snapping.snap_third_middle_enabled = false;
+        cfg.snapping.snap_third_right_enabled = false;
+        cfg.layout.move_next_monitor_shortcut_enabled = false;
+        cfg.snapping.snap_percent_left_enabled = false;
+        cfg.snapping.snap_percent_right_enabled = false;
+        cfg.snapping.snap_percent_top_enabled = false;
+        cfg.snapping.snap_percent_bottom_enabled = false;
+        cfg.layout.stack_shortcut_enabled = false;
+
+        let toml = cfg.to_toml_string().unwrap();
+        let parsed = Config::from_toml_str(&toml).unwrap();
+        assert_eq!(cfg, parsed);
+        assert!(!parsed.switcher.shortcut_enabled);
+        assert!(!parsed.switcher.fallback_shortcut_enabled);
+        assert!(!parsed.snapping.snap_half_left_enabled);
+        assert!(!parsed.snapping.snap_half_right_enabled);
+        assert!(!parsed.snapping.snap_half_top_enabled);
+        assert!(!parsed.snapping.snap_half_bottom_enabled);
+        assert!(!parsed.snapping.snap_maximize_enabled);
+        assert!(!parsed.snapping.snap_third_left_enabled);
+        assert!(!parsed.snapping.snap_third_middle_enabled);
+        assert!(!parsed.snapping.snap_third_right_enabled);
+        assert!(!parsed.layout.move_next_monitor_shortcut_enabled);
+        assert!(!parsed.snapping.snap_percent_left_enabled);
+        assert!(!parsed.snapping.snap_percent_right_enabled);
+        assert!(!parsed.snapping.snap_percent_top_enabled);
+        assert!(!parsed.snapping.snap_percent_bottom_enabled);
+        assert!(!parsed.layout.stack_shortcut_enabled);
+    }
+
+    #[test]
+    fn legacy_config_with_enable_overlapping_stack_false_seeds_disabled() {
+        let toml = r#"
+            [layout]
+            enable_overlapping_stack = false
+            stack_width_percent = 60
+        "#;
+        let cfg = Config::from_toml_str(toml).unwrap();
+        assert_eq!(cfg.layout.stack_width_percent, 60);
+        assert!(!cfg.layout.stack_shortcut_enabled);
+
+        // Next save drops the retired key
+        let saved_toml = cfg.to_toml_string().unwrap();
+        assert!(!saved_toml.contains("enable_overlapping_stack"));
+    }
+
+    #[test]
+    fn legacy_config_with_enable_overlapping_stack_true_or_absent_loads_enabled() {
+        let toml_true = r#"
+            [layout]
+            enable_overlapping_stack = true
+        "#;
+        let cfg_true = Config::from_toml_str(toml_true).unwrap();
+        assert!(cfg_true.layout.stack_shortcut_enabled);
+
+        let toml_absent = r#"
+            [layout]
+            stack_width_percent = 50
+        "#;
+        let cfg_absent = Config::from_toml_str(toml_absent).unwrap();
+        assert!(cfg_absent.layout.stack_shortcut_enabled);
+    }
+
     // ── frozen extension contract ─────────────────────────────────
     // Epics 3, 4, and 5 consume these as sibling lanes. They may read them but
     // must not renumber or reinterpret them, so the values are pinned here.
@@ -343,6 +478,18 @@ mod tests {
         assert_eq!(cfg.snap_third_left, "ctrl+alt+1");
         assert_eq!(cfg.snap_third_middle, "ctrl+alt+2");
         assert_eq!(cfg.snap_third_right, "ctrl+alt+3");
+        assert!(cfg.snap_half_left_enabled);
+        assert!(cfg.snap_half_right_enabled);
+        assert!(cfg.snap_half_top_enabled);
+        assert!(cfg.snap_half_bottom_enabled);
+        assert!(cfg.snap_maximize_enabled);
+        assert!(cfg.snap_percent_left_enabled);
+        assert!(cfg.snap_percent_right_enabled);
+        assert!(cfg.snap_percent_top_enabled);
+        assert!(cfg.snap_percent_bottom_enabled);
+        assert!(cfg.snap_third_left_enabled);
+        assert!(cfg.snap_third_middle_enabled);
+        assert!(cfg.snap_third_right_enabled);
         assert_eq!(cfg.percent_left, 50);
         assert_eq!(cfg.percent_right, 50);
         assert_eq!(cfg.percent_top, 50);
@@ -435,11 +582,20 @@ mod tests {
 
     #[test]
     fn frozen_stack_shortcut_default() {
-        assert_eq!(LayoutConfig::default().stack_shortcut, "ctrl+alt+shift+s");
-        assert_eq!(
-            LayoutConfig::default().move_next_monitor_shortcut,
-            "ctrl+alt+shift+enter"
-        );
+        let layout = LayoutConfig::default();
+        assert_eq!(layout.stack_shortcut, "ctrl+alt+shift+s");
+        assert!(layout.stack_shortcut_enabled);
+        assert_eq!(layout.move_next_monitor_shortcut, "ctrl+alt+shift+enter");
+        assert!(layout.move_next_monitor_shortcut_enabled);
+    }
+
+    #[test]
+    fn frozen_switcher_defaults() {
+        let switcher = SwitcherConfig::default();
+        assert_eq!(switcher.shortcut, "win+backtick");
+        assert!(switcher.shortcut_enabled);
+        assert_eq!(switcher.fallback_shortcut, "alt+backtick");
+        assert!(switcher.fallback_shortcut_enabled);
     }
 
     #[test]

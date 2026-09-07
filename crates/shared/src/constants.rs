@@ -229,3 +229,12 @@ pub const MIN_SNAP_PERCENT: u32 = 1;
 
 /// Maximum allowed percentage for custom-percentage edge snap (99%).
 pub const MAX_SNAP_PERCENT: u32 = 99;
+
+/// Default percentage for overlapping stack width (50%).
+pub const DEFAULT_STACK_WIDTH_PERCENT: u32 = 50;
+
+/// Minimum allowed percentage for overlapping stack width (10%).
+pub const MIN_STACK_WIDTH_PERCENT: u32 = 10;
+
+/// Maximum allowed percentage for overlapping stack width (100%).
+pub const MAX_STACK_WIDTH_PERCENT: u32 = 100;

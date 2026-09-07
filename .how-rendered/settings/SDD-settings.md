@@ -41,7 +41,7 @@ The three Logical Components (LCs) operate strictly within the `settings` contai
 
 | LC | type | Responsibility |
 | --- | --- | --- |
-| `LC-settings-shell` | ui-composite | Hosts the retained-mode `Slint` window (`ui/main_window.slint`, compiled by `slint-build`) and its pane components; manages frameless window shell (`no-frame: true`) and 5-pane routing (`General`, `Shortcuts`, `Layout & Snapping`, `VM & Exceptions`, `About`); detects OS theme (`AppsUseLightTheme`) once at startup and sets it on the `Palette` global for two-theme visuals with widened focus outlines; implements first-run onboarding wizard progression; renders save feedback and diagnostic typeface information. |
+| `LC-settings-shell` | ui-composite | Hosts the retained-mode `Slint` window (`ui/main_window.slint`, compiled by `slint-build`) and its pane components; manages frameless window shell (`no-frame: true`) and 5-pane routing (`General`, `Shortcuts`, `Layout`, `VM & Exceptions`, `About`); detects OS theme (`AppsUseLightTheme`) once at startup and sets it on the `Palette` global for two-theme visuals with widened focus outlines; implements first-run onboarding wizard progression; renders save feedback and diagnostic typeface information. |
 | `LC-config-writer` | service | Executes strict pre-persistence shortcut validation; performs atomic file writes (`Config::save`) to `%APPDATA%\WiraDesk\config.toml`; dispatches non-blocking `WM_APP_RELOAD_CONFIG` (0x8001) signals via `PostMessageW` to `WiraDeskDaemonHiddenWindow`. It records the auto-start *preference* only; the scheduled task itself is created and deleted by the daemon (`daemon::autostart`) when it reloads config. |
 | `LC-shortcut-capturer` | control | Implements interactive key interception within the Settings window; while a field is `Listening`, the daemon's own hook report (drained from a channel by a 20ms Slint timer) is the source of truth for the chord — Slint's `key-pressed` text never arrives for a chord the Windows shell owns, so it survives only as a marked fallback for when no daemon is running (`DEC-004`); enforces modifier requirements; exposes live first-class `Listening` state and screen reader announcements via Slint's accessibility tree. |
 
@@ -449,7 +449,7 @@ Changing `WM_APP_RELOAD_CONFIG` value requires synchronized update in `shared` a
 
 `LC-settings-shell` is the Slint presentation layer for `wiradesk-settings.exe`: the declared UI in `ui/*.slint` (compiled by `slint-build`) plus the Rust-side application state and model it binds to. It owns:
 
-1. Application frameless shell (`no-frame: true`), navigation tabs (General, Shortcuts, Layout & Snapping, VM & Exceptions, About), and adaptive light/dark theming (FR-19, AD-11a).
+1. Application frameless shell (`no-frame: true`), navigation tabs (General, Shortcuts, Layout, VM & Exceptions, About), and adaptive light/dark theming (FR-19, AD-11a).
 2. Wiring shortcut fields to `LC-shortcut-capturer` listening mode (FR-18).
 3. Tab order across all interactive controls (FR-20, LBR-ST-5).
 4. First-run onboarding panels when launched with `--onboarding` (FR-17, UC-5).

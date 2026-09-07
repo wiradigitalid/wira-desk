@@ -47,6 +47,8 @@ windows-sys = { version = "0.52", features = [
 embed-resource = "3.0"
 slint-build = "1.17"
 
+[dev-dependencies]
+i-slint-backend-testing = "1.17"
 
 [lints]
 workspace = true

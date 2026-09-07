@@ -223,3 +223,58 @@ decisions:
       - .control/decisions/DEC-015-the-hygiene-gate-permits-internal-ids-under-scratch.md
       - .control/registry/decisions.yaml
       - scripts/verify-public-export.ps1
+
+  - id: DEC-016
+    title: Autopilot mandate for SPEC-2/SPEC-3 delivery
+    status: applied
+    file: decisions/DEC-016-autopilot-mandate-for-spec-2-spec-3-delivery.md
+    created: '2026-09-07'
+    touches:
+      - .control/decisions/DEC-016-autopilot-mandate-for-spec-2-spec-3-delivery.md
+      - .control/memlog/autopilot-DEC-016.md
+      - .control/registry/decisions.yaml
+      - .control/registry/specs.yaml
+      - .how/_platform/design-system.md
+      - .how/_platform/inventory-db.md
+      - .how/settings/04-components/LC-settings-shell.md
+      - .how/settings/SDD-settings.md
+      - .scratch/builder-brief-spec-2-01-fix1.md
+      - .scratch/builder-brief-spec-2-01.md
+      - .scratch/builder-brief-spec-3-01.md
+      - .scratch/builder-brief-spec-3-02.md
+      - .scratch/smoke-test-dec-016.md
+      - .scratch/spec-2-shortcuts-pane-fixes/issues/01-commit-on-departure-and-stepper-parity.md
+      - .scratch/spec-3-per-action-shortcut-enable-disable/issues/01-per-action-enable-flag.md
+      - .scratch/spec-3-per-action-shortcut-enable-disable/issues/02-hook-registration-exclusion.md
+      - .what/business-rules.md
+      - 3p.md
+      - Cargo.lock
+      - crates/daemon/src/arrangement/mod.rs
+      - crates/daemon/src/arrangement/stack.rs
+      - crates/daemon/src/config.rs
+      - crates/daemon/src/hook.rs
+      - crates/settings/Cargo.toml
+      - crates/settings/build.rs
+      - crates/settings/src/app.rs
+      - crates/settings/src/layout_pane_slint_snapshot.rs
+      - crates/settings/src/main.rs
+      - crates/settings/src/persistence.rs
+      - crates/settings/src/shortcut_row_slint_snapshot.rs
+      - crates/settings/src/theme.rs
+      - crates/settings/ui/components/shortcut_row.slint
+      - crates/settings/ui/components/toggle_switch.slint
+      - crates/settings/ui/main_window.slint
+      - crates/settings/ui/panes/layout_pane.slint
+      - crates/settings/ui/panes/shortcuts_pane.slint
+      - crates/shared/src/config.rs
+      - crates/shared/src/constants.rs
+    mandate:
+      from_gate: G5
+      scope: all
+      parked: [ad-n]
+      smoke_test: agent  # claude-byok CLI only (CLAUDE_CONFIG_DIR=~/.claude-byok, headless), never the coordinator or the human owner
+      loop: 10m  # rides cron job 3ef639b3 (this session), no second loop started
+      expires: '2026-09-14'
+      run_branch: autopilot/DEC-016
+      worktree: ../wira-desk-autopilot  # sibling of the main checkout; `git worktree list` from there finds its actual path
+      ledger: .control/memlog/autopilot-DEC-016.md

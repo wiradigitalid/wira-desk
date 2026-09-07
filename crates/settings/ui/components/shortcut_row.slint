@@ -1,4 +1,5 @@
 import { Palette, Typography } from "../theme.slint";
+import { ToggleSwitch } from "toggle_switch.slint";
 
 // One editable action.
 //
@@ -17,10 +18,39 @@ export component ShortcutRow inherits Rectangle {
     in property <bool> can_swap: false;
     in property <bool> has_percent: false;
     in property <int> percent: 50;
+    in-out property <string> typed_text: "\{root.percent}";
+    in property <bool> enabled: true;
 
     callback capture_clicked();
     callback swap_clicked();
     callback percent_changed(int);
+    callback editing_changed(int);
+    callback toggle_enabled(bool);
+
+    function current_value() -> int {
+        if root.typed_text.is-float() {
+            return Math.round(root.typed_text.to-float());
+        }
+        return root.percent;
+    }
+
+    public function step_plus() {
+        let base = root.current_value();
+        let next = (base >= 1 && base < 99) ? (base + 1) : base;
+        root.typed_text = "\{next}";
+        root.percent_changed(next);
+    }
+
+    public function step_minus() {
+        let base = root.current_value();
+        let next = (base > 1 && base <= 99) ? (base - 1) : base;
+        root.typed_text = "\{next}";
+        root.percent_changed(next);
+    }
+
+    changed percent => {
+        root.typed_text = "\{root.percent}";
+    }
 
     HorizontalLayout {
         padding-left: 16px;
@@ -63,6 +93,16 @@ export component ShortcutRow inherits Rectangle {
                 wrap: no-wrap;
                 overflow: elide;
             }
+
+            if !root.enabled : Text {
+                text: "Disabled";
+                font-family: Typography.font_family;
+                font-size: 11.5px;
+                font-weight: 600;
+                color: Palette.text_tertiary;
+                wrap: no-wrap;
+                overflow: elide;
+            }
         }
 
         // Right Actions: Swap button + Keycap button
@@ -96,6 +136,9 @@ export component ShortcutRow inherits Rectangle {
 
                     accessible-role: button;
                     accessible-label: "Decrease snap percentage";
+                    accessible-action-default => {
+                        root.step_minus();
+                    }
 
                     Text {
                         text: "−";
@@ -107,7 +150,7 @@ export component ShortcutRow inherits Rectangle {
                     }
                     pct_minus_touch := TouchArea {
                         clicked => {
-                            root.percent_changed(Math.clamp(root.percent - 1, 1, 99));
+                            root.step_minus();
                         }
                     }
                 }
@@ -120,6 +163,13 @@ export component ShortcutRow inherits Rectangle {
                     background: Palette.bg_subtle;
                     border-width: 1px;
                     border-color: pct_input.has-focus ? Palette.accent_primary : Palette.stroke_card;
+
+                    accessible-role: button;
+                    accessible-label: "Snap percentage field";
+                    accessible-action-default => {
+                        pct_input.focus();
+                        pct_input.select-all();
+                    }
 
                     pct_field_touch := TouchArea {
                         clicked => {
@@ -134,7 +184,7 @@ export component ShortcutRow inherits Rectangle {
 
                         pct_input := TextInput {
                             width: 26px;
-                            text: "\{root.percent}";
+                            text <=> root.typed_text;
                             input-type: number;
                             single-line: true;
                             font-family: Typography.font_mono;
@@ -146,23 +196,46 @@ export component ShortcutRow inherits Rectangle {
 
                             accessible-role: text;
                             accessible-label: "Snap percentage input";
+                            accessible-action-set-value(val) => {
+                                root.typed_text = val;
+                                if val.is-float() {
+                                    root.editing_changed(Math.round(val.to-float()));
+                                }
+                            }
+
+                            edited => {
+                                if root.typed_text.is-float() {
+                                    root.editing_changed(Math.round(root.typed_text.to-float()));
+                                }
+                            }
 
                             accepted => {
-                                if self.text.is-float() {
-                                    root.percent_changed(Math.round(self.text.to-float()));
+                                if root.typed_text.is-float() {
+                                    root.percent_changed(Math.round(root.typed_text.to-float()));
                                 } else {
-                                    self.text = "\{root.percent}";
+                                    root.typed_text = "\{root.percent}";
                                 }
                                 self.clear-focus();
                             }
                             changed has-focus => {
                                 if !self.has-focus {
-                                    if self.text.is-float() {
-                                        root.percent_changed(Math.round(self.text.to-float()));
+                                    if root.typed_text.is-float() {
+                                        root.percent_changed(Math.round(root.typed_text.to-float()));
                                     } else {
-                                        self.text = "\{root.percent}";
+                                        root.typed_text = "\{root.percent}";
                                     }
                                 }
+                            }
+                            key-pressed(event) => {
+                                if event.text == Key.Tab || event.text == Key.Backtab {
+                                    if root.typed_text.is-float() {
+                                        root.percent_changed(Math.round(root.typed_text.to-float()));
+                                    } else {
+                                        root.typed_text = "\{root.percent}";
+                                    }
+                                    return reject;
+                                }
+                                accept
                             }
                         }
 
@@ -188,6 +261,9 @@ export component ShortcutRow inherits Rectangle {
 
                     accessible-role: button;
                     accessible-label: "Increase snap percentage";
+                    accessible-action-default => {
+                        root.step_plus();
+                    }
 
                     Text {
                         text: "+";
@@ -199,7 +275,7 @@ export component ShortcutRow inherits Rectangle {
                     }
                     pct_plus_touch := TouchArea {
                         clicked => {
-                            root.percent_changed(Math.clamp(root.percent + 1, 1, 99));
+                            root.step_plus();
                         }
                     }
                 }
@@ -243,7 +319,7 @@ export component ShortcutRow inherits Rectangle {
                 width: max(135px, lbl.width + 24px);
                 height: 30px;
                 border-radius: 6px;
-                background: is_listening ? Palette.accent_primary : (has_conflict ? Palette.bg_conflict_keycap : Palette.bg_keycap);
+                background: is_listening ? Palette.accent_primary : (has_conflict ? Palette.bg_conflict_keycap : (root.enabled ? Palette.bg_keycap : Palette.bg_subtle));
                 border-width: 1px;
                 border-color: is_listening ? Palette.accent_primary : (has_conflict ? Palette.signal_warning : Palette.stroke_card);
 
@@ -264,7 +340,7 @@ export component ShortcutRow inherits Rectangle {
                     font-family: Typography.font_family;
                     font-size: 12.5px;
                     font-weight: 600;
-                    color: is_listening ? #FFFFFF : (has_conflict ? Palette.signal_warning : Palette.text_primary);
+                    color: is_listening ? #FFFFFF : (has_conflict ? Palette.signal_warning : (root.enabled ? Palette.text_primary : Palette.text_tertiary));
                     x: (parent.width - self.width) / 2 + (root.is_listening ? 6px : 0px);
                     y: (parent.height - self.height) / 2;
                 }
@@ -272,6 +348,12 @@ export component ShortcutRow inherits Rectangle {
                 btn_touch := TouchArea {
                     clicked => { root.capture_clicked(); }
                 }
+            }
+
+            ToggleSwitch {
+                checked: root.enabled;
+                accessible-label: "Enable " + root.title;
+                toggled(val) => { root.toggle_enabled(val); }
             }
         }
 
