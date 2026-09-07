@@ -287,6 +287,7 @@ rtm:
   release: 0.5.0
   test:
   - shortcut_row_slint_snapshot::tests::a_real_keystroke_sequence_commits_a_typed_percentage
+  - shortcut_row_slint_snapshot::tests::a_real_keystroke_sequence_out_of_range_is_refused
   status: ready-for-agent
   exempt: false
   green: false
@@ -792,6 +793,7 @@ rtm:
   release: 0.5.0
   test:
   - shortcut_row_slint_snapshot::tests::a_real_keystroke_sequence_commits_a_typed_percentage
+  - shortcut_row_slint_snapshot::tests::a_real_keystroke_sequence_out_of_range_is_refused
   status: ready-for-agent
   exempt: false
   green: false

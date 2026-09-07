@@ -653,8 +653,12 @@ specs:
         component: settings
         satisfies: [UC-4]
         depends_on: [SPEC-4-03, SPEC-4-05]
+        # Both written by the coordinator as Step 1 and seen red at the right assertions: typing
+        # "70" leaves the field reading "50", which is DEF-5 itself. The refusal test is the half a
+        # fix could quietly drop while looking correct.
         tests:
           - shortcut_row_slint_snapshot::tests::a_real_keystroke_sequence_commits_a_typed_percentage
+          - shortcut_row_slint_snapshot::tests::a_real_keystroke_sequence_out_of_range_is_refused
       # Opened 2026-09-08 from the Spec-axis panel on SPEC-4-03, which found DEF-9: `key_handler`
       # is a childless SIBLING of the content, so keys reach Rust only while it holds focus. The
       # nesting and one route into it predate SPEC-4-03, and that ticket's two return trips were

@@ -8,27 +8,23 @@ date: 2026-09-07
 
 ## Resume
 
-- Iteration 18 — **`SPEC-4-05` closed** (`DEF-9` fixed at `d26c416`, two coordinator guards on top).
-  Suite 556/0/2, clippy and fmt clean, validators GREEN.
-- Run branch: `autopilot/DEC-017` at `0fc6e8d`; `ticket/SPEC-4-05` merges into it this iteration
-  and is deleted. Not pushed, no PR — first push at spec close.
-- Stopped at: ticket closed; merge, then `SPEC-4-04`, the last ticket in the spec.
+- Iteration 18 — `SPEC-4-05` **merged** into the run branch at `13b3781`, verified green on the
+  merge commit (556/0/2), branch deleted. `SPEC-4-04` Step 1 done and dispatched.
+- Run branch: `autopilot/DEC-017` at `13b3781`; work on `ticket/SPEC-4-04`, the **last ticket in
+  the spec**. Not pushed, no PR — first push at spec close.
+- Stopped at: `SPEC-4-04` dispatch out.
 - Blocked: —
 - Parked: —
-- **Next, in order:** merge `ticket/SPEC-4-05`, verify the merge commit green, cut
-  `ticket/SPEC-4-04`, apply the drafted `DEF-5` tests and **see them red** — Step 1 is the
-  coordinator's on that ticket — commit them, then dispatch `claude-byok` with the brief.
-- `SPEC-4-04` inputs are ready: tests at `<scratchpad>/spec404_tests.py`, brief at
-  `<scratchpad>/builder-brief-spec-4-04.draft.md`. Its first dependency check is closed: trip 1 did
-  not move `"Snap percentage field"` or `"Snap percentage input"`, so those tests will fail on
-  `DEF-5` itself rather than at `.expect(...)`.
-- No panel for these tickets unless a diff earns it: `settings` is `risk_accepted: medium`, so
-  `wdi-build` makes the two-reviewer panel available rather than required, and neither diff touches
-  money, personal data, or a third party.
-- After `SPEC-4-04`: spec close, `wdi-reconcile`, the stale `review-trace` on
-  `.how/settings/SDD-settings.md`, first push, one draft PR, CI, smoke test (`claude-byok` only —
-  script drafted at `<scratchpad>/finish-inventory-and-smoke.md`), then Finish.
-- Build lock: mine, idle. No builder out.
+- **IN FLIGHT — do NOT re-dispatch:** `claude-byok` on `SPEC-4-04` (`DEF-5`), brief at
+  `.scratch/builder-brief-spec-4-04.md`. Two failing tests are handed down, written by the
+  coordinator and seen red: typing "70" leaves the field reading "50".
+- **Build lock: SHUT.** The builder holds it.
+- After this ticket: spec close, `wdi-reconcile` over the gate scope, the stale `review-trace` on
+  `.how/settings/SDD-settings.md`, first push, one draft PR, CI on the pushed head, smoke test
+  (`claude-byok` only — script at `<scratchpad>/finish-inventory-and-smoke.md`), then § Finish.
+  `SPEC-4` is the only open spec, so its close is the run's Done condition.
+- For the final report: `FR-8`, `FR-9` and `FR-24` sit in no spec's `fr:` list yet are implemented
+  in code — a traceability gap, evidence in `<scratchpad>/finish-inventory-and-smoke.md`.
 
 ## Decisions
 
@@ -93,3 +89,5 @@ date: 2026-09-07
 | Iter 18 | Coordinator's own testability claim | **Corrected in four places.** A test CAN reach the keyboard path by registering its own `on_key_pressed_event`; I had recorded the opposite. Two guards written, both seen red. | Leaving "untestable" standing and relying on smoke steps alone | An applied `DEC-`'s only signal stays unguarded, and the next reader inherits a false limit | `DEF-8`, `DEF-9`, `main_window.slint`, `specs.yaml` |
 | Iter 18 | `DEF-8`'s scope | **Narrowed, not closed**: the markup contract is guarded now, but `main()`'s registration and its handler — Key Check recording, capture branch, Escape cancel — are still untested. | Closing it as solved by the two new guards | The handler's behaviour looks covered when only the forwarding is | `.control/registry/defects.yaml` |
 | Iter 18 | `SPEC-4-05`'s Escape criterion | Left **open and marked smoke-only**: what `main()`'s handler does with a bubbled key is behind `DEF-8`. | Ticking it on the strength of the bubbling guard | A criterion reads satisfied when only its precondition is | ticket 05 |
+| Iter 18 | `wdi-build` Step 1 for `SPEC-4-04` | Wrote both `DEF-5` tests myself and saw them red at the right assertions — the mandate gives unit tests to the coordinator, so the builder gets a red suite handed down rather than writing its own. | Letting the builder encode the criteria, as `SPEC-4-03` had to | A defect's test is written by whoever also fixes it | `shortcut_row_slint_snapshot.rs`, `specs.yaml` |
+| Iter 18 | `SPEC-4-04`'s search space | Told the builder that `SPEC-4-05`'s nesting did **not** fix `DEF-5` — tests re-run after that merge are still red — so one of the ticket's five candidates is ruled out before it starts. | Letting it rediscover that by root-causing against a tree that had just changed | A root-cause pass spends time on a branch already excluded | `.scratch/builder-brief-spec-4-04.md` |

@@ -2,10 +2,11 @@
 id: SPEC-4-04
 component: settings
 satisfies: [UC-4]
-blocked_by: [SPEC-4-03]
+blocked_by: [SPEC-4-03, SPEC-4-05]
 status: ready-for-agent
 tests:
   - shortcut_row_slint_snapshot::tests::a_real_keystroke_sequence_commits_a_typed_percentage
+  - shortcut_row_slint_snapshot::tests::a_real_keystroke_sequence_out_of_range_is_refused
 ---
 
 # 04: Defect DEF-5 — typed digits do not reach a percentage field's value
