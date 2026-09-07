@@ -249,6 +249,17 @@ pub const SHORTCUT_CONFLICT_SWAP: ControlSemantics = ControlSemantics {
     description: "Swaps shortcut keys between the two conflicting actions.",
 };
 
+// The two constants below are PREFIXES, not names any element carries. `shortcut_keycap_label`
+// and `shortcut_description_label` build the rendered name per row, so the tree holds
+// "Shortcut keycap: Snap to left edge" and never "Shortcut keycap".
+//
+// That matters for what the register tests below actually prove about these two: iterating `ALL`
+// shows the two PREFIXES are unique, which is not the property `DEF-2` needs. Per-row uniqueness
+// of the rendered names comes from every action having a distinct label, which
+// `app::tests::every_field_has_a_distinct_key_label_and_description` is what holds — the
+// rendered labels are that label with a fixed prefix, so distinct labels give distinct names.
+// Their `description` fields have no reader: `shortcut_row.slint` binds the row's own
+// `root.description` to `accessible-description`, not these.
 pub const SHORTCUT_KEYCAP: ControlSemantics = ControlSemantics {
     name: "Shortcut keycap",
     description: "Button displaying the current shortcut chord; click to record a new shortcut.",

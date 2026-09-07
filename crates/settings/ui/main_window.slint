@@ -147,6 +147,21 @@ export component MainWindow inherits Window {
     forward-focus: key_handler;
 
     key_handler := FocusScope {
+        // The forward happens BEFORE the reject below, and that order is load-bearing.
+        //
+        // `DEC-005` (applied) reports the key check as a correlation of what the daemon's hook saw
+        // against what THIS WINDOW saw. Returning `reject` for Tab without forwarding first makes
+        // the window's half of that pair false, and the table in `DEC-005` then reads hook-yes /
+        // window-no as "another application claimed it" — a fabricated third party. Forwarding
+        // also keeps Tab bindable as a chord: `map_slint_key` maps it in two arms on purpose.
+        //
+        // The `listening_field == -1` guard is what stops a Tab pressed mid-capture from being
+        // recorded as a chord AND throwing focus out of the row.
+        //
+        // Nothing in the suite reaches this: `on_key_pressed_event` is registered in `main()`,
+        // not in `bind_callbacks`, so the callback is unset in every test and this forward is a
+        // silent no-op there. `DEF-8` carries the seam move that would make it testable. Until
+        // then this comment is the guard, so do not simplify it back to an unconditional `accept`.
         key-pressed(event) => {
             root.key_pressed_event(
                 event.text,

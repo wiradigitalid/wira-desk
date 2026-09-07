@@ -420,3 +420,81 @@ defects:
       and MUST NOT be blamed for it. This is deliberately NOT `SPEC-4-03`'s: its two return trips
       were spent, and moving production wiring is not a coordinator's unit-test work.
     owner: repo owner
+
+  - id: DEF-9
+    title: Keyboard events reach the Settings Rust layer only while the window's own FocusScope holds focus
+    status: open
+    severity: high
+    component: settings
+    violates: [DEC-005]
+    found_in: "0.4.0"
+    found_by: Spec-axis review panel on SPEC-4-03, 2026-09-08
+    tests: []
+    summary: >-
+      `crates/settings/ui/main_window.slint` declares `key_handler := FocusScope` (line 149) as a
+      SIBLING of the outer `Rectangle` that holds every pane (line 179) -- both are direct children
+      of the `Window`, and `key_handler` has no children of its own. Slint delivers a key event to
+      the focused element and bubbles it up that element's ANCESTORS, so a sibling subtree never
+      receives it. `root.key_pressed_event(...)` therefore fires only while `key_handler` itself
+      holds focus, and it is the sole entry point for four behaviours: the Key Check live
+      diagnostic `DEC-005` specifies, Escape-cancels-capture, `CaptureState::Listening` chord
+      capture, and onboarding step 2's Win+backtick.
+    why_it_hid: >-
+      `MainWindow` sets `forward-focus: key_handler`, so a freshly opened window has focus there
+      and everything works. Nothing took focus away in normal use until a control asked for it,
+      and the only pre-existing route was `pct_input.focus()` in `shortcut_row.slint` -- clicking
+      a percentage field. Both the structure and that route predate `SPEC-4-03` (verified at
+      `0c6f405~1`), so this is not a regression that ticket introduced. What that ticket changed is
+      reachability: making `key_handler` reject Tab so focus traversal runs means ONE Tab press now
+      moves focus to a row's description block, and it is the intended behaviour of its own
+      criterion 2. No test could see any of it -- see `DEF-8`, which is why.
+    impact: >-
+      Press Tab once in Settings, then click a keycap to rebind a shortcut: the row sits in
+      "Listening..." forever, no chord is ever recorded, and Escape cannot cancel it. The Key Check
+      band goes blind at the same moment, and because `DEC-005` reads hook-saw against window-saw,
+      a chord pressed in that state reports as "another application claimed it" -- a fabricated
+      third party, which is the one verdict `DEC-005` exists to refuse. The same happens after
+      clicking any percentage field, which is the route that already existed.
+    fix_direction: >-
+      Nest the outer `Rectangle` INSIDE `key_handler` so every unconsumed key bubbles up to it,
+      rather than leaving it a childless sibling. Keep the Tab traversal `SPEC-4-03` added and
+      re-check it afterwards: `description_renders_as_a_tooltip_not_a_visible_line` must stay
+      green, and the `listening_field == -1` guard must still keep a mid-capture Tab out of focus
+      traversal. Verification cannot be a `#[test]` until `DEF-8`'s seam move lands, so the two
+      smoke steps in `SPEC-4-03`'s Amendment 4 MUST be re-run from a state where Tab has already
+      moved focus -- both of them start from a fresh window today, which is exactly the state that
+      still works.
+    owner: repo owner
+
+  - id: DEF-10
+    title: The publication gate cannot see .slint, and five findings its own pattern would report already sit there
+    status: open
+    severity: low
+    component: settings
+    violates: [NFR-4]
+    found_in: "0.4.0"
+    found_by: Standards-axis review panel on SPEC-4-03, 2026-09-08
+    tests: []
+    summary: >-
+      `scripts/verify-public-export.ps1`'s `$textExtensions` (line 61) lists nineteen extensions
+      and omits `.slint`, so the entire Slint UI layer is never scanned by the gate `AGENTS.md`
+      names as the enforcement of what may appear in this repository. It is not hypothetical: the
+      gate's own `$checkLanguage` pattern would report five findings in
+      `crates/settings/ui/components/key_check.slint` today, at lines 4, 5, 18, 49 and 172 -- e.g.
+      `// harus juga ada sebagai teks -- AccessKit tidak melihat warna.`
+    why_it_hid: >-
+      The omission is invisible from either side: the gate reports a clean run because it never
+      opened the files, and the files look fine because nothing ever complained about them. Three
+      `.slint` files were changed during `SPEC-4-03` and none was checked; that diff happens to be
+      clean, measured pattern by pattern, so even a careful reviewer would have seen no symptom.
+    impact: >-
+      A whole file type in product source is outside the only automated check on publication
+      hygiene, and it is the file type this product's entire user interface is written in. The five
+      existing findings are comments rather than anything sensitive, so nothing is leaking today --
+      the cost is that the gate's green means less than it claims.
+    fix_direction: >-
+      Add `.slint` to `$textExtensions`, then fix what the gate reports -- translate those five
+      comments. MUST NOT widen or exempt a pattern to make the findings disappear: `AGENTS.md`
+      names that as the failure mode the file exists to prevent, so the extension going in and the
+      comments being fixed are one change, not two.
+    owner: repo owner

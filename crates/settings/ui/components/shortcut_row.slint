@@ -10,8 +10,17 @@ import { ToggleSwitch } from "toggle_switch.slint";
 //
 // The description used to be one of those texts and was the one that overflowed, so it now
 // lives in the tooltip below instead, where wrapping is free because the tooltip is
-// free-positioned rather than a layout child. The row is therefore one line tall, at the
-// `min-height` floor.
+// free-positioned rather than a layout child.
+//
+// What pins the row's height, now that the description is out of it and `min-height: 50px` has
+// been deleted as inert: the right-hand cluster's 30px keycap plus this layout's 10px top and
+// 10px bottom padding. Measured row pitch is 51px (50px + the 1px divider).
+//
+// The row is NOT one line tall in general, and an earlier version of this comment said so
+// wrongly. Two states put a second line in `title_block` and the row grows to fit it, which is
+// correct behaviour rather than the old defect: a conflict row and a disabled row both measure
+// 52.5px. What the old defect was is different — text drawing OUTSIDE a row whose height had
+// already been computed — and that is what keeping each text single-line still prevents.
 //
 // The mis-measurement above was re-confirmed while testing this change, and it is the reason a
 // geometry test cannot see the defect: with the wrapping description put back, the row height
@@ -125,16 +134,25 @@ export component ShortcutRow inherits Rectangle {
             }
         }
 
-        // Right Actions: Swap button + Keycap button
+        // Right Actions: percentage stepper (where present) + Swap button + Keycap + enable toggle
         //
-        // Wrapped in a centring VerticalLayout because the buttons must sit on the row's
-        // vertical middle whatever the row's height is — which is no longer the description's
-        // to decide, but is still the conflict line's, and still the `min-height` floor's.
+        // This outer `alignment: center` positions the whole cluster within the row. It is worth
+        // knowing what it does and does not hold, because a previous version of this comment
+        // credited it with the guard and that was wrong, measured both ways:
         //
-        // The previous attempt set `y: (parent.height - 30px) / 2` on each button, which could
+        //  - Deleting it changes nothing on a one-line row, and on a two-line row it moves the
+        //    cluster 1.5px (centre 215.5 -> 214) without ever separating keycap from toggle. No
+        //    test fails either way.
+        //  - The guard is the INNER `VerticalLayout { alignment: center }` around the
+        //    `ToggleSwitch` further down. Delete that one and the 20px toggle top-aligns in the
+        //    30px cluster: keycap centre 205, toggle centre 200, and
+        //    `control_cluster_and_toggle_share_one_vertical_centre` goes red on a 5px gap against
+        //    its 1px tolerance. Those are the same two numbers the original defect measured.
+        //
+        // The attempt before that set `y: (parent.height - 30px) / 2` on each button, which could
         // not work: a layout positions its own children, so `y` on a layout child is discarded.
-        // That is why the keycap sat high. `control_cluster_and_toggle_share_one_vertical_centre`
-        // is what holds this now — do not replace the layout with a `y:` expression again.
+        // That is why the keycap sat high. Do not go back to a `y:` expression — but do not
+        // expect this outer line to catch you either.
         VerticalLayout {
             alignment: center;
             horizontal-stretch: 0;

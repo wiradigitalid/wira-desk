@@ -8,25 +8,24 @@ date: 2026-09-07
 
 ## Resume
 
-- Iteration 13 — `SPEC-4-03` **return trip 2 verified and accepted** (`741ed49`, twelve lines in
-  `main_window.slint` plus its tracker entry). Both return trips are now spent. The **two-axis
-  panel is running** — owed since two fix rounds landed without one.
-- Run branch: `autopilot/DEC-017` at `398a362`; ticket work on `ticket/SPEC-4-03`, cut from it,
-  merges back only green. Not pushed, no PR — first push at spec close.
-- Stopped at: waiting on the panel; ticket amendment held so the panel's findings and the
-  coordinator's own correction land in one edit.
+- Iteration 15 — **`SPEC-4-03` is closed**: both panel axes adjudicated, every acceptance criterion
+  ticked, `status: done`. Suite 554/0/2, clippy and fmt clean, validators GREEN.
+- Run branch: `autopilot/DEC-017` at `398a362` until this iteration's merge; `ticket/SPEC-4-03`
+  merges into it now and is deleted. Not pushed, no PR — first push at spec close.
+- Stopped at: ticket closed, merge next, then the `SPEC-4-05` dispatch.
 - Blocked: —
 - Parked: —
-- **Next:** adjudicate the panel by reading its cited lines, land Amendment 5, close the ticket,
-  merge `ticket/SPEC-4-03` into the run branch, then `SPEC-4-04`.
-- **The cap is spent.** A genuine must-fix from this panel makes `SPEC-4-03` **Blocked** and
-  recorded, not a third trip; `SPEC-4-04` is then the next runnable row.
-- `SPEC-4-04` is ready to start: its two failing tests are drafted at
-  `<scratchpad>/spec404_tests.py` and its builder brief at
-  `<scratchpad>/builder-brief-spec-4-04.draft.md`, both pending the two dependency checks written
-  at the brief's end.
-- Build lock: mine, but held idle while the two reviewers read the worktree — they were told to run
-  no cargo at all, and the coordinator runs none either until they return.
+- **Next:** merge `ticket/SPEC-4-03` into the run branch, verify the suite on the merge commit, cut
+  `ticket/SPEC-4-05`, write its builder brief, dispatch `claude-byok`.
+- **Ticket order changed this iteration:** `SPEC-4-05` (new, `DEF-9`) runs **before** `SPEC-4-04`,
+  and `SPEC-4-04`'s `depends_on` now names it. `SPEC-4-04`'s two failing tests stay drafted at
+  `<scratchpad>/spec404_tests.py` with its brief at
+  `<scratchpad>/builder-brief-spec-4-04.draft.md`; re-read them after `SPEC-4-05` lands, because
+  that ticket changes which element receives a key.
+- Follow-ups carried on the spec, not lost: the width test's bound is the window edge rather than
+  the pane's content edge; the scroll helper is still not shared into
+  `shortcut_row_slint_snapshot.rs`; the tooltip `Rectangle` declares a width but no height.
+- Build lock: mine, idle. No builder out.
 
 ## Decisions
 
@@ -81,3 +80,9 @@ date: 2026-09-07
 | Iter 13 | Coordinator's own Amendment 4 | **Corrected the reason** the Tab path has no test. It is not that keys never reach `key_handler` — they do — but that `on_key_pressed_event` is registered in `main()` and absent from `bind_callbacks`, so the callback is unset in every test. | Leaving the wrong cause standing, since the conclusion happened to be right | The next reader blames the harness and stops looking | ticket Amendment 5, `DEF-8` |
 | Iter 13 | The keyboard path's coverage | Filed **`DEF-8`** rather than fixing it here: `DEC-005`'s whole correlation table has no automated guard because the callbacks live in `main()`. | Folding a production-wiring move into `SPEC-4-03` past its cap | An applied `DEC-`'s behaviour stays unguarded until the row is picked up | `.control/registry/defects.yaml` |
 | Iter 13 | Panel timing | Ran the panel **after** trip 2 rather than per trip, and scoped it to the whole ticket diff. | Two panels, one per trip, on a moving tree | A trip-1 finding is only caught one round later than it could have been | `<scratchpad>/panel-spec-4-03-rerun.md` |
+| Iter 15 | `wdi-build` Step 3, panel adjudication | The Spec axis's `key_handler` finding is **real but pre-existing** — sibling nesting and `pct_input.focus()` both verified at `0c6f405~1` — so it is a follow-up by the list, filed as `DEF-9` (high) with its own ticket rather than a third return trip. | Blocking `SPEC-4-03` at the cap, which would also block `SPEC-4-04` and end the run with the spec incomplete | A high-severity defect rides one ticket later than it could have | `DEF-9`, `SPEC-4-05` |
+| Iter 15 | Criterion 6's reading | Read it as satisfied: its own text scopes it to *"not the pane's own vertical scroll mechanics"*, and the band is still pinned. Ticked, with `DEF-9` named beside it. | Treating the band's keyboard function as the criterion, which would make it a must-fix | The ticket closes over a criterion a reader may read more broadly | ticket Amendment 5 |
+| Iter 15 | Ticket order in `SPEC-4` | `SPEC-4-05` runs **before** `SPEC-4-04`: `DEF-5`'s candidate list includes whether a click lands focus on `pct_input`, and `SPEC-4-05` changes which element receives a key. | Running `SPEC-4-04` first, as originally sequenced | A root-cause pass gets done against a focus tree about to change, and repeated | `specs.yaml` |
+| Iter 15 | `SPEC-4-05`'s `tests:` | Named the existing mutation-verified `description_renders_as_a_tooltip_not_a_visible_line` as its regression guard, since `ticket-has-test` is red on an empty list and the new behaviour is untestable until `DEF-8`. | Inventing a test through the accessible layer to satisfy the validator | The validator is satisfied by a guard that watches the old behaviour, not the new | `specs.yaml`, ticket 05 |
+| Iter 15 | Standards finding 7 | **Half dismissed**: the 553/554 counts are different commits, not a contradiction. The stale `theme::ALL` count of 27 is real and fixed to 22. | Accepting both halves and "reconciling" numbers that already agreed | A tracker gains a correction that corrects nothing | `3p.md` |
+| Iter 15 | The publication gate's blind spot | Filed **`DEF-10`**: `.slint` is absent from `$textExtensions`, and `$checkLanguage` would report five findings in `key_check.slint` today. | Recording it as prose in a ticket nobody re-reads | An enforced gate keeps reporting green over a file type it never opens | `.control/registry/defects.yaml` |

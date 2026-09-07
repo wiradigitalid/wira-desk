@@ -46,7 +46,6 @@ changes. Not yet released — tracked here per `AGENTS.md`'s versioning rule unt
   only part of them some rows ever showed; the full text is now readable, and reachable without a
   mouse. The row's controls — percentage stepper, chord keycap, and on/off switch — sit on one
   vertical centre, and the five groups fit the default window width without sideways scrolling.
-
 - If you have bound two actions to the same chord, the one that keeps it may have changed.
   Maximize now sits behind every snap variant in the order that resolves a collision, so a snap
   action wins where Maximize used to. Nothing is migrated and no chord is renamed; on the shipped

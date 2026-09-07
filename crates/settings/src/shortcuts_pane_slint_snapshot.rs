@@ -11,7 +11,7 @@ pub(crate) mod tests {
     /// One scroll gesture larger than the pane's scrollable extent, used to return to the top.
     ///
     /// It is not a "scroll to top" primitive and must not be read as one: it is an amount
-    /// currently believed to exceed the extent. `SPEC-4` is adding rows, and once the content
+    /// currently believed to exceed the extent. This pane is still gaining rows, and once the
     /// grows past this the walk below starts from a non-top position and a heading above it
     /// becomes unfindable — which fails loudly, in `find_scrolling_down`'s `None`, but reads as
     /// "the heading was never instantiated" rather than "the scroll idiom stopped reaching the
@@ -58,12 +58,23 @@ pub(crate) mod tests {
         run_on_ui_thread(|| {
             let (window, _model, save_path) = setup_shortcuts_window();
 
+            // Counted, not just iterated: an empty `GROUPS` would make the loop a no-op and this
+            // test would pass having looked at nothing. That is the vacuity `b28d5ab` closed in
+            // the width test with exactly this assertion, and this test never got it.
+            let mut found = 0;
             for heading in ShortcutField::GROUPS {
                 assert!(
                     find_scrolling_down(&window, heading).is_some(),
                     "Group heading '{heading}' must be findable in the rendered accessible tree"
                 );
+                found += 1;
             }
+            assert_eq!(
+                found,
+                ShortcutField::GROUPS.len(),
+                "every declared group heading must be checked, not skipped"
+            );
+            assert!(found >= 5, "the pane declares five groups; found {found}");
 
             let _ = std::fs::remove_file(&save_path);
         });

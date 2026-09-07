@@ -272,10 +272,11 @@ rtm:
   - shortcut_row_slint_snapshot::tests::row_height_is_independent_of_description_length
   - shortcuts_pane_slint_snapshot::tests::five_groups_fit_the_default_window_width_with_no_horizontal_scroll
   - shortcuts_pane_slint_snapshot::tests::all_five_group_headings_are_in_the_rendered_tree
-  status: ready-for-agent
+  - theme::tests::shortcut_per_row_labels_derive_from_theme_constants
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-5
   FR: FR-18
@@ -286,6 +287,20 @@ rtm:
   release: 0.5.0
   test:
   - shortcut_row_slint_snapshot::tests::a_real_keystroke_sequence_commits_a_typed_percentage
+  status: ready-for-agent
+  exempt: false
+  green: false
+  broken_at: status
+- BG: BG-2
+  CAP: CAP-5
+  FR: FR-18
+  DEC: []
+  UC: UC-4
+  ticket: SPEC-4-05
+  spec: SPEC-4
+  release: 0.5.0
+  test:
+  - shortcut_row_slint_snapshot::tests::description_renders_as_a_tooltip_not_a_visible_line
   status: ready-for-agent
   exempt: false
   green: false
@@ -589,10 +604,11 @@ rtm:
   - shortcut_row_slint_snapshot::tests::row_height_is_independent_of_description_length
   - shortcuts_pane_slint_snapshot::tests::five_groups_fit_the_default_window_width_with_no_horizontal_scroll
   - shortcuts_pane_slint_snapshot::tests::all_five_group_headings_are_in_the_rendered_tree
-  status: ready-for-agent
+  - theme::tests::shortcut_per_row_labels_derive_from_theme_constants
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-3
   CAP: CAP-16
   FR: FR-29
@@ -759,10 +775,11 @@ rtm:
   - shortcut_row_slint_snapshot::tests::row_height_is_independent_of_description_length
   - shortcuts_pane_slint_snapshot::tests::five_groups_fit_the_default_window_width_with_no_horizontal_scroll
   - shortcuts_pane_slint_snapshot::tests::all_five_group_headings_are_in_the_rendered_tree
-  status: ready-for-agent
+  - theme::tests::shortcut_per_row_labels_derive_from_theme_constants
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-3
   FR: FR-7
@@ -773,6 +790,20 @@ rtm:
   release: 0.5.0
   test:
   - shortcut_row_slint_snapshot::tests::a_real_keystroke_sequence_commits_a_typed_percentage
+  status: ready-for-agent
+  exempt: false
+  green: false
+  broken_at: status
+- BG: BG-2
+  CAP: CAP-3
+  FR: FR-7
+  DEC: []
+  UC: UC-4
+  ticket: SPEC-4-05
+  spec: SPEC-4
+  release: 0.5.0
+  test:
+  - shortcut_row_slint_snapshot::tests::description_renders_as_a_tooltip_not_a_visible_line
   status: ready-for-agent
   exempt: false
   green: false
