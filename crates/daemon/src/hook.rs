@@ -1820,6 +1820,56 @@ mod tests {
     }
 
     #[test]
+    fn the_daemon_precedence_order_matches_the_shared_source() {
+        // `LBR-ST-14` / `DEC-018`. This crate cannot see `settings`' `ShortcutField`, which is
+        // why the two declared orders drifted apart with nothing to notice: `ShortcutField::ALL`
+        // ordered the pane and the save-time duplicate rejection, while the sequence below
+        // ordered the unbinding that actually runs. `shared::constants::SHORTCUT_DECLARED_ORDER`
+        // is now the one source, and this is the daemon half of the guard.
+        //
+        // Only the ORDER comes from the constant. The key-to-command mapping below is this
+        // crate's own domain knowledge, not a second declared sequence — reordering it cannot
+        // change what this test accepts, because the iteration order is the constant's.
+        fn command_for(key: &str) -> u8 {
+            match key {
+                // Both switcher slots issue the same command; the fallback exists so a user
+                // whose Win key is taken still has a chord, not to do something different.
+                "switcher.shortcut" | "switcher.fallback_shortcut" => Command::Cycle.as_u8(),
+                "snapping.snap_half_left" => Command::SnapLeft.as_u8(),
+                "snapping.snap_half_right" => Command::SnapRight.as_u8(),
+                "snapping.snap_half_top" => Command::SnapTop.as_u8(),
+                "snapping.snap_half_bottom" => Command::SnapBottom.as_u8(),
+                "snapping.snap_third_left" => Command::SnapThirdLeft.as_u8(),
+                "snapping.snap_third_middle" => Command::SnapThirdMiddle.as_u8(),
+                "snapping.snap_third_right" => Command::SnapThirdRight.as_u8(),
+                "snapping.snap_percent_left" => Command::SnapPercentLeft.as_u8(),
+                "snapping.snap_percent_right" => Command::SnapPercentRight.as_u8(),
+                "snapping.snap_percent_top" => Command::SnapPercentTop.as_u8(),
+                "snapping.snap_percent_bottom" => Command::SnapPercentBottom.as_u8(),
+                "snapping.snap_maximize" => Command::SnapMaximize.as_u8(),
+                "layout.move_next_monitor_shortcut" => Command::MoveToNextMonitor.as_u8(),
+                "layout.stack_shortcut" => Command::OverlappingStack.as_u8(),
+                other => panic!("{other} is in the shared declared order but unknown here"),
+            }
+        }
+
+        let expected: Vec<u8> = shared::constants::SHORTCUT_DECLARED_ORDER
+            .iter()
+            .map(|key| command_for(key))
+            .collect();
+        let actual: Vec<u8> = shipped_chords()
+            .in_declared_order()
+            .iter()
+            .map(|slot| slot.command)
+            .collect();
+        assert_eq!(
+            actual, expected,
+            "the daemon's precedence sequence must follow `SHORTCUT_DECLARED_ORDER`; a chord \
+             collision resolved here would otherwise name a different winner than the pane"
+        );
+    }
+
+    #[test]
     fn the_declared_order_is_the_precedence_order() {
         // Two actions on one chord: the earlier slot wins, and it wins because it is
         // earlier in `in_declared_order`, not because of where an `if` happens to sit.

@@ -1387,12 +1387,19 @@ mod tests {
 
     #[test]
     fn field_declaration_order_includes_third_snap_fields() {
-        assert_eq!(ShortcutField::SnapThirdLeft as usize, 7);
-        assert_eq!(ShortcutField::SnapThirdMiddle as usize, 8);
-        assert_eq!(ShortcutField::SnapThirdRight as usize, 9);
-        assert!((ShortcutField::SnapMaximize as usize) < (ShortcutField::SnapThirdLeft as usize));
+        // `DEC-014` moves the thirds up behind the halves; Maximize's relative position moved
+        // out to `snap_maximize_now_sorts_after_every_snap_variant`, which asserts the new
+        // ordering rather than the inverted old one.
+        assert_eq!(ShortcutField::SnapThirdLeft as usize, 6);
+        assert_eq!(ShortcutField::SnapThirdMiddle as usize, 7);
+        assert_eq!(ShortcutField::SnapThirdRight as usize, 8);
         assert!(
-            (ShortcutField::SnapThirdRight as usize) < (ShortcutField::MoveNextMonitor as usize)
+            (ShortcutField::SnapBottom as usize) < (ShortcutField::SnapThirdLeft as usize),
+            "the halves stay ahead of the thirds"
+        );
+        assert!(
+            (ShortcutField::SnapThirdRight as usize) < (ShortcutField::SnapPercentLeft as usize),
+            "the thirds stay ahead of the custom-percentage edges"
         );
     }
 
@@ -1426,15 +1433,121 @@ mod tests {
     }
 
     #[test]
-    fn every_field_belongs_to_one_of_the_three_groups() {
-        let groups = ["Switching", "Snap & resize", "Move & arrange"];
-        for f in ShortcutField::ALL {
-            assert!(
-                groups.contains(&f.group()),
-                "{} is in an undeclared group",
-                f.label()
+    fn shortcut_field_group_declares_five_taxonomic_groups() {
+        // `DEC-014`: the taxonomy groups by the literal shape of what the action snaps to,
+        // replacing three groups that fell out of declaration order. Membership is asserted
+        // field by field rather than by counting headings, because a field silently landing
+        // in a neighbouring group is exactly the drift the old taxonomy was.
+        use ShortcutField::*;
+        let expected: [(ShortcutField, &str); 16] = [
+            (Switcher, "Switching"),
+            (Fallback, "Switching"),
+            (SnapLeft, "Snap to half"),
+            (SnapRight, "Snap to half"),
+            (SnapTop, "Snap to half"),
+            (SnapBottom, "Snap to half"),
+            (SnapThirdLeft, "Snap to third"),
+            (SnapThirdMiddle, "Snap to third"),
+            (SnapThirdRight, "Snap to third"),
+            (SnapPercentLeft, "Snap to custom"),
+            (SnapPercentRight, "Snap to custom"),
+            (SnapPercentTop, "Snap to custom"),
+            (SnapPercentBottom, "Snap to custom"),
+            (SnapMaximize, "Resize, move & arrange"),
+            (MoveNextMonitor, "Resize, move & arrange"),
+            (Stack, "Resize, move & arrange"),
+        ];
+        for (field, group) in expected {
+            assert_eq!(
+                field.group(),
+                group,
+                "{} is in the wrong group",
+                field.label()
             );
         }
+        // And no sixth group leaks in from a field the table above forgot. Deduplicating the
+        // headings in declared order also proves each group's rows are contiguous.
+        let mut headings: Vec<&str> = ShortcutField::ALL.iter().map(|f| f.group()).collect();
+        headings.dedup();
+        assert_eq!(
+            headings,
+            vec![
+                "Switching",
+                "Snap to half",
+                "Snap to third",
+                "Snap to custom",
+                "Resize, move & arrange",
+            ],
+            "the pane headings, in declared order, are exactly the five `DEC-014` names"
+        );
+    }
+
+    #[test]
+    fn snap_maximize_now_sorts_after_every_snap_variant() {
+        // `DEC-014` moves Maximize from index 6 to index 13 — out of the old "Snap & resize"
+        // group and into the last one, behind every snap variant. This inverts the previous
+        // `SnapMaximize < SnapThirdLeft` assertion on purpose: it is a precedence change, so
+        // the new relative position is asserted rather than the old one simply deleted.
+        let maximize = ShortcutField::SnapMaximize as usize;
+        for earlier in [
+            ShortcutField::SnapLeft,
+            ShortcutField::SnapRight,
+            ShortcutField::SnapTop,
+            ShortcutField::SnapBottom,
+            ShortcutField::SnapThirdLeft,
+            ShortcutField::SnapThirdMiddle,
+            ShortcutField::SnapThirdRight,
+            ShortcutField::SnapPercentLeft,
+            ShortcutField::SnapPercentRight,
+            ShortcutField::SnapPercentTop,
+            ShortcutField::SnapPercentBottom,
+        ] {
+            assert!(
+                (earlier as usize) < maximize,
+                "{} must keep precedence over Maximize",
+                earlier.label()
+            );
+        }
+        // It leads its own group, ahead of the two non-snap actions.
+        assert!(maximize < (ShortcutField::MoveNextMonitor as usize));
+        assert!(maximize < (ShortcutField::Stack as usize));
+    }
+
+    #[test]
+    fn snap_custom_labels_no_longer_repeat_the_group_name() {
+        // The "Snap to custom" heading now carries the meaning the `(custom %)` suffix used
+        // to. `label()` is also `from_label`'s lookup key, so this asserts the new label
+        // round-trips rather than only that the old substring is gone.
+        for f in [
+            ShortcutField::SnapPercentLeft,
+            ShortcutField::SnapPercentRight,
+            ShortcutField::SnapPercentTop,
+            ShortcutField::SnapPercentBottom,
+        ] {
+            assert!(
+                !f.label().contains("(custom"),
+                "{} still repeats its group name",
+                f.label()
+            );
+            assert_eq!(ShortcutField::from_label(f.label()), Some(f));
+        }
+        assert_eq!(ShortcutField::SnapPercentLeft.label(), "Snap to left edge");
+        assert_eq!(ShortcutField::SnapPercentRight.label(), "Snap to right edge");
+        assert_eq!(ShortcutField::SnapPercentTop.label(), "Snap to top edge");
+        assert_eq!(
+            ShortcutField::SnapPercentBottom.label(),
+            "Snap to bottom edge"
+        );
+    }
+
+    #[test]
+    fn the_declared_sequence_matches_the_shared_source() {
+        // `LBR-ST-14` / `DEC-018`: one declared sequence, and it lives in `shared` so the
+        // daemon's collision precedence and this pane's order cannot drift apart. Asserted
+        // against the constant, never against a fresh literal of the same order — a second
+        // literal here would be the very thing the rule forbids.
+        let keys: Vec<&str> = ShortcutField::ALL.iter().map(|f| f.key()).collect();
+        assert_eq!(keys, shared::constants::SHORTCUT_DECLARED_ORDER.to_vec());
     }
 
     #[test]
@@ -1443,7 +1556,13 @@ mod tests {
         // in pane order must reproduce `ALL` exactly — which is only true while each group's
         // members are contiguous in the declared sequence.
         let mut regrouped: Vec<ShortcutField> = Vec::new();
-        for heading in ["Switching", "Snap & resize", "Move & arrange"] {
+        for heading in [
+            "Switching",
+            "Snap to half",
+            "Snap to third",
+            "Snap to custom",
+            "Resize, move & arrange",
+        ] {
             regrouped.extend(
                 ShortcutField::ALL
                     .into_iter()
