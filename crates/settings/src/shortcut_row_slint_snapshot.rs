@@ -642,6 +642,74 @@ pub(crate) mod tests {
     }
 
     #[test]
+    fn a_real_keystroke_sequence_commits_a_typed_stack_percentage() {
+        run_on_ui_thread(|| {
+            let (window, model, save_path) = setup_shortcuts_window();
+
+            // Scroll down to bring the Overlapping Stack row into view
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::PointerScrolled {
+                    position: slint::LogicalPosition::new(300.0, 300.0),
+                    delta_x: 0.0,
+                    delta_y: -600.0,
+                });
+
+            let field = ElementHandle::find_by_accessible_label(
+                &window,
+                crate::theme::STACK_WIDTH_FIELD.name,
+            )
+            .next()
+            .expect("Stack width field element found");
+            field.invoke_accessible_default_action();
+
+            // Clear what is there, then type "65" as two character events.
+            for _ in 0..3 {
+                window
+                    .window()
+                    .dispatch_event(slint::platform::WindowEvent::KeyPressed {
+                        text: slint::platform::Key::Backspace.into(),
+                    });
+            }
+            type_digits(&window, "65");
+
+            let input = ElementHandle::find_by_accessible_label(
+                &window,
+                crate::theme::STACK_WIDTH_INPUT.name,
+            )
+            .next()
+            .expect("Stack width input element found");
+            let seen = input.accessible_value().unwrap_or_default();
+            assert_eq!(
+                seen.as_str(),
+                "65",
+                "typing '6' then '5' must land in the stack width field; it reads {seen:?}"
+            );
+
+            assert_eq!(
+                model.borrow().draft.layout.stack_width_percent,
+                50,
+                "a typed stack width value must not commit before departure"
+            );
+
+            window.invoke_save_clicked();
+
+            assert_eq!(
+                model.borrow().draft.layout.stack_width_percent,
+                65,
+                "typing 65 and clicking Save must commit 65 to the draft"
+            );
+            assert_eq!(
+                model.borrow().saved.layout.stack_width_percent,
+                65,
+                "typing 65 and clicking Save must save 65 to the config"
+            );
+
+            let _ = std::fs::remove_file(&save_path);
+        });
+    }
+
+    #[test]
     fn description_renders_as_a_tooltip_not_a_visible_line() {
         run_on_ui_thread(|| {
             let (window, _model, save_path) = setup_shortcuts_window();
