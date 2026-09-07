@@ -8,21 +8,21 @@ date: 2026-09-07
 
 ## Resume
 
-- Iteration: 5 — still waiting on the `SPEC-2-01` builder (~65 min elapsed since dispatch).
-- Run branch: `autopilot/DEC-016`, HEAD `e12b640` (iteration-4 ledger commit; no ticket work landed yet).
-  No PR opened yet — opens as a draft at the first spec close.
-- Stopped at: **Capacity.** Job `bafaw9fiy` still `running`. `crates/shared/src/constants.rs` newly touched
-  this iteration (new progress); file list otherwise unchanged across two more 5-min re-checks — reads as
-  mid-edit or running `cargo fmt`/`clippy`/`test`, which doesn't necessarily touch more files. Still not a
-  repeat capacity failure, so stays Capacity — will escalate my own judgment (not the ledger's Blocked rule)
-  if the next firing shows no further change at all, since that would suggest a stall rather than a long
-  build.
-  all, since that would suggest a stall rather than a long build.
+- Iteration: 6 — `SPEC-2-01` builder finished; Steps 1+2 verified, panel dispatched.
+- Run branch: `autopilot/DEC-016`, HEAD `fa3dddc` (builder's own commit, landed directly — not yet a ledger
+  commit boundary). No PR opened yet — opens as a draft at the first spec close.
+- Stopped at: **Capacity.** Job `bafaw9fiy` exited (code 0) after ~80 min. Did NOT trust its self-report:
+  independently re-ran `cargo fmt --check`, `clippy -D warnings`, and the full workspace suite myself in
+  this worktree (safe now that the builder process has exited) — clean, 519 passed/0 failed, all 5 named
+  ticket tests plus 2 extra present and green; `verify-public-export.ps1` 10/10. Diff touches only
+  `crates/settings`, `crates/shared`, `3p.md` — no corpus file. Dispatched Step 3 as two genuinely separate,
+  fresh-context review agents (Standards axis `a38e9e2fc328ecbfe`, Spec axis `a08eb5bd423c4a6c3`), neither
+  of which is `bafaw9fiy` or this coordinator. Both still running.
 - Blocked: —
 - Parked: —
-- Next: check job `bafaw9fiy` via `TaskOutput(block:false)`. If it has exited: read the actual diff and
-  test output (never its own report) to judge Step 1/2, then dispatch the separate Step 3 review panel
-  (two axes, two agents, neither `bafaw9fiy`). If still running: re-check next firing.
+- Next: read both review agents' verdicts. Clean on both axes → close `SPEC-2-01` (ticket-closing checklist,
+  commit already on the run branch, no PR-per-ticket under a mandate), then move to the `SPEC-3-01` frontier.
+  A must-fix → amend the ticket, reset to `ready-for-agent`, redispatch `claude-byok` (return trip 1/2).
 
 ## Decisions
 
@@ -34,3 +34,5 @@ date: 2026-09-07
 | Preflight | Settings: `smoke_test` | `agent`, delegated specifically to the `claude-byok` CLI profile, never the coordinator or the human owner — same as `DEC-012`, per the owner's own instruction this turn | Guide default of `owner` | One setting changes via a superseding `DEC-` | `DEC-016` row, `decisions.yaml` |
 | Preflight | Settings: `loop` | Ride the cron job created this turn (`3ef639b3`, every 10m) rather than starting a second loop | A fresh `loop` skill invocation | Cancel one, keep the other | `decisions.yaml` mandate row |
 | Preflight | Runtime: build/test ownership | Coordinator never runs `cargo build`/`cargo test`/`./build.ps1` or launches the app in the shared worktree; claude-byok's own ticket-closing checklist covers it, confined to the one autopilot worktree | Coordinator running the full suite itself between claude-byok invocations | A concurrent build race in the shared worktree | This ledger, `DEC-016` |
+| Iter 6 | `wdi-build` Steps 1+2 judging | Judged from the artifact, not `bafaw9fiy`'s self-report: re-ran fmt/clippy/full suite/export-gate myself once the builder process had exited (no longer a race), read `git show fa3dddc` directly for corpus-boundary violations | Trusting the job's own completion summary | A false-green ticket if the report and the artifact ever disagree | `fa3dddc`, this ledger |
+| Iter 6 | `wdi-build` Step 3 dispatch | Two fresh-context `general-purpose` agents, one per axis (Standards `a38e9e2fc328ecbfe`, Spec `a08eb5bd423c4a6c3`), neither carrying this coordinator's own analysis nor `bafaw9fiy`'s report — genuine separation, not a self-review | A single combined review, or reusing this session's own read of the diff | Re-dispatch if either agent's findings turn out unverifiable from the diff | This ledger |
