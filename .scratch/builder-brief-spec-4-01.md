@@ -53,7 +53,7 @@ Work you will need, from the ticket's own checklist:
   existing `rows_switching`/`rows_snap`/`rows_move`
 - `crates/settings/ui/panes/shortcuts_pane.slint` — a `ShortcutGroup` per new group, heading text
   exactly matching `group()`'s strings, in declared order
-- `crates/daemon/src/hook.rs` — `Chords::in_declared_order`, `resolve_chords`'s row table, and the
+- `crates/daemon/src/hook.rs` — `Chords::in_declared_order`, `load_shortcuts_from_config`'s row table, and the
   positional `Chords { ... resolved[N] }` mapping, **every index of which shifts**
 - `dec_011_collision_favors_percent_snap_bottom_over_legacy_stack_default` in the same file — its
   literal indices and its inline 16-entry array move. Its **outcome must not change**: percent-snap

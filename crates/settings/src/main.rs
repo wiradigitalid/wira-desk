@@ -192,6 +192,11 @@ pub(crate) fn sync_model_to_ui(window: &MainWindow, model: &SettingsModel) {
                 .collect();
             slint::ModelRc::new(slint::VecModel::from(rows))
         };
+        // The index order here MUST track the `ShortcutGroup` order in
+        // `ui/panes/shortcuts_pane.slint`, because each setter is hard-bound to one heading in
+        // the markup and markup cannot read a Rust const. `the_group_headings_have_one_home`
+        // proves `GROUPS` matches `group()`; nothing can prove this pairing, so reordering
+        // `GROUPS` means reordering the five lines below and the five markup blocks together.
         window.set_rows_switching(group_rows(ShortcutField::GROUPS[0]));
         window.set_rows_snap_half(group_rows(ShortcutField::GROUPS[1]));
         window.set_rows_snap_third(group_rows(ShortcutField::GROUPS[2]));

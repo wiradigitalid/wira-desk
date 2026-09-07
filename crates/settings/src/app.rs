@@ -344,12 +344,18 @@ impl ShortcutField {
     }
 
     /// The dotted TOML path this field corresponds to in `Config`.
-    /// `persistence::validate_config` names a rejected field by this exact
-    /// path — literal strings, kept separate on purpose so persistence has no
-    /// dependency on this UI-facing enum. `from_key` is the one place that
-    /// reads a save-time rejection back into a field, so the two tables must
-    /// stay in sync; a field added to one and not the other breaks the round
-    /// trip silently rather than at compile time.
+    ///
+    /// `persistence::validate_config` names a rejected field by this exact path, and `from_key`
+    /// is the one place that reads a save-time rejection back into a field. The strings are
+    /// still literals here rather than shared with that module, because persistence must not
+    /// depend on this UI-facing enum (`LBR-ST-14`, `DEC-018`).
+    ///
+    /// What is **not** duplicated any more is the *order*. `persistence::validate_config` walks
+    /// `shared::constants::SHORTCUT_DECLARED_ORDER` and looks each key up, so there is no second
+    /// ordered table to keep in step — re-adding one is the drift `DEC-018` was written to end.
+    /// A divergence is no longer silent either: `the_declared_sequence_matches_the_shared_source`
+    /// catches a `key()` that drifts from the constant, and `validate_config`'s own lookup fails
+    /// loudly on a key it does not know.
     pub fn key(self) -> &'static str {
         match self {
             ShortcutField::Switcher => "switcher.shortcut",

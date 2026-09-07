@@ -173,6 +173,12 @@ pub fn validate_config(cfg: &Config) -> Result<(), (&'static str, ShortcutError)
                 &cfg.layout.stack_shortcut,
                 cfg.layout.stack_shortcut_enabled,
             ),
+            // Unreachable while this match and `SHORTCUT_DECLARED_ORDER` hold the same sixteen
+            // keys. It is not left to chance: the walk visits every key in the constant
+            // regardless of config, so `default_config_passes_its_own_validation` traverses all
+            // sixteen arms on every test run and a seventeenth key added without an arm fails
+            // the suite loudly, naming itself. Failing open here — skipping an unknown key —
+            // would leave a field silently unvalidated, which is the worse trade.
             other => {
                 panic!("{other} is in the shared declared order but unknown in validate_config")
             }
