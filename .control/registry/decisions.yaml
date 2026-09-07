@@ -194,3 +194,15 @@ decisions:
       run_branch: autopilot/DEC-012
       worktree: ../wira-desk-autopilot  # sibling of this checkout; `git worktree list` from here finds its actual path
       ledger: .control/memlog/autopilot-DEC-012.md
+
+  - id: DEC-013
+    title: The hygiene gate permits the maintainer handle on a decision's accepted_by line
+    status: applied
+    file: decisions/DEC-013-the-hygiene-gate-permits-the-handle-on-a-decisions-accepted-by-line.md
+    created: '2026-09-07'
+    touches:
+      - .control/decisions/DEC-013-the-hygiene-gate-permits-the-handle-on-a-decisions-accepted-by-line.md
+      - .control/questions/answered.md
+      - .control/questions/assumptions.md
+      - .control/registry/decisions.yaml
+      - scripts/verify-public-export.ps1

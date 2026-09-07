@@ -36,11 +36,11 @@ validators_skipped:
     rule MUST NOT be moved here just to give the room content
 open_questions:
   blocking: 0
-  assumptions: 32
+  assumptions: 31
   external: 2
-  answered: 3
+  answered: 4
   open_by_whose:
-    owner: 9
+    owner: 8
     run: 1
     frozen: 0
     unstated: 22
