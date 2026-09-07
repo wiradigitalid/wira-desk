@@ -655,10 +655,6 @@ impl Chords {
                 command: Command::SnapBottom.as_u8(),
             },
             ChordSlot {
-                chord: self.snap_maximize,
-                command: Command::SnapMaximize.as_u8(),
-            },
-            ChordSlot {
                 chord: self.snap_third_left,
                 command: Command::SnapThirdLeft.as_u8(),
             },
@@ -669,10 +665,6 @@ impl Chords {
             ChordSlot {
                 chord: self.snap_third_right,
                 command: Command::SnapThirdRight.as_u8(),
-            },
-            ChordSlot {
-                chord: self.move_next_monitor,
-                command: Command::MoveToNextMonitor.as_u8(),
             },
             ChordSlot {
                 chord: self.snap_percent_left,
@@ -689,6 +681,14 @@ impl Chords {
             ChordSlot {
                 chord: self.snap_percent_bottom,
                 command: Command::SnapPercentBottom.as_u8(),
+            },
+            ChordSlot {
+                chord: self.snap_maximize,
+                command: Command::SnapMaximize.as_u8(),
+            },
+            ChordSlot {
+                chord: self.move_next_monitor,
+                command: Command::MoveToNextMonitor.as_u8(),
             },
             ChordSlot {
                 chord: self.stack,
@@ -1062,12 +1062,6 @@ fn load_shortcuts_from_config(worker_hwnd: HWND, cfg: &Config) -> Chords {
             cfg.snapping.snap_half_bottom_enabled,
         ),
         (
-            "snapping.snap_maximize",
-            &cfg.snapping.snap_maximize,
-            &snap_defaults.snap_maximize,
-            cfg.snapping.snap_maximize_enabled,
-        ),
-        (
             "snapping.snap_third_left",
             &cfg.snapping.snap_third_left,
             &snap_defaults.snap_third_left,
@@ -1084,12 +1078,6 @@ fn load_shortcuts_from_config(worker_hwnd: HWND, cfg: &Config) -> Chords {
             &cfg.snapping.snap_third_right,
             &snap_defaults.snap_third_right,
             cfg.snapping.snap_third_right_enabled,
-        ),
-        (
-            "layout.move_next_monitor_shortcut",
-            &cfg.layout.move_next_monitor_shortcut,
-            &layout_defaults.move_next_monitor_shortcut,
-            cfg.layout.move_next_monitor_shortcut_enabled,
         ),
         (
             "snapping.snap_percent_left",
@@ -1114,6 +1102,18 @@ fn load_shortcuts_from_config(worker_hwnd: HWND, cfg: &Config) -> Chords {
             &cfg.snapping.snap_percent_bottom,
             &snap_defaults.snap_percent_bottom,
             cfg.snapping.snap_percent_bottom_enabled,
+        ),
+        (
+            "snapping.snap_maximize",
+            &cfg.snapping.snap_maximize,
+            &snap_defaults.snap_maximize,
+            cfg.snapping.snap_maximize_enabled,
+        ),
+        (
+            "layout.move_next_monitor_shortcut",
+            &cfg.layout.move_next_monitor_shortcut,
+            &layout_defaults.move_next_monitor_shortcut,
+            cfg.layout.move_next_monitor_shortcut_enabled,
         ),
         (
             "layout.stack_shortcut",
@@ -1154,15 +1154,15 @@ fn load_shortcuts_from_config(worker_hwnd: HWND, cfg: &Config) -> Chords {
         snap_right: resolved[3],
         snap_top: resolved[4],
         snap_bottom: resolved[5],
-        snap_maximize: resolved[6],
-        snap_third_left: resolved[7],
-        snap_third_middle: resolved[8],
-        snap_third_right: resolved[9],
-        move_next_monitor: resolved[10],
-        snap_percent_left: resolved[11],
-        snap_percent_right: resolved[12],
-        snap_percent_top: resolved[13],
-        snap_percent_bottom: resolved[14],
+        snap_third_left: resolved[6],
+        snap_third_middle: resolved[7],
+        snap_third_right: resolved[8],
+        snap_percent_left: resolved[9],
+        snap_percent_right: resolved[10],
+        snap_percent_top: resolved[11],
+        snap_percent_bottom: resolved[12],
+        snap_maximize: resolved[13],
+        move_next_monitor: resolved[14],
         stack: resolved[15],
     }
 }
@@ -1708,20 +1708,20 @@ mod tests {
             chords.snap_right,
             chords.snap_top,
             chords.snap_bottom,
-            chords.snap_maximize,
             chords.snap_third_left,
             chords.snap_third_middle,
             chords.snap_third_right,
-            chords.move_next_monitor,
             chords.snap_percent_left,
             chords.snap_percent_right,
             chords.snap_percent_top,
             chords.snap_percent_bottom,
+            chords.snap_maximize,
+            chords.move_next_monitor,
             chords.stack,
         ];
         let collisions = unbind_duplicates(&mut resolved);
-        assert_eq!(collisions, vec![(14, 15)]);
-        assert!(resolved[14].is_some());
+        assert_eq!(collisions, vec![(12, 15)]);
+        assert!(resolved[12].is_some());
         assert_eq!(resolved[15], None);
 
         chords.stack = resolved[15];

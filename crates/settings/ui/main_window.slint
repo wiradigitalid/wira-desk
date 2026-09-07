@@ -52,15 +52,17 @@ export component MainWindow inherits Window {
 
     // Shortcuts Pane Properties.
     //
-    // Three models rather than one property per field per concern. The previous shape was
+    // Five models rather than one property per field per concern. The previous shape was
     // one `sc_`, one `conflict_`, and one `can_swap_` property per action; at nine actions
     // that is twenty-seven declarations here and twenty-seven more where they are bound,
     // and an action added to the model with any one of them forgotten is drawn wrong or not
     // at all. The Rust side builds these from `ShortcutField::ALL`, so the declared sequence
     // is the only list (`LBR-ST-14`).
     in property <[ShortcutRowData]> rows_switching;
-    in property <[ShortcutRowData]> rows_snap;
-    in property <[ShortcutRowData]> rows_move;
+    in property <[ShortcutRowData]> rows_snap_half;
+    in property <[ShortcutRowData]> rows_snap_third;
+    in property <[ShortcutRowData]> rows_snap_custom;
+    in property <[ShortcutRowData]> rows_arrange;
     in property <int> listening_field: -1;
 
     // KeyCheck Properties
@@ -267,8 +269,10 @@ export component MainWindow inherits Window {
 
                             if root.current_pane == 1 : ShortcutsPane {
                                 rows_switching: root.rows_switching;
-                                rows_snap: root.rows_snap;
-                                rows_move: root.rows_move;
+                                rows_snap_half: root.rows_snap_half;
+                                rows_snap_third: root.rows_snap_third;
+                                rows_snap_custom: root.rows_snap_custom;
+                                rows_arrange: root.rows_arrange;
                                 listening_field: root.listening_field;
 
                                 start_capture(idx) => { root.start_capture(idx); }

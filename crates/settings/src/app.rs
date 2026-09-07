@@ -78,15 +78,15 @@ pub enum ShortcutField {
     SnapRight,
     SnapTop,
     SnapBottom,
-    SnapMaximize,
     SnapThirdLeft,
     SnapThirdMiddle,
     SnapThirdRight,
-    MoveNextMonitor,
     SnapPercentLeft,
     SnapPercentRight,
     SnapPercentTop,
     SnapPercentBottom,
+    SnapMaximize,
+    MoveNextMonitor,
     Stack,
 }
 
@@ -98,15 +98,15 @@ impl ShortcutField {
         ShortcutField::SnapRight,
         ShortcutField::SnapTop,
         ShortcutField::SnapBottom,
-        ShortcutField::SnapMaximize,
         ShortcutField::SnapThirdLeft,
         ShortcutField::SnapThirdMiddle,
         ShortcutField::SnapThirdRight,
-        ShortcutField::MoveNextMonitor,
         ShortcutField::SnapPercentLeft,
         ShortcutField::SnapPercentRight,
         ShortcutField::SnapPercentTop,
         ShortcutField::SnapPercentBottom,
+        ShortcutField::SnapMaximize,
+        ShortcutField::MoveNextMonitor,
         ShortcutField::Stack,
     ];
 
@@ -166,17 +166,17 @@ impl ShortcutField {
             ShortcutField::SnapLeft
             | ShortcutField::SnapRight
             | ShortcutField::SnapTop
-            | ShortcutField::SnapBottom
-            | ShortcutField::SnapMaximize
-            | ShortcutField::SnapThirdLeft
+            | ShortcutField::SnapBottom => "Snap to half",
+            ShortcutField::SnapThirdLeft
             | ShortcutField::SnapThirdMiddle
-            | ShortcutField::SnapThirdRight => "Snap & resize",
-            ShortcutField::MoveNextMonitor
-            | ShortcutField::SnapPercentLeft
+            | ShortcutField::SnapThirdRight => "Snap to third",
+            ShortcutField::SnapPercentLeft
             | ShortcutField::SnapPercentRight
             | ShortcutField::SnapPercentTop
-            | ShortcutField::SnapPercentBottom
-            | ShortcutField::Stack => "Move & arrange",
+            | ShortcutField::SnapPercentBottom => "Snap to custom",
+            ShortcutField::SnapMaximize | ShortcutField::MoveNextMonitor | ShortcutField::Stack => {
+                "Resize, move & arrange"
+            }
         }
     }
 
@@ -193,10 +193,10 @@ impl ShortcutField {
             ShortcutField::SnapThirdMiddle => "Snap to middle third",
             ShortcutField::SnapThirdRight => "Snap to right third",
             ShortcutField::MoveNextMonitor => "Move to next monitor",
-            ShortcutField::SnapPercentLeft => "Snap to left edge (custom %)",
-            ShortcutField::SnapPercentRight => "Snap to right edge (custom %)",
-            ShortcutField::SnapPercentTop => "Snap to top edge (custom %)",
-            ShortcutField::SnapPercentBottom => "Snap to bottom edge (custom %)",
+            ShortcutField::SnapPercentLeft => "Snap to left edge",
+            ShortcutField::SnapPercentRight => "Snap to right edge",
+            ShortcutField::SnapPercentTop => "Snap to top edge",
+            ShortcutField::SnapPercentBottom => "Snap to bottom edge",
             ShortcutField::Stack => "Overlapping stack",
         }
     }
@@ -1532,7 +1532,10 @@ mod tests {
             assert_eq!(ShortcutField::from_label(f.label()), Some(f));
         }
         assert_eq!(ShortcutField::SnapPercentLeft.label(), "Snap to left edge");
-        assert_eq!(ShortcutField::SnapPercentRight.label(), "Snap to right edge");
+        assert_eq!(
+            ShortcutField::SnapPercentRight.label(),
+            "Snap to right edge"
+        );
         assert_eq!(ShortcutField::SnapPercentTop.label(), "Snap to top edge");
         assert_eq!(
             ShortcutField::SnapPercentBottom.label(),
