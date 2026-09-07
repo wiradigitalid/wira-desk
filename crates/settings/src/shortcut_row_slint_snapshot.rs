@@ -279,4 +279,73 @@ pub(crate) mod tests {
             let _ = std::fs::remove_file(&save_path);
         });
     }
+
+    #[test]
+    fn typed_percentage_survives_cross_row_stepper_click() {
+        run_on_ui_thread(|| {
+            let (window, model, save_path) = setup_shortcuts_window();
+
+            // Focus Row A (snap percent left) field
+            let mut fields =
+                ElementHandle::find_by_accessible_label(&window, "Snap percentage field");
+            let field_a_btn = fields
+                .next()
+                .expect("Snap percentage field element found for Row A");
+            field_a_btn.invoke_accessible_default_action();
+
+            let mut inputs =
+                ElementHandle::find_by_accessible_label(&window, "Snap percentage input");
+            let row_a_input = inputs.next().expect("Snap percentage input for Row A");
+            let _row_b_input = inputs.next().expect("Snap percentage input for Row B");
+
+            // Type '70' into Row A's percentage field without pressing Enter
+            row_a_input.set_accessible_value("70");
+
+            // Verify Row A's draft has not committed yet before departure
+            assert_eq!(
+                model.borrow().draft.snapping.percent_left,
+                50,
+                "Row A value must not commit to draft before departure"
+            );
+
+            // Click '+' stepper on a DIFFERENT row (Row B, snap percent right)
+            let mut plus_buttons =
+                ElementHandle::find_by_accessible_label(&window, "Increase snap percentage");
+            let _row_a_plus = plus_buttons
+                .next()
+                .expect("Increase snap percentage button for Row A");
+            let row_b_plus = plus_buttons
+                .next()
+                .expect("Increase snap percentage button for Row B");
+            row_b_plus.invoke_accessible_default_action();
+
+            // Row A's pending typed value '70' must survive and commit to the draft,
+            // while Row B's value is stepped (50 + 1 = 51)
+            assert_eq!(
+                model.borrow().draft.snapping.percent_left,
+                70,
+                "Row A typed value (70) must be committed when Row B stepper is clicked"
+            );
+            assert_eq!(
+                model.borrow().draft.snapping.percent_right,
+                51,
+                "Row B stepped value must be 51"
+            );
+
+            // Save is clicked afterwards: both values must be saved to disk
+            window.invoke_save_clicked();
+            assert_eq!(
+                model.borrow().saved.snapping.percent_left,
+                70,
+                "Row A value (70) must be saved to config"
+            );
+            assert_eq!(
+                model.borrow().saved.snapping.percent_right,
+                51,
+                "Row B value (51) must be saved to config"
+            );
+
+            let _ = std::fs::remove_file(&save_path);
+        });
+    }
 }

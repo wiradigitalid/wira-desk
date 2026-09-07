@@ -395,9 +395,13 @@ pub(crate) fn bind_callbacks(
         let window_weak = main_window.as_weak();
         let uncommitted_pct = Rc::clone(&uncommitted_percent);
         main_window.on_percent_changed(move |idx, val| {
-            *uncommitted_pct.borrow_mut() = None;
             let mut m = model_rc.borrow_mut();
             let field = ShortcutField::from_index(idx);
+            if let Some((pending_field, pending_val)) = uncommitted_pct.borrow_mut().take() {
+                if pending_field != field {
+                    m.set_percent(pending_field, pending_val);
+                }
+            }
             if field.has_percent() {
                 let uval = if val < 0 { 0 } else { val as u32 };
                 m.set_percent(field, uval);

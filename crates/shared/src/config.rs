@@ -169,7 +169,7 @@ impl Default for LayoutConfig {
     fn default() -> Self {
         Self {
             enable_overlapping_stack: true,
-            stack_width_percent: 50,
+            stack_width_percent: crate::constants::DEFAULT_STACK_WIDTH_PERCENT,
             stack_shortcut: "ctrl+alt+shift+s".to_string(),
             move_next_monitor_shortcut: "ctrl+alt+shift+enter".to_string(),
         }

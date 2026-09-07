@@ -8,6 +8,7 @@ tests:
   - shortcut_row_slint_snapshot::tests::typed_percentage_commits_on_save_click
   - shortcut_row_slint_snapshot::tests::typed_percentage_commits_on_stepper_click
   - shortcut_row_slint_snapshot::tests::typed_percentage_commits_on_focus_change_to_another_row
+  - shortcut_row_slint_snapshot::tests::typed_percentage_survives_cross_row_stepper_click
   - persistence::tests::an_out_of_range_percentage_typed_then_saved_is_refused
   - layout_pane_slint_snapshot::tests::out_of_range_stack_width_is_refused_not_clamped
 ---
@@ -73,7 +74,7 @@ other departure handler in this file (`on_start_capture`, `on_swap_shortcuts`, `
 `if let Some((field, val)) = uncommitted_pct.borrow_mut().take() { m.set_percent(field, val); }` —
 take-and-apply. `on_percent_changed` is the one path that discards instead.
 
-- [ ] `on_percent_changed` drains the shared `uncommitted_percent` slot the same way its siblings do —
+- [x] `on_percent_changed` drains the shared `uncommitted_percent` slot the same way its siblings do —
       if the slot holds a *different* field's pending value, that value is applied to the model (not
       discarded) before the just-changed field's own new value is applied. A new test reproduces the
       cross-row scenario above (type in row A, trigger a stepper/commit on row B, assert row A's typed
