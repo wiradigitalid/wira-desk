@@ -69,15 +69,15 @@ window at all. Removing it is not a dependency cleanup.
 ## The UI is `.slint` markup, not Rust widget calls
 
 `crates/settings/ui/` holds the markup — `main_window.slint`, `theme.slint`, `onboarding.slint`, one
-file per pane under `panes/`, and reusable controls under `components/`. `build.rs` compiles them
-through `slint-build`, which generates the Rust types `src/` then binds to; a control that does not
+file per pane under `panes/`, and reusable controls under `components/`. `crates/settings/build.rs` compiles
+them through `slint-build`, which generates the Rust types `crates/settings/src/` then binds to; a control that does not
 exist in the markup cannot be reached from Rust, and vice versa.
 
 Two consequences worth stating, because both have already cost a return trip:
 
-- **A pane is declared in two places.** The markup file and the pane enum in `src/app.rs` must agree,
+- **A pane is declared in two places.** The markup file and the pane enum in `crates/settings/src/app.rs` must agree,
   and the nav order is the declared order — not the alphabetical one.
-- **Tests drive the real window, not a mock.** `src/*_slint_snapshot.rs` boot
+- **Tests drive the real window, not a mock.** The `crates/settings/src/*_slint_snapshot.rs` modules boot
   `i-slint-backend-testing`'s `TestingBackend` and locate controls by accessible label, so a control
   without an `accessible-label` is untestable by construction. That harness sets values through the
   accessible-value setter, which is a *different code path* from a physical keystroke reaching a
