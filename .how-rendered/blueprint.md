@@ -8,7 +8,7 @@ This is what the owner reads at **G3 Blueprint** — one page, every one of the 
 
 ## Use case catalogue
 
-**10 use cases**, 0 marked `critical`. Rendered from `usecases.yaml`.
+**12 use cases**, 0 marked `critical`. Rendered from `usecases.yaml`.
 
 | id | Use case | Component | Satisfies | critical |
 | --- | --- | --- | --- | --- |
@@ -22,6 +22,8 @@ This is what the owner reads at **G3 Blueprint** — one page, every one of the 
 | `UC-8` | Check for updates from the About pane | `settings` | `FR-25` | no |
 | `UC-9` | Snap the active window to a screen edge at a custom percentage | `window-management` | `FR-26` | no |
 | `UC-10` | Snap the active window to a third of the screen | `window-management` | `FR-27` | no |
+| `UC-11` | Turn a shortcut action on or off | `settings` | `FR-28` | no |
+| `UC-12` | A disabled shortcut action's chord is not claimed at the hook | `window-management` | `FR-29` | no |
 
 
 ## Actor list
@@ -31,14 +33,14 @@ This is what the owner reads at **G3 Blueprint** — one page, every one of the 
 
 | Actor | Who they are | What they may do |
 | --- | --- | --- |
-| Power User | Desktop user wanting customized shortcut chords, auto-start management, or diagnostic preferences. | Customize primary/fallback shortcuts, toggle auto-start on boot, modify passthrough lists. |
+| Power User | Desktop user wanting customized shortcut chords, auto-start management, or diagnostic preferences. | Customize primary/fallback shortcuts, toggle auto-start on boot, modify passthrough lists, turn any individual shortcut action on or off. |
 | New User | First-time user encountering Wira Desk upon installation or initial launch. | Step through interactive mock window cycling simulation or dismiss onboarding via Skip Tutorial. |
 
 ### window-management
 
 | Actor | Who they are | What they may do |
 | --- | --- | --- |
-| Power User | Desktop user managing multiple windows of the same application across multi-monitor or virtual desktop workspaces. | Trigger same-app cycling, snap active windows to any half or to full screen, to a custom percentage of a screen edge, or to a left/middle/right third, move the active window to the next monitor, access tray menu, open diagnostic logs. |
+| Power User | Desktop user managing multiple windows of the same application across multi-monitor or virtual desktop workspaces. | Trigger same-app cycling, snap active windows to any half or to full screen, to a custom percentage of a screen edge, or to a left/middle/right third, move the active window to the next monitor, turn off any shortcut action so Windows and other applications receive its chord instead, access tray menu, open diagnostic logs. |
 | New User | First-time user running Wira Desk on Windows. | Experience default cycling and snapping shortcuts without opening configuration. |
 | Sysadmin | System administrator operating standard and elevated command shells or administrative tools. | Cycle seamlessly between standard and elevated administrator windows without UIPI refusal. |
 
@@ -55,7 +57,7 @@ Conceptual domain model for the `settings` component. Represents domain entities
 
 | Entity | What it is | Identified by |
 | --- | --- | --- |
-| `user-shortcut-preference` | The user's customized physical key combinations for primary cycling, fallback cycling, window snapping, and application passthrough lists. | Shortcut action identifier (e.g. `cycle_primary`, `cycle_fallback`, `snap_left`) |
+| `user-shortcut-preference` | The user's customized physical key combinations for primary cycling, fallback cycling, window snapping, and application passthrough lists, plus a per-action enabled/disabled flag independent of the chord itself. | Shortcut action identifier (e.g. `cycle_primary`, `cycle_fallback`, `snap_left`) |
 | `onboarding-completion` | The status record indicating whether the initial interactive simulation tutorial has been completed, skipped, or is still pending. | User profile configuration identity and completion timestamp |
 | `auto-start-preference` | The persistent configuration controlling whether Wira Desk launches silently at user logon via Windows Task Scheduler with elevated privileges. | Scheduled task identifier (`WiraDesk`, frozen as `shared::constants::TASK_NAME`) and target user profile |
 
@@ -65,6 +67,7 @@ Conceptual domain model for the `settings` component. Represents domain entities
 - `onboarding-completion` **gates** the presentation of the interactive tutorial dialog on application startup.
 - `auto-start-preference` **governs** the registration and removal of the Windows Scheduled Task, which the daemon performs when it reloads configuration; this component only records the preference.
 - Saving `user-shortcut-preference` **triggers** an atomic write to `app-config` followed by an explicit `ipc-reload-signal` dispatch.
+- A `user-shortcut-preference` the user disabled **excludes** its chord from hook registration in `window-management`, the same effective outcome as an `unbound` action but for a different reason (`BR-9`) — see the Enablement Invariant below.
 
 #### State Lifecycle
 
@@ -92,6 +95,7 @@ Conceptual domain model for the `settings` component. Represents domain entities
 - **Skip Tutorial Availability Invariant:** The "Skip Tutorial" action must remain accessible and clearly visible on every step of the first-run onboarding flow (FR-17).
 - **Per-User Task Alignment Invariant:** Auto-start scheduled tasks must always be created with `/RU %USERNAME%` and `/RL HIGHEST`, never under the `SYSTEM` account (BR-4, AD-13).
 - **Full Accessibility Invariant:** All interactive settings controls, toggles, and modal dialogs must be fully navigable via keyboard and expose name, role, and state to screen readers via Windows UI Automation (FR-20, FR-21, AD-11a).
+- **Per-Action Enablement Invariant:** `disabled` (the user turned an action off) and `unbound` (`window-management` left an action's chord unreachable because it collided with an earlier one, `BR-6`/`DEC-009`) are two different domain concepts and must never be presented as the same state, even though both currently resolve to the identical "chord absent from hook registration" representation at the daemon boundary. `disabled` is a preference the user set on purpose and this component owns it; `unbound` is a runtime derivation `window-management` computes and this component only displays. A row's chord string is retained across a disable, not discarded — disabling never invalidates a chord the way an empty capture does (FR-28).
 
 ### window-management
 
@@ -115,6 +119,7 @@ Conceptual domain model for the `window-management` component. Represents domain
 - One `tray-health-state` **reflects** the runtime health of the hook thread and error reporting protocol.
 - One `arrangement-command` **modifies** the geometry of the active window within the bounds of `window-focus-state`.
 - One `arrangement-command` of the monitor-move kind **reads** the live monitor set to choose a destination, and is the only kind whose target work area is not the one `window-focus-state` reports.
+- An action `settings` recorded as `disabled` **excludes** its chord from hook registration before matching is ever attempted; no `hook-command` is created for it (`FR-29`, `BR-9`).
 
 #### State Lifecycle
 
@@ -135,13 +140,16 @@ Conceptual domain model for the `window-management` component. Represents domain
 | `Pending` | `Dropped` | Throttle window violation (<50 ms) or ring buffer full | Hook thread |
 | `Dispatched` | `Executed` | Worker completes window focus transition or arrangement | Worker thread |
 
+A disabled action's chord never enters this lifecycle at all: it is excluded at hook registration, before any keypress could be matched against it, so there is no `Pending` a disabled action's `hook-command` could ever reach. This is a precondition on registration, not a new terminal state — there is nothing to transition **from** for a command that was never created (`FR-29`).
+
 #### Invariants
 
 - **Live Traversal Invariant:** Window focus state and Z-order stacking must never be cached between shortcut keypresses; each cycle command must traverse live desktop state (AD-3).
 - **Spatial Preservation Invariant:** Target candidate windows for cycling or snapping must reside on the exact same physical monitor and virtual desktop as the foreground window (FR-2, CAP-7). A monitor-move command is the one deliberate crossing of the monitor half of this boundary; it still must not cross the virtual desktop half, and moving a window never changes which desktop shows it (FR-23, AD-9).
 - **Proportional Placement Invariant:** A window moved between monitors must be placed by the share of the destination work area it occupied on the source, never by copying its pixel width and height — otherwise an arrangement dissolves the moment the two monitors differ in size or display scaling (FR-23, DEC-007).
 - **Live Monitor Set Invariant:** The set of attached monitors must be enumerated fresh on every monitor-move command and must never be cached between keypresses. An `HMONITOR` is a handle rather than an identity, and a cached list survives an unplug that the handle does not (AD-14).
-- **One Chord, One Action Invariant:** No two actions may be reachable by the same chord. When configuration says otherwise, the chord belongs to the first action in the fixed precedence order and the later action is unbound rather than ambiguous (BR-6, DEC-009).
+- **One Chord, One Action Invariant:** No two actions may be reachable by the same chord. When configuration says otherwise, the chord belongs to the first action in the fixed precedence order and the later action is unbound rather than ambiguous (BR-6, DEC-009). A `disabled` action (`BR-9`) is a different concept reaching the same registration-time exclusion: it never enters the precedence resolution at all, having no chord to contend with in the first place, so this invariant's collision handling needs no change to also exclude disabled rows.
+- **Registration Exclusion Invariant:** A shortcut action's chord is registered at the low-level keyboard hook only when `settings` records it as enabled; a disabled action's physical key combination is never intercepted and reaches the foreground application or Windows exactly as it would if Wira Desk were not installed (FR-29, BR-9).
 - **UX Honesty Invariant:** Unresponsive ("Not Responding") windows must receive focus when reached in the cycling sequence and must never be filtered out (FR-4).
 - **Hook Callback Speed Invariant:** The low-level keyboard hook callback must complete within 10 ms without executing heap allocations or blocking synchronous APIs (NFR-2, NFR-3).
 - **Single Instance Invariant:** Exactly one background daemon instance may run per user logon session (NFR-6).
@@ -159,6 +167,7 @@ Conceptual domain model for the `window-management` component. Represents domain
 | BR-6 | Two actions configured to the same chord is a defined condition, and the two components answer it differently on purpose. The settings process refuses to save a configuration containing one, naming both fields. The daemon, which has no such veto over a file it did not write, keeps the chord for whichever field comes first in the fixed precedence order, leaves the later field unbound, and emits exactly one Tier-2 warning naming both — except on an explicit reload, where a last-known-good configuration exists and the whole candidate is refused instead. | `settings`, `window-management` | FR-7, FR-18, DEC-001, DEC-009 | active |
 | BR-7 | The auto-start task's stored executable path must track the running daemon rather than the daemon's location at the moment auto-start was switched on, and the safety of that location must be reported to the user without ever being enforced against them. | `window-management`, `settings` | FR-13, CAP-10, AD-13, AD-7 | active |
 | BR-8 | The update-check request, made by either component, is the only network activity the product ever performs. It carries no payload beyond the request itself — no version, machine name, user name, configuration, or identifier — and nothing else in either component may make a network call. | `window-management`, `settings` | FR-24, FR-25, CAP-13 | active |
+| BR-9 | A shortcut action's enabled/disabled state is a preference `settings` persists and displays, distinct from `unbound` — the state `window-management` derives at runtime when a chord collides with an earlier action (`BR-6`). A disabled action's chord is excluded from keyboard-hook registration entirely, before any match is attempted, rather than registered and left unreachable; disabling never discards the stored chord itself. | `settings`, `window-management` | FR-28, FR-29, CAP-16, DEC-009 | active |
 
 
 ## Invariants — the spine

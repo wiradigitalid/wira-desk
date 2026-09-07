@@ -20,7 +20,7 @@ Users manage multiple windows within the same application (multiple browser sess
 
 | Actor | Who they are | What they may do |
 | --- | --- | --- |
-| Power User | Desktop user managing multiple windows of the same application across multi-monitor or virtual desktop workspaces. | Trigger same-app cycling, snap active windows to any half or to full screen, to a custom percentage of a screen edge, or to a left/middle/right third, move the active window to the next monitor, access tray menu, open diagnostic logs. |
+| Power User | Desktop user managing multiple windows of the same application across multi-monitor or virtual desktop workspaces. | Trigger same-app cycling, snap active windows to any half or to full screen, to a custom percentage of a screen edge, or to a left/middle/right third, move the active window to the next monitor, turn off any shortcut action so Windows and other applications receive its chord instead, access tray menu, open diagnostic logs. |
 | New User | First-time user running Wira Desk on Windows. | Experience default cycling and snapping shortcuts without opening configuration. |
 | Sysadmin | System administrator operating standard and elevated command shells or administrative tools. | Cycle seamlessly between standard and elevated administrator windows without UIPI refusal. |
 
@@ -37,6 +37,7 @@ Rendered from `usecases.yaml`.
 | `UC-7` | Move the active window to the next monitor | `window-management` | `FR-23` | no |
 | `UC-9` | Snap the active window to a screen edge at a custom percentage | `window-management` | `FR-26` | no |
 | `UC-10` | Snap the active window to a third of the screen | `window-management` | `FR-27` | no |
+| `UC-12` | A disabled shortcut action's chord is not claimed at the hook | `window-management` | `FR-29` | no |
 
 
 ## Constraints
@@ -156,6 +157,7 @@ Conceptual domain model for the `window-management` component. Represents domain
 - One `tray-health-state` **reflects** the runtime health of the hook thread and error reporting protocol.
 - One `arrangement-command` **modifies** the geometry of the active window within the bounds of `window-focus-state`.
 - One `arrangement-command` of the monitor-move kind **reads** the live monitor set to choose a destination, and is the only kind whose target work area is not the one `window-focus-state` reports.
+- An action `settings` recorded as `disabled` **excludes** its chord from hook registration before matching is ever attempted; no `hook-command` is created for it (`FR-29`, `BR-9`).
 
 #### State Lifecycle
 
@@ -176,13 +178,16 @@ Conceptual domain model for the `window-management` component. Represents domain
 | `Pending` | `Dropped` | Throttle window violation (<50 ms) or ring buffer full | Hook thread |
 | `Dispatched` | `Executed` | Worker completes window focus transition or arrangement | Worker thread |
 
+A disabled action's chord never enters this lifecycle at all: it is excluded at hook registration, before any keypress could be matched against it, so there is no `Pending` a disabled action's `hook-command` could ever reach. This is a precondition on registration, not a new terminal state — there is nothing to transition **from** for a command that was never created (`FR-29`).
+
 #### Invariants
 
 - **Live Traversal Invariant:** Window focus state and Z-order stacking must never be cached between shortcut keypresses; each cycle command must traverse live desktop state (AD-3).
 - **Spatial Preservation Invariant:** Target candidate windows for cycling or snapping must reside on the exact same physical monitor and virtual desktop as the foreground window (FR-2, CAP-7). A monitor-move command is the one deliberate crossing of the monitor half of this boundary; it still must not cross the virtual desktop half, and moving a window never changes which desktop shows it (FR-23, AD-9).
 - **Proportional Placement Invariant:** A window moved between monitors must be placed by the share of the destination work area it occupied on the source, never by copying its pixel width and height — otherwise an arrangement dissolves the moment the two monitors differ in size or display scaling (FR-23, DEC-007).
 - **Live Monitor Set Invariant:** The set of attached monitors must be enumerated fresh on every monitor-move command and must never be cached between keypresses. An `HMONITOR` is a handle rather than an identity, and a cached list survives an unplug that the handle does not (AD-14).
-- **One Chord, One Action Invariant:** No two actions may be reachable by the same chord. When configuration says otherwise, the chord belongs to the first action in the fixed precedence order and the later action is unbound rather than ambiguous (BR-6, DEC-009).
+- **One Chord, One Action Invariant:** No two actions may be reachable by the same chord. When configuration says otherwise, the chord belongs to the first action in the fixed precedence order and the later action is unbound rather than ambiguous (BR-6, DEC-009). A `disabled` action (`BR-9`) is a different concept reaching the same registration-time exclusion: it never enters the precedence resolution at all, having no chord to contend with in the first place, so this invariant's collision handling needs no change to also exclude disabled rows.
+- **Registration Exclusion Invariant:** A shortcut action's chord is registered at the low-level keyboard hook only when `settings` records it as enabled; a disabled action's physical key combination is never intercepted and reaches the foreground application or Windows exactly as it would if Wira Desk were not installed (FR-29, BR-9).
 - **UX Honesty Invariant:** Unresponsive ("Not Responding") windows must receive focus when reached in the cycling sequence and must never be filtered out (FR-4).
 - **Hook Callback Speed Invariant:** The low-level keyboard hook callback must complete within 10 ms without executing heap allocations or blocking synchronous APIs (NFR-2, NFR-3).
 - **Single Instance Invariant:** Exactly one background daemon instance may run per user logon session (NFR-6).

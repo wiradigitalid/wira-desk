@@ -70,3 +70,17 @@ usecases:
     actor: Power User
     satisfies: [FR-27]
     critical: false
+
+  - id: UC-11
+    component: settings
+    title: Turn a shortcut action on or off
+    actor: Power User
+    satisfies: [FR-28]
+    critical: false
+
+  - id: UC-12
+    component: window-management
+    title: A disabled shortcut action's chord is not claimed at the hook
+    actor: Power User
+    satisfies: [FR-29]
+    critical: false

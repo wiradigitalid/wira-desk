@@ -4,10 +4,10 @@ component: window-management
 status: reviewed
 created: 2026-08-21
 updated: 2026-08-26
-satisfies: [FR-1, FR-2, FR-3, FR-4, FR-5, FR-6, FR-8, FR-9, FR-10, FR-11, FR-12, FR-14, FR-15, FR-22, FR-23]
+satisfies: [FR-1, FR-2, FR-3, FR-4, FR-5, FR-6, FR-8, FR-9, FR-10, FR-11, FR-12, FR-14, FR-15, FR-22, FR-23, FR-26, FR-27, FR-29]
 reviewed:
   date: '2026-09-07'
-  sha: 'dd5c8cd'
+  sha: 'b1fbaad'
   lenses: [structure, prose]
 ---
 
@@ -25,7 +25,7 @@ Users manage multiple windows within the same application (multiple browser sess
 
 | Actor | Who they are | What they may do |
 | --- | --- | --- |
-| Power User | Desktop user managing multiple windows of the same application across multi-monitor or virtual desktop workspaces. | Trigger same-app cycling, snap active windows to any half or to full screen, to a custom percentage of a screen edge, or to a left/middle/right third, move the active window to the next monitor, access tray menu, open diagnostic logs. |
+| Power User | Desktop user managing multiple windows of the same application across multi-monitor or virtual desktop workspaces. | Trigger same-app cycling, snap active windows to any half or to full screen, to a custom percentage of a screen edge, or to a left/middle/right third, move the active window to the next monitor, turn off any shortcut action so Windows and other applications receive its chord instead, access tray menu, open diagnostic logs. |
 | New User | First-time user running Wira Desk on Windows. | Experience default cycling and snapping shortcuts without opening configuration. |
 | Sysadmin | System administrator operating standard and elevated command shells or administrative tools. | Cycle seamlessly between standard and elevated administrator windows without UIPI refusal. |
 
@@ -84,7 +84,7 @@ Pressing `Win + \`` immediately shifts keyboard focus to the next visible, same-
 - ★ Every functional requirement (FR-1..6, FR-8..12, FR-14..15, FR-22, FR-23, FR-26..27) mapped to a usecase or carries explicit `no_uc:` justification? Yes.
 - ★ All use case titles phrased as natural user sentences? Yes.
 - ★ Actor Register complete and aligned with PRD journeys? Yes.
-- ★ Invariants AD-1..10, AD-14, and cross-component business rules BR-1..6 respected? Yes.
+- ★ Invariants AD-1..10, AD-14, and cross-component business rules BR-1..9 respected? Yes.
 
 ## Design Reference · [G3]
 

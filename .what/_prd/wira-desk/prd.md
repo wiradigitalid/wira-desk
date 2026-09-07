@@ -4,7 +4,7 @@ title: Wira Desk
 initiative: wira-desk
 status: reviewed
 created: 2026-07-06
-updated: 2026-09-06
+updated: 2026-09-07
 provenance: >-
   Harvested from _bmad-output/planning-artifacts/prds/prd-WinTick-2026-07-06/prd.md
   via wdi-product intent update (brownfield).
@@ -22,6 +22,7 @@ provenance: >-
 | 2026-08-26 | Snapping now covers the top and bottom halves of a screen, not only the left and right; moving the active window to another monitor became something Wira Desk does itself instead of leaving to Windows; and every shipped arrangement shortcut moved to the Ctrl+Alt family | The owner asked for vertical halves and a deliberate monitor move. The shortcut family moved because the previous default, `Ctrl+Win+Left/Right`, silently took over Windows' own shortcut for switching virtual desktops — a promise this product had already made not to break. Monitor movement was previously delegated to Windows' `Win+Shift+Arrow`, which discards whatever arrangement the user had just applied, so the two features never composed | v0.4.0 |
 | 2026-09-03 | Added Update Checking (CAP-13, FR-24, FR-25): the product already shipped an optional, toggleable HTTPS check for a newer release, disclosed in `PRIVACY.md` but never promised here; §7's Constraints corrected to state the one exception instead of an absolute zero; FR-16's tray menu order corrected to match what ships (an "Update to \<version\>..." item only when one is available, not an always-present "Check for Updates...") | `wdi-reconcile` traced the shipped code against the corpus and found the update-check subsystem — real, deliberate, already privacy-documented — had no promise anywhere in `.what/`, and that FR-16's proof no longer matched the running menu | v0.4.0 |
 | 2026-09-06 | Added custom-percentage edge snap (CAP-14, FR-26) and snap-to-thirds (CAP-15, FR-27), both `window-management`; FR-15's proof corrected from `Ctrl + Alt + Shift + Down` to `Ctrl + Alt + Shift + S`, the Overlapping Stack default `DEC-011` moved it to so the new percentage-snap feature could claim the arrow tier | The owner asked for a configurable-percentage snap and a thirds snap, and wanted the first bound to arrow keys; freeing that tier required moving the Overlapping Stack default, recorded as `DEC-011` | Unreleased |
+| 2026-09-07 | Added per-action shortcut enable/disable (CAP-16): FR-28 (`settings`) gives every editable action its own on/off control, distinct from a `DEC-009` chord-collision unbind; FR-29 (`window-management`) excludes a disabled action's chord from hook registration entirely rather than registering and then discarding it | Overlapping Stack was the only action with an on/off control and no `FR`/`UC`/`DEC` explained why. Every other action's chord is claimed from Windows permanently regardless of whether the user wants that feature — and even Overlapping Stack's own existing toggle checked state inside the arrangement planner, after the hook had already consumed the keystroke, so "disabled" still stole the chord without using it | Unreleased |
 
 ## 1. Why This Initiative
 
@@ -229,6 +230,21 @@ Windows already moves windows between monitors with `Win + Shift + Arrow`, and W
 
 ---
 
+### 3.15 Per-Action Shortcut Enable/Disable
+
+**Capability:** CAP-16 — serves BG-3.
+
+**Description:** Every editable shortcut action — not only the Overlapping Stack toggle that has one
+today — can be turned off individually from its own row in the Shortcuts pane. Turning an action off
+excludes its chord from keyboard-hook registration entirely, so the same key combination reaches
+Windows or another application untouched instead of being claimed and then discarded. A row the user
+turned off reads visibly differently from a row `DEC-009` left unbound because its chord collided with
+another action's, so the user is never left guessing which state they are looking at.
+
+**Realizes:** FR-28, FR-29
+
+---
+
 ## 4. MVP Scope
 
 ### 4.1 In Scope
@@ -240,6 +256,7 @@ Windows already moves windows between monitors with `Win + Shift + Arrow`, and W
 - DPI-aware keyboard snapping to any half of the screen (`Ctrl + Alt + Arrows`) and maximize (`Ctrl + Alt + Enter`), plus the overlapping stack layout.
 - DPI-aware keyboard snapping to a user-configurable edge percentage (`Ctrl + Alt + Shift + Arrows`) and to left/middle/right thirds (`Ctrl + Alt + 1/2/3`).
 - Moving the active window to the next physical monitor from the keyboard, keeping its share of the working area.
+- Turning any individual shortcut action off from Settings, returning its chord to Windows rather than leaving it claimed and inert.
 - Separate settings binary with first-run onboarding, physical key listening, and UI Automation accessibility.
 - Silent auto-start via Windows Task Scheduler.
 - Local TOML configuration parsing and logging.

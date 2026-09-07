@@ -4,10 +4,10 @@ component: settings
 status: reviewed
 created: 2026-08-21
 updated: 2026-08-25
-satisfies: [FR-7, FR-13, FR-16, FR-17, FR-18, FR-19, FR-20, FR-21, FR-25]
+satisfies: [FR-7, FR-13, FR-16, FR-17, FR-18, FR-19, FR-20, FR-21, FR-25, FR-28]
 reviewed:
-  date: '2026-09-03'
-  sha: '8ec65d7'
+  date: '2026-09-07'
+  sha: 'b1fbaad'
   lenses: [structure, prose]
 ---
 
@@ -25,7 +25,7 @@ Configuration customization and user onboarding are episodic, UI-intensive tasks
 
 | Actor | Who they are | What they may do |
 | --- | --- | --- |
-| Power User | Desktop user wanting customized shortcut chords, auto-start management, or diagnostic preferences. | Customize primary/fallback shortcuts, toggle auto-start on boot, modify passthrough lists. |
+| Power User | Desktop user wanting customized shortcut chords, auto-start management, or diagnostic preferences. | Customize primary/fallback shortcuts, toggle auto-start on boot, modify passthrough lists, turn any individual shortcut action on or off. |
 | New User | First-time user encountering Wira Desk upon installation or initial launch. | Step through interactive mock window cycling simulation or dismiss onboarding via Skip Tutorial. |
 
 ## UC Catalogue
@@ -76,7 +76,7 @@ A user customizes a shortcut combination in Settings, saves preferences, and imm
 - ★ Every functional requirement (FR-7, FR-13, FR-16..21, FR-25) mapped to a usecase or carries explicit `no_uc:` justification? Yes.
 - ★ All use case titles phrased as natural user sentences? Yes.
 - ★ Actor Register complete and aligned with PRD journeys? Yes.
-- ★ Invariants AD-1, AD-5, AD-11, AD-11a, AD-12, AD-13 and cross-component business rules BR-1..6 respected? Yes.
+- ★ Invariants AD-1, AD-5, AD-11, AD-11a, AD-12, AD-13 and cross-component business rules BR-1..9 respected? Yes.
 
 ## Design Reference · [G3]
 

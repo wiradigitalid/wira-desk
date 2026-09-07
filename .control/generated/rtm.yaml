@@ -300,6 +300,32 @@ rtm:
   exempt: false
   green: true
   broken_at: ''
+- BG: BG-3
+  CAP: CAP-16
+  FR: FR-28
+  DEC: []
+  UC: UC-11
+  ticket: ''
+  spec: ''
+  release: ''
+  test: []
+  status: ''
+  green: false
+  exempt: false
+  broken_at: ticket
+- BG: BG-3
+  CAP: CAP-16
+  FR: FR-29
+  DEC: []
+  UC: UC-12
+  ticket: ''
+  spec: ''
+  release: ''
+  test: []
+  status: ''
+  green: false
+  exempt: false
+  broken_at: ticket
 - BG: BG-1
   CAP: CAP-8
   FR: FR-3

@@ -14,7 +14,7 @@ Conceptual domain model for the `settings` component. Represents domain entities
 
 | Entity | What it is | Identified by |
 | --- | --- | --- |
-| `user-shortcut-preference` | The user's customized physical key combinations for primary cycling, fallback cycling, window snapping, and application passthrough lists. | Shortcut action identifier (e.g. `cycle_primary`, `cycle_fallback`, `snap_left`) |
+| `user-shortcut-preference` | The user's customized physical key combinations for primary cycling, fallback cycling, window snapping, and application passthrough lists, plus a per-action enabled/disabled flag independent of the chord itself. | Shortcut action identifier (e.g. `cycle_primary`, `cycle_fallback`, `snap_left`) |
 | `onboarding-completion` | The status record indicating whether the initial interactive simulation tutorial has been completed, skipped, or is still pending. | User profile configuration identity and completion timestamp |
 | `auto-start-preference` | The persistent configuration controlling whether Wira Desk launches silently at user logon via Windows Task Scheduler with elevated privileges. | Scheduled task identifier (`WiraDesk`, frozen as `shared::constants::TASK_NAME`) and target user profile |
 
@@ -24,6 +24,7 @@ Conceptual domain model for the `settings` component. Represents domain entities
 - `onboarding-completion` **gates** the presentation of the interactive tutorial dialog on application startup.
 - `auto-start-preference` **governs** the registration and removal of the Windows Scheduled Task, which the daemon performs when it reloads configuration; this component only records the preference.
 - Saving `user-shortcut-preference` **triggers** an atomic write to `app-config` followed by an explicit `ipc-reload-signal` dispatch.
+- A `user-shortcut-preference` the user disabled **excludes** its chord from hook registration in `window-management`, the same effective outcome as an `unbound` action but for a different reason (`BR-9`) — see the Enablement Invariant below.
 
 ## State Lifecycle
 
@@ -51,3 +52,4 @@ Conceptual domain model for the `settings` component. Represents domain entities
 - **Skip Tutorial Availability Invariant:** The "Skip Tutorial" action must remain accessible and clearly visible on every step of the first-run onboarding flow (FR-17).
 - **Per-User Task Alignment Invariant:** Auto-start scheduled tasks must always be created with `/RU %USERNAME%` and `/RL HIGHEST`, never under the `SYSTEM` account (BR-4, AD-13).
 - **Full Accessibility Invariant:** All interactive settings controls, toggles, and modal dialogs must be fully navigable via keyboard and expose name, role, and state to screen readers via Windows UI Automation (FR-20, FR-21, AD-11a).
+- **Per-Action Enablement Invariant:** `disabled` (the user turned an action off) and `unbound` (`window-management` left an action's chord unreachable because it collided with an earlier one, `BR-6`/`DEC-009`) are two different domain concepts and must never be presented as the same state, even though both currently resolve to the identical "chord absent from hook registration" representation at the daemon boundary. `disabled` is a preference the user set on purpose and this component owns it; `unbound` is a runtime derivation `window-management` computes and this component only displays. A row's chord string is retained across a disable, not discarded — disabling never invalidates a chord the way an empty capture does (FR-28).

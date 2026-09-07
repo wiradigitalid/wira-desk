@@ -46,6 +46,9 @@ capabilities:
   - id: CAP-15
     goal: BG-3
     text: Snap the active window to one of three equal horizontal thirds of the current monitor.
+  - id: CAP-16
+    goal: BG-3
+    text: Let the user turn any individual shortcut action off, returning its chord to Windows instead of leaving it claimed and inert.
 
 functional:
   - id: FR-1
@@ -350,6 +353,31 @@ functional:
     proof: >-
       Pressing `Ctrl + Alt + 2` resizes and aligns the active window to the middle third of the
       working area of the current monitor, taking display scaling into account.
+  - id: FR-28
+    capability: CAP-16
+    component: settings
+    text: Every editable shortcut action carries its own on/off control, distinct from a chord-collision unbind.
+    statement: >-
+      The system can let the user turn any individual shortcut action off from its own row in the
+      Shortcuts pane, independently of every other action, and persists that choice; a row the user
+      turned off reads visibly differently from a row `DEC-009` left unbound because its chord
+      collided with another action's.
+    proof: >-
+      Turning off "Snap to left third" in Settings and saving leaves every other action's chord
+      untouched, and the row reads as user-disabled rather than as a collision.
+  - id: FR-29
+    capability: CAP-16
+    component: window-management
+    text: A shortcut action the user turned off is not registered at the keyboard hook, so its chord passes through to Windows.
+    statement: >-
+      The system excludes a disabled action's chord from low-level keyboard hook registration
+      entirely, rather than registering it and then discarding the match, so the same physical key
+      combination reaches the foreground application or Windows exactly as it would if Wira Desk
+      were not running.
+    proof: >-
+      With "Snap to left third" turned off, pressing `Ctrl + Alt + 1` in another application that
+      binds that same chord triggers that application's own action instead of being silently
+      swallowed.
 
 nonfunctional:
   - id: NFR-1
