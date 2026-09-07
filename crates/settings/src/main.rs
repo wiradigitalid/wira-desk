@@ -161,7 +161,10 @@ pub(crate) fn sync_model_to_ui(window: &MainWindow, model: &SettingsModel) {
         // without a line changing in this file — which is the property the previous
         // one-property-per-field shape could not offer.
         let row_of = |field: ShortcutField| {
-            let (min, max) = field.percent_bounds().unwrap_or((1, 99));
+            let (min, max) = field.percent_bounds().unwrap_or((
+                shared::constants::MIN_SNAP_PERCENT,
+                shared::constants::MAX_SNAP_PERCENT,
+            ));
             ShortcutRowData {
                 index: field as i32,
                 title: slint::SharedString::from(field.label()),

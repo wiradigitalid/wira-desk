@@ -12,6 +12,8 @@ tests:
   - app::tests::pane_declaration_order_is_the_navigation_index
   - app::tests::every_pane_index_round_trips_through_the_ui_boundary
   - app::tests::the_stack_row_carries_its_own_percent_bounds
+  - app::tests::every_percentage_row_reaches_all_four_percent_seams
+  - theme::tests::every_rendered_percent_control_name_comes_from_theme
 ---
 
 # 02: Layout pane retired; stack width percentage moves onto the Overlapping Stack row
@@ -176,6 +178,80 @@ exists in `.slint` is a range nothing can guard — which is exactly how `shortc
 `Pane::from_index` is also committed, mirroring `ShortcutField::from_index` including its
 out-of-range fallback. What remains is rewiring `main.rs`'s two hand-numbered tables to it and to
 `pane as i32`.
+
+## Amendment 3 — 2026-09-07, return trip 1 of 2 (`wdi-build` Step 3 panel)
+
+Everything mechanical in `3b8210b` checks out and **must not be redone**: the derived pane index
+tables, the markup renumbering (VmExceptions 3→2, About 4→3, exactly four entries each side), the
+snapshot migration with every surviving assertion carried verbatim, the percent plumbing, and the
+refused-not-clamped behaviour with its 10-100 message. Both axes verified those independently.
+
+### The two axes split on severity, and the coordinator adjudicated must-fix
+
+Standards scored the accessible-label mechanism **must-fix**; Spec scored it **follow-up**. They
+agreed on every fact. Spec supplied the one that decides it, and it is not about today's labels:
+
+**Both new Stack tests locate their row by `find_by_accessible_label(&window, "Stack width input")`,
+which resolves to the Stack row only because `Stack` alone happens to have bounds (10, 100).** The
+row selection is a coincidence, not a declaration. Give a snap row a 10-100 range and the migrated
+refused-not-clamped guard starts `.next()`-ing a snap row while its messages still say "Stack
+width" — a guard asserting against the wrong control and still passing.
+
+Second ground, independent of the first: `.control/registry/defects.yaml`'s `DEF-2` row names
+`app::tests::focus_order_has_no_duplicates`, `focus_order_is_stable_across_calls` and
+`focus_order_starts_with_navigation_and_ends_with_actions` as its guards. `3b8210b` deleted
+`focus_order(Pane::Layout)` — the one production reader of `theme.rs`'s three `STACK_WIDTH_*`
+names — so those three tests no longer touch these controls at all, and
+`theme::tests::accessible_names_are_unique` now iterates constants the UI never draws. A registry
+pointing at guards that no longer guard is corpus drift, which `wdi-build` returns.
+
+`DEF-2`'s symptom has **not** returned: the three controls on the new row do carry three distinct
+names. This is about the guard, and about identity being inferred from a number.
+
+- [ ] `crates/settings/ui/components/shortcut_row.slint:23-26` stops deciding four accessible
+      labels with `(root.percent_min == 10 && root.percent_max == 100)`. The condition disappears
+      from all four sites.
+- [ ] `crates/settings/src/theme.rs` gains the two names the markup currently spells itself and
+      Rust never declared — the "field" wrapper for each kind (`"Stack width field"` and
+      `"Snap percentage field"`) — plus the snap-percentage decrease/input/increase set, so all
+      eight names live in the layer that can be asserted on. The four existing `STACK_WIDTH_*`
+      constants are reused, not re-spelled.
+- [ ] `ShortcutRowData` carries the four labels, populated in `crates/settings/src/main.rs` from
+      those constants **per `ShortcutField`**. Identity comes from which field the row is. That
+      seam already exists — this commit put `percent_min`/`percent_max` through it.
+- [ ] `theme::tests::every_rendered_percent_control_name_comes_from_theme` asserts every accessible
+      name a percentage control actually renders is one of the `theme.rs` constants. This is the
+      half that makes `accessible_names_are_unique` — `DEF-2`'s own named guard — mean something
+      again. Prove it can fail: point one label at a literal, watch it go red, restore.
+- [ ] Once the labels come from field identity, re-point the two Stack snapshot tests at whatever
+      makes their row selection explicit rather than range-contingent, without weakening either
+      assertion.
+
+### Already landed by the coordinator in this trip, do not redo
+
+- `ShortcutField::percent_bounds()` now reads `MIN_SNAP_PERCENT`/`MAX_SNAP_PERCENT` and
+  `MIN_STACK_WIDTH_PERCENT`/`MAX_STACK_WIDTH_PERCENT` from `crates/shared/src/constants.rs` instead
+  of hardcoding all four numbers. That hardcoding was coordinator code from `1051f10`, and
+  `persistence.rs` already validated against those same constants.
+- `main.rs`'s `unwrap_or((1, 99))` literal pair reads the constants too.
+- `app::tests::every_percentage_row_reaches_all_four_percent_seams` closes the gap Spec found:
+  `has_percent`, `percent`, `set_percent` and `percent_bounds` must agree for **every** field, and
+  the write must actually land. `Stack`'s own round-trip only proved it for `Stack`, while
+  `set_percent`'s `_ => {}` is exactly what this ticket was caught on. Seen red under a mutation
+  that drops `Stack` back through the catch-all, and restored.
+- `defects.yaml`'s `DEF-2` row records that its named guards stopped covering these controls.
+
+### Recorded, not fixed
+
+- The migrated snapshot test hardcodes `50` rather than `DEFAULT_STACK_WIDTH_PERCENT`. Copied
+  verbatim from the deleted file — pre-existing, not a new deviation.
+- `delta_y: -600.0` is a geometry-dependent magic number, and `setup_shortcuts_window` already
+  scrolls, so the scroll in both migrated tests is dead motion. Harmless; it fails loudly through
+  `.expect(...)` if the row moves.
+- The four pre-existing snap tests take `.next()` on `"Snap percentage input"`, shared by four
+  rows, relying on the first being `SnapPercentLeft`. Prior art, not this ticket's doing.
+- `percent_bounds`'s `Option<(u32, u32)>` shape is Primitive Obsession by the smell baseline;
+  naming a type for it is out of scope here.
 
 ## Out of scope, deliberately
 

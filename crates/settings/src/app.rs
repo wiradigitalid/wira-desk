@@ -339,12 +339,15 @@ impl ShortcutField {
     /// `1`/`99` and the retired Layout pane carried `10`/`100` — so moving the stack control onto
     /// a shortcut row without moving its range with it silently narrowed it.
     pub fn percent_bounds(self) -> Option<(u32, u32)> {
+        use shared::constants::{
+            MAX_SNAP_PERCENT, MAX_STACK_WIDTH_PERCENT, MIN_SNAP_PERCENT, MIN_STACK_WIDTH_PERCENT,
+        };
         match self {
             ShortcutField::SnapPercentLeft
             | ShortcutField::SnapPercentRight
             | ShortcutField::SnapPercentTop
-            | ShortcutField::SnapPercentBottom => Some((1, 99)),
-            ShortcutField::Stack => Some((10, 100)),
+            | ShortcutField::SnapPercentBottom => Some((MIN_SNAP_PERCENT, MAX_SNAP_PERCENT)),
+            ShortcutField::Stack => Some((MIN_STACK_WIDTH_PERCENT, MAX_STACK_WIDTH_PERCENT)),
             _ => None,
         }
     }
@@ -1581,6 +1584,45 @@ mod tests {
             ShortcutField::Stack.has_percent(),
             "the Overlapping Stack row carries a percentage"
         );
+    }
+
+    #[test]
+    fn every_percentage_row_reaches_all_four_percent_seams() {
+        // `set_percent` and `percent` both end in `_ => {}` / `_ => None` catch-alls, so a field
+        // added to `has_percent()` but forgotten in either one fails **silently** — the row draws
+        // a control that discards every edit. That is exactly what this ticket was caught on, and
+        // `Stack`'s own round-trip test only proves it for `Stack`. This pins the general rule:
+        // the four seams agree for every field, so the next percentage row cannot repeat it.
+        let mut cfg = Config::default();
+        for f in ShortcutField::ALL {
+            let claims = f.has_percent();
+            assert_eq!(
+                claims,
+                f.percent_bounds().is_some(),
+                "{} disagrees between has_percent and percent_bounds",
+                f.label()
+            );
+            assert_eq!(
+                claims,
+                f.percent(&cfg).is_some(),
+                "{} disagrees between has_percent and percent",
+                f.label()
+            );
+            if !claims {
+                continue;
+            }
+            // And the write actually lands rather than falling through the catch-all. Chosen
+            // inside every row's own bounds so no row is refused for being out of range.
+            let (min, max) = f.percent_bounds().expect("a percentage row has bounds");
+            let target = min + (max - min) / 2;
+            f.set_percent(&mut cfg, target);
+            assert_eq!(
+                f.percent(&cfg),
+                Some(target),
+                "{} accepted a percentage and discarded it",
+                f.label()
+            );
+        }
     }
 
     #[test]
