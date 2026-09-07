@@ -16,15 +16,15 @@ date: 2026-09-07
 - Stopped at: coordinator half complete; **builder half not yet dispatched.**
 - Blocked: —
 - Parked: —
-- **Next, and it is a dispatch:** `claude-byok` on the production half of return trip 1, brief to be
-  written at `.scratch/builder-brief-spec-4-03-trip1.md`. Four items, all on the ticket as
+- **IN FLIGHT — do NOT re-dispatch:** `claude-byok` on the production half of return trip 1, brief
+  at `.scratch/builder-brief-spec-4-03-trip1.md`. Four items, all on the ticket as
   Amendment 2: (1) the Tab-order regression against `LBR-ST-5` — `wdi-systematic-debugging`
   FIRST, one Tab press reaches a row's description block from a fresh window; (2) delete the five
   `GROUP_HEADING_*` constants and plumb `SHORTCUT_KEYCAP` / `SHORTCUT_ROW_DESCRIPTION` through the
   existing `in property` pattern; (3) per-row accessible names for keycap and description —
   sixteen elements currently share two names, `DEF-2`'s literal shape; (4) keep-or-remove
   `min-height: 50px`, and remove the test-only `accessible-action-default => { self.focus(); }`.
-- **Build lock: shut the moment that dispatch goes out** — no `cargo`, no stash, no branch switch,
+- **Build lock: SHUT.** The builder holds it — no `cargo`, no stash, no branch switch,
   no worktree restore by the coordinator while the builder holds it.
 - Mutation discipline for the judging pass, learned the hard way this iteration and not to be
   re-learned: verify every mutation APPLIED (`git diff --numstat`) before believing a green, and
