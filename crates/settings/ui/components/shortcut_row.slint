@@ -3,11 +3,22 @@ import { ToggleSwitch } from "toggle_switch.slint";
 
 // One editable action.
 //
-// Every text in here is single-line and elides. That is not a style preference: this row's
-// height comes from a preferred height that Slint computes at the text's *unwrapped* width,
-// so a description that wrapped to two lines got a one-line row and its second line drew
-// over the divider into the next row. Keeping each text to one line makes the row height
-// deterministic instead of dependent on a measurement that is taken before wrapping.
+// Every text INSIDE the row is single-line and elides. That is not a style preference: the
+// row's height comes from a preferred height that Slint computes at the text's *unwrapped*
+// width, so a text that wrapped to two lines got a one-line row and its second line drew over
+// the divider into the next row.
+//
+// The description used to be one of those texts and was the one that overflowed, so it now
+// lives in the tooltip below instead, where wrapping is free because the tooltip is
+// free-positioned rather than a layout child. The row is therefore one line tall, at the
+// `min-height` floor.
+//
+// The mis-measurement above was re-confirmed while testing this change, and it is the reason a
+// geometry test cannot see the defect: with the wrapping description put back, the row height
+// did not move at all — the row stayed 50px and the text simply drew outside it. So a row-height
+// assertion is not the guard for "the description is not a visible line"; reading the element
+// tree is (`description_renders_as_a_tooltip_not_a_visible_line`), and the overflow it used to
+// cause is a hand-verified smoke-test item.
 export component ShortcutRow inherits Rectangle {
     min-height: 50px;
     in property <string> title: "Shortcut";
@@ -119,10 +130,13 @@ export component ShortcutRow inherits Rectangle {
         // Right Actions: Swap button + Keycap button
         //
         // Wrapped in a centring VerticalLayout because the buttons must sit on the row's
-        // vertical middle, and a row is as tall as its description — two lines on the longer
-        // ones. The previous attempt set `y: (parent.height - 30px) / 2` on each button, which
-        // could not work: a layout positions its own children, so `y` on a layout child is
-        // discarded. That is why the keycap sat high against a two-line row.
+        // vertical middle whatever the row's height is — which is no longer the description's
+        // to decide, but is still the conflict line's, and still the `min-height` floor's.
+        //
+        // The previous attempt set `y: (parent.height - 30px) / 2` on each button, which could
+        // not work: a layout positions its own children, so `y` on a layout child is discarded.
+        // That is why the keycap sat high. `control_cluster_and_toggle_share_one_vertical_centre`
+        // is what holds this now — do not replace the layout with a `y:` expression again.
         VerticalLayout {
             alignment: center;
             horizontal-stretch: 0;

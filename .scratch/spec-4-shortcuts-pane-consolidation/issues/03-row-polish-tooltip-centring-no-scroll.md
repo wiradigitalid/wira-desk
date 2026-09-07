@@ -209,7 +209,7 @@ Recorded here so the builder does not redo them, and because three are the coord
       **geometry** mutation — widening the cluster — because every mutation so far proved only that
       the test detects *missing elements*, never *actual width*. Nothing was narrowed for defect 3
       and the width assertion has never been observed failing.
-- [ ] The height guard measures two **title blocks**, not two rows, and after this change they are
+- [x] The height guard measures two **title blocks**, not two rows, and after this change they are
       structurally identical by construction — it cannot go red for the property it names. Rewrite
       it to measure real row heights across two shapes: a one-line row and a row carrying the
       conflict or "Disabled" line, which is the shape `shortcut_row.slint`'s own comment says broke
@@ -219,17 +219,87 @@ Recorded here so the builder does not redo them, and because three are the coord
       make it saturating, unify the two divergent scroll ladders in one file, and share the helper
       into `shortcut_row_slint_snapshot.rs`, which still inlines raw dispatches — the commit message
       claimed a reach it did not have.
-- [ ] The measured counters double-count, because the outer loop revisits scroll positions. Harmless
+- [x] The measured counters double-count, because the outer loop revisits scroll positions. Harmless
       for `> 0`, misleading as coverage.
-- [ ] `shortcut_row.slint`'s header comment and the note above the cluster both still describe the
+- [x] `shortcut_row.slint`'s header comment and the note above the cluster both still describe the
       always-visible wrapping description. Both are now false in the direction that matters: a
       reader repairing a badly-wrapping tooltip would read them as licence to make it single-line,
       undoing defect 1.
-- [ ] `CHANGELOG.md` `## [Unreleased]` — this adds behaviour and new files, so it fails the patch
+- [x] `CHANGELOG.md` `## [Unreleased]` — this adds behaviour and new files, so it fails the patch
       test twice, and it is user-facing in exactly the way that section's preamble describes.
-- [ ] `3p.md` overstates two things after `b28d5ab` (the width test now proves `>= 1` keycap and
+- [x] `3p.md` overstates two things after `b28d5ab` (the width test now proves `>= 1` keycap and
       toggle, not "all"; row height is a 50px floor, not a deterministic 50px), carries no entry for
       `b28d5ab`, and records no per-test mutation report though the brief required one.
+
+### Amendment 3 — the mutation reports, and what running them changed
+
+Every mutation below was verified applied by reading `git diff --numstat`, not by trusting the
+script's own success message: an earlier attempt printed nothing, mutated nothing, and the test
+then passed against unmutated code. **A mutation that does not apply is indistinguishable from a
+guard that works.**
+
+| # | Mutation | Result |
+|---|---|---|
+| 1 | The always-visible wrapping description put back into the row layout | **Test stayed green.** Not a guard failure — see below |
+| 2 | `min-height` keyed to `description.character-count` | **Red**, pitches `[63, 57, 57]`, message named the group and both numbers |
+| 3 | Keycap widened `max(135px …)` → `max(700px …)` | **Red**, `Heading 'Switching' right edge (1248) exceeds window width (760)` |
+
+Mutation 3 is the one the width test had never faced. Every earlier mutation on it emptied an
+accessible label, so all it had ever proven was that it notices *missing elements*; it now
+demonstrably measures *actual width*.
+
+#### Mutation 1 is a finding about the criterion, not about the test
+
+Restoring the wrapping description does not change the row's height **at all** — and neither does
+injecting a 200-character description through the production model. The component's own header
+comment says why, and this run confirmed it by measurement: Slint computes the row's preferred
+height at the text's **unwrapped** width, so a wrapping description reports a one-line height, the
+row stays at its 50px floor, and the surplus lines draw **outside** the row. That is exactly the
+historic defect the header was written about — text over the next row's divider — and **it is
+invisible to any geometry assertion.**
+
+So criterion 3 as worded cannot be proven by measuring height, whatever the test does:
+
+- **That the description is not a visible line** is proven by reading the element tree —
+  `description_renders_as_a_tooltip_not_a_visible_line`. That test carries the criterion.
+- **That the row height is uniform** is a real and separate property, worth its own guard, and
+  `row_height_is_independent_of_description_length` now holds it: it measures real row pitch, it
+  imposes a hostile description length through `set_rows_snap_custom` rather than hoping the four
+  rows in view differ (they do not — "Snaps the window to the {left,right,top,bottom} edge at its
+  configured percentage." is the same length to within a word), and mutation 2 shows it red.
+- **That nothing overflows the row** is hand-verifiable only, and is on the smoke-test list.
+
+Two earlier readings of this same check looked like proof and were not, so the reasoning is now in
+the test's own comment rather than only here.
+
+#### Two corrections to Amendment 2's own instructions
+
+- Amendment 2 told the next reader to rewrite the height guard "across two shapes: a one-line row
+  and a row carrying the conflict or Disabled line". That would not have worked either: it varies
+  the *conflict* line, not the description, so it would have measured something the criterion does
+  not name. Imposing the description length is the version that tests the stated property.
+- Amendment 2's first attempt at the rewrite derived group boundaries by index arithmetic over the
+  declared sequence, assuming the visible run starts at row 0. It does not — `setup_shortcuts_window`
+  scrolls `-600`, and the bracketed group is *Snap to custom*. Under mutation 1 the boundaries
+  landed one index earlier, the guard went **red while every real row pitch was still 51**, and the
+  message blamed the description. Group membership is now read from the rendered tree: the keycaps
+  between two visible headings are that group's rows, by construction. **A guard that reds for the
+  wrong reason is not a guard**, and this one was two-thirds of the way to being accepted as one.
+
+#### Still open from Amendment 2, narrowed
+
+- The width test's bound is still the **window** edge, not the pane's content edge. The measured
+  margin is now printed (`MEASUREMENT: widest right edge …`) so the slack is visible rather than
+  implied, but tightening it needs the `ScrollView`'s `viewport-width` exposed — a production
+  change, still the builder's.
+- `SCROLL_PAST_TOP` and one `SCROLL_DOWN_LADDER` now have a single home in
+  `shortcuts_pane_slint_snapshot.rs`, and the sharing item is **narrower than Amendment 2 stated**:
+  the height guard needs no scrolling of its own, so what remains is the raw
+  `dispatch_event` calls elsewhere in `shortcut_row_slint_snapshot.rs`.
+- `min-height: 50px` — mutation 2 shows the guard catches a min-height that varies **between**
+  rows, so if the builder keeps the line it is not unguarded. It gives no purchase on *deleting*
+  it, which the panel's arithmetic says changes no pixel. That decision is unchanged and still the
+  builder's.
 
 ### Recorded, not fixed
 

@@ -599,24 +599,112 @@ pub(crate) mod tests {
                 "Description must cease rendering when pointer leaves the title block"
             );
 
-            // 6. Verify row height determinism across rows with differing description text lengths
-            let row_titles: Vec<_> =
-                ElementHandle::find_by_accessible_label(&window, "Shortcut description").collect();
-            assert!(
-                row_titles.len() >= 2,
-                "At least two rows visible in first group"
-            );
-            let h0 = row_titles[0].size().height;
-            let h1 = row_titles[1].size().height;
-            assert_eq!(
-                h0, h1,
-                "Row heights must be deterministic regardless of description length: {h0} vs {h1}"
-            );
-
             let _ = std::fs::remove_file(&save_path);
         });
     }
 
+    /// The row pitch of one group, measured between two of its visible group headings.
+    ///
+    /// No element spans a row, so a row's height cannot be read directly. Consecutive keycaps sit
+    /// at a fixed offset inside their rows, so the distance between two keycaps IS the height of
+    /// the row between them — but only for keycaps in the SAME group: a gap across a group
+    /// boundary additionally spans a heading and the card's padding.
+    ///
+    /// Which rows are instantiated depends on the scroll position, and the visible run does not
+    /// begin at the first declared row. So the group is bounded by reading its own heading and the
+    /// next one out of the rendered tree, and both MUST be present — an earlier version derived
+    /// the boundaries by index arithmetic over the declared sequence, went red under a mutation
+    /// that changed only which rows were in view, and blamed the description for it.
+    fn group_row_pitches(window: &MainWindow, group: &str, next_group: &str) -> Vec<f32> {
+        let heading_y = |label: &str| -> f32 {
+            ElementHandle::find_by_accessible_label(window, label)
+                .next()
+                .unwrap_or_else(|| {
+                    panic!("heading '{label}' is not in view, so no row of '{group}' is bracketed")
+                })
+                .absolute_position()
+                .y
+        };
+        let (top, bottom) = (heading_y(group), heading_y(next_group));
+        let mut rows: Vec<f32> = ElementHandle::find_by_accessible_label(window, "Shortcut keycap")
+            .map(|k| k.absolute_position().y)
+            .filter(|y| *y > top && *y < bottom)
+            .collect();
+        rows.sort_by(|a, b| a.partial_cmp(b).expect("keycap positions are comparable"));
+        assert!(
+            rows.len() >= 3,
+            "group '{group}' shows {} rows before '{next_group}'; need 3 for two pitches",
+            rows.len()
+        );
+        eprintln!("MEASUREMENT: group '{group}' keycap ys={rows:?}");
+        rows.windows(2).map(|w| w[1] - w[0]).collect()
+    }
+
+    #[test]
+    fn row_height_is_independent_of_description_length() {
+        // The criterion is that removing the always-visible description leaves the row's height
+        // deterministic. Two earlier versions of this check could not fail for that reason:
+        //
+        //  - the first compared two *title blocks*, which after this change are structurally
+        //    identical by construction — one `Text`, no conflict, both enabled — so no change to
+        //    row height, padding or `min-height` could have made them differ;
+        //  - the second compared real row pitches, but relied on the four descriptions of the
+        //    group in view differing in length. They are "Snaps the window to the {left,right,
+        //    top,bottom} edge at its configured percentage." — same length to within a word. A
+        //    description rendered inline would wrap identically on all four and the pitches would
+        //    stay uniform, so the defect would pass.
+        //
+        // So the length is not hoped for, it is IMPOSED: one row's description is replaced with a
+        // pathologically long one and the group's pitches must not move.
+        //
+        // WHAT THIS CAN AND CANNOT SEE, established by running the mutations rather than by
+        // reasoning, because two of the three readings above looked like proof and were not:
+        //
+        //  - Restoring the always-visible wrapping description does NOT move the pitch, and the
+        //    injection above does not either. The component's header comment says why: Slint
+        //    computes the row's preferred height at the text's UNWRAPPED width, so a wrapping
+        //    description reports a one-line height, the row stays 50px, and the extra lines
+        //    overflow the row instead of growing it. That was the historic defect - text drawn
+        //    over the next row's divider - and it is invisible to geometry. The description's
+        //    absence is proven by `description_renders_as_a_tooltip_not_a_visible_line`, which
+        //    reads the tree; the overflow risk is a smoke-test item, recorded on the ticket.
+        //  - It DOES fail when row height genuinely varies across a group. Verified by keying
+        //    `min-height` to `description.character-count`: the pitches went [63, 57, 57] and
+        //    the assertion named the group and both numbers. That is the property in the name,
+        //    and the mutation is the most direct possible statement of it.
+        run_on_ui_thread(|| {
+            let (window, _model, save_path) = setup_shortcuts_window();
+            let (group, next_group) = (ShortcutField::GROUPS[3], ShortcutField::GROUPS[4]);
+
+            let before = group_row_pitches(&window, group, next_group);
+
+            // Impose the length. `rows_snap_custom` is the same model `sync_model_to_ui` fills,
+            // so this is the production data path with one field made hostile.
+            let rows: Vec<crate::ShortcutRowData> =
+                slint::Model::iter(&window.get_rows_snap_custom()).collect();
+            let mut hostile = rows.clone();
+            hostile[1].description = slint::SharedString::from(
+                "This description is deliberately long enough to wrap onto several lines at any                  plausible row width, which is the whole point of it: if the row still renders                  its description inline, this row grows and its neighbours do not.",
+            );
+            window.set_rows_snap_custom(slint::ModelRc::new(slint::VecModel::from(hostile)));
+
+            let after = group_row_pitches(&window, group, next_group);
+            eprintln!("MEASUREMENT: pitches before={before:?} after={after:?}");
+
+            const TOLERANCE: f32 = 1.0;
+            let baseline = before[0];
+            for (label, pitches) in [("before", &before), ("after", &after)] {
+                for (i, p) in pitches.iter().enumerate() {
+                    assert!(
+                        (p - baseline).abs() <= TOLERANCE,
+                        "{label} the long description, pitch {i} of '{group}' is {p}, not {baseline}"
+                    );
+                }
+            }
+
+            let _ = std::fs::remove_file(&save_path);
+        });
+    }
     #[test]
     fn control_cluster_and_toggle_share_one_vertical_centre() {
         run_on_ui_thread(|| {

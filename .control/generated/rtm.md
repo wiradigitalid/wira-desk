@@ -269,6 +269,7 @@ rtm:
   test:
   - shortcut_row_slint_snapshot::tests::description_renders_as_a_tooltip_not_a_visible_line
   - shortcut_row_slint_snapshot::tests::control_cluster_and_toggle_share_one_vertical_centre
+  - shortcut_row_slint_snapshot::tests::row_height_is_independent_of_description_length
   - shortcuts_pane_slint_snapshot::tests::five_groups_fit_the_default_window_width_with_no_horizontal_scroll
   - shortcuts_pane_slint_snapshot::tests::all_five_group_headings_are_in_the_rendered_tree
   status: ready-for-agent
@@ -585,6 +586,7 @@ rtm:
   test:
   - shortcut_row_slint_snapshot::tests::description_renders_as_a_tooltip_not_a_visible_line
   - shortcut_row_slint_snapshot::tests::control_cluster_and_toggle_share_one_vertical_centre
+  - shortcut_row_slint_snapshot::tests::row_height_is_independent_of_description_length
   - shortcuts_pane_slint_snapshot::tests::five_groups_fit_the_default_window_width_with_no_horizontal_scroll
   - shortcuts_pane_slint_snapshot::tests::all_five_group_headings_are_in_the_rendered_tree
   status: ready-for-agent
@@ -754,6 +756,7 @@ rtm:
   test:
   - shortcut_row_slint_snapshot::tests::description_renders_as_a_tooltip_not_a_visible_line
   - shortcut_row_slint_snapshot::tests::control_cluster_and_toggle_share_one_vertical_centre
+  - shortcut_row_slint_snapshot::tests::row_height_is_independent_of_description_length
   - shortcuts_pane_slint_snapshot::tests::five_groups_fit_the_default_window_width_with_no_horizontal_scroll
   - shortcuts_pane_slint_snapshot::tests::all_five_group_headings_are_in_the_rendered_tree
   status: ready-for-agent

@@ -8,6 +8,20 @@ pub(crate) mod tests {
     use i_slint_backend_testing::ElementHandle;
     use slint::ComponentHandle;
 
+    /// One scroll gesture larger than the pane's scrollable extent, used to return to the top.
+    ///
+    /// It is not a "scroll to top" primitive and must not be read as one: it is an amount
+    /// currently believed to exceed the extent. `SPEC-4` is adding rows, and once the content
+    /// grows past this the walk below starts from a non-top position and a heading above it
+    /// becomes unfindable — which fails loudly, in `find_scrolling_down`'s `None`, but reads as
+    /// "the heading was never instantiated" rather than "the scroll idiom stopped reaching the
+    /// top". If that day comes, scroll a viewport at a time until the first heading appears
+    /// instead of raising this number.
+    const SCROLL_PAST_TOP: f32 = 1200.0;
+
+    /// The downward ladder, one home. Two divergent copies of this existed in this file.
+    const SCROLL_DOWN_LADDER: [f32; 5] = [-200.0, -400.0, -600.0, -800.0, -1000.0];
+
     fn scroll_by(window: &crate::MainWindow, delta_y: f32) {
         window
             .window()
@@ -26,11 +40,11 @@ pub(crate) mod tests {
     /// of it. So there is no scroll position from which all five groups are simultaneously
     /// present, and any test that measures them must measure each one while it is in view.
     fn find_scrolling_down(window: &crate::MainWindow, label: &str) -> Option<ElementHandle> {
-        scroll_by(window, 1200.0); // back to the top
+        scroll_by(window, SCROLL_PAST_TOP);
         if let Some(el) = ElementHandle::find_by_accessible_label(window, label).next() {
             return Some(el);
         }
-        for delta_y in [-200.0, -400.0, -600.0, -800.0, -1000.0] {
+        for delta_y in SCROLL_DOWN_LADDER {
             scroll_by(window, delta_y);
             if let Some(el) = ElementHandle::find_by_accessible_label(window, label).next() {
                 return Some(el);
@@ -91,9 +105,13 @@ pub(crate) mod tests {
             // The right-hand cluster. Recycling means only the rows currently in view exist, so
             // the honest assertion is that at least one of each was actually measured — never
             // that a loop ran zero times without complaint.
-            let mut keycaps_measured = 0;
-            let mut toggles_measured = 0;
-            for delta_y in [1200.0, -300.0, -600.0, -900.0, -1200.0] {
+            // Distinct elements, not visits: the walk revisits scroll positions, so counting
+            // hits would double-count a row seen at two offsets and read as coverage it is not.
+            let mut keycap_edges: Vec<f32> = Vec::new();
+            let mut toggles_seen: std::collections::BTreeSet<String> = Default::default();
+            let mut widest: f32 = 0.0;
+            scroll_by(&window, SCROLL_PAST_TOP);
+            for delta_y in std::iter::once(0.0).chain(SCROLL_DOWN_LADDER) {
                 scroll_by(&window, delta_y);
                 for keycap in
                     ElementHandle::find_by_accessible_label(&window, theme::SHORTCUT_KEYCAP.name)
@@ -103,7 +121,10 @@ pub(crate) mod tests {
                         right <= window_width,
                         "Keycap right edge ({right}) exceeds window width ({window_width})"
                     );
-                    keycaps_measured += 1;
+                    widest = widest.max(right);
+                    if !keycap_edges.iter().any(|e| (e - right).abs() < 0.5) {
+                        keycap_edges.push(right);
+                    }
                 }
                 for field in ShortcutField::ALL {
                     let toggle_label = format!("Enable {}", field.label());
@@ -114,17 +135,30 @@ pub(crate) mod tests {
                             "Toggle for '{}' right edge ({right}) exceeds window width ({window_width})",
                             field.label()
                         );
-                        toggles_measured += 1;
+                        widest = widest.max(right);
+                        toggles_seen.insert(toggle_label.clone());
                     }
                 }
             }
             assert!(
-                keycaps_measured > 0,
+                !keycap_edges.is_empty(),
                 "no keycap was measured — the loop found nothing and would have passed silently"
             );
             assert!(
-                toggles_measured > 0,
+                !toggles_seen.is_empty(),
                 "no toggle was measured — the loop found nothing and would have passed silently"
+            );
+            // Printed so the margin is visible rather than implied. The bound asserted above is
+            // the WINDOW edge; the pane's own content edge sits ~20px inside it, past the
+            // sidebar and the scroll area's right padding. So up to that much real overflow into
+            // the padding still passes here. Tightening it needs the ScrollView's own
+            // `viewport-width` exposed, which is a production change and is recorded on the
+            // ticket rather than guessed at with a second hardcoded number.
+            eprintln!(
+                "MEASUREMENT: widest right edge {widest} against window width {window_width}; \
+                 {} distinct keycap edges, {} distinct toggles",
+                keycap_edges.len(),
+                toggles_seen.len()
             );
 
             let _ = std::fs::remove_file(&save_path);

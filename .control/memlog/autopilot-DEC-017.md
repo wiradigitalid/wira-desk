@@ -8,19 +8,28 @@ date: 2026-09-07
 
 ## Resume
 
-- Iteration 7 — `SPEC-4-03` brief written; **Step 2 dispatch imminent**. No red suite handed down,
-  by the seam agreement in the ticket's Amendment 1 — the builder writes all four tests via `tdd`.
+- Iteration 8 — `SPEC-4-03` **return trip 1 of 2**, coordinator half **done and committed**. The
+  panel's own findings, the mutations, the two stale markup comments, `CHANGELOG`, `3p.md`,
+  `specs.yaml` and Amendment 3 are all landed. Suite 553/0/2, clippy clean, validators GREEN.
 - Run branch: `autopilot/DEC-017` at `398a362`; ticket work on `ticket/SPEC-4-03`, cut from it,
   merges back only green. Not pushed, no PR — first push at spec close.
-- Stopped at: — (iteration in progress)
+- Stopped at: coordinator half complete; **builder half not yet dispatched.**
 - Blocked: —
 - Parked: —
-- **IN FLIGHT once dispatched — do NOT re-dispatch:** `claude-byok` on `SPEC-4-03`, brief at
-  `.scratch/builder-brief-spec-4-03.md`. Build lock shut while it is out: no `cargo`, no stash, no
-  branch switch, no worktree restore.
-- Next: when it exits — judge from the artifact, and judge the MUTATIONS hardest, because this
-  ticket's guards are the builder's own and nothing red was handed down to check them against.
-  Then the two-axis panel, ticket close, merge, and `SPEC-4-04`.
+- **Next, and it is a dispatch:** `claude-byok` on the production half of return trip 1, brief to be
+  written at `.scratch/builder-brief-spec-4-03-trip1.md`. Four items, all on the ticket as
+  Amendment 2: (1) the Tab-order regression against `LBR-ST-5` — `wdi-systematic-debugging`
+  FIRST, one Tab press reaches a row's description block from a fresh window; (2) delete the five
+  `GROUP_HEADING_*` constants and plumb `SHORTCUT_KEYCAP` / `SHORTCUT_ROW_DESCRIPTION` through the
+  existing `in property` pattern; (3) per-row accessible names for keycap and description —
+  sixteen elements currently share two names, `DEF-2`'s literal shape; (4) keep-or-remove
+  `min-height: 50px`, and remove the test-only `accessible-action-default => { self.focus(); }`.
+- **Build lock: shut the moment that dispatch goes out** — no `cargo`, no stash, no branch switch,
+  no worktree restore by the coordinator while the builder holds it.
+- Mutation discipline for the judging pass, learned the hard way this iteration and not to be
+  re-learned: verify every mutation APPLIED (`git diff --numstat`) before believing a green, and
+  read the measurement before believing a red. One guard here went red for the wrong reason and was
+  two-thirds of the way to being accepted as working.
 
 ## Decisions
 
