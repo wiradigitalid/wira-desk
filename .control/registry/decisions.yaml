@@ -278,3 +278,24 @@ decisions:
       run_branch: autopilot/DEC-016
       worktree: ../wira-desk-autopilot  # sibling of the main checkout; `git worktree list` from there finds its actual path
       ledger: .control/memlog/autopilot-DEC-016.md
+
+  - id: DEC-017
+    title: Autopilot mandate for SPEC-4 delivery
+    status: accepted
+    file: decisions/DEC-017-autopilot-mandate-for-spec-4-delivery.md
+    created: '2026-09-07'
+    touches:
+      - .control/decisions/DEC-017-autopilot-mandate-for-spec-4-delivery.md
+      - .control/memlog/autopilot-DEC-017.md
+      - .control/registry/decisions.yaml
+    mandate:
+      from_gate: G5
+      scope: all  # in practice SPEC-4's four tickets; the eight `no_uc` FR rows are RTM-exempt, not work
+      parked: [ad-n]
+      smoke_test: agent  # claude-byok CLI only (CLAUDE_CONFIG_DIR=~/.claude-byok, headless), never the coordinator or the human owner
+      loop: 10m  # rides cron job 04d63c6f (this session), no second loop started
+      expires: '2026-09-14'
+      run_branch: autopilot/DEC-017
+      worktree: ../wira-desk-autopilot  # sibling of the main checkout; `git worktree list` from there finds its actual path
+      build_target_dir: ../wira-desk/target  # THE one build location, already warm; pinned as CARGO_TARGET_DIR so no second target tree exists and cargo's lock serialises every build
+      ledger: .control/memlog/autopilot-DEC-017.md

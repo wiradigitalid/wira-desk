@@ -1,6 +1,6 @@
 ---
 status: Accepted
-ratified_by: 67f2645     # the last commit that changed `crates/` — the code this file describes
+ratified_by: c803a1d     # the last commit that changed `crates/` — the code this file describes
 ---
 
 # stack — codebase guide
@@ -41,7 +41,7 @@ A single Cargo workspace, three crates, `resolver = "2"`, edition 2021, target
 | Crate | Binary | Holds |
 | --- | --- | --- |
 | `daemon` | `wiradesk.exe` | The hook thread, worker, tray, arrangement, health, autostart |
-| `settings` | `wiradesk-settings.exe` | The egui settings window and the first-run tutorial |
+| `settings` | `wiradesk-settings.exe` | The Slint settings window and the first-run tutorial |
 | `shared` | — | `Config` TOML types, the `u8` command enum, every constant, `%APPDATA%` paths |
 
 Both binaries depend on `shared`, and nothing depends on a binary. A type used by both sides belongs
@@ -54,15 +54,34 @@ silently never fires.
 | Crate | Version | Note |
 | --- | --- | --- |
 | `windows-sys` | 0.52 | Raw C-FFI only. The full `windows` crate's COM metadata is deliberately avoided |
-| `eframe` + `egui` | 0.36 | `settings` only, and `eframe` carries `features = ["accesskit"]`. Bump the two together, never one |
-| `ttf-parser` | 0.25 | Validates a system font's bytes before egui is asked to load them |
+| `slint` | 1.17 | `settings` only, `default-features = false` plus `backend-winit`, `renderer-skia`, `accessibility`, `compat-1-2`. Paired with `i-slint-backend-winit`, `slint-build` (a build dependency), and `i-slint-backend-testing` (a dev dependency) — bump all four together, never one |
+| `winit` | 0.30 | `settings` only, and it MUST match the version `i-slint-backend-winit` 1.17 resolves to; the window handle the titlebar and elevation path need is reached through it |
 | `toml` | 1.1 | Moved from 0.8 by #5 |
-| `serde` | 1.0 | `derive` |
+| `serde` | 1.0 | `derive`. `settings` also carries `serde_json` for the update check |
 
-`accesskit` is **not** an eframe default feature. Without it the UI Automation tree is never
-published and every accessibility criterion fails silently — passing a manual look while failing a
-screen reader. It is requested explicitly for that reason, and removing it is not a dependency
-cleanup.
+Slint is declared with `default-features = false`, so **every** feature above is load-bearing and
+none is a leftover. `accessibility` is the one to understand before touching this list: without it the
+UI Automation tree is never published, every accessibility criterion fails silently — passing a manual
+look while failing a screen reader — and, because the snapshot tests below drive controls through
+`ElementHandle::find_by_accessible_label`, the whole `settings` test suite stops being able to see the
+window at all. Removing it is not a dependency cleanup.
+
+## The UI is `.slint` markup, not Rust widget calls
+
+`crates/settings/ui/` holds the markup — `main_window.slint`, `theme.slint`, `onboarding.slint`, one
+file per pane under `panes/`, and reusable controls under `components/`. `build.rs` compiles them
+through `slint-build`, which generates the Rust types `src/` then binds to; a control that does not
+exist in the markup cannot be reached from Rust, and vice versa.
+
+Two consequences worth stating, because both have already cost a return trip:
+
+- **A pane is declared in two places.** The markup file and the pane enum in `src/app.rs` must agree,
+  and the nav order is the declared order — not the alphabetical one.
+- **Tests drive the real window, not a mock.** `src/*_slint_snapshot.rs` boot
+  `i-slint-backend-testing`'s `TestingBackend` and locate controls by accessible label, so a control
+  without an `accessible-label` is untestable by construction. That harness sets values through the
+  accessible-value setter, which is a *different code path* from a physical keystroke reaching a
+  `TextInput` — the gap that let `DEF-5` ship. A test asserting typed input must say so explicitly.
 
 The one COM exception is `IVirtualDesktopManager`, hand-written as a minimal vtable in
 `crates/daemon/src/context/virtual_desktop.rs` rather than pulled in through a wrapper crate.

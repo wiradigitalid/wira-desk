@@ -1,7 +1,7 @@
-promise_progress: 100%
+promise_progress: 74%
 rtm_rows:
   green: 28
-  counted: 28
+  counted: 38
   excluded_no_uc: 8
 work_progress:
 - spec: SPEC-1
@@ -19,6 +19,11 @@ work_progress:
   tickets_done: 2
   tickets_total: 2
   work_progress: 100%
+- spec: SPEC-4
+  status: open
+  tickets_done: 0
+  tickets_total: 4
+  work_progress: 0%
 - spec: W1
   status: closed
   tickets_done: 6
@@ -39,11 +44,14 @@ work_progress:
   tickets_done: 1
   tickets_total: 1
   work_progress: 100%
-gate_readiness: 100%
-validators_red: []
+gate_readiness: 96%
+validators_red:
+- cites-resolve
 validators_skipped:
   custom-room-declared: the `.constitution/project/` room is empty, and that is a valid state — a generic
     rule MUST NOT be moved here just to give the room content
+  review-trace: 'advisory — trace stale, re-run before the next gate or spec close: .how/settings/SDD-settings.md
+    (changed at 079ea56, reviewed at f7760db)'
 open_questions:
   blocking: 0
   assumptions: 31

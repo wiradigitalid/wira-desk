@@ -214,6 +214,70 @@ rtm:
   FR: FR-18
   DEC: []
   UC: UC-4
+  ticket: SPEC-4-01
+  spec: SPEC-4
+  release: 0.5.0
+  test:
+  - app::tests::shortcut_field_group_declares_five_taxonomic_groups
+  - app::tests::snap_maximize_now_sorts_after_every_snap_variant
+  - app::tests::grouping_never_reorders_the_declared_sequence
+  - app::tests::snap_custom_labels_no_longer_repeat_the_group_name
+  status: ready-for-agent
+  exempt: false
+  green: false
+  broken_at: status
+- BG: BG-2
+  CAP: CAP-5
+  FR: FR-18
+  DEC: []
+  UC: UC-4
+  ticket: SPEC-4-02
+  spec: SPEC-4
+  release: 0.5.0
+  test:
+  - app::tests::pane_enum_no_longer_declares_layout
+  - main::tests::overlapping_stack_row_has_percent_true
+  - shortcut_row_slint_snapshot::tests::stack_row_percent_commits_on_save_click
+  - persistence::tests::stack_width_percent_round_trips_through_the_shortcut_row_path
+  status: ready-for-agent
+  exempt: false
+  green: false
+  broken_at: status
+- BG: BG-2
+  CAP: CAP-5
+  FR: FR-18
+  DEC: []
+  UC: UC-4
+  ticket: SPEC-4-03
+  spec: SPEC-4
+  release: 0.5.0
+  test:
+  - shortcut_row_slint_snapshot::tests::description_renders_as_a_tooltip_not_a_visible_line
+  - shortcut_row_slint_snapshot::tests::control_cluster_and_toggle_share_one_vertical_centre
+  - shortcuts_pane_slint_snapshot::tests::five_groups_fit_the_default_window_width_with_no_horizontal_scroll
+  status: ready-for-agent
+  exempt: false
+  green: false
+  broken_at: status
+- BG: BG-2
+  CAP: CAP-5
+  FR: FR-18
+  DEC: []
+  UC: UC-4
+  ticket: SPEC-4-04
+  spec: SPEC-4
+  release: 0.5.0
+  test:
+  - shortcut_row_slint_snapshot::tests::a_real_keystroke_sequence_commits_a_typed_percentage
+  status: ready-for-agent
+  exempt: false
+  green: false
+  broken_at: status
+- BG: BG-2
+  CAP: CAP-5
+  FR: FR-18
+  DEC: []
+  UC: UC-4
   ticket: W1-S4
   spec: W1
   release: 0.1.0
@@ -435,6 +499,23 @@ rtm:
   green: true
   broken_at: ''
 - BG: BG-3
+  CAP: CAP-14
+  FR: FR-26
+  DEC: []
+  UC: UC-9
+  ticket: SPEC-4-02
+  spec: SPEC-4
+  release: 0.5.0
+  test:
+  - app::tests::pane_enum_no_longer_declares_layout
+  - main::tests::overlapping_stack_row_has_percent_true
+  - shortcut_row_slint_snapshot::tests::stack_row_percent_commits_on_save_click
+  - persistence::tests::stack_width_percent_round_trips_through_the_shortcut_row_path
+  status: ready-for-agent
+  exempt: false
+  green: false
+  broken_at: status
+- BG: BG-3
   CAP: CAP-15
   FR: FR-27
   DEC: []
@@ -472,6 +553,22 @@ rtm:
   exempt: false
   green: true
   broken_at: ''
+- BG: BG-3
+  CAP: CAP-16
+  FR: FR-28
+  DEC: []
+  UC: UC-11
+  ticket: SPEC-4-03
+  spec: SPEC-4
+  release: 0.5.0
+  test:
+  - shortcut_row_slint_snapshot::tests::description_renders_as_a_tooltip_not_a_visible_line
+  - shortcut_row_slint_snapshot::tests::control_cluster_and_toggle_share_one_vertical_centre
+  - shortcuts_pane_slint_snapshot::tests::five_groups_fit_the_default_window_width_with_no_horizontal_scroll
+  status: ready-for-agent
+  exempt: false
+  green: false
+  broken_at: status
 - BG: BG-3
   CAP: CAP-16
   FR: FR-29
@@ -580,6 +677,70 @@ rtm:
   exempt: false
   green: true
   broken_at: ''
+- BG: BG-2
+  CAP: CAP-3
+  FR: FR-7
+  DEC: []
+  UC: UC-4
+  ticket: SPEC-4-01
+  spec: SPEC-4
+  release: 0.5.0
+  test:
+  - app::tests::shortcut_field_group_declares_five_taxonomic_groups
+  - app::tests::snap_maximize_now_sorts_after_every_snap_variant
+  - app::tests::grouping_never_reorders_the_declared_sequence
+  - app::tests::snap_custom_labels_no_longer_repeat_the_group_name
+  status: ready-for-agent
+  exempt: false
+  green: false
+  broken_at: status
+- BG: BG-2
+  CAP: CAP-3
+  FR: FR-7
+  DEC: []
+  UC: UC-4
+  ticket: SPEC-4-02
+  spec: SPEC-4
+  release: 0.5.0
+  test:
+  - app::tests::pane_enum_no_longer_declares_layout
+  - main::tests::overlapping_stack_row_has_percent_true
+  - shortcut_row_slint_snapshot::tests::stack_row_percent_commits_on_save_click
+  - persistence::tests::stack_width_percent_round_trips_through_the_shortcut_row_path
+  status: ready-for-agent
+  exempt: false
+  green: false
+  broken_at: status
+- BG: BG-2
+  CAP: CAP-3
+  FR: FR-7
+  DEC: []
+  UC: UC-4
+  ticket: SPEC-4-03
+  spec: SPEC-4
+  release: 0.5.0
+  test:
+  - shortcut_row_slint_snapshot::tests::description_renders_as_a_tooltip_not_a_visible_line
+  - shortcut_row_slint_snapshot::tests::control_cluster_and_toggle_share_one_vertical_centre
+  - shortcuts_pane_slint_snapshot::tests::five_groups_fit_the_default_window_width_with_no_horizontal_scroll
+  status: ready-for-agent
+  exempt: false
+  green: false
+  broken_at: status
+- BG: BG-2
+  CAP: CAP-3
+  FR: FR-7
+  DEC: []
+  UC: UC-4
+  ticket: SPEC-4-04
+  spec: SPEC-4
+  release: 0.5.0
+  test:
+  - shortcut_row_slint_snapshot::tests::a_real_keystroke_sequence_commits_a_typed_percentage
+  status: ready-for-agent
+  exempt: false
+  green: false
+  broken_at: status
 - BG: BG-2
   CAP: CAP-3
   FR: FR-7
