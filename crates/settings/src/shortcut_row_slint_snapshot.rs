@@ -2,7 +2,8 @@
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use crate::app::{Pane, SettingsModel, ShortcutField};
+    use crate::app::{Pane, SaveFeedback, SettingsModel, ShortcutField};
+    use crate::theme;
     use crate::{bind_callbacks, sync_model_to_ui, MainWindow};
     use i_slint_backend_testing::{ElementHandle, TestingBackend, TestingBackendOptions};
     use shared::Config;
@@ -52,7 +53,8 @@ pub(crate) mod tests {
         }
     }
 
-    fn setup_shortcuts_window() -> (MainWindow, Rc<RefCell<SettingsModel>>, std::path::PathBuf) {
+    pub(crate) fn setup_shortcuts_window(
+    ) -> (MainWindow, Rc<RefCell<SettingsModel>>, std::path::PathBuf) {
         let main_window = MainWindow::new().expect("MainWindow creation");
         let mut path = std::env::temp_dir();
         path.push(format!(
@@ -239,6 +241,127 @@ pub(crate) mod tests {
         });
     }
 
+    /// Type a value into the focused percentage field the way a person does: one character
+    /// event per digit, through the window's real event queue.
+    ///
+    /// This is the whole point of `DEF-5`. Every other percentage test in this file reaches the
+    /// value through `set_accessible_value`, which is the UI Automation `RangeValuePattern` path
+    /// — a different code path from a keystroke arriving at Slint's `TextInput`. Those tests
+    /// prove the commit-on-departure LOGIC is right once a value has landed in `typed_text`;
+    /// none of them proves a keystroke can put one there, and on the live build it could not.
+    ///
+    /// Focusing is deliberately NOT part of what this helper exercises: it uses the same
+    /// accessible default action the sibling tests use, so that a failure here is a failure of
+    /// character entry and not of the click-to-focus mechanics. If the root-cause pass finds the
+    /// defect is in focus after all, this helper is the wrong shape and should say so loudly
+    /// rather than be quietly widened.
+    fn type_digits(window: &crate::MainWindow, digits: &str) {
+        for ch in digits.chars() {
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::KeyPressed {
+                    text: slint::SharedString::from(ch.to_string()),
+                });
+        }
+    }
+
+    #[test]
+    fn a_real_keystroke_sequence_commits_a_typed_percentage() {
+        run_on_ui_thread(|| {
+            let (window, model, save_path) = setup_shortcuts_window();
+
+            let field = ElementHandle::find_by_accessible_label(&window, "Snap percentage field")
+                .next()
+                .expect("Snap percentage field element found");
+            field.invoke_accessible_default_action();
+
+            // Clear what is there, then type "70" as two character events.
+            for _ in 0..3 {
+                window
+                    .window()
+                    .dispatch_event(slint::platform::WindowEvent::KeyPressed {
+                        text: slint::platform::Key::Backspace.into(),
+                    });
+            }
+            type_digits(&window, "70");
+
+            // The digits must have reached the row's own typed state. Read it back the way a
+            // screen reader would, so the assertion does not depend on internals.
+            let input = ElementHandle::find_by_accessible_label(&window, "Snap percentage input")
+                .next()
+                .expect("Snap percentage input element found");
+            let seen = input.accessible_value().unwrap_or_default();
+            eprintln!("MEASUREMENT: field reads {seen:?} after typing 70");
+            assert_eq!(
+                seen.as_str(),
+                "70",
+                "typing '7' then '0' must land in the field; it reads {seen:?}"
+            );
+
+            assert_eq!(
+                model.borrow().draft.snapping.percent_left,
+                50,
+                "a typed value must not commit before departure"
+            );
+
+            window.invoke_save_clicked();
+
+            assert_eq!(
+                model.borrow().draft.snapping.percent_left,
+                70,
+                "typing 70 and clicking Save must commit 70 to the draft"
+            );
+            assert_eq!(
+                model.borrow().saved.snapping.percent_left,
+                70,
+                "typing 70 and clicking Save must save 70 to the config"
+            );
+
+            let _ = std::fs::remove_file(&save_path);
+        });
+    }
+
+    #[test]
+    fn a_real_keystroke_sequence_out_of_range_is_refused() {
+        use crate::app::SaveFeedback;
+        run_on_ui_thread(|| {
+            let (window, model, save_path) = setup_shortcuts_window();
+
+            let field = ElementHandle::find_by_accessible_label(&window, "Snap percentage field")
+                .next()
+                .expect("Snap percentage field element found");
+            field.invoke_accessible_default_action();
+
+            for _ in 0..3 {
+                window
+                    .window()
+                    .dispatch_event(slint::platform::WindowEvent::KeyPressed {
+                        text: slint::platform::Key::Backspace.into(),
+                    });
+            }
+            // 0 is below MIN_SNAP_PERCENT. The fix that makes digits land MUST NOT also make an
+            // out-of-range typed value silently clamp or silently save: the refusal is half of
+            // what `SPEC-2-01` promised, and it is the half a fix for this defect could quietly
+            // drop while looking correct.
+            type_digits(&window, "0");
+
+            window.invoke_save_clicked();
+
+            assert!(
+                matches!(model.borrow().feedback, SaveFeedback::Error(_)),
+                "a typed out-of-range percentage must be refused with an actionable error, \
+                 not clamped and not saved"
+            );
+            assert_eq!(
+                model.borrow().saved.snapping.percent_left,
+                50,
+                "a refused value must leave the saved config untouched"
+            );
+
+            let _ = std::fs::remove_file(&save_path);
+        });
+    }
+
     #[test]
     fn an_out_of_range_percentage_committed_via_departure_is_refused() {
         use crate::app::SaveFeedback;
@@ -389,6 +512,575 @@ pub(crate) mod tests {
             assert!(
                 model.borrow().draft.snapping.snap_percent_left_enabled,
                 "Toggling switch on must enable SnapPercentLeft in draft"
+            );
+
+            let _ = std::fs::remove_file(&save_path);
+        });
+    }
+
+    #[test]
+    fn out_of_range_stack_width_is_refused_not_clamped() {
+        run_on_ui_thread(|| {
+            let (window, model, save_path) = setup_shortcuts_window();
+
+            // Scroll down to bring the Overlapping Stack row into view
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::PointerScrolled {
+                    position: slint::LogicalPosition::new(300.0, 300.0),
+                    delta_x: 0.0,
+                    delta_y: -600.0,
+                });
+
+            // Focus the stack width field on the Overlapping Stack row
+            let mut fields = ElementHandle::find_by_accessible_label(
+                &window,
+                crate::theme::STACK_WIDTH_FIELD.name,
+            );
+            let field_btn = fields.next().expect("Stack width field element found");
+            field_btn.invoke_accessible_default_action();
+
+            // Find stack width input element
+            let mut inputs = ElementHandle::find_by_accessible_label(
+                &window,
+                crate::theme::STACK_WIDTH_INPUT.name,
+            );
+            let width_input = inputs.next().expect("Stack width input element found");
+
+            // Type out-of-range percentage 150
+            width_input.set_accessible_value("150");
+
+            // Value must not commit to draft before departure
+            assert_eq!(
+                model.borrow().draft.layout.stack_width_percent,
+                50,
+                "Stack width percentage must not commit before departure"
+            );
+
+            // Save is clicked
+            window.invoke_save_clicked();
+
+            // 1. Must NOT be silently clamped to 100 in the model draft
+            assert_eq!(
+                model.borrow().draft.layout.stack_width_percent,
+                150,
+                "Stack width percentage must not be silently clamped to 100 on input"
+            );
+
+            // 2. The out-of-range value must be refused with an actionable message
+            if let SaveFeedback::Error(msg) = &model.borrow().feedback {
+                assert!(
+                    msg.contains("Stack width percentage") && msg.contains("between 10% and 100%"),
+                    "Feedback message must be actionable: {msg}"
+                );
+            } else {
+                panic!(
+                    "Expected SaveFeedback::Error for out-of-range stack width percentage, got {:?}",
+                    model.borrow().feedback
+                );
+            }
+
+            // 3. Saved config must remain untouched at 50
+            assert_eq!(
+                model.borrow().saved.layout.stack_width_percent,
+                50,
+                "Saved config must not be overwritten when out-of-range"
+            );
+
+            let _ = std::fs::remove_file(&save_path);
+        });
+    }
+
+    #[test]
+    fn stack_row_percent_commits_on_save_click() {
+        run_on_ui_thread(|| {
+            let (window, model, save_path) = setup_shortcuts_window();
+
+            // Scroll down to bring the Overlapping Stack row into view
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::PointerScrolled {
+                    position: slint::LogicalPosition::new(300.0, 300.0),
+                    delta_x: 0.0,
+                    delta_y: -600.0,
+                });
+
+            // Find the percentage input for the Overlapping Stack row
+            let mut inputs = ElementHandle::find_by_accessible_label(
+                &window,
+                crate::theme::STACK_WIDTH_INPUT.name,
+            );
+            let stack_input = inputs.next().expect("Stack width input element found");
+
+            // Type '65' into the percentage field without pressing Enter
+            stack_input.set_accessible_value("65");
+
+            // Must NOT commit prematurely before departure
+            assert_eq!(
+                model.borrow().draft.layout.stack_width_percent,
+                50,
+                "Stack width value must not commit to draft before departure"
+            );
+
+            // Save is clicked directly while the field has focus / was typed into
+            window.invoke_save_clicked();
+
+            // The typed value '65' must be committed on departure (save click), not discarded
+            assert_eq!(
+                model.borrow().draft.layout.stack_width_percent,
+                65,
+                "Typing 65 then clicking Save must commit 65 to draft without requiring Enter"
+            );
+            assert_eq!(
+                model.borrow().saved.layout.stack_width_percent,
+                65,
+                "Typing 65 then clicking Save must save 65 to config"
+            );
+
+            let _ = std::fs::remove_file(&save_path);
+        });
+    }
+
+    #[test]
+    fn a_real_keystroke_sequence_commits_a_typed_stack_percentage() {
+        run_on_ui_thread(|| {
+            let (window, model, save_path) = setup_shortcuts_window();
+
+            // Scroll down to bring the Overlapping Stack row into view
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::PointerScrolled {
+                    position: slint::LogicalPosition::new(300.0, 300.0),
+                    delta_x: 0.0,
+                    delta_y: -600.0,
+                });
+
+            let field = ElementHandle::find_by_accessible_label(
+                &window,
+                crate::theme::STACK_WIDTH_FIELD.name,
+            )
+            .next()
+            .expect("Stack width field element found");
+            field.invoke_accessible_default_action();
+
+            // Clear what is there, then type "65" as two character events.
+            for _ in 0..3 {
+                window
+                    .window()
+                    .dispatch_event(slint::platform::WindowEvent::KeyPressed {
+                        text: slint::platform::Key::Backspace.into(),
+                    });
+            }
+            type_digits(&window, "65");
+
+            let input = ElementHandle::find_by_accessible_label(
+                &window,
+                crate::theme::STACK_WIDTH_INPUT.name,
+            )
+            .next()
+            .expect("Stack width input element found");
+            let seen = input.accessible_value().unwrap_or_default();
+            assert_eq!(
+                seen.as_str(),
+                "65",
+                "typing '6' then '5' must land in the stack width field; it reads {seen:?}"
+            );
+
+            assert_eq!(
+                model.borrow().draft.layout.stack_width_percent,
+                50,
+                "a typed stack width value must not commit before departure"
+            );
+
+            window.invoke_save_clicked();
+
+            assert_eq!(
+                model.borrow().draft.layout.stack_width_percent,
+                65,
+                "typing 65 and clicking Save must commit 65 to the draft"
+            );
+            assert_eq!(
+                model.borrow().saved.layout.stack_width_percent,
+                65,
+                "typing 65 and clicking Save must save 65 to the config"
+            );
+
+            let _ = std::fs::remove_file(&save_path);
+        });
+    }
+
+    #[test]
+    fn description_renders_as_a_tooltip_not_a_visible_line() {
+        run_on_ui_thread(|| {
+            let (window, _model, save_path) = setup_shortcuts_window();
+
+            // Scroll to the top so Switcher row is at the top
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::PointerScrolled {
+                    position: slint::LogicalPosition::new(300.0, 300.0),
+                    delta_x: 0.0,
+                    delta_y: 1200.0,
+                });
+
+            let desc = ShortcutField::Switcher.description();
+
+            // 1. When pointer and focus are elsewhere, the description is NOT rendered in the tree
+            let initial_desc = ElementHandle::find_by_accessible_label(&window, desc).next();
+            assert!(
+                initial_desc.is_none(),
+                "Description must not be rendered as an always-visible line when pointer and focus are elsewhere"
+            );
+
+            // 2. Reachable by keyboard focus: Tab navigation reaches the title block and surfaces tooltip
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::KeyPressed {
+                    text: slint::platform::Key::Tab.into(),
+                });
+
+            let focused_desc = ElementHandle::find_by_accessible_label(&window, desc).next();
+            assert!(
+                focused_desc.is_some(),
+                "Description must surface as a tooltip on keyboard focus"
+            );
+
+            // 3. Clear focus away via keyboard Tab: advancing focus to next row hides description
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::PointerMoved {
+                    position: slint::LogicalPosition::new(0.0, 0.0),
+                });
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::KeyPressed {
+                    text: slint::platform::Key::Tab.into(),
+                });
+            let cleared_desc = ElementHandle::find_by_accessible_label(&window, desc).next();
+            assert!(
+                cleared_desc.is_none(),
+                "Description must cease rendering when focus advances away from the title block"
+            );
+
+            // 4. Reachable by mouse hover: hovering the title block surfaces the tooltip
+            let switcher_desc_label =
+                theme::shortcut_description_label(ShortcutField::Switcher.label());
+            let mut title_blocks =
+                ElementHandle::find_by_accessible_label(&window, &switcher_desc_label);
+            let switcher_title = title_blocks
+                .next()
+                .expect("Shortcut description block found");
+            let title_pos = switcher_title.absolute_position();
+            let title_sz = switcher_title.size();
+            let hover_pos = slint::LogicalPosition::new(
+                title_pos.x + title_sz.width / 2.0,
+                title_pos.y + title_sz.height / 2.0,
+            );
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::PointerMoved {
+                    position: hover_pos,
+                });
+
+            let hovered_desc = ElementHandle::find_by_accessible_label(&window, desc).next();
+            assert!(
+                hovered_desc.is_some(),
+                "Description must surface as a tooltip on mouse hover"
+            );
+
+            // 5. Moving pointer away hides the tooltip again
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::PointerMoved {
+                    position: slint::LogicalPosition::new(0.0, 0.0),
+                });
+            let cleared_desc = ElementHandle::find_by_accessible_label(&window, desc).next();
+            assert!(
+                cleared_desc.is_none(),
+                "Description must cease rendering when pointer leaves the title block"
+            );
+
+            let _ = std::fs::remove_file(&save_path);
+        });
+    }
+
+    /// The row pitch of one group, measured between two of its visible group headings.
+    ///
+    /// No element spans a row, so a row's height cannot be read directly. Consecutive keycaps sit
+    /// at a fixed offset inside their rows, so the distance between two keycaps IS the height of
+    /// the row between them — but only for keycaps in the SAME group: a gap across a group
+    /// boundary additionally spans a heading and the card's padding.
+    ///
+    /// Which rows are instantiated depends on the scroll position, and the visible run does not
+    /// begin at the first declared row. So the group is bounded by reading its own heading and the
+    /// next one out of the rendered tree, and both MUST be present — an earlier version derived
+    /// the boundaries by index arithmetic over the declared sequence, went red under a mutation
+    /// that changed only which rows were in view, and blamed the description for it.
+    fn group_row_pitches(window: &MainWindow, group: &str, next_group: &str) -> Vec<f32> {
+        let heading_y = |label: &str| -> f32 {
+            ElementHandle::find_by_accessible_label(window, label)
+                .next()
+                .unwrap_or_else(|| {
+                    panic!("heading '{label}' is not in view, so no row of '{group}' is bracketed")
+                })
+                .absolute_position()
+                .y
+        };
+        let (top, bottom) = (heading_y(group), heading_y(next_group));
+        let mut rows: Vec<f32> = ShortcutField::ALL
+            .into_iter()
+            .filter(|f| f.group() == group)
+            .filter_map(|f| {
+                let label = theme::shortcut_keycap_label(f.label());
+                let y = ElementHandle::find_by_accessible_label(window, &label)
+                    .next()
+                    .map(|k| k.absolute_position().y);
+                y
+            })
+            .filter(|y| *y > top && *y < bottom)
+            .collect();
+        rows.sort_by(|a, b| a.partial_cmp(b).expect("keycap positions are comparable"));
+        assert!(
+            rows.len() >= 3,
+            "group '{group}' shows {} rows before '{next_group}'; need 3 for two pitches",
+            rows.len()
+        );
+        eprintln!("MEASUREMENT: group '{group}' keycap ys={rows:?}");
+        rows.windows(2).map(|w| w[1] - w[0]).collect()
+    }
+
+    /// Record every key the window forwards to Rust, by registering the callback the test itself.
+    ///
+    /// `bind_callbacks` does not wire `key_pressed_event` — `main()` does, at `main.rs:721`, which
+    /// is `DEF-8` — so in a test that callback is unset and a forward from the markup is a silent
+    /// no-op. That is a fact about `main()`'s wiring, NOT about what a test can reach: a test can
+    /// register its own listener, and then the markup's forwarding contract is directly
+    /// observable. Two earlier records of mine said no automated test could reach this path at
+    /// all; that was too strong, and these two tests are the correction.
+    ///
+    /// What is still untested is `main()`'s own registration. `DEF-8` carries that.
+    fn record_forwarded_keys(window: &crate::MainWindow) -> Rc<RefCell<Vec<String>>> {
+        let seen = Rc::new(RefCell::new(Vec::<String>::new()));
+        let sink = Rc::clone(&seen);
+        window.on_key_pressed_event(move |text, _ctrl, _alt, _shift, _meta| {
+            sink.borrow_mut().push(text.to_string());
+        });
+        seen
+    }
+
+    fn press(window: &crate::MainWindow, text: slint::SharedString) {
+        window
+            .window()
+            .dispatch_event(slint::platform::WindowEvent::KeyPressed { text });
+    }
+
+    #[test]
+    fn tab_is_forwarded_to_rust_before_it_is_rejected_for_focus_traversal() {
+        // `DEC-005` (applied) reads the key check as a correlation of what the daemon's hook saw
+        // against what the WINDOW saw. `key_handler` returns `reject` for Tab so Slint's focus
+        // traversal can run, and if it did that BEFORE forwarding, the window's half of that pair
+        // would be false for every Tab-containing chord — `Ctrl+Alt+Tab` would report "another
+        // application claimed it" about an application that does not exist. Tab is also a
+        // bindable chord key: `map_slint_key` maps `"\t"` and `U+0009` to `"tab"` in two arms.
+        //
+        // So the order is the assertion: forwarded first, rejected second.
+        run_on_ui_thread(|| {
+            let (window, _model, save_path) = setup_shortcuts_window();
+            let seen = record_forwarded_keys(&window);
+
+            press(&window, slint::SharedString::from("x"));
+            press(&window, slint::platform::Key::Tab.into());
+
+            let keys = seen.borrow().clone();
+            eprintln!("MEASUREMENT: forwarded keys {keys:?}");
+            assert!(
+                keys.iter().any(|k| k == "x"),
+                "an ordinary key must reach the window callback, got {keys:?}"
+            );
+            assert!(
+                keys.iter().any(|k| k == "\t"),
+                "Tab must be forwarded to Rust before it is rejected for focus traversal, \
+                 otherwise DEC-005's window signal is false for every Tab chord; got {keys:?}"
+            );
+
+            let _ = std::fs::remove_file(&save_path);
+        });
+    }
+
+    #[test]
+    fn an_unconsumed_key_still_reaches_rust_after_focus_moves_into_a_row() {
+        // `DEF-9`. `key_handler` used to be a childless SIBLING of the content, and Slint bubbles a
+        // key up the focused element's ANCESTORS — so the moment anything else took focus, every
+        // one of the four behaviours behind this callback went dead: the Key Check diagnostic,
+        // Escape-cancels-capture, chord capture, and onboarding step 2. The user-visible symptom
+        // was a row stuck in "Listening…" with Escape unable to cancel it.
+        //
+        // One Tab press is the shortest route to that state, and it is the route `SPEC-4-03`
+        // created. The percentage-field route (`pct_input.focus()`) predates it.
+        run_on_ui_thread(|| {
+            let (window, _model, save_path) = setup_shortcuts_window();
+            let seen = record_forwarded_keys(&window);
+
+            // Move focus off `key_handler` the way a user does.
+            press(&window, slint::platform::Key::Tab.into());
+            seen.borrow_mut().clear();
+
+            // A key no focused element consumes must still arrive, by bubbling.
+            press(&window, slint::SharedString::from("y"));
+
+            let keys = seen.borrow().clone();
+            eprintln!("MEASUREMENT: after focus moved, forwarded keys {keys:?}");
+            assert!(
+                keys.iter().any(|k| k == "y"),
+                "an unconsumed key must bubble to the window's FocusScope once focus has moved \
+                 into a row, or chord capture and Escape are both dead there; got {keys:?}"
+            );
+
+            let _ = std::fs::remove_file(&save_path);
+        });
+    }
+
+    #[test]
+    fn row_height_is_independent_of_description_length() {
+        // The criterion is that removing the always-visible description leaves the row's height
+        // deterministic. Two earlier versions of this check could not fail for that reason:
+        //
+        //  - the first compared two *title blocks*, which after this change are structurally
+        //    identical by construction — one `Text`, no conflict, both enabled — so no change to
+        //    row height, padding or `min-height` could have made them differ;
+        //  - the second compared real row pitches, but relied on the four descriptions of the
+        //    group in view differing in length. They are "Snaps the window to the {left,right,
+        //    top,bottom} edge at its configured percentage." — same length to within a word. A
+        //    description rendered inline would wrap identically on all four and the pitches would
+        //    stay uniform, so the defect would pass.
+        //
+        // So the length is not hoped for, it is IMPOSED: one row's description is replaced with a
+        // pathologically long one and the group's pitches must not move.
+        //
+        // WHAT THIS CAN AND CANNOT SEE, established by running the mutations rather than by
+        // reasoning, because two of the three readings above looked like proof and were not:
+        //
+        //  - Restoring the always-visible wrapping description does NOT move the pitch, and the
+        //    injection above does not either. The component's header comment says why: Slint
+        //    computes the row's preferred height at the text's UNWRAPPED width, so a wrapping
+        //    description reports a one-line height, the row stays 50px, and the extra lines
+        //    overflow the row instead of growing it. That was the historic defect - text drawn
+        //    over the next row's divider - and it is invisible to geometry. The description's
+        //    absence is proven by `description_renders_as_a_tooltip_not_a_visible_line`, which
+        //    reads the tree; the overflow risk is a smoke-test item, recorded on the ticket.
+        //  - It DOES fail when row height genuinely varies across a group. Verified by keying
+        //    `min-height` to `description.character-count`: the pitches went [63, 57, 57] and
+        //    the assertion named the group and both numbers. That is the property in the name,
+        //    and the mutation is the most direct possible statement of it.
+        run_on_ui_thread(|| {
+            let (window, _model, save_path) = setup_shortcuts_window();
+            let (group, next_group) = (ShortcutField::GROUPS[3], ShortcutField::GROUPS[4]);
+
+            let before = group_row_pitches(&window, group, next_group);
+
+            // Impose the length. `rows_snap_custom` is the same model `sync_model_to_ui` fills,
+            // so this is the production data path with one field made hostile.
+            let rows: Vec<crate::ShortcutRowData> =
+                slint::Model::iter(&window.get_rows_snap_custom()).collect();
+            let mut hostile = rows.clone();
+            hostile[1].description = slint::SharedString::from(
+                "This description is deliberately long enough to wrap onto several lines at any                  plausible row width, which is the whole point of it: if the row still renders                  its description inline, this row grows and its neighbours do not.",
+            );
+            window.set_rows_snap_custom(slint::ModelRc::new(slint::VecModel::from(hostile)));
+
+            let after = group_row_pitches(&window, group, next_group);
+            eprintln!("MEASUREMENT: pitches before={before:?} after={after:?}");
+
+            const TOLERANCE: f32 = 1.0;
+            let baseline = before[0];
+            for (label, pitches) in [("before", &before), ("after", &after)] {
+                for (i, p) in pitches.iter().enumerate() {
+                    assert!(
+                        (p - baseline).abs() <= TOLERANCE,
+                        "{label} the long description, pitch {i} of '{group}' is {p}, not {baseline}"
+                    );
+                }
+            }
+
+            let _ = std::fs::remove_file(&save_path);
+        });
+    }
+    #[test]
+    fn control_cluster_and_toggle_share_one_vertical_centre() {
+        run_on_ui_thread(|| {
+            let (window, _model, save_path) = setup_shortcuts_window();
+
+            // Scroll to the top so Switcher row is in view
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::PointerScrolled {
+                    position: slint::LogicalPosition::new(300.0, 300.0),
+                    delta_x: 0.0,
+                    delta_y: 1200.0,
+                });
+
+            // Find keycap and toggle for Switcher
+            let switcher_kc_label = theme::shortcut_keycap_label(ShortcutField::Switcher.label());
+            let mut keycaps = ElementHandle::find_by_accessible_label(&window, &switcher_kc_label);
+            let keycap = keycaps.next().expect("First row keycap found");
+
+            let label = format!("Enable {}", ShortcutField::Switcher.label());
+            let mut toggles = ElementHandle::find_by_accessible_label(&window, &label);
+            let toggle = toggles.next().expect("First row toggle switch found");
+
+            let keycap_pos = keycap.absolute_position();
+            let keycap_sz = keycap.size();
+            let keycap_centre_y = keycap_pos.y + keycap_sz.height / 2.0;
+
+            let toggle_pos = toggle.absolute_position();
+            let toggle_sz = toggle.size();
+            let toggle_centre_y = toggle_pos.y + toggle_sz.height / 2.0;
+
+            eprintln!(
+                "MEASUREMENT: keycap y={}, h={}, centre_y={}; toggle y={}, h={}, centre_y={}; diff={}",
+                keycap_pos.y, keycap_sz.height, keycap_centre_y,
+                toggle_pos.y, toggle_sz.height, toggle_centre_y,
+                (keycap_centre_y - toggle_centre_y).abs()
+            );
+
+            // Stated tolerance: within 1.0 logical pixel
+            const TOLERANCE: f32 = 1.0;
+            assert!(
+                (keycap_centre_y - toggle_centre_y).abs() <= TOLERANCE,
+                "Keycap centre ({keycap_centre_y}) and toggle centre ({toggle_centre_y}) must share one vertical centre within {TOLERANCE}px, but differed by {}px",
+                (keycap_centre_y - toggle_centre_y).abs()
+            );
+
+            // Also test a row with percent control (SnapPercentLeft) to verify alignment holds
+            // when bounded numeric stepper controls are present in the cluster.
+            // Scroll down so Snap to custom group is in view.
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::PointerScrolled {
+                    position: slint::LogicalPosition::new(300.0, 300.0),
+                    delta_x: 0.0,
+                    delta_y: -600.0,
+                });
+
+            let snap_label = format!("Enable {}", ShortcutField::SnapPercentLeft.label());
+            let mut snap_toggles = ElementHandle::find_by_accessible_label(&window, &snap_label);
+            let snap_toggle = snap_toggles.next().expect("Snap toggle switch found");
+            let snap_toggle_pos = snap_toggle.absolute_position();
+            let snap_toggle_sz = snap_toggle.size();
+            let snap_toggle_centre_y = snap_toggle_pos.y + snap_toggle_sz.height / 2.0;
+
+            let snap_kc_label =
+                theme::shortcut_keycap_label(ShortcutField::SnapPercentLeft.label());
+            let snap_keycap = ElementHandle::find_by_accessible_label(&window, &snap_kc_label)
+                .find(|k| (k.absolute_position().y - snap_toggle_pos.y).abs() < 10.0)
+                .expect("SnapPercentLeft keycap found");
+            let snap_kc_pos = snap_keycap.absolute_position();
+            let snap_kc_sz = snap_keycap.size();
+            let snap_kc_centre_y = snap_kc_pos.y + snap_kc_sz.height / 2.0;
+
+            assert!(
+                (snap_kc_centre_y - snap_toggle_centre_y).abs() <= TOLERANCE,
+                "Percent row keycap centre ({snap_kc_centre_y}) and toggle centre ({snap_toggle_centre_y}) must share vertical centre within {TOLERANCE}px"
             );
 
             let _ = std::fs::remove_file(&save_path);

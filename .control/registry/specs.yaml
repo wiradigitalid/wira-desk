@@ -571,7 +571,7 @@ specs:
     release: "0.5.0"
     prd: [wira-desk]
     size: M
-    status: open
+    status: closed
     depends_on: []
     spec_folder: .scratch/spec-4-shortcuts-pane-consolidation/
     fr: [FR-15, FR-26, FR-28]
@@ -606,6 +606,11 @@ specs:
           - app::tests::snap_maximize_now_sorts_after_every_snap_variant
           - app::tests::grouping_never_reorders_the_declared_sequence
           - app::tests::snap_custom_labels_no_longer_repeat_the_group_name
+          - app::tests::the_declared_sequence_matches_the_shared_source
+          - hook::tests::the_daemon_precedence_order_matches_the_shared_source
+          - app::tests::the_group_headings_have_one_home
+          - hook::tests::the_row_table_binds_every_chord_to_its_own_action
+          - persistence::tests::a_duplicate_names_the_holder_by_the_shared_declared_order
       - id: SPEC-4-02
         title: Layout pane retired; stack width percentage moves onto the Overlapping Stack row
         spec_folder: .scratch/spec-4-shortcuts-pane-consolidation/
@@ -614,9 +619,14 @@ specs:
         depends_on: [SPEC-4-01]
         tests:
           - app::tests::pane_enum_no_longer_declares_layout
-          - main::tests::overlapping_stack_row_has_percent_true
+          - app::tests::overlapping_stack_row_has_percent_true
           - shortcut_row_slint_snapshot::tests::stack_row_percent_commits_on_save_click
           - persistence::tests::stack_width_percent_round_trips_through_the_shortcut_row_path
+          - app::tests::pane_declaration_order_is_the_navigation_index
+          - app::tests::every_pane_index_round_trips_through_the_ui_boundary
+          - app::tests::the_stack_row_carries_its_own_percent_bounds
+          - app::tests::every_percentage_row_reaches_all_four_percent_seams
+          - theme::tests::every_rendered_percent_control_name_comes_from_theme
       - id: SPEC-4-03
         title: Row polish — tooltip description, centred control cluster, no horizontal scroll
         spec_folder: .scratch/spec-4-shortcuts-pane-consolidation/
@@ -626,12 +636,49 @@ specs:
         tests:
           - shortcut_row_slint_snapshot::tests::description_renders_as_a_tooltip_not_a_visible_line
           - shortcut_row_slint_snapshot::tests::control_cluster_and_toggle_share_one_vertical_centre
+          # Extracted from step 6 of the tooltip test, where it compared two title blocks that are
+          # identical by construction and so could not fail. It measures real row pitch now.
+          - shortcut_row_slint_snapshot::tests::row_height_is_independent_of_description_length
           - shortcuts_pane_slint_snapshot::tests::five_groups_fit_the_default_window_width_with_no_horizontal_scroll
+          - shortcuts_pane_slint_snapshot::tests::all_five_group_headings_are_in_the_rendered_tree
+          # Guards the per-row label derivation trip 1 introduced. Registered late: the Spec-axis
+          # panel caught that the ticket added a sixth test traceable to nothing.
+          - theme::tests::shortcut_per_row_labels_derive_from_theme_constants
+      # Ordered after SPEC-4-05 as well: that ticket changes which element receives a key, and
+      # DEF-5's own candidate list includes whether a click lands focus on `pct_input` -- so a
+      # root-cause pass run first would be run against a focus tree about to change.
       - id: SPEC-4-04
         title: "Defect DEF-5 — typed digits do not reach a percentage field's value"
         spec_folder: .scratch/spec-4-shortcuts-pane-consolidation/
         component: settings
         satisfies: [UC-4]
-        depends_on: [SPEC-4-03]
+        depends_on: [SPEC-4-03, SPEC-4-05]
+        # Both written by the coordinator as Step 1 and seen red at the right assertions: typing
+        # "70" leaves the field reading "50", which is DEF-5 itself. The refusal test is the half a
+        # fix could quietly drop while looking correct.
         tests:
           - shortcut_row_slint_snapshot::tests::a_real_keystroke_sequence_commits_a_typed_percentage
+          - shortcut_row_slint_snapshot::tests::a_real_keystroke_sequence_out_of_range_is_refused
+          # The builder added this one for the relocated Stack row, since the fix is on the shared
+          # ShortcutRow percent control rather than on any single row. Mutation-verified with the
+          # others: restoring `accept` reds all three.
+          - shortcut_row_slint_snapshot::tests::a_real_keystroke_sequence_commits_a_typed_stack_percentage
+      # Opened 2026-09-08 from the Spec-axis panel on SPEC-4-03, which found DEF-9: `key_handler`
+      # is a childless SIBLING of the content, so keys reach Rust only while it holds focus. The
+      # nesting and one route into it predate SPEC-4-03, and that ticket's two return trips were
+      # spent, so the fix lands here rather than as a third trip.
+      - id: SPEC-4-05
+        title: "Defect DEF-9 — keyboard events reach Rust only while the shell's FocusScope has focus"
+        spec_folder: .scratch/spec-4-shortcuts-pane-consolidation/
+        component: settings
+        satisfies: [UC-4]
+        depends_on: [SPEC-4-03]
+        # Two guards the coordinator wrote after the builder's probe showed this path IS reachable
+        # from a test by registering the callback there -- an earlier note of mine said it was not.
+        # Both mutation-verified: the pre-fix sibling structure reds the first (forwarded keys
+        # empty), reject-before-forward reds the second (only "x" arrives, Tab missing). The third
+        # is the regression guard on SPEC-4-03's Tab traversal.
+        tests:
+          - shortcut_row_slint_snapshot::tests::an_unconsumed_key_still_reaches_rust_after_focus_moves_into_a_row
+          - shortcut_row_slint_snapshot::tests::tab_is_forwarded_to_rust_before_it_is_rejected_for_focus_traversal
+          - shortcut_row_slint_snapshot::tests::description_renders_as_a_tooltip_not_a_visible_line

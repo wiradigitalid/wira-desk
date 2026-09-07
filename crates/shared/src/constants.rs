@@ -32,6 +32,38 @@ pub const SETTINGS_EXE_NAME: &str = "wiradesk-settings.exe";
 /// appears — not a compile error.
 pub const ONBOARDING_FLAG: &str = "--onboarding";
 
+/// The declared order of every editable chord action, as its `config.toml` key path.
+///
+/// `LBR-ST-14`: **one** declared sequence is the single source of the Shortcuts pane's draw
+/// order, its keyboard focus order, and the precedence order that resolves a chord collision —
+/// and a second, independently maintained list of the same actions must not exist. Two did:
+/// `settings`' `ShortcutField::ALL` ordered the pane and the save-time duplicate rejection,
+/// while `daemon`'s `Chords::in_declared_order` ordered the unbinding that actually runs. They
+/// agreed only by coincidence, because `daemon` cannot see `ShortcutField` and nothing compared
+/// them. This is that single source; both crates assert their own list against it (`DEC-018`).
+///
+/// The order itself is `DEC-014`'s five-group taxonomy: switching, snap-to-half, snap-to-third,
+/// snap-to-custom, then resize/move/arrange. Position is behaviour, not presentation — moving an
+/// entry changes which of two colliding chords keeps its binding, so an edit here is a decision.
+pub const SHORTCUT_DECLARED_ORDER: [&str; 16] = [
+    "switcher.shortcut",
+    "switcher.fallback_shortcut",
+    "snapping.snap_half_left",
+    "snapping.snap_half_right",
+    "snapping.snap_half_top",
+    "snapping.snap_half_bottom",
+    "snapping.snap_third_left",
+    "snapping.snap_third_middle",
+    "snapping.snap_third_right",
+    "snapping.snap_percent_left",
+    "snapping.snap_percent_right",
+    "snapping.snap_percent_top",
+    "snapping.snap_percent_bottom",
+    "snapping.snap_maximize",
+    "layout.move_next_monitor_shortcut",
+    "layout.stack_shortcut",
+];
+
 /// Windows Task Scheduler task name for elevated logon auto-start.
 /// Used by `daemon::autostart` for `schtasks /Create|/Query|/Delete /TN`.
 pub const TASK_NAME: &str = "WiraDesk";

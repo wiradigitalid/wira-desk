@@ -5,7 +5,6 @@ import { Titlebar } from "components/titlebar.slint";
 import { Sidebar } from "components/sidebar.slint";
 import { GeneralPane } from "panes/general_pane.slint";
 import { ShortcutsPane, ShortcutRowData } from "panes/shortcuts_pane.slint";
-import { LayoutPane } from "panes/layout_pane.slint";
 import { VmExceptionsPane } from "panes/vm_exceptions_pane.slint";
 import { AboutPane } from "panes/about_pane.slint";
 import { KeyCheck } from "components/key_check.slint";
@@ -41,8 +40,10 @@ export component MainWindow inherits Window {
     //
     // Deliberately not per-step. Only the last screen grew, but a window that resizes as the
     // user presses Next draws attention to itself at the moment the content should have it.
-    width: is_onboarding ? 580px : 760px;
-    height: is_onboarding ? 396px : 610px;
+    out property <length> normal_width: 760px;
+    out property <length> normal_height: 610px;
+    width: is_onboarding ? 580px : root.normal_width;
+    height: is_onboarding ? 396px : root.normal_height;
 
     // Navigation & Panes
     in-out property <int> current_pane: 0;
@@ -52,15 +53,17 @@ export component MainWindow inherits Window {
 
     // Shortcuts Pane Properties.
     //
-    // Three models rather than one property per field per concern. The previous shape was
+    // Five models rather than one property per field per concern. The previous shape was
     // one `sc_`, one `conflict_`, and one `can_swap_` property per action; at nine actions
     // that is twenty-seven declarations here and twenty-seven more where they are bound,
     // and an action added to the model with any one of them forgotten is drawn wrong or not
     // at all. The Rust side builds these from `ShortcutField::ALL`, so the declared sequence
     // is the only list (`LBR-ST-14`).
     in property <[ShortcutRowData]> rows_switching;
-    in property <[ShortcutRowData]> rows_snap;
-    in property <[ShortcutRowData]> rows_move;
+    in property <[ShortcutRowData]> rows_snap_half;
+    in property <[ShortcutRowData]> rows_snap_third;
+    in property <[ShortcutRowData]> rows_snap_custom;
+    in property <[ShortcutRowData]> rows_arrange;
     in property <int> listening_field: -1;
 
     // KeyCheck Properties
@@ -72,9 +75,6 @@ export component MainWindow inherits Window {
     in property <string> kc_last_canonical: "";
     in property <int> kc_verdict: 0;
     in property <bool> kc_beat: false;
-
-    // Layout Pane Properties
-    in-out property <int> stack_width_percent: 50;
 
     // VM Exceptions Pane Properties
     in property <[string]> bypass_processes: [
@@ -129,9 +129,6 @@ export component MainWindow inherits Window {
     callback editing_percent_changed(int, int);
     callback shortcut_enabled_toggled(int, bool);
 
-    callback width_changed(int);
-    callback editing_width_changed(int);
-
     callback save_clicked();
     callback revert_clicked();
 
@@ -150,6 +147,32 @@ export component MainWindow inherits Window {
     forward-focus: key_handler;
 
     key_handler := FocusScope {
+        width: 100%;
+        height: 100%;
+
+        // The forward happens BEFORE the reject below, and that order is load-bearing.
+        //
+        // `DEC-005` (applied) reports the key check as a correlation of what the daemon's hook saw
+        // against what THIS WINDOW saw. Returning `reject` for Tab without forwarding first makes
+        // the window's half of that pair false, and the table in `DEC-005` then reads hook-yes /
+        // window-no as "another application claimed it" — a fabricated third party. Forwarding
+        // also keeps Tab bindable as a chord: `map_slint_key` maps it in two arms on purpose.
+        //
+        // The `listening_field == -1` guard is what stops a Tab pressed mid-capture from being
+        // recorded as a chord AND throwing focus out of the row.
+        //
+        // Both halves of this ARE guarded, and an earlier version of this comment said they were
+        // not. `bind_callbacks` does not wire `key_pressed_event` — `main()` does — so the
+        // callback is unset in a test by default; but a test can register its own listener, and
+        // two do:
+        //
+        //   `tab_is_forwarded_to_rust_before_it_is_rejected_for_focus_traversal` reds when the
+        //   reject is moved above the forward (forwarded keys read `["x"]`, Tab missing), and
+        //   `an_unconsumed_key_still_reaches_rust_after_focus_moves_into_a_row` reds when this
+        //   scope goes back to being a childless sibling of the content (forwarded keys read `[]`).
+        //
+        // What is still unguarded is `main()`'s own registration and the handler behind it — the
+        // Key Check recording, the capture branch, Escape-cancels-capture. `DEF-8` carries that.
         key-pressed(event) => {
             root.key_pressed_event(
                 event.text,
@@ -158,6 +181,9 @@ export component MainWindow inherits Window {
                 event.modifiers.shift,
                 event.modifiers.meta
             );
+            if (event.text == Key.Tab || event.text == Key.Backtab) && root.listening_field == -1 {
+                return reject;
+            }
             accept
         }
         key-released(event) => {
@@ -168,17 +194,19 @@ export component MainWindow inherits Window {
                 event.modifiers.shift,
                 event.modifiers.meta
             );
+            if (event.text == Key.Tab || event.text == Key.Backtab) && root.listening_field == -1 {
+                return reject;
+            }
             accept
         }
-    }
 
-    // Outer Container
-    Rectangle {
-        width: parent.width;
-        height: parent.height;
-        background: Palette.bg_page;
-        border-radius: is_onboarding ? 12px : 8px;
-        clip: true;
+        // Outer Container
+        Rectangle {
+            width: parent.width;
+            height: parent.height;
+            background: Palette.bg_page;
+            border-radius: is_onboarding ? 12px : 8px;
+            clip: true;
 
         // No titlebar during onboarding, and that is a deliberate difference from
         // Settings rather than an omission. The tutorial already offers its own way out
@@ -267,8 +295,10 @@ export component MainWindow inherits Window {
 
                             if root.current_pane == 1 : ShortcutsPane {
                                 rows_switching: root.rows_switching;
-                                rows_snap: root.rows_snap;
-                                rows_move: root.rows_move;
+                                rows_snap_half: root.rows_snap_half;
+                                rows_snap_third: root.rows_snap_third;
+                                rows_snap_custom: root.rows_snap_custom;
+                                rows_arrange: root.rows_arrange;
                                 listening_field: root.listening_field;
 
                                 start_capture(idx) => { root.start_capture(idx); }
@@ -278,18 +308,12 @@ export component MainWindow inherits Window {
                                 toggle_enabled(idx, val) => { root.shortcut_enabled_toggled(idx, val); }
                             }
 
-                            if root.current_pane == 2 : LayoutPane {
-                                stack_width_percent <=> root.stack_width_percent;
-                                width_changed(val) => { root.width_changed(val); }
-                                editing_width_changed(val) => { root.editing_width_changed(val); }
-                            }
-
-                            if root.current_pane == 3 : VmExceptionsPane {
+                            if root.current_pane == 2 : VmExceptionsPane {
                                 bypass_processes: root.bypass_processes;
                                 bypass_classes: root.bypass_classes;
                             }
 
-                            if root.current_pane == 4 : AboutPane {
+                            if root.current_pane == 3 : AboutPane {
                                 version: root.app_version;
                                 typeface: root.app_typeface;
                                 update_status: root.update_status;
@@ -470,4 +494,5 @@ export component MainWindow inherits Window {
             }
         }
     }
+}
 }

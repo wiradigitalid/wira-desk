@@ -3,11 +3,31 @@ import { ToggleSwitch } from "toggle_switch.slint";
 
 // One editable action.
 //
-// Every text in here is single-line and elides. That is not a style preference: this row's
-// height comes from a preferred height that Slint computes at the text's *unwrapped* width,
-// so a description that wrapped to two lines got a one-line row and its second line drew
-// over the divider into the next row. Keeping each text to one line makes the row height
-// deterministic instead of dependent on a measurement that is taken before wrapping.
+// Every text INSIDE the row is single-line and elides. That is not a style preference: the
+// row's height comes from a preferred height that Slint computes at the text's *unwrapped*
+// width, so a text that wrapped to two lines got a one-line row and its second line drew over
+// the divider into the next row.
+//
+// The description used to be one of those texts and was the one that overflowed, so it now
+// lives in the tooltip below instead, where wrapping is free because the tooltip is
+// free-positioned rather than a layout child.
+//
+// What pins the row's height, now that the description is out of it and `min-height: 50px` has
+// been deleted as inert: the right-hand cluster's 30px keycap plus this layout's 10px top and
+// 10px bottom padding. Measured row pitch is 51px (50px + the 1px divider).
+//
+// The row is NOT one line tall in general, and an earlier version of this comment said so
+// wrongly. Two states put a second line in `title_block` and the row grows to fit it, which is
+// correct behaviour rather than the old defect: a conflict row and a disabled row both measure
+// 52.5px. What the old defect was is different — text drawing OUTSIDE a row whose height had
+// already been computed — and that is what keeping each text single-line still prevents.
+//
+// The mis-measurement above was re-confirmed while testing this change, and it is the reason a
+// geometry test cannot see the defect: with the wrapping description put back, the row height
+// did not move at all — the row stayed 50px and the text simply drew outside it. So a row-height
+// assertion is not the guard for "the description is not a visible line"; reading the element
+// tree is (`description_renders_as_a_tooltip_not_a_visible_line`), and the overflow it used to
+// cause is a hand-verified smoke-test item.
 export component ShortcutRow inherits Rectangle {
     in property <string> title: "Shortcut";
     in property <string> description: "Description text";
@@ -18,6 +38,14 @@ export component ShortcutRow inherits Rectangle {
     in property <bool> can_swap: false;
     in property <bool> has_percent: false;
     in property <int> percent: 50;
+    in property <int> percent_min: 1;
+    in property <int> percent_max: 99;
+    in property <string> accessible_label_decrease: "";
+    in property <string> accessible_label_field: "";
+    in property <string> accessible_label_input: "";
+    in property <string> accessible_label_increase: "";
+    in property <string> accessible_label_keycap: "";
+    in property <string> accessible_label_description: "";
     in-out property <string> typed_text: "\{root.percent}";
     in property <bool> enabled: true;
 
@@ -36,14 +64,14 @@ export component ShortcutRow inherits Rectangle {
 
     public function step_plus() {
         let base = root.current_value();
-        let next = (base >= 1 && base < 99) ? (base + 1) : base;
+        let next = (base >= root.percent_min && base < root.percent_max) ? (base + 1) : base;
         root.typed_text = "\{next}";
         root.percent_changed(next);
     }
 
     public function step_minus() {
         let base = root.current_value();
-        let next = (base > 1 && base <= 99) ? (base - 1) : base;
+        let next = (base > root.percent_min && base <= root.percent_max) ? (base - 1) : base;
         root.typed_text = "\{next}";
         root.percent_changed(next);
     }
@@ -60,58 +88,71 @@ export component ShortcutRow inherits Rectangle {
         spacing: 12px;
         alignment: space-between;
 
-        // Left Content: Title + Subtext + Clean Dedicated Conflict Notice Line
-        VerticalLayout {
-            spacing: 3px;
-            alignment: center;
+        // Left Content: Title + Clean Dedicated Conflict Notice Line (Description is now a hover/focus tooltip)
+        title_block := FocusScope {
             horizontal-stretch: 1;
+            accessible-role: text;
+            accessible-label: root.accessible_label_description;
+            accessible-description: root.description;
 
-            Text {
-                text: root.title;
-                font-family: Typography.font_family;
-                font-size: Typography.size_subheading;
-                font-weight: 600;
-                color: Palette.text_primary;
+            title_touch := TouchArea {
+                width: 100%;
+                height: 100%;
             }
 
-            Text {
-                text: root.description;
-                font-family: Typography.font_family;
-                font-size: Typography.size_caption;
-                color: Palette.text_secondary;
-                // One line, always. See the note on this component's height above.
-                wrap: no-wrap;
-                overflow: elide;
-            }
+            VerticalLayout {
+                spacing: 3px;
+                alignment: center;
 
-            if root.has_conflict : Text {
-                text: "⚠ Conflicts with " + root.conflict_name;
-                font-family: Typography.font_family;
-                font-size: 11.5px;
-                font-weight: 600;
-                color: Palette.signal_warning;
-                wrap: no-wrap;
-                overflow: elide;
-            }
+                Text {
+                    text: root.title;
+                    font-family: Typography.font_family;
+                    font-size: Typography.size_subheading;
+                    font-weight: 600;
+                    color: Palette.text_primary;
+                }
 
-            if !root.enabled : Text {
-                text: "Disabled";
-                font-family: Typography.font_family;
-                font-size: 11.5px;
-                font-weight: 600;
-                color: Palette.text_tertiary;
-                wrap: no-wrap;
-                overflow: elide;
+                if root.has_conflict : Text {
+                    text: "⚠ Conflicts with " + root.conflict_name;
+                    font-family: Typography.font_family;
+                    font-size: 11.5px;
+                    font-weight: 600;
+                    color: Palette.signal_warning;
+                    wrap: no-wrap;
+                    overflow: elide;
+                }
+
+                if !root.enabled : Text {
+                    text: "Disabled";
+                    font-family: Typography.font_family;
+                    font-size: 11.5px;
+                    font-weight: 600;
+                    color: Palette.text_tertiary;
+                    wrap: no-wrap;
+                    overflow: elide;
+                }
             }
         }
 
-        // Right Actions: Swap button + Keycap button
+        // Right Actions: percentage stepper (where present) + Swap button + Keycap + enable toggle
         //
-        // Wrapped in a centring VerticalLayout because the buttons must sit on the row's
-        // vertical middle, and a row is as tall as its description — two lines on the longer
-        // ones. The previous attempt set `y: (parent.height - 30px) / 2` on each button, which
-        // could not work: a layout positions its own children, so `y` on a layout child is
-        // discarded. That is why the keycap sat high against a two-line row.
+        // This outer `alignment: center` positions the whole cluster within the row. It is worth
+        // knowing what it does and does not hold, because a previous version of this comment
+        // credited it with the guard and that was wrong, measured both ways:
+        //
+        //  - Deleting it changes nothing on a one-line row, and on a two-line row it moves the
+        //    cluster 1.5px (centre 215.5 -> 214) without ever separating keycap from toggle. No
+        //    test fails either way.
+        //  - The guard is the INNER `VerticalLayout { alignment: center }` around the
+        //    `ToggleSwitch` further down. Delete that one and the 20px toggle top-aligns in the
+        //    30px cluster: keycap centre 205, toggle centre 200, and
+        //    `control_cluster_and_toggle_share_one_vertical_centre` goes red on a 5px gap against
+        //    its 1px tolerance. Those are the same two numbers the original defect measured.
+        //
+        // The attempt before that set `y: (parent.height - 30px) / 2` on each button, which could
+        // not work: a layout positions its own children, so `y` on a layout child is discarded.
+        // That is why the keycap sat high. Do not go back to a `y:` expression — but do not
+        // expect this outer line to catch you either.
         VerticalLayout {
             alignment: center;
             horizontal-stretch: 0;
@@ -135,7 +176,7 @@ export component ShortcutRow inherits Rectangle {
                     border-color: Palette.stroke_card;
 
                     accessible-role: button;
-                    accessible-label: "Decrease snap percentage";
+                    accessible-label: root.accessible_label_decrease;
                     accessible-action-default => {
                         root.step_minus();
                     }
@@ -165,7 +206,7 @@ export component ShortcutRow inherits Rectangle {
                     border-color: pct_input.has-focus ? Palette.accent_primary : Palette.stroke_card;
 
                     accessible-role: button;
-                    accessible-label: "Snap percentage field";
+                    accessible-label: root.accessible_label_field;
                     accessible-action-default => {
                         pct_input.focus();
                         pct_input.select-all();
@@ -195,7 +236,7 @@ export component ShortcutRow inherits Rectangle {
                             vertical-alignment: center;
 
                             accessible-role: text;
-                            accessible-label: "Snap percentage input";
+                            accessible-label: root.accessible_label_input;
                             accessible-action-set-value(val) => {
                                 root.typed_text = val;
                                 if val.is-float() {
@@ -235,7 +276,7 @@ export component ShortcutRow inherits Rectangle {
                                     }
                                     return reject;
                                 }
-                                accept
+                                reject
                             }
                         }
 
@@ -260,7 +301,7 @@ export component ShortcutRow inherits Rectangle {
                     border-color: Palette.stroke_card;
 
                     accessible-role: button;
-                    accessible-label: "Increase snap percentage";
+                    accessible-label: root.accessible_label_increase;
                     accessible-action-default => {
                         root.step_plus();
                     }
@@ -323,6 +364,12 @@ export component ShortcutRow inherits Rectangle {
                 border-width: 1px;
                 border-color: is_listening ? Palette.accent_primary : (has_conflict ? Palette.signal_warning : Palette.stroke_card);
 
+                accessible-role: button;
+                accessible-label: root.accessible_label_keycap;
+                accessible-action-default => {
+                    root.capture_clicked();
+                }
+
                 // A drawn dot, not an emoji. Neither loaded font carries U+1F534, and this is
                 // the state a user reaches every time they rebind a chord — the worst possible
                 // place for a tofu box.
@@ -350,13 +397,45 @@ export component ShortcutRow inherits Rectangle {
                 }
             }
 
-            ToggleSwitch {
-                checked: root.enabled;
-                accessible-label: "Enable " + root.title;
-                toggled(val) => { root.toggle_enabled(val); }
+            VerticalLayout {
+                alignment: center;
+                ToggleSwitch {
+                    checked: root.enabled;
+                    accessible-label: "Enable " + root.title;
+                    toggled(val) => { root.toggle_enabled(val); }
+                }
             }
         }
 
+        }
+    }
+
+    // Floating tooltip carrying full un-truncated description on hover/focus of title block
+    if (title_touch.has-hover || title_block.has-focus) && root.description != "" : Rectangle {
+        x: 16px;
+        y: root.height + 2px;
+        z: 100;
+        background: Palette.bg_card;
+        border-width: 1px;
+        border-color: Palette.stroke_card;
+        border-radius: 4px;
+        width: min(320px, tooltip_layout.preferred-width);
+
+        tooltip_layout := HorizontalLayout {
+            padding-left: 8px;
+            padding-right: 8px;
+            padding-top: 4px;
+            padding-bottom: 4px;
+
+            Text {
+                text: root.description;
+                font-family: Typography.font_family;
+                font-size: Typography.size_caption;
+                color: Palette.text_primary;
+                wrap: word-wrap;
+                accessible-role: text;
+                accessible-label: root.description;
+            }
         }
     }
 }

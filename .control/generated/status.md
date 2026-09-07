@@ -5,8 +5,8 @@
 ```yaml
 promise_progress: 100%
 rtm_rows:
-  green: 28
-  counted: 28
+  green: 40
+  counted: 40
   excluded_no_uc: 8
 work_progress:
 - spec: SPEC-1
@@ -23,6 +23,11 @@ work_progress:
   status: closed
   tickets_done: 2
   tickets_total: 2
+  work_progress: 100%
+- spec: SPEC-4
+  status: closed
+  tickets_done: 5
+  tickets_total: 5
   work_progress: 100%
 - spec: W1
   status: closed
@@ -49,6 +54,8 @@ validators_red: []
 validators_skipped:
   custom-room-declared: the `.constitution/project/` room is empty, and that is a valid state — a generic
     rule MUST NOT be moved here just to give the room content
+  review-trace: 'advisory — trace stale, re-run before the next gate or spec close: .how/settings/SDD-settings.md
+    (changed at 70ef0da, reviewed at 13b3781)'
 open_questions:
   blocking: 0
   assumptions: 31

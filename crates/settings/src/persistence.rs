@@ -6,7 +6,9 @@
 
 use std::path::Path;
 
-use shared::constants::{DAEMON_WINDOW_CLASS, DAEMON_WINDOW_TITLE, WM_APP_RELOAD_CONFIG};
+use shared::constants::{
+    DAEMON_WINDOW_CLASS, DAEMON_WINDOW_TITLE, SHORTCUT_DECLARED_ORDER, WM_APP_RELOAD_CONFIG,
+};
 use shared::{config_path, Config, Shortcut};
 
 use windows_sys::Win32::UI::WindowsAndMessaging::{FindWindowW, PostMessageW};
@@ -101,98 +103,92 @@ fn classify_parse_failure(input: &str) -> ShortcutError {
 /// Returns the offending field name and reason on the first failure, leaving
 /// the caller's active configuration untouched.
 pub fn validate_config(cfg: &Config) -> Result<(), (&'static str, ShortcutError)> {
-    // These sixteen paths must match `app::ShortcutField::key()` exactly, and in the same
-    // ORDER: `describe()` maps a rejection reported here back to a human label through that
-    // table, and the order decides which of two colliding fields is named as the first
-    // holder. The two are kept as separate literals so this module has no dependency on the
-    // UI-facing field enum — a coupling `LBR-ST-14` accepts in exchange for the layer
-    // boundary, and which `app::tests::field_declaration_order_is_the_precedence_order`
-    // guards from the other side.
-    let fields: [(&'static str, &str, bool); 16] = [
-        (
-            "switcher.shortcut",
-            &cfg.switcher.shortcut,
-            cfg.switcher.shortcut_enabled,
-        ),
-        (
-            "switcher.fallback_shortcut",
-            &cfg.switcher.fallback_shortcut,
-            cfg.switcher.fallback_shortcut_enabled,
-        ),
-        (
-            "snapping.snap_half_left",
-            &cfg.snapping.snap_half_left,
-            cfg.snapping.snap_half_left_enabled,
-        ),
-        (
-            "snapping.snap_half_right",
-            &cfg.snapping.snap_half_right,
-            cfg.snapping.snap_half_right_enabled,
-        ),
-        (
-            "snapping.snap_half_top",
-            &cfg.snapping.snap_half_top,
-            cfg.snapping.snap_half_top_enabled,
-        ),
-        (
-            "snapping.snap_half_bottom",
-            &cfg.snapping.snap_half_bottom,
-            cfg.snapping.snap_half_bottom_enabled,
-        ),
-        (
-            "snapping.snap_maximize",
-            &cfg.snapping.snap_maximize,
-            cfg.snapping.snap_maximize_enabled,
-        ),
-        (
-            "snapping.snap_third_left",
-            &cfg.snapping.snap_third_left,
-            cfg.snapping.snap_third_left_enabled,
-        ),
-        (
-            "snapping.snap_third_middle",
-            &cfg.snapping.snap_third_middle,
-            cfg.snapping.snap_third_middle_enabled,
-        ),
-        (
-            "snapping.snap_third_right",
-            &cfg.snapping.snap_third_right,
-            cfg.snapping.snap_third_right_enabled,
-        ),
-        (
-            "layout.move_next_monitor_shortcut",
-            &cfg.layout.move_next_monitor_shortcut,
-            cfg.layout.move_next_monitor_shortcut_enabled,
-        ),
-        (
-            "snapping.snap_percent_left",
-            &cfg.snapping.snap_percent_left,
-            cfg.snapping.snap_percent_left_enabled,
-        ),
-        (
-            "snapping.snap_percent_right",
-            &cfg.snapping.snap_percent_right,
-            cfg.snapping.snap_percent_right_enabled,
-        ),
-        (
-            "snapping.snap_percent_top",
-            &cfg.snapping.snap_percent_top,
-            cfg.snapping.snap_percent_top_enabled,
-        ),
-        (
-            "snapping.snap_percent_bottom",
-            &cfg.snapping.snap_percent_bottom,
-            cfg.snapping.snap_percent_bottom_enabled,
-        ),
-        (
-            "layout.stack_shortcut",
-            &cfg.layout.stack_shortcut,
-            cfg.layout.stack_shortcut_enabled,
-        ),
-    ];
-    let mut seen: Vec<(&'static str, String)> = Vec::with_capacity(fields.len());
+    // The validation and duplicate-rejection sequence is derived directly from
+    // `shared::constants::SHORTCUT_DECLARED_ORDER` (`LBR-ST-14`, `DEC-018`).
+    // The order decides which of two colliding fields is named as the first holder.
+    // Iterating the shared constant guarantees that this validation walk matches
+    // the daemon's precedence order while keeping this module free of any dependency
+    // on the UI-facing `ShortcutField` enum. The key-to-value mapping below is not a
+    // second declared order: the constant dictates the iteration order.
+    fn field_for<'a>(cfg: &'a Config, key: &str) -> (&'a str, bool) {
+        match key {
+            "switcher.shortcut" => (&cfg.switcher.shortcut, cfg.switcher.shortcut_enabled),
+            "switcher.fallback_shortcut" => (
+                &cfg.switcher.fallback_shortcut,
+                cfg.switcher.fallback_shortcut_enabled,
+            ),
+            "snapping.snap_half_left" => (
+                &cfg.snapping.snap_half_left,
+                cfg.snapping.snap_half_left_enabled,
+            ),
+            "snapping.snap_half_right" => (
+                &cfg.snapping.snap_half_right,
+                cfg.snapping.snap_half_right_enabled,
+            ),
+            "snapping.snap_half_top" => (
+                &cfg.snapping.snap_half_top,
+                cfg.snapping.snap_half_top_enabled,
+            ),
+            "snapping.snap_half_bottom" => (
+                &cfg.snapping.snap_half_bottom,
+                cfg.snapping.snap_half_bottom_enabled,
+            ),
+            "snapping.snap_third_left" => (
+                &cfg.snapping.snap_third_left,
+                cfg.snapping.snap_third_left_enabled,
+            ),
+            "snapping.snap_third_middle" => (
+                &cfg.snapping.snap_third_middle,
+                cfg.snapping.snap_third_middle_enabled,
+            ),
+            "snapping.snap_third_right" => (
+                &cfg.snapping.snap_third_right,
+                cfg.snapping.snap_third_right_enabled,
+            ),
+            "snapping.snap_percent_left" => (
+                &cfg.snapping.snap_percent_left,
+                cfg.snapping.snap_percent_left_enabled,
+            ),
+            "snapping.snap_percent_right" => (
+                &cfg.snapping.snap_percent_right,
+                cfg.snapping.snap_percent_right_enabled,
+            ),
+            "snapping.snap_percent_top" => (
+                &cfg.snapping.snap_percent_top,
+                cfg.snapping.snap_percent_top_enabled,
+            ),
+            "snapping.snap_percent_bottom" => (
+                &cfg.snapping.snap_percent_bottom,
+                cfg.snapping.snap_percent_bottom_enabled,
+            ),
+            "snapping.snap_maximize" => (
+                &cfg.snapping.snap_maximize,
+                cfg.snapping.snap_maximize_enabled,
+            ),
+            "layout.move_next_monitor_shortcut" => (
+                &cfg.layout.move_next_monitor_shortcut,
+                cfg.layout.move_next_monitor_shortcut_enabled,
+            ),
+            "layout.stack_shortcut" => (
+                &cfg.layout.stack_shortcut,
+                cfg.layout.stack_shortcut_enabled,
+            ),
+            // Unreachable while this match and `SHORTCUT_DECLARED_ORDER` hold the same sixteen
+            // keys. It is not left to chance: the walk visits every key in the constant
+            // regardless of config, so `default_config_passes_its_own_validation` traverses all
+            // sixteen arms on every test run and a seventeenth key added without an arm fails
+            // the suite loudly, naming itself. Failing open here — skipping an unknown key —
+            // would leave a field silently unvalidated, which is the worse trade.
+            other => {
+                panic!("{other} is in the shared declared order but unknown in validate_config")
+            }
+        }
+    }
 
-    for (name, value, enabled) in fields {
+    let mut seen: Vec<(&'static str, String)> = Vec::with_capacity(SHORTCUT_DECLARED_ORDER.len());
+
+    for &name in &SHORTCUT_DECLARED_ORDER {
+        let (value, enabled) = field_for(cfg, name);
         let canonical = validate_shortcut(value).map_err(|e| (name, e))?;
         if enabled {
             if let Some((first_name, _)) = seen.iter().find(|(_, s)| *s == canonical) {
@@ -511,6 +507,60 @@ mod tests {
     }
 
     #[test]
+    fn a_duplicate_names_the_holder_by_the_shared_declared_order() {
+        // `LBR-ST-14`: one declared sequence decides which of two colliding actions is named
+        // as the holder. This module walks its own table to find that holder, so its order is
+        // part of that sequence — and until `DEC-018` it was a third, separately kept copy
+        // that `DEC-014`'s reorder missed. The consequence is user-visible on the Save path:
+        // Settings would refuse the save naming one action as the holder while the daemon's
+        // precedence unbound the other.
+        //
+        // Asserted through the behaviour rather than by re-listing the order, because a test
+        // that restates the sequence is itself another copy of it.
+        for (earlier, later, set) in [
+            (
+                "snapping.snap_third_left",
+                "snapping.snap_maximize",
+                (|c: &mut Config, v: &str| {
+                    c.snapping.snap_third_left = v.to_string();
+                    c.snapping.snap_maximize = v.to_string();
+                }) as fn(&mut Config, &str),
+            ),
+            (
+                "snapping.snap_percent_left",
+                "snapping.snap_maximize",
+                |c: &mut Config, v: &str| {
+                    c.snapping.snap_percent_left = v.to_string();
+                    c.snapping.snap_maximize = v.to_string();
+                },
+            ),
+            (
+                "snapping.snap_percent_left",
+                "layout.move_next_monitor_shortcut",
+                |c: &mut Config, v: &str| {
+                    c.snapping.snap_percent_left = v.to_string();
+                    c.layout.move_next_monitor_shortcut = v.to_string();
+                },
+            ),
+        ] {
+            let mut cfg = Config::default();
+            set(&mut cfg, "ctrl+alt+f9");
+            let err = validate_config(&cfg).expect_err("a shared chord must be refused");
+            assert_eq!(
+                err.0, later,
+                "the later action in the declared sequence is the one refused"
+            );
+            match err.1 {
+                ShortcutError::DuplicateShortcut(holder) => assert_eq!(
+                    holder, earlier,
+                    "the earlier action in the declared sequence keeps the chord"
+                ),
+                other => panic!("expected a duplicate rejection, got {other:?}"),
+            }
+        }
+    }
+
+    #[test]
     fn a_disabled_action_is_excluded_from_collision_detection() {
         let mut cfg = Config::default();
         cfg.switcher.shortcut = "ctrl+alt+left".to_string();
@@ -638,6 +688,40 @@ mod tests {
             ))
         );
 
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn stack_width_percent_round_trips_through_the_shortcut_row_path() {
+        // The Overlapping Stack row edits `layout.stack_width_percent` through the same
+        // `ShortcutField` percentage plumbing every `Snap to custom` row uses. That path has a
+        // catch-all arm, so a field left out of it does not fail to compile — it accepts the edit
+        // and discards it, drawing a control that silently does nothing. This asserts the value
+        // actually reaches the config and survives a serialise/parse round trip.
+        let mut cfg = Config::default();
+        crate::app::ShortcutField::Stack.set_percent(&mut cfg, 42);
+        assert_eq!(
+            cfg.layout.stack_width_percent, 42,
+            "the shortcut-row percentage path must reach `layout.stack_width_percent`"
+        );
+        assert_eq!(
+            crate::app::ShortcutField::Stack.percent(&cfg),
+            Some(42),
+            "and must read back what it wrote"
+        );
+
+        // Round-tripped through the real save path rather than a serde call, so this covers what
+        // a user's Save actually does to the file on disk.
+        let dir = temp_dir();
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("stack-width-round-trip.toml");
+        assert!(
+            matches!(save_and_notify(&cfg, &path), SaveOutcome::Saved { .. }),
+            "42 is inside the stack range, so the save must be accepted"
+        );
+        let reloaded = Config::from_toml_str(&std::fs::read_to_string(&path).unwrap())
+            .expect("the saved file parses back");
+        assert_eq!(reloaded.layout.stack_width_percent, 42);
         let _ = std::fs::remove_file(&path);
     }
 

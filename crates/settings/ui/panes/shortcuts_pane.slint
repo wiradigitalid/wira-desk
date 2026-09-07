@@ -18,6 +18,14 @@ export struct ShortcutRowData {
     can_swap: bool,
     has_percent: bool,
     percent: int,
+    percent_min: int,
+    percent_max: int,
+    accessible_label_decrease: string,
+    accessible_label_field: string,
+    accessible_label_input: string,
+    accessible_label_increase: string,
+    accessible_label_keycap: string,
+    accessible_label_description: string,
     enabled: bool,
 }
 
@@ -37,6 +45,8 @@ component ShortcutGroup inherits VerticalLayout {
 
     Text {
         text: root.heading;
+        accessible-role: text;
+        accessible-label: root.heading;
         font-family: Typography.font_family;
         font-size: Typography.size_caption;
         font-weight: 600;
@@ -58,6 +68,14 @@ component ShortcutGroup inherits VerticalLayout {
                     can_swap: row.can_swap;
                     has_percent: row.has_percent;
                     percent: row.percent;
+                    percent_min: row.percent_min;
+                    percent_max: row.percent_max;
+                    accessible_label_decrease: row.accessible_label_decrease;
+                    accessible_label_field: row.accessible_label_field;
+                    accessible_label_input: row.accessible_label_input;
+                    accessible_label_increase: row.accessible_label_increase;
+                    accessible_label_keycap: row.accessible_label_keycap;
+                    accessible_label_description: row.accessible_label_description;
                     enabled: row.enabled;
                     capture_clicked => {
                         root.capture(row.index);
@@ -81,12 +99,12 @@ component ShortcutGroup inherits VerticalLayout {
 }
 
 export component ShortcutsPane inherits VerticalLayout {
-    // Three groups, mirroring the three configuration sections already on disk
-    // (`[switcher]`, `[snapping]`, `[layout]`), so what a user sees and what the product
-    // stores stop telling different stories.
+    // Five groups, taxonomy per `DEC-014` (`LBR-ST-14`), driven from `ShortcutField::ALL`.
     in property <[ShortcutRowData]> rows_switching;
-    in property <[ShortcutRowData]> rows_snap;
-    in property <[ShortcutRowData]> rows_move;
+    in property <[ShortcutRowData]> rows_snap_half;
+    in property <[ShortcutRowData]> rows_snap_third;
+    in property <[ShortcutRowData]> rows_snap_custom;
+    in property <[ShortcutRowData]> rows_arrange;
 
     in property <int> listening_field: -1; // -1 = idle, otherwise the action's index
 
@@ -159,8 +177,8 @@ export component ShortcutsPane inherits VerticalLayout {
     }
 
     ShortcutGroup {
-        heading: "Snap & resize";
-        rows: root.rows_snap;
+        heading: "Snap to half";
+        rows: root.rows_snap_half;
         listening_field: root.listening_field;
         capture(i) => {
             root.start_capture(i);
@@ -180,8 +198,50 @@ export component ShortcutsPane inherits VerticalLayout {
     }
 
     ShortcutGroup {
-        heading: "Move & arrange";
-        rows: root.rows_move;
+        heading: "Snap to third";
+        rows: root.rows_snap_third;
+        listening_field: root.listening_field;
+        capture(i) => {
+            root.start_capture(i);
+        }
+        swap(i) => {
+            root.swap_shortcuts(i);
+        }
+        percent_changed(i, val) => {
+            root.percent_changed(i, val);
+        }
+        editing_changed(i, val) => {
+            root.editing_percent_changed(i, val);
+        }
+        toggle_enabled(i, val) => {
+            root.toggle_enabled(i, val);
+        }
+    }
+
+    ShortcutGroup {
+        heading: "Snap to custom";
+        rows: root.rows_snap_custom;
+        listening_field: root.listening_field;
+        capture(i) => {
+            root.start_capture(i);
+        }
+        swap(i) => {
+            root.swap_shortcuts(i);
+        }
+        percent_changed(i, val) => {
+            root.percent_changed(i, val);
+        }
+        editing_changed(i, val) => {
+            root.editing_percent_changed(i, val);
+        }
+        toggle_enabled(i, val) => {
+            root.toggle_enabled(i, val);
+        }
+    }
+
+    ShortcutGroup {
+        heading: "Resize, move & arrange";
+        rows: root.rows_arrange;
         listening_field: root.listening_field;
         capture(i) => {
             root.start_capture(i);

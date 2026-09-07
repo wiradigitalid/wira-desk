@@ -6,9 +6,10 @@ appears — do not treat an elevation prompt as a blocker; launch the daemon and
 start (poll for the process/mutex rather than assuming failure).
 
 This is testing only. Do not modify code. Do not commit anything. Work in this worktree, already checked
-out to `autopilot/DEC-016` with today's release binaries already built in `target/release/`:
-`D:\Developer\wiradigital.id\wira-desk-autopilot`. If the binaries are stale (older than the latest
-commit), rebuild with `./build.ps1` first.
+out to `autopilot/DEC-016` with today's release binaries already built in `target/release/` — the
+autopilot worktree named on `DEC-016`'s row in `decisions.yaml`, a sibling of the main checkout, whose
+real path `git worktree list` prints. If the binaries are stale (older than the latest commit), rebuild
+with `./build.ps1` first.
 
 Report honestly per item — PASS with what you actually observed, FAIL with what broke, or NOT
 VERIFIABLE with the specific reason — never round up.

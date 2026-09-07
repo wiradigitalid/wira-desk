@@ -40,8 +40,9 @@ alongside the halves and thirds they conceptually belong with — and confirmed 
 
 `LBR-ST-14` makes the declared sequence load-bearing three times over — pane draw order, keyboard focus
 order, and chord-collision precedence — so a taxonomy change here is not cosmetic. The consequence worth
-recording on purpose: **Maximize moves from position 5 to the second-to-last position**, behind every snap
-variant instead of ahead of them. On the shipped defaults nothing collides, so nothing is currently
+recording on purpose: **Maximize moves from index 6 to index 13**, behind every snap variant instead of
+ahead of them — the first entry of the new last group, ahead of Move to next monitor and Overlapping
+Stack, exactly as the group enumeration above lists it. On the shipped defaults nothing collides, so nothing is currently
 observable — but the day a user's own edit puts two of these chords in contention, Maximize now loses
 precedence it used to hold. Nobody chose that as a goal; it is the honest side effect of a taxonomy chosen
 for a different reason, and it is recorded here rather than discovered later by someone debugging a
