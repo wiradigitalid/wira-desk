@@ -9,12 +9,24 @@ dag:
   - parallel:
     - SPEC-1-01
     - SPEC-1-02
+- spec: SPEC-2
+  order:
+  - parallel:
+    - SPEC-2-01
+- spec: SPEC-3
+  order:
+  - parallel:
+    - SPEC-3-01
+    - SPEC-3-02
 - spec: W1
   order:
   - parallel:
     - W1-S1
     - W1-S2
     - W1-S3
+    - W1-S4
+    - W1-S5
+    - W1-S6
 - spec: W4
   order:
   - parallel:

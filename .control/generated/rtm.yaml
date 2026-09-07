@@ -67,14 +67,17 @@ rtm:
   FR: FR-13
   DEC: []
   UC: UC-6
-  ticket: ''
-  spec: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W1-S6
+  spec: W1
+  release: 0.1.0
+  test:
+  - autostart::tests::create_args_carries_logon_elevation_flags
+  - autostart::tests::create_args_wraps_exe_path_in_quotes
+  - autostart::tests::query_and_delete_target_the_pinned_task_name
+  status: done
   exempt: false
-  broken_at: ticket
+  green: true
+  broken_at: ''
 - BG: BG-3
   CAP: CAP-2
   FR: FR-14
@@ -122,27 +125,74 @@ rtm:
   FR: FR-17
   DEC: []
   UC: UC-5
-  ticket: ''
-  spec: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: W1-S5
+  spec: W1
+  release: 0.1.0
+  test:
+  - app::tests::onboarding_is_absent_unless_requested
+  - app::tests::onboarding_starts_at_welcome_and_advances_to_done
+  - app::tests::every_onboarding_step_has_heading_and_body
+  - app::tests::onboarding_teaches_the_spatial_philosophy
+  - app::tests::skip_reaches_the_same_terminal_state_as_completing
+  - persistence::tests::missing_config_selects_onboarding
+  - persistence::tests::existing_config_selects_settings
+  - persistence::tests::explicit_flag_forces_onboarding
+  - persistence::tests::onboarding_flag_is_the_frozen_spelling
+  - persistence::tests::completing_onboarding_writes_a_valid_config_so_it_does_not_repeat
+  status: done
   exempt: false
-  broken_at: ticket
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-5
   FR: FR-18
   DEC: []
   UC: UC-4
-  ticket: ''
-  spec: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: SPEC-2-01
+  spec: SPEC-2
+  release: 0.3.0
+  test:
+  - shortcut_row_slint_snapshot::tests::typed_percentage_commits_on_save_click
+  - shortcut_row_slint_snapshot::tests::typed_percentage_commits_on_stepper_click
+  - shortcut_row_slint_snapshot::tests::typed_percentage_commits_on_focus_change_to_another_row
+  - persistence::tests::an_out_of_range_percentage_typed_then_saved_is_refused
+  - layout_pane_slint_snapshot::tests::out_of_range_stack_width_is_refused_not_clamped
+  status: ready-for-agent
   exempt: false
-  broken_at: ticket
+  green: false
+  broken_at: status
+- BG: BG-2
+  CAP: CAP-5
+  FR: FR-18
+  DEC: []
+  UC: UC-4
+  ticket: W1-S4
+  spec: W1
+  release: 0.1.0
+  test:
+  - app::tests::capture_starts_idle
+  - app::tests::beginning_capture_targets_exactly_one_field
+  - app::tests::accepting_a_valid_capture_stores_the_canonical_form
+  - app::tests::accepting_without_listening_is_a_no_op
+  - app::tests::cancelling_capture_changes_nothing
+  - app::tests::editing_the_draft_marks_dirty_without_touching_saved
+  - app::tests::a_successful_save_promotes_the_draft_and_clears_dirty
+  - app::tests::a_rejected_save_reports_an_error_and_does_not_promote_the_draft
+  - persistence::tests::valid_shortcut_returns_canonical_form
+  - persistence::tests::bare_main_key_without_a_modifier_is_rejected
+  - persistence::tests::modifier_only_is_reported_as_no_main_key
+  - persistence::tests::two_main_keys_are_reported_distinctly
+  - persistence::tests::unsupported_token_is_reported_as_such
+  - persistence::tests::an_invalid_field_names_itself
+  - persistence::tests::rejection_leaves_the_previous_file_intact
+  - persistence::tests::saved_config_round_trips_without_loss
+  - persistence::tests::default_config_uses_frozen_shortcuts
+  - persistence::tests::reload_uses_the_frozen_message_identifier
+  - persistence::tests::reload_signal_is_harmless_when_no_daemon_is_running
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-5
   FR: FR-19
@@ -282,6 +332,24 @@ rtm:
   green: true
   broken_at: ''
 - BG: BG-3
+  CAP: CAP-14
+  FR: FR-26
+  DEC: []
+  UC: UC-9
+  ticket: SPEC-2-01
+  spec: SPEC-2
+  release: 0.3.0
+  test:
+  - shortcut_row_slint_snapshot::tests::typed_percentage_commits_on_save_click
+  - shortcut_row_slint_snapshot::tests::typed_percentage_commits_on_stepper_click
+  - shortcut_row_slint_snapshot::tests::typed_percentage_commits_on_focus_change_to_another_row
+  - persistence::tests::an_out_of_range_percentage_typed_then_saved_is_refused
+  - layout_pane_slint_snapshot::tests::out_of_range_stack_width_is_refused_not_clamped
+  status: ready-for-agent
+  exempt: false
+  green: false
+  broken_at: status
+- BG: BG-3
   CAP: CAP-15
   FR: FR-27
   DEC: []
@@ -305,27 +373,37 @@ rtm:
   FR: FR-28
   DEC: []
   UC: UC-11
-  ticket: ''
-  spec: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: SPEC-3-01
+  spec: SPEC-3
+  release: 0.3.0
+  test:
+  - config::tests::action_enabled_fields_roundtrip_through_toml
+  - config::tests::frozen_snapping_defaults
+  - persistence::tests::a_disabled_action_is_excluded_from_collision_detection
+  - persistence::tests::a_config_predating_the_enabled_field_loads_every_action_enabled
+  - app::tests::disabling_an_action_retains_its_stored_chord
+  - app::tests::re_enabling_an_action_restores_its_prior_chord
+  status: ready-for-agent
   exempt: false
-  broken_at: ticket
+  green: false
+  broken_at: status
 - BG: BG-3
   CAP: CAP-16
   FR: FR-29
   DEC: []
   UC: UC-12
-  ticket: ''
-  spec: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: SPEC-3-02
+  spec: SPEC-3
+  release: 0.3.0
+  test:
+  - hook::tests::a_disabled_action_is_absent_from_chords
+  - hook::tests::a_disabled_actions_chord_falls_through_to_call_next_hook_ex
+  - hook::tests::a_disabled_field_shares_a_chord_with_an_enabled_field_without_collision
+  - arrangement::stack::tests::stack_planner_no_longer_reads_a_layout_level_toggle
+  status: ready-for-agent
   exempt: false
-  broken_at: ticket
+  green: false
+  broken_at: status
 - BG: BG-1
   CAP: CAP-8
   FR: FR-3
@@ -403,14 +481,51 @@ rtm:
   FR: FR-7
   DEC: []
   UC: UC-4
-  ticket: ''
-  spec: ''
-  release: ''
-  test: []
-  status: ''
-  green: false
+  ticket: SPEC-2-01
+  spec: SPEC-2
+  release: 0.3.0
+  test:
+  - shortcut_row_slint_snapshot::tests::typed_percentage_commits_on_save_click
+  - shortcut_row_slint_snapshot::tests::typed_percentage_commits_on_stepper_click
+  - shortcut_row_slint_snapshot::tests::typed_percentage_commits_on_focus_change_to_another_row
+  - persistence::tests::an_out_of_range_percentage_typed_then_saved_is_refused
+  - layout_pane_slint_snapshot::tests::out_of_range_stack_width_is_refused_not_clamped
+  status: ready-for-agent
   exempt: false
-  broken_at: ticket
+  green: false
+  broken_at: status
+- BG: BG-2
+  CAP: CAP-3
+  FR: FR-7
+  DEC: []
+  UC: UC-4
+  ticket: W1-S4
+  spec: W1
+  release: 0.1.0
+  test:
+  - app::tests::capture_starts_idle
+  - app::tests::beginning_capture_targets_exactly_one_field
+  - app::tests::accepting_a_valid_capture_stores_the_canonical_form
+  - app::tests::accepting_without_listening_is_a_no_op
+  - app::tests::cancelling_capture_changes_nothing
+  - app::tests::editing_the_draft_marks_dirty_without_touching_saved
+  - app::tests::a_successful_save_promotes_the_draft_and_clears_dirty
+  - app::tests::a_rejected_save_reports_an_error_and_does_not_promote_the_draft
+  - persistence::tests::valid_shortcut_returns_canonical_form
+  - persistence::tests::bare_main_key_without_a_modifier_is_rejected
+  - persistence::tests::modifier_only_is_reported_as_no_main_key
+  - persistence::tests::two_main_keys_are_reported_distinctly
+  - persistence::tests::unsupported_token_is_reported_as_such
+  - persistence::tests::an_invalid_field_names_itself
+  - persistence::tests::rejection_leaves_the_previous_file_intact
+  - persistence::tests::saved_config_round_trips_without_loss
+  - persistence::tests::default_config_uses_frozen_shortcuts
+  - persistence::tests::reload_uses_the_frozen_message_identifier
+  - persistence::tests::reload_signal_is_harmless_when_no_daemon_is_running
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-4
   FR: FR-8

@@ -239,13 +239,13 @@ Secondary interaction is accessed via right-clicking the System Tray icon to sum
 
 Structure of the Settings Window (`wiradesk-settings.exe`):
 - **General**: Auto-start on boot toggle (Task Scheduler integration), Spatial Lock, Virtual Desktop isolation, and UX Honesty controls.
-- **Shortcuts**: Every editable chord, and the only pane that holds any. Nine rows in three labelled groups that scroll, above a Key check readout pinned in place:
+- **Shortcuts**: Every editable chord, and the only pane that holds any. Sixteen rows in three labelled groups that scroll, above a Key check readout pinned in place:
 
   | Group | Rows | Reads as |
   | --- | --- | --- |
   | Switching | Switch windows of the same application · Fallback switch shortcut | Which window has focus |
-  | Snap & resize | Snap to left half · right half · top half · bottom half · Maximize | One window, one monitor, a fraction of it |
-  | Move & arrange | Move to next monitor · Overlapping stack | More than one window, or more than one screen |
+  | Snap & resize | Snap to left half · right half · top half · bottom half · Maximize · left third · middle third · right third | One window, one monitor, a fraction of it |
+  | Move & arrange | Move to next monitor · custom-percentage left/right/top/bottom edge · Overlapping stack | More than one window, or more than one screen |
 
   The groups are the three configuration sections the product already keeps on disk, so what a user sees and what the product stores stop telling different stories. The Key check readout stays put while they scroll: it reports what the keyboard just did, so it has to be readable at the moment a chord is pressed rather than wherever the list happens to end. Inside *Snap & resize* the rows follow the arrow keys — left, right, top, bottom — with Maximize last as the "all of it" case; the order is the declared sequence, not the enum's numbering, and grouping never reorders it.
 - **Layout**: The overlapping stack toggle and its width slider. No chord lives here — the pane was called *Layout & Snapping* while holding no snapping control at all.
@@ -267,7 +267,7 @@ Structure of the Settings Window (`wiradesk-settings.exe`):
 
 - **Frameless Window Shell**: The settings and onboarding windows feature a modern frameless custom titlebar (`with_decorations(false)`) with in-app minimize (`—`) and close (`✕`) caption controls and native window drag handling.
 - **Fluent 2 Animated Toggle**: Interactive animated pill switches (`fluent_toggle_switch`) providing immediate tactile and visual state confirmation.
-- **Scroll hint**: When a pane holds more than fits, a chevron appears at the bottom edge of the scroll area and bobs gently. It shows only while **both** are true — the area is genuinely scrollable, and the reader has not scrolled yet — and fades out the moment either stops holding. Both halves earn their place: without the first it invites a scroll that does nothing, and without the second it keeps nagging after the reader has already complied, which is what makes the same pattern irritating on a landing page. It is an addition to the scrollbar, not a replacement: Fluent's auto-hiding scrollbar is easy to miss, and the Shortcuts pane's nine rows are where that was first noticed.
+- **Scroll hint**: When a pane holds more than fits, a chevron appears at the bottom edge of the scroll area and bobs gently. It shows only while **both** are true — the area is genuinely scrollable, and the reader has not scrolled yet — and fades out the moment either stops holding. Both halves earn their place: without the first it invites a scroll that does nothing, and without the second it keeps nagging after the reader has already complied, which is what makes the same pattern irritating on a landing page. It is an addition to the scrollbar, not a replacement: Fluent's auto-hiding scrollbar is easy to miss, and the Shortcuts pane's sixteen rows are where that was first noticed.
 - **Shortcut Capturer**: When a user focuses or activates a shortcut field, the UI does not accept regular text entry. Instead, it enters an active "Listening" state to intercept the physical key chord pressed next. Pressing Escape cancels listening without overwriting previous bindings.
 - **Decoupled Architecture**: Activating "Settings..." from the tray spawns an isolated process (`wiradesk-settings.exe`). The core background daemon is never blocked by GUI rendering threads, guaranteeing uncompromised low-level keyboard hook responsiveness.
 
