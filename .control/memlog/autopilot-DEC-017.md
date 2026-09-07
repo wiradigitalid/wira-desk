@@ -8,24 +8,27 @@ date: 2026-09-07
 
 ## Resume
 
-- Iteration 15 — **`SPEC-4-03` is closed**: both panel axes adjudicated, every acceptance criterion
-  ticked, `status: done`. Suite 554/0/2, clippy and fmt clean, validators GREEN.
-- Run branch: `autopilot/DEC-017` at `398a362` until this iteration's merge; `ticket/SPEC-4-03`
-  merges into it now and is deleted. Not pushed, no PR — first push at spec close.
-- Stopped at: ticket closed, merge next, then the `SPEC-4-05` dispatch.
+- Iteration 15 — `SPEC-4-03` **closed and merged** into the run branch at `0fc6e8d`, verified green
+  on the merge commit itself (554/0/2), and `ticket/SPEC-4-03` deleted. `SPEC-4-05` dispatched.
+- Run branch: `autopilot/DEC-017` at `0fc6e8d`; work now on `ticket/SPEC-4-05`, cut from it, merges
+  back only green. Not pushed, no PR — first push at spec close.
+- Stopped at: `SPEC-4-05` dispatch out.
 - Blocked: —
 - Parked: —
-- **Next:** merge `ticket/SPEC-4-03` into the run branch, verify the suite on the merge commit, cut
-  `ticket/SPEC-4-05`, write its builder brief, dispatch `claude-byok`.
-- **Ticket order changed this iteration:** `SPEC-4-05` (new, `DEF-9`) runs **before** `SPEC-4-04`,
-  and `SPEC-4-04`'s `depends_on` now names it. `SPEC-4-04`'s two failing tests stay drafted at
-  `<scratchpad>/spec404_tests.py` with its brief at
-  `<scratchpad>/builder-brief-spec-4-04.draft.md`; re-read them after `SPEC-4-05` lands, because
-  that ticket changes which element receives a key.
+- **IN FLIGHT — do NOT re-dispatch:** `claude-byok` on `SPEC-4-05` (`DEF-9`), brief at
+  `.scratch/builder-brief-spec-4-05.md`. Nest the outer `Rectangle` inside `key_handler` so an
+  unconsumed key bubbles to it; `wdi-systematic-debugging` first.
+- **Build lock: SHUT.** The builder holds it; no cargo, no stash, no branch switch here.
+- **Then `SPEC-4-04`** (`DEF-5`), last ticket in the spec. Its two failing tests are drafted at
+  `<scratchpad>/spec404_tests.py`, its brief at `<scratchpad>/builder-brief-spec-4-04.draft.md`.
+  Re-read both after `SPEC-4-05` lands — that ticket changes which element receives a key, and the
+  brief's own tail names the two dependency checks.
+- After `SPEC-4-04`: spec close, `wdi-reconcile`, the stale `review-trace` on
+  `.how/settings/SDD-settings.md`, first push, one draft PR, CI, smoke test (`claude-byok` only,
+  and `SPEC-4-05`'s three steps replace Amendment 4's two), then Finish.
 - Follow-ups carried on the spec, not lost: the width test's bound is the window edge rather than
   the pane's content edge; the scroll helper is still not shared into
   `shortcut_row_slint_snapshot.rs`; the tooltip `Rectangle` declares a width but no height.
-- Build lock: mine, idle. No builder out.
 
 ## Decisions
 
