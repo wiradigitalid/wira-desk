@@ -8,19 +8,18 @@ date: 2026-09-07
 
 ## Resume
 
-- Iteration 3 — `SPEC-4-02` Steps 1 and 2 closed and judged from the artifact (builder `3b8210b`;
-  coordinator's own re-run green: fmt clean, clippy clean, 546 passed / 0 failed / 2 ignored, no
-  `Layout` reference left in `crates/`). **Step 3 panel IN FLIGHT.**
-- Run branch: `autopilot/DEC-017` at `3b1cb32`; ticket work on `ticket/SPEC-4-02` at `3b8210b`,
-  merges back only green. Not pushed, no PR — first push is at spec close.
-- Stopped at: — (iteration in progress, waiting on the Step 3 panel)
+- Iteration 4 — `SPEC-4-02` panel adjudicated (`359a12c`): one must-fix, coordinator-owned fixes
+  landed, suite 547 passed / 0 failed / 2 ignored. **Return trip 1 of 2 dispatched.**
+- Run branch: `autopilot/DEC-017` at `3b1cb32`; ticket work on `ticket/SPEC-4-02`. Not pushed, no
+  PR — first push is at spec close.
+- Stopped at: — (iteration in progress, waiting on a dispatched step)
 - Blocked: —
 - Parked: —
-- **IN FLIGHT:** two review agents, Standards and Spec, neither the builder. Build lock is FREE.
-  The worktree MUST stay on `ticket/SPEC-4-02` until they return — a branch switch changes the
-  files they are reading.
-- Next: adjudicate by reading the cited lines, starting with the accessible-label mechanism the
-  coordinator already flagged; then ticket close, merge, and `SPEC-4-03`.
+- **IN FLIGHT — do NOT re-dispatch:** `claude-byok` on return trip 1, brief at
+  `.scratch/builder-brief-spec-4-02-fix1.md`. Build lock shut: run no `cargo`, and do not stash,
+  switch branches, or restore the worktree until it exits.
+- Next: when it exits — judge from the artifact, re-run the WHOLE panel (a fix round requires it),
+  then ticket close, merge, and `SPEC-4-03`.
 
 ## Decisions
 
