@@ -571,7 +571,7 @@ specs:
     release: "0.5.0"
     prd: [wira-desk]
     size: M
-    status: open
+    status: closed
     depends_on: []
     spec_folder: .scratch/spec-4-shortcuts-pane-consolidation/
     fr: [FR-15, FR-26, FR-28]
@@ -659,6 +659,10 @@ specs:
         tests:
           - shortcut_row_slint_snapshot::tests::a_real_keystroke_sequence_commits_a_typed_percentage
           - shortcut_row_slint_snapshot::tests::a_real_keystroke_sequence_out_of_range_is_refused
+          # The builder added this one for the relocated Stack row, since the fix is on the shared
+          # ShortcutRow percent control rather than on any single row. Mutation-verified with the
+          # others: restoring `accept` reds all three.
+          - shortcut_row_slint_snapshot::tests::a_real_keystroke_sequence_commits_a_typed_stack_percentage
       # Opened 2026-09-08 from the Spec-axis panel on SPEC-4-03, which found DEF-9: `key_handler`
       # is a childless SIBLING of the content, so keys reach Rust only while it holds focus. The
       # nesting and one route into it predate SPEC-4-03, and that ticket's two return trips were
