@@ -478,8 +478,13 @@ specs:
       lenses: [edge-case-hunter]
     # Size S: no SPEC.md by Phase 1's own rule (the tickets are the contract at this size). A defect fix
     # plus doc reconciliation, not a promise change (prd-guide.md's wording-vs-promise split) -- no new
-    # FR/UC. Written directly rather than through /to-spec /to-tickets (disable-model-invocation: true,
-    # owner-run engines; no active wdi-autopilot mandate this session to read-and-follow them under).
+    # FR/UC. CORRECTION (2026-09-07): first written on a wrong premise -- this repo's own local
+    # to-spec/to-tickets/implement/tdd/code-review copies (.claude/skills/, .agents/skills/ mirror) had
+    # already had disable-model-invocation stripped in a prior session (77bd03a, d6a104c), same as
+    # SPEC-1's own precedent. Checked directly against the live skill files and against SPEC-1's own
+    # delivered ticket shape: this ticket's content, structure, and file-path density already match what
+    # those skills would have produced (SPEC-1's own real to-tickets output cites file paths too), so it
+    # stands as written rather than being rewritten to look different for its own sake.
     # Two doc-only corrections landed directly in the same pass, not as a ticket: EXPERIENCE.md/DESIGN.md's
     # "Nine rows" wording and table corrected to sixteen (stale since SPEC-1 grew the pane; no test surface,
     # no code, wdi-reconcile-shaped work). The taxonomy/grouping question itself (DEC-014, draft) is
@@ -510,10 +515,12 @@ specs:
       date: '2026-09-07'
       sha: 'e91c235'
       lenses: [edge-case-hunter]
-    # SPEC.md written directly, same reason as SPEC-2's note above (owner-run engines, no active mandate to
-    # read-and-follow them under this session). G2 (PRD §3.15, CAP-16) through G4 (UC-11/UC-12, BR-9,
-    # LBR-ST-17, SDD/data-model/LC amendments in both components, all [MISSING]) already landed this session
-    # before this spec opened, per spec-after-g4's precondition.
+    # SPEC.md and both tickets checked against the same correction as SPEC-2's note above -- this repo's
+    # local to-spec/to-tickets copies were already unlocked before this session started; content verified
+    # to already match their template and this repo's own established output shape (SPEC-1's real ticket),
+    # not rewritten. G2 (PRD §3.15, CAP-16) through G4 (UC-11/UC-12, BR-9, LBR-ST-17, SDD/data-model/LC
+    # amendments in both components, all [MISSING]) already landed this session before this spec opened,
+    # per spec-after-g4's precondition.
     tickets:
       - id: SPEC-3-01
         title: Per-action enable flag (settings)
