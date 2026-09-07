@@ -8,23 +8,25 @@ date: 2026-09-07
 
 ## Resume
 
-- Iteration: 11 — CI green on the last push; `SPEC-3-01` verified, panel dispatched.
-- Run branch: `autopilot/DEC-016`, HEAD `5c9c8ac` (builder's commit, not yet a ledger boundary). **PR #17
-  open, draft**: https://github.com/wiradigitalid/wira-desk/pull/17.
-- Stopped at: **Capacity.** CI on `f9840fe` (run `34108292593`) concluded **all 4 checks green** (`build`
-  13m22s). PR stays draft regardless — only Finish marks it ready. `SPEC-3-01` builder (`bd03n1l84`) exited
-  code 0, commit `5c9c8ac`; did NOT trust its report (it claimed to have run its own Standards/Spec review —
-  self-review by construction, does not count). Independently re-ran fmt/clippy/full suite (529 passed/0
-  failed, all 6 named ticket tests present and green) and the export gate (10/10); confirmed no corpus file
-  touched. Dispatched the real panel fresh (Standards `a6f2d1479688fb5c9`, Spec `a7e725bf847e12c3f`),
-  specifically asked to scrutinize the trickiest criterion — the `enable_overlapping_stack` migration's
-  three cases (old key `true`/`false`/absent).
+- Iteration: 12 — `SPEC-3-01` closed; `SPEC-3-02` builder dispatched.
+- Run branch: `autopilot/DEC-016`, HEAD `9c1257b`. **PR #17 open, draft**:
+  https://github.com/wiradigitalid/wira-desk/pull/17. CI green on the last pushed head (`f9840fe`); nothing
+  new pushed since (waiting for the next spec close per the mandate's own cadence).
+- Stopped at: **Capacity.** Both panel agents clean (Standards `a6f2d1479688fb5c9`, Spec
+  `a7e725bf847e12c3f`) — independently found the same follow-up (orphaned `TOGGLE_OVERLAPPING_STACK`
+  accessible-name constant, no behaviour delta), confirmed real, not a return-trip trigger. Closed
+  `SPEC-3-01` (checkboxes, status `done`), carried the follow-up into `SPEC-3-02`'s builder brief as a
+  bundled cleanup rather than a separate trip. Dispatched `SPEC-3-02` (hook registration exclusion,
+  `UC-12`/`FR-29`, now unblocked) to a fresh `claude-byok` session (job `bcthvyq4n`, confirmed running) —
+  noted that one of its checkboxes (stack.rs no longer reading the retired field) may already be satisfied
+  by `SPEC-3-01`'s own commit, to confirm rather than redo.
 - Blocked: —
 - Parked: —
-- Advisory (not blocking): `review-trace` flags `SDD-settings.md` stale (changed at `f7760db`'s reconcile
-  fix, last reviewed at `f989238`) — re-run `wdi-review` before `SPEC-3`'s close.
-- Next: read both panel verdicts. Clean → close `SPEC-3-01`, dispatch `SPEC-3-02` (now unblocked). A
-  must-fix → return trip 1/2 for this ticket.
+- Advisory (not blocking): `review-trace` still flags `SDD-settings.md` stale — re-run `wdi-review` before
+  `SPEC-3`'s close (next: after `SPEC-3-02`).
+- Next: check job `bcthvyq4n`. On exit: verify independently (never the report), dispatch the review
+  panel. Clean → close `SPEC-3-02`/`SPEC-3`, run `wdi-review` for the advisory, push at spec close, then
+  check whether every `FR` in scope is closed (§ Finish) or more remains.
 
 ## Decisions
 
@@ -49,3 +51,5 @@ date: 2026-09-07
 | Iter 10 | Push + open the one PR | Pushed `autopilot/DEC-016` and opened PR #17 as **draft** at `SPEC-2`'s close, per the mandate's own rule (first push opens the PR; the coordinator pushes at every spec close, not per ticket) | Waiting until Finish to push everything at once | None — this is exactly what the rule specifies | PR #17, `f9840fe` |
 | Iter 11 | CI verdict, `f9840fe` | All 4 checks green — recorded, PR stays draft anyway (only Finish un-drafts it) | Marking ready early since it's green | None — matches the rule exactly | run `34108292593` |
 | Iter 11 | `SPEC-3-01` verification | Independently re-ran fmt/clippy/full suite/export-gate before trusting `bd03n1l84`'s report; its claimed internal review does not count as Step 3 | Accepting the builder's self-review as the panel | A false-green ticket if the report and artifact disagree | `5c9c8ac`, this ledger |
+| Iter 12 | Close `SPEC-3-01` | Both panel axes clean, same follow-up independently found (orphaned constant) — confirmed real by reading `theme.rs` myself, no behaviour delta, not a return-trip trigger | Treating a duplicate follow-up as two separate findings, or triggering a return trip for a non-behavioural issue | If wrong, a later ticket removes the dead code anyway | ticket file, `9c1257b` |
+| Iter 12 | Bundle the follow-up | Carried the orphaned-constant cleanup into `SPEC-3-02`'s builder brief instead of a dedicated dispatch | A separate tiny dispatch just for dead-code removal | None — cheap either way | `.scratch/builder-brief-spec-3-02.md` |
