@@ -8,25 +8,22 @@ date: 2026-09-07
 
 ## Resume
 
-- Iteration: 7 — `SPEC-2-01` return trip 1/2 in progress.
-- Run branch: `autopilot/DEC-016`, HEAD `fa3dddc`. No PR opened yet — opens as a draft at the first spec
-  close.
-- Stopped at: **Capacity.** Both review agents finished and were adjudicated by reading the cited lines
-  myself, not by vote: Standards axis found 1 must-fix (unused `DEFAULT_STACK_WIDTH_PERCENT` constant,
-  `config.rs:172` still hardcodes `50`) — read the code, confirmed real but no behaviour delta and no
-  acceptance-criterion break, reclassified as follow-up per `wdi-build`'s own "style/no behaviour delta"
-  bucket, bundled into the fix round rather than treated as its own trigger. Spec axis found 1 must-fix
-  (confirmed genuine): `on_percent_changed` (`main.rs:397-408`) discards a *different* row's pending typed
-  value instead of draining it like every sibling handler does — reachable by mouse, silently loses data,
-  breaks the ticket's own checkbox 3. Amended the ticket with a **Return trip 1/2** section (reproduction,
-  fix instruction, bundled constant fix), redispatched `claude-byok` fresh (job `bq40cmkpl`, confirmed
-  running).
+- Iteration: 8 — `SPEC-2-01` fix-round verified, re-review dispatched.
+- Run branch: `autopilot/DEC-016`, HEAD `867a509` (fix commit). No PR opened yet — opens as a draft at the
+  first spec close.
+- Stopped at: **Capacity.** Job `bq40cmkpl` exited (code 0). Did NOT trust its report: read `git show
+  867a509` myself — the `on_percent_changed` fix drains the shared slot and applies a *different* pending
+  field before applying the new one, exactly closing the reported bug without double-applying the
+  same-field case; `DEFAULT_STACK_WIDTH_PERCENT` now wired into `LayoutConfig::default()`; no corpus file
+  touched. Independently re-ran fmt/clippy/full suite (520 passed/0 failed, new reproduction test present
+  and green) and the export gate (10/10). Re-dispatched the panel fresh on this new commit (Standards
+  `a96267b6e0bba1ad0`, Spec `a13e70ff3d92f7f89`), per the engine rule that a fix round MUST re-run the
+  whole panel, not just re-check the one finding.
 - Blocked: —
 - Parked: —
-- Next: check job `bq40cmkpl`. On exit: verify independently (fmt/clippy/full suite/export-gate,
-  never the report), re-run the full panel from scratch on the new commit. Clean → close `SPEC-2-01`, move
-  to `SPEC-3-01`. A second must-fix → return trip 2/2 (cap). A third → escalate, do not open a fourth
-  variant.
+- Next: read both re-review verdicts. Clean on both → close `SPEC-2-01` (this is return trip 1 succeeding,
+  no trip 2 needed), move to the `SPEC-3-01` frontier. A new must-fix → return trip 2/2 (cap reached after
+  this one — a third failure escalates rather than opening a fourth variant).
 
 ## Decisions
 
@@ -43,3 +40,5 @@ date: 2026-09-07
 | Iter 7 | Adjudicate Standards-axis must-fix | Confirmed the unused `DEFAULT_STACK_WIDTH_PERCENT` finding is real (read `constants.rs`, `config.rs` myself) but reclassified follow-up, not must-fix — no acceptance-criterion break, no behaviour delta, `config.rs` untouched by this ticket's own diff; bundled into the fix round anyway since it's cheap | Sending it back to Step 2 on its own, or silently accepting the reviewer's must-fix label without reading the lines | If wrong, a second return trip fixes it in isolation | `config.rs:172`, this row |
 | Iter 7 | Adjudicate Spec-axis must-fix | Confirmed real by reading `main.rs:291-408` myself: `on_percent_changed` discards a different row's pending value instead of draining it, unlike its three sibling handlers in the same file — reachable by mouse, silent data loss, breaks checkbox 3. Genuine must-fix, return to Step 2 | Accepting the ticket as closed on the panel's mixed verdict | A shipped ticket with the exact bug it was meant to eliminate | `main.rs:397-408`, ticket file |
 | Iter 7 | Return trip 1/2 | Amended the ticket in place with a dated "Return trip 1/2" section (reproduction, fix instruction, bundled constant fix); status stays `ready-for-agent` (never left it — builder doesn't touch ticket status). Redispatched `claude-byok` fresh (`bq40cmkpl`) rather than reusing `bafaw9fiy`'s context | Giving the fix as a chat instruction instead of a ticket amendment | Cap is 2 return trips; a second failure escalates | ticket file, `bq40cmkpl` |
+| Iter 8 | Fix-round verification | Read `git show 867a509` myself before trusting `bq40cmkpl`'s report; independently re-ran fmt/clippy/full suite (520/0 failed)/export gate | Trusting the completion summary | A false-green ticket if the report and artifact disagree | `867a509`, this ledger |
+| Iter 8 | Panel re-dispatch on fix round | Re-ran the WHOLE panel fresh (Standards `a96267b6e0bba1ad0`, Spec `a13e70ff3d92f7f89`) rather than only re-checking the one prior finding — a fix can introduce its own defects | Spot-checking just the fixed line | A new regression the fix itself introduced going unreviewed | This ledger |
