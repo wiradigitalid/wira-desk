@@ -8,27 +8,27 @@ date: 2026-09-07
 
 ## Resume
 
-- Iteration 15 — `SPEC-4-03` **closed and merged** into the run branch at `0fc6e8d`, verified green
-  on the merge commit itself (554/0/2), and `ticket/SPEC-4-03` deleted. `SPEC-4-05` dispatched.
-- Run branch: `autopilot/DEC-017` at `0fc6e8d`; work now on `ticket/SPEC-4-05`, cut from it, merges
-  back only green. Not pushed, no PR — first push at spec close.
-- Stopped at: `SPEC-4-05` dispatch out.
+- Iteration 18 — **`SPEC-4-05` closed** (`DEF-9` fixed at `d26c416`, two coordinator guards on top).
+  Suite 556/0/2, clippy and fmt clean, validators GREEN.
+- Run branch: `autopilot/DEC-017` at `0fc6e8d`; `ticket/SPEC-4-05` merges into it this iteration
+  and is deleted. Not pushed, no PR — first push at spec close.
+- Stopped at: ticket closed; merge, then `SPEC-4-04`, the last ticket in the spec.
 - Blocked: —
 - Parked: —
-- **IN FLIGHT — do NOT re-dispatch:** `claude-byok` on `SPEC-4-05` (`DEF-9`), brief at
-  `.scratch/builder-brief-spec-4-05.md`. Nest the outer `Rectangle` inside `key_handler` so an
-  unconsumed key bubbles to it; `wdi-systematic-debugging` first.
-- **Build lock: SHUT.** The builder holds it; no cargo, no stash, no branch switch here.
-- **Then `SPEC-4-04`** (`DEF-5`), last ticket in the spec. Its two failing tests are drafted at
-  `<scratchpad>/spec404_tests.py`, its brief at `<scratchpad>/builder-brief-spec-4-04.draft.md`.
-  Re-read both after `SPEC-4-05` lands — that ticket changes which element receives a key, and the
-  brief's own tail names the two dependency checks.
+- **Next, in order:** merge `ticket/SPEC-4-05`, verify the merge commit green, cut
+  `ticket/SPEC-4-04`, apply the drafted `DEF-5` tests and **see them red** — Step 1 is the
+  coordinator's on that ticket — commit them, then dispatch `claude-byok` with the brief.
+- `SPEC-4-04` inputs are ready: tests at `<scratchpad>/spec404_tests.py`, brief at
+  `<scratchpad>/builder-brief-spec-4-04.draft.md`. Its first dependency check is closed: trip 1 did
+  not move `"Snap percentage field"` or `"Snap percentage input"`, so those tests will fail on
+  `DEF-5` itself rather than at `.expect(...)`.
+- No panel for these tickets unless a diff earns it: `settings` is `risk_accepted: medium`, so
+  `wdi-build` makes the two-reviewer panel available rather than required, and neither diff touches
+  money, personal data, or a third party.
 - After `SPEC-4-04`: spec close, `wdi-reconcile`, the stale `review-trace` on
-  `.how/settings/SDD-settings.md`, first push, one draft PR, CI, smoke test (`claude-byok` only,
-  and `SPEC-4-05`'s three steps replace Amendment 4's two), then Finish.
-- Follow-ups carried on the spec, not lost: the width test's bound is the window edge rather than
-  the pane's content edge; the scroll helper is still not shared into
-  `shortcut_row_slint_snapshot.rs`; the tooltip `Rectangle` declares a width but no height.
+  `.how/settings/SDD-settings.md`, first push, one draft PR, CI, smoke test (`claude-byok` only —
+  script drafted at `<scratchpad>/finish-inventory-and-smoke.md`), then Finish.
+- Build lock: mine, idle. No builder out.
 
 ## Decisions
 
@@ -89,3 +89,7 @@ date: 2026-09-07
 | Iter 15 | `SPEC-4-05`'s `tests:` | Named the existing mutation-verified `description_renders_as_a_tooltip_not_a_visible_line` as its regression guard, since `ticket-has-test` is red on an empty list and the new behaviour is untestable until `DEF-8`. | Inventing a test through the accessible layer to satisfy the validator | The validator is satisfied by a guard that watches the old behaviour, not the new | `specs.yaml`, ticket 05 |
 | Iter 15 | Standards finding 7 | **Half dismissed**: the 553/554 counts are different commits, not a contradiction. The stale `theme::ALL` count of 27 is real and fixed to 22. | Accepting both halves and "reconciling" numbers that already agreed | A tracker gains a correction that corrects nothing | `3p.md` |
 | Iter 15 | The publication gate's blind spot | Filed **`DEF-10`**: `.slint` is absent from `$textExtensions`, and `$checkLanguage` would report five findings in `key_check.slint` today. | Recording it as prose in a ticket nobody re-reads | An enforced gate keeps reporting green over a file type it never opens | `.control/registry/defects.yaml` |
+| Iter 18 | `wdi-build` Step 3 for `SPEC-4-05` | Trip accepted from the diff — the nesting is right and the builder confirmed the mechanism by probe before changing anything. No panel run. | Assembling a two-axis panel on a 19-line markup diff | A small diff goes unseen by a second pair of eyes | `d26c416` |
+| Iter 18 | Coordinator's own testability claim | **Corrected in four places.** A test CAN reach the keyboard path by registering its own `on_key_pressed_event`; I had recorded the opposite. Two guards written, both seen red. | Leaving "untestable" standing and relying on smoke steps alone | An applied `DEC-`'s only signal stays unguarded, and the next reader inherits a false limit | `DEF-8`, `DEF-9`, `main_window.slint`, `specs.yaml` |
+| Iter 18 | `DEF-8`'s scope | **Narrowed, not closed**: the markup contract is guarded now, but `main()`'s registration and its handler — Key Check recording, capture branch, Escape cancel — are still untested. | Closing it as solved by the two new guards | The handler's behaviour looks covered when only the forwarding is | `.control/registry/defects.yaml` |
+| Iter 18 | `SPEC-4-05`'s Escape criterion | Left **open and marked smoke-only**: what `main()`'s handler does with a bubbled key is behind `DEF-8`. | Ticking it on the strength of the bubbling guard | A criterion reads satisfied when only its precondition is | ticket 05 |

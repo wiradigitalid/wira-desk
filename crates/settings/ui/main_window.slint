@@ -161,10 +161,18 @@ export component MainWindow inherits Window {
         // The `listening_field == -1` guard is what stops a Tab pressed mid-capture from being
         // recorded as a chord AND throwing focus out of the row.
         //
-        // Nothing in the suite reaches this: `on_key_pressed_event` is registered in `main()`,
-        // not in `bind_callbacks`, so the callback is unset in every test and this forward is a
-        // silent no-op there. `DEF-8` carries the seam move that would make it testable. Until
-        // then this comment is the guard, so do not simplify it back to an unconditional `accept`.
+        // Both halves of this ARE guarded, and an earlier version of this comment said they were
+        // not. `bind_callbacks` does not wire `key_pressed_event` — `main()` does — so the
+        // callback is unset in a test by default; but a test can register its own listener, and
+        // two do:
+        //
+        //   `tab_is_forwarded_to_rust_before_it_is_rejected_for_focus_traversal` reds when the
+        //   reject is moved above the forward (forwarded keys read `["x"]`, Tab missing), and
+        //   `an_unconsumed_key_still_reaches_rust_after_focus_moves_into_a_row` reds when this
+        //   scope goes back to being a childless sibling of the content (forwarded keys read `[]`).
+        //
+        // What is still unguarded is `main()`'s own registration and the handler behind it — the
+        // Key Check recording, the capture branch, Escape-cancels-capture. `DEF-8` carries that.
         key-pressed(event) => {
             root.key_pressed_event(
                 event.text,

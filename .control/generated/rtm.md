@@ -300,11 +300,13 @@ rtm:
   spec: SPEC-4
   release: 0.5.0
   test:
+  - shortcut_row_slint_snapshot::tests::an_unconsumed_key_still_reaches_rust_after_focus_moves_into_a_row
+  - shortcut_row_slint_snapshot::tests::tab_is_forwarded_to_rust_before_it_is_rejected_for_focus_traversal
   - shortcut_row_slint_snapshot::tests::description_renders_as_a_tooltip_not_a_visible_line
-  status: ready-for-agent
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-5
   FR: FR-18
@@ -803,11 +805,13 @@ rtm:
   spec: SPEC-4
   release: 0.5.0
   test:
+  - shortcut_row_slint_snapshot::tests::an_unconsumed_key_still_reaches_rust_after_focus_moves_into_a_row
+  - shortcut_row_slint_snapshot::tests::tab_is_forwarded_to_rust_before_it_is_rejected_for_focus_traversal
   - shortcut_row_slint_snapshot::tests::description_renders_as_a_tooltip_not_a_visible_line
-  status: ready-for-agent
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-3
   FR: FR-7

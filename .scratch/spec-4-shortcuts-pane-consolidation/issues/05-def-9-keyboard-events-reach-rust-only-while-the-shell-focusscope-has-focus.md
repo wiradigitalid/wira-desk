@@ -3,8 +3,10 @@ id: SPEC-4-05
 component: settings
 satisfies: [UC-4]
 blocked_by: [SPEC-4-03]
-status: ready-for-agent
+status: done
 tests:
+  - shortcut_row_slint_snapshot::tests::an_unconsumed_key_still_reaches_rust_after_focus_moves_into_a_row
+  - shortcut_row_slint_snapshot::tests::tab_is_forwarded_to_rust_before_it_is_rejected_for_focus_traversal
   - shortcut_row_slint_snapshot::tests::description_renders_as_a_tooltip_not_a_visible_line
 ---
 
@@ -31,30 +33,32 @@ actually lands keyboard focus on `pct_input`", so a root-cause pass run before t
 run against a focus tree that is about to change, and may have to be redone. That is a sequencing
 judgement, not a claim about `DEF-5`'s cause.
 
-- [ ] **Root-cause with `wdi-systematic-debugging` before writing the fix.** The structural reading
+- [x] **Root-cause with `wdi-systematic-debugging` before writing the fix.** The structural reading
       above is the coordinator's, from the brace depths and Slint's routing rules — it is not a
       run. Confirm the mechanism yourself before changing anything, and say what you confirmed it
       with. In particular establish whether an unconsumed key from a focused `title_block` or
       `pct_input` reaches `key_handler` today at all.
-- [ ] Nest the outer `Rectangle` **inside** `key_handler` so every unconsumed key bubbles up to
+- [x] Nest the outer `Rectangle` **inside** `key_handler` so every unconsumed key bubbles up to
       it. `forward-focus: key_handler` stays, so a fresh window still starts with focus there.
-- [ ] `SPEC-4-03`'s Tab traversal MUST survive:
+- [x] `SPEC-4-03`'s Tab traversal MUST survive:
       `shortcut_row_slint_snapshot::tests::description_renders_as_a_tooltip_not_a_visible_line`
       stays green, and reverting your change MUST still red it — that test is mutation-verified and
       it is the one thing standing between this fix and re-breaking criterion 2.
-- [ ] The `listening_field == -1` guard MUST keep working: a Tab pressed while a row is capturing is
+- [x] The `listening_field == -1` guard MUST keep working: a Tab pressed while a row is capturing is
       recorded as part of the chord and does not move focus. With `key_handler` as an ancestor
       rather than a sibling this condition is now reachable from a focused row, which is the whole
       point, so re-read it rather than assuming it still means what it did.
-- [ ] Escape MUST cancel a capture from a state where focus has already moved — press Tab, click a
+- [ ] **Smoke-test only, and the one criterion no test reaches** — what `main()`'s handler
+      does with a bubbled key is behind `DEF-8`.
+      Escape MUST cancel a capture from a state where focus has already moved — press Tab, click a
       keycap, press Escape. That is the path `DEF-9` describes and the one no test can see.
-- [ ] Say plainly which of these you could verify automatically and which you could not.
+- [x] Say plainly which of these you could verify automatically and which you could not.
       `DEF-8` records why: `on_key_pressed_event` is registered in `main()`, not in
       `bind_callbacks`, so the callback is unset in every test and a forwarded call is a silent
       no-op there. **MUST NOT** fake a guard through `invoke_accessible_default_action()` or
       `set_accessible_value` to get around that — that is `DEF-5`'s own mechanism and a returnable
       finding in itself.
-- [ ] Full test suite green once, not only this ticket's own tests.
+- [x] Full test suite green once, not only this ticket's own tests.
 
 ## The smoke steps this ticket owns
 

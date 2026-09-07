@@ -660,6 +660,97 @@ pub(crate) mod tests {
         rows.windows(2).map(|w| w[1] - w[0]).collect()
     }
 
+    /// Record every key the window forwards to Rust, by registering the callback the test itself.
+    ///
+    /// `bind_callbacks` does not wire `key_pressed_event` — `main()` does, at `main.rs:721`, which
+    /// is `DEF-8` — so in a test that callback is unset and a forward from the markup is a silent
+    /// no-op. That is a fact about `main()`'s wiring, NOT about what a test can reach: a test can
+    /// register its own listener, and then the markup's forwarding contract is directly
+    /// observable. Two earlier records of mine said no automated test could reach this path at
+    /// all; that was too strong, and these two tests are the correction.
+    ///
+    /// What is still untested is `main()`'s own registration. `DEF-8` carries that.
+    fn record_forwarded_keys(window: &crate::MainWindow) -> Rc<RefCell<Vec<String>>> {
+        let seen = Rc::new(RefCell::new(Vec::<String>::new()));
+        let sink = Rc::clone(&seen);
+        window.on_key_pressed_event(move |text, _ctrl, _alt, _shift, _meta| {
+            sink.borrow_mut().push(text.to_string());
+        });
+        seen
+    }
+
+    fn press(window: &crate::MainWindow, text: slint::SharedString) {
+        window
+            .window()
+            .dispatch_event(slint::platform::WindowEvent::KeyPressed { text });
+    }
+
+    #[test]
+    fn tab_is_forwarded_to_rust_before_it_is_rejected_for_focus_traversal() {
+        // `DEC-005` (applied) reads the key check as a correlation of what the daemon's hook saw
+        // against what the WINDOW saw. `key_handler` returns `reject` for Tab so Slint's focus
+        // traversal can run, and if it did that BEFORE forwarding, the window's half of that pair
+        // would be false for every Tab-containing chord — `Ctrl+Alt+Tab` would report "another
+        // application claimed it" about an application that does not exist. Tab is also a
+        // bindable chord key: `map_slint_key` maps `"\t"` and `U+0009` to `"tab"` in two arms.
+        //
+        // So the order is the assertion: forwarded first, rejected second.
+        run_on_ui_thread(|| {
+            let (window, _model, save_path) = setup_shortcuts_window();
+            let seen = record_forwarded_keys(&window);
+
+            press(&window, slint::SharedString::from("x"));
+            press(&window, slint::platform::Key::Tab.into());
+
+            let keys = seen.borrow().clone();
+            eprintln!("MEASUREMENT: forwarded keys {keys:?}");
+            assert!(
+                keys.iter().any(|k| k == "x"),
+                "an ordinary key must reach the window callback, got {keys:?}"
+            );
+            assert!(
+                keys.iter().any(|k| k == "\t"),
+                "Tab must be forwarded to Rust before it is rejected for focus traversal, \
+                 otherwise DEC-005's window signal is false for every Tab chord; got {keys:?}"
+            );
+
+            let _ = std::fs::remove_file(&save_path);
+        });
+    }
+
+    #[test]
+    fn an_unconsumed_key_still_reaches_rust_after_focus_moves_into_a_row() {
+        // `DEF-9`. `key_handler` used to be a childless SIBLING of the content, and Slint bubbles a
+        // key up the focused element's ANCESTORS — so the moment anything else took focus, every
+        // one of the four behaviours behind this callback went dead: the Key Check diagnostic,
+        // Escape-cancels-capture, chord capture, and onboarding step 2. The user-visible symptom
+        // was a row stuck in "Listening…" with Escape unable to cancel it.
+        //
+        // One Tab press is the shortest route to that state, and it is the route `SPEC-4-03`
+        // created. The percentage-field route (`pct_input.focus()`) predates it.
+        run_on_ui_thread(|| {
+            let (window, _model, save_path) = setup_shortcuts_window();
+            let seen = record_forwarded_keys(&window);
+
+            // Move focus off `key_handler` the way a user does.
+            press(&window, slint::platform::Key::Tab.into());
+            seen.borrow_mut().clear();
+
+            // A key no focused element consumes must still arrive, by bubbling.
+            press(&window, slint::SharedString::from("y"));
+
+            let keys = seen.borrow().clone();
+            eprintln!("MEASUREMENT: after focus moved, forwarded keys {keys:?}");
+            assert!(
+                keys.iter().any(|k| k == "y"),
+                "an unconsumed key must bubble to the window's FocusScope once focus has moved \
+                 into a row, or chord capture and Escape are both dead there; got {keys:?}"
+            );
+
+            let _ = std::fs::remove_file(&save_path);
+        });
+    }
+
     #[test]
     fn row_height_is_independent_of_description_length() {
         // The criterion is that removing the always-visible description leaves the row's height

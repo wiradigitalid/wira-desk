@@ -665,10 +665,12 @@ specs:
         component: settings
         satisfies: [UC-4]
         depends_on: [SPEC-4-03]
-        # The ticket's NEW behaviour cannot be tested until DEF-8's seam move lands -- the keyboard
-        # callback is registered in `main()`, so it is unset in every test -- and faking a guard
-        # through the accessible layer is DEF-5's own mechanism. What IS named here is the
-        # regression guard the change must not break: it is mutation-verified, and reverting the
-        # Tab traversal reds it at shortcut_row_slint_snapshot.rs:554.
+        # Two guards the coordinator wrote after the builder's probe showed this path IS reachable
+        # from a test by registering the callback there -- an earlier note of mine said it was not.
+        # Both mutation-verified: the pre-fix sibling structure reds the first (forwarded keys
+        # empty), reject-before-forward reds the second (only "x" arrives, Tab missing). The third
+        # is the regression guard on SPEC-4-03's Tab traversal.
         tests:
+          - shortcut_row_slint_snapshot::tests::an_unconsumed_key_still_reaches_rust_after_focus_moves_into_a_row
+          - shortcut_row_slint_snapshot::tests::tab_is_forwarded_to_rust_before_it_is_rejected_for_focus_traversal
           - shortcut_row_slint_snapshot::tests::description_renders_as_a_tooltip_not_a_visible_line
