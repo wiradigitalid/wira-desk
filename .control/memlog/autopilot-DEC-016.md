@@ -8,14 +8,15 @@ date: 2026-09-07
 
 ## Resume
 
-- Iteration: 4 — still waiting on the `SPEC-2-01` builder (~50 min elapsed since dispatch).
-- Run branch: `autopilot/DEC-016`, HEAD `c43b919` (iteration-3 ledger commit; no ticket work landed yet).
+- Iteration: 5 — still waiting on the `SPEC-2-01` builder (~65 min elapsed since dispatch).
+- Run branch: `autopilot/DEC-016`, HEAD `e12b640` (iteration-4 ledger commit; no ticket work landed yet).
   No PR opened yet — opens as a draft at the first spec close.
-- Stopped at: **Capacity.** Job `bafaw9fiy` still `running`. Worktree `git status` unchanged in file list
-  since iteration 3 except `app.rs` now also touched; the two snapshot test files hold real content
-  (168 + 91 lines, not stubs) — reads as Step 1 wrapping up or Step 2 (implement) now in progress, editing
-  existing files rather than adding new ones. Still not a repeat capacity failure, so stays Capacity — will
-  escalate my own judgment (not the ledger's Blocked rule) if the next firing shows no further change at
+- Stopped at: **Capacity.** Job `bafaw9fiy` still `running`. `crates/shared/src/constants.rs` newly touched
+  this iteration (new progress); file list otherwise unchanged across two more 5-min re-checks — reads as
+  mid-edit or running `cargo fmt`/`clippy`/`test`, which doesn't necessarily touch more files. Still not a
+  repeat capacity failure, so stays Capacity — will escalate my own judgment (not the ledger's Blocked rule)
+  if the next firing shows no further change at all, since that would suggest a stall rather than a long
+  build.
   all, since that would suggest a stall rather than a long build.
 - Blocked: —
 - Parked: —
