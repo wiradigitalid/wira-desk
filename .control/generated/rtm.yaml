@@ -241,7 +241,7 @@ rtm:
   release: 0.5.0
   test:
   - app::tests::pane_enum_no_longer_declares_layout
-  - main::tests::overlapping_stack_row_has_percent_true
+  - app::tests::overlapping_stack_row_has_percent_true
   - shortcut_row_slint_snapshot::tests::stack_row_percent_commits_on_save_click
   - persistence::tests::stack_width_percent_round_trips_through_the_shortcut_row_path
   - app::tests::pane_declaration_order_is_the_navigation_index
@@ -516,7 +516,7 @@ rtm:
   release: 0.5.0
   test:
   - app::tests::pane_enum_no_longer_declares_layout
-  - main::tests::overlapping_stack_row_has_percent_true
+  - app::tests::overlapping_stack_row_has_percent_true
   - shortcut_row_slint_snapshot::tests::stack_row_percent_commits_on_save_click
   - persistence::tests::stack_width_percent_round_trips_through_the_shortcut_row_path
   - app::tests::pane_declaration_order_is_the_navigation_index
@@ -720,7 +720,7 @@ rtm:
   release: 0.5.0
   test:
   - app::tests::pane_enum_no_longer_declares_layout
-  - main::tests::overlapping_stack_row_has_percent_true
+  - app::tests::overlapping_stack_row_has_percent_true
   - shortcut_row_slint_snapshot::tests::stack_row_percent_commits_on_save_click
   - persistence::tests::stack_width_percent_round_trips_through_the_shortcut_row_path
   - app::tests::pane_declaration_order_is_the_navigation_index

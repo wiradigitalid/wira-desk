@@ -6,7 +6,7 @@ blocked_by: [SPEC-4-01]
 status: ready-for-agent
 tests:
   - app::tests::pane_enum_no_longer_declares_layout
-  - main::tests::overlapping_stack_row_has_percent_true
+  - app::tests::overlapping_stack_row_has_percent_true
   - shortcut_row_slint_snapshot::tests::stack_row_percent_commits_on_save_click
   - persistence::tests::stack_width_percent_round_trips_through_the_shortcut_row_path
   - app::tests::pane_declaration_order_is_the_navigation_index
@@ -129,6 +129,53 @@ invent a replacement assertion for a pane that is gone.
 `m.set_pane(Pane::Layout)` sits inside an unrelated test and needs a different pane.
 `crates/settings/src/layout_pane_slint_snapshot.rs` is declared as a module in
 `crates/settings/src/main.rs`; removing the file means removing that declaration too.
+
+## Amendment 2 — 2026-09-07, Step 1 landed (coordinator)
+
+Six of the seven tests are committed. **Four are red**, and they are the definition of done:
+
+| Test | Red because |
+|---|---|
+| `app::tests::pane_enum_no_longer_declares_layout` | `Pane::ALL.len()` is 5, wants 4 |
+| `app::tests::overlapping_stack_row_has_percent_true` | `Stack.has_percent()` is false |
+| `app::tests::the_stack_row_carries_its_own_percent_bounds` | `Stack` disagrees about whether it has a percentage |
+| `persistence::tests::stack_width_percent_round_trips_through_the_shortcut_row_path` | writes 42, reads back 50 |
+
+That last one is the silent seam this ticket's main list warned about, caught in the act:
+`set_percent`'s `_ => {}` swallowed the write and the default survived. Nothing failed to compile
+and no user would have seen an error — the control would simply have discarded every edit.
+
+Two are **green guards**, both seen red under a deliberate `Pane::ALL` reorder and restored:
+`pane_declaration_order_is_the_navigation_index` and
+`every_pane_index_round_trips_through_the_ui_boundary`.
+
+### Two corrections to this ticket's own test list
+
+- `main::tests::overlapping_stack_row_has_percent_true` is now **`app::tests::`**. `has_percent` is
+  a `ShortcutField` method, and `crates/settings/src/main.rs` has no `tests` module — asserting it
+  there would mean standing up a real Slint window to build the row model, which
+  `shortcut_row_slint_snapshot` already owns. One fact, one place.
+- `shortcut_row_slint_snapshot::tests::stack_row_percent_commits_on_save_click` is **not**
+  committed. It needs the percentage control to exist on the `Stack` row, so it cannot be written
+  before the work it tests. **The builder writes it, through `tdd`, at the seam the other
+  `shortcut_row_slint_snapshot` tests already use** (`i-slint-backend-testing`'s `TestingBackend`,
+  controls located by accessible label). It is an acceptance criterion, not an optional extra.
+
+### Where the bounds live, decided
+
+`ShortcutField::percent_bounds() -> Option<(u32, u32)>` is committed and already returns
+`Some((10, 100))` for `Stack` and `Some((1, 99))` for the four `SnapPercent*` rows. **The numbers
+live in Rust, not as markup literals**, because markup cannot be asserted on and a range that only
+exists in `.slint` is a range nothing can guard — which is exactly how `shortcut_row.slint`'s
+`1`/`99` and `layout_pane.slint`'s `10`/`100` came to disagree in the first place.
+
+- [ ] `ShortcutRowData` (`crates/settings/ui/panes/shortcuts_pane.slint`) grows `percent_min` and
+      `percent_max`, fed from `percent_bounds()`, and `shortcut_row.slint`'s `step_plus`/
+      `step_minus` read those instead of their hardcoded `1`/`99`.
+
+`Pane::from_index` is also committed, mirroring `ShortcutField::from_index` including its
+out-of-range fallback. What remains is rewiring `main.rs`'s two hand-numbered tables to it and to
+`pane as i32`.
 
 ## Out of scope, deliberately
 
