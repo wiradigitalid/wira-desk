@@ -192,11 +192,11 @@ pub(crate) fn sync_model_to_ui(window: &MainWindow, model: &SettingsModel) {
                 .collect();
             slint::ModelRc::new(slint::VecModel::from(rows))
         };
-        window.set_rows_switching(group_rows("Switching"));
-        window.set_rows_snap_half(group_rows("Snap to half"));
-        window.set_rows_snap_third(group_rows("Snap to third"));
-        window.set_rows_snap_custom(group_rows("Snap to custom"));
-        window.set_rows_arrange(group_rows("Resize, move & arrange"));
+        window.set_rows_switching(group_rows(ShortcutField::GROUPS[0]));
+        window.set_rows_snap_half(group_rows(ShortcutField::GROUPS[1]));
+        window.set_rows_snap_third(group_rows(ShortcutField::GROUPS[2]));
+        window.set_rows_snap_custom(group_rows(ShortcutField::GROUPS[3]));
+        window.set_rows_arrange(group_rows(ShortcutField::GROUPS[4]));
 
         // Listening index is the action's position in the declared sequence, which is exactly
         // its discriminant — so the pane, the focus order, and the collision precedence all

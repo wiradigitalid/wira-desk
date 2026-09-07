@@ -603,15 +603,15 @@ pub struct Chords {
     pub snap_right: Option<Shortcut>,
     pub snap_top: Option<Shortcut>,
     pub snap_bottom: Option<Shortcut>,
-    pub snap_maximize: Option<Shortcut>,
     pub snap_third_left: Option<Shortcut>,
     pub snap_third_middle: Option<Shortcut>,
     pub snap_third_right: Option<Shortcut>,
-    pub move_next_monitor: Option<Shortcut>,
     pub snap_percent_left: Option<Shortcut>,
     pub snap_percent_right: Option<Shortcut>,
     pub snap_percent_top: Option<Shortcut>,
     pub snap_percent_bottom: Option<Shortcut>,
+    pub snap_maximize: Option<Shortcut>,
+    pub move_next_monitor: Option<Shortcut>,
     pub stack: Option<Shortcut>,
 }
 

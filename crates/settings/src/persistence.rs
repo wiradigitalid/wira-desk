@@ -6,7 +6,9 @@
 
 use std::path::Path;
 
-use shared::constants::{DAEMON_WINDOW_CLASS, DAEMON_WINDOW_TITLE, WM_APP_RELOAD_CONFIG};
+use shared::constants::{
+    DAEMON_WINDOW_CLASS, DAEMON_WINDOW_TITLE, SHORTCUT_DECLARED_ORDER, WM_APP_RELOAD_CONFIG,
+};
 use shared::{config_path, Config, Shortcut};
 
 use windows_sys::Win32::UI::WindowsAndMessaging::{FindWindowW, PostMessageW};
@@ -101,98 +103,86 @@ fn classify_parse_failure(input: &str) -> ShortcutError {
 /// Returns the offending field name and reason on the first failure, leaving
 /// the caller's active configuration untouched.
 pub fn validate_config(cfg: &Config) -> Result<(), (&'static str, ShortcutError)> {
-    // These sixteen paths must match `app::ShortcutField::key()` exactly, and in the same
-    // ORDER: `describe()` maps a rejection reported here back to a human label through that
-    // table, and the order decides which of two colliding fields is named as the first
-    // holder. The two are kept as separate literals so this module has no dependency on the
-    // UI-facing field enum — a coupling `LBR-ST-14` accepts in exchange for the layer
-    // boundary, and which `app::tests::field_declaration_order_is_the_precedence_order`
-    // guards from the other side.
-    let fields: [(&'static str, &str, bool); 16] = [
-        (
-            "switcher.shortcut",
-            &cfg.switcher.shortcut,
-            cfg.switcher.shortcut_enabled,
-        ),
-        (
-            "switcher.fallback_shortcut",
-            &cfg.switcher.fallback_shortcut,
-            cfg.switcher.fallback_shortcut_enabled,
-        ),
-        (
-            "snapping.snap_half_left",
-            &cfg.snapping.snap_half_left,
-            cfg.snapping.snap_half_left_enabled,
-        ),
-        (
-            "snapping.snap_half_right",
-            &cfg.snapping.snap_half_right,
-            cfg.snapping.snap_half_right_enabled,
-        ),
-        (
-            "snapping.snap_half_top",
-            &cfg.snapping.snap_half_top,
-            cfg.snapping.snap_half_top_enabled,
-        ),
-        (
-            "snapping.snap_half_bottom",
-            &cfg.snapping.snap_half_bottom,
-            cfg.snapping.snap_half_bottom_enabled,
-        ),
-        (
-            "snapping.snap_maximize",
-            &cfg.snapping.snap_maximize,
-            cfg.snapping.snap_maximize_enabled,
-        ),
-        (
-            "snapping.snap_third_left",
-            &cfg.snapping.snap_third_left,
-            cfg.snapping.snap_third_left_enabled,
-        ),
-        (
-            "snapping.snap_third_middle",
-            &cfg.snapping.snap_third_middle,
-            cfg.snapping.snap_third_middle_enabled,
-        ),
-        (
-            "snapping.snap_third_right",
-            &cfg.snapping.snap_third_right,
-            cfg.snapping.snap_third_right_enabled,
-        ),
-        (
-            "layout.move_next_monitor_shortcut",
-            &cfg.layout.move_next_monitor_shortcut,
-            cfg.layout.move_next_monitor_shortcut_enabled,
-        ),
-        (
-            "snapping.snap_percent_left",
-            &cfg.snapping.snap_percent_left,
-            cfg.snapping.snap_percent_left_enabled,
-        ),
-        (
-            "snapping.snap_percent_right",
-            &cfg.snapping.snap_percent_right,
-            cfg.snapping.snap_percent_right_enabled,
-        ),
-        (
-            "snapping.snap_percent_top",
-            &cfg.snapping.snap_percent_top,
-            cfg.snapping.snap_percent_top_enabled,
-        ),
-        (
-            "snapping.snap_percent_bottom",
-            &cfg.snapping.snap_percent_bottom,
-            cfg.snapping.snap_percent_bottom_enabled,
-        ),
-        (
-            "layout.stack_shortcut",
-            &cfg.layout.stack_shortcut,
-            cfg.layout.stack_shortcut_enabled,
-        ),
-    ];
-    let mut seen: Vec<(&'static str, String)> = Vec::with_capacity(fields.len());
+    // The validation and duplicate-rejection sequence is derived directly from
+    // `shared::constants::SHORTCUT_DECLARED_ORDER` (`LBR-ST-14`, `DEC-018`).
+    // The order decides which of two colliding fields is named as the first holder.
+    // Iterating the shared constant guarantees that this validation walk matches
+    // the daemon's precedence order while keeping this module free of any dependency
+    // on the UI-facing `ShortcutField` enum. The key-to-value mapping below is not a
+    // second declared order: the constant dictates the iteration order.
+    fn field_for<'a>(cfg: &'a Config, key: &str) -> (&'a str, bool) {
+        match key {
+            "switcher.shortcut" => (&cfg.switcher.shortcut, cfg.switcher.shortcut_enabled),
+            "switcher.fallback_shortcut" => (
+                &cfg.switcher.fallback_shortcut,
+                cfg.switcher.fallback_shortcut_enabled,
+            ),
+            "snapping.snap_half_left" => (
+                &cfg.snapping.snap_half_left,
+                cfg.snapping.snap_half_left_enabled,
+            ),
+            "snapping.snap_half_right" => (
+                &cfg.snapping.snap_half_right,
+                cfg.snapping.snap_half_right_enabled,
+            ),
+            "snapping.snap_half_top" => (
+                &cfg.snapping.snap_half_top,
+                cfg.snapping.snap_half_top_enabled,
+            ),
+            "snapping.snap_half_bottom" => (
+                &cfg.snapping.snap_half_bottom,
+                cfg.snapping.snap_half_bottom_enabled,
+            ),
+            "snapping.snap_third_left" => (
+                &cfg.snapping.snap_third_left,
+                cfg.snapping.snap_third_left_enabled,
+            ),
+            "snapping.snap_third_middle" => (
+                &cfg.snapping.snap_third_middle,
+                cfg.snapping.snap_third_middle_enabled,
+            ),
+            "snapping.snap_third_right" => (
+                &cfg.snapping.snap_third_right,
+                cfg.snapping.snap_third_right_enabled,
+            ),
+            "snapping.snap_percent_left" => (
+                &cfg.snapping.snap_percent_left,
+                cfg.snapping.snap_percent_left_enabled,
+            ),
+            "snapping.snap_percent_right" => (
+                &cfg.snapping.snap_percent_right,
+                cfg.snapping.snap_percent_right_enabled,
+            ),
+            "snapping.snap_percent_top" => (
+                &cfg.snapping.snap_percent_top,
+                cfg.snapping.snap_percent_top_enabled,
+            ),
+            "snapping.snap_percent_bottom" => (
+                &cfg.snapping.snap_percent_bottom,
+                cfg.snapping.snap_percent_bottom_enabled,
+            ),
+            "snapping.snap_maximize" => (
+                &cfg.snapping.snap_maximize,
+                cfg.snapping.snap_maximize_enabled,
+            ),
+            "layout.move_next_monitor_shortcut" => (
+                &cfg.layout.move_next_monitor_shortcut,
+                cfg.layout.move_next_monitor_shortcut_enabled,
+            ),
+            "layout.stack_shortcut" => (
+                &cfg.layout.stack_shortcut,
+                cfg.layout.stack_shortcut_enabled,
+            ),
+            other => {
+                panic!("{other} is in the shared declared order but unknown in validate_config")
+            }
+        }
+    }
 
-    for (name, value, enabled) in fields {
+    let mut seen: Vec<(&'static str, String)> = Vec::with_capacity(SHORTCUT_DECLARED_ORDER.len());
+
+    for &name in &SHORTCUT_DECLARED_ORDER {
+        let (value, enabled) = field_for(cfg, name);
         let canonical = validate_shortcut(value).map_err(|e| (name, e))?;
         if enabled {
             if let Some((first_name, _)) = seen.iter().find(|(_, s)| *s == canonical) {
