@@ -128,40 +128,30 @@ pub trait WarnSink {
 pub fn validate(text: &str) -> Result<(Config, HookSnapshot, WorkerSnapshot), RejectReason> {
     let cfg = Config::from_toml_str(text).map_err(|_| RejectReason::Malformed)?;
 
-    // Both shortcuts must parse. `load_shortcuts` substitutes a default on a
+    // Every shortcut must parse. `load_shortcuts` substitutes a default on a
     // bad string at startup, which is right for startup — the daemon must come
     // up — but wrong here: silently ignoring half of what the user just saved
     // while reporting success is the exact dishonesty this story exists to fix.
-    let primary = Shortcut::parse(&cfg.switcher.shortcut).ok_or(RejectReason::InvalidShortcut)?;
-    let fallback =
-        Shortcut::parse(&cfg.switcher.fallback_shortcut).ok_or(RejectReason::InvalidShortcut)?;
-    let snap_left =
-        Shortcut::parse(&cfg.snapping.snap_half_left).ok_or(RejectReason::InvalidShortcut)?;
-    let snap_right =
-        Shortcut::parse(&cfg.snapping.snap_half_right).ok_or(RejectReason::InvalidShortcut)?;
-    let snap_top =
-        Shortcut::parse(&cfg.snapping.snap_half_top).ok_or(RejectReason::InvalidShortcut)?;
-    let snap_bottom =
-        Shortcut::parse(&cfg.snapping.snap_half_bottom).ok_or(RejectReason::InvalidShortcut)?;
-    let snap_maximize =
-        Shortcut::parse(&cfg.snapping.snap_maximize).ok_or(RejectReason::InvalidShortcut)?;
-    let snap_third_left =
-        Shortcut::parse(&cfg.snapping.snap_third_left).ok_or(RejectReason::InvalidShortcut)?;
-    let snap_third_middle =
-        Shortcut::parse(&cfg.snapping.snap_third_middle).ok_or(RejectReason::InvalidShortcut)?;
-    let snap_third_right =
-        Shortcut::parse(&cfg.snapping.snap_third_right).ok_or(RejectReason::InvalidShortcut)?;
-    let move_next_monitor = Shortcut::parse(&cfg.layout.move_next_monitor_shortcut)
-        .ok_or(RejectReason::InvalidShortcut)?;
-    let snap_percent_left =
-        Shortcut::parse(&cfg.snapping.snap_percent_left).ok_or(RejectReason::InvalidShortcut)?;
-    let snap_percent_right =
-        Shortcut::parse(&cfg.snapping.snap_percent_right).ok_or(RejectReason::InvalidShortcut)?;
-    let snap_percent_top =
-        Shortcut::parse(&cfg.snapping.snap_percent_top).ok_or(RejectReason::InvalidShortcut)?;
-    let snap_percent_bottom =
-        Shortcut::parse(&cfg.snapping.snap_percent_bottom).ok_or(RejectReason::InvalidShortcut)?;
-    let stack = Shortcut::parse(&cfg.layout.stack_shortcut).ok_or(RejectReason::InvalidShortcut)?;
+    for s in [
+        &cfg.switcher.shortcut,
+        &cfg.switcher.fallback_shortcut,
+        &cfg.snapping.snap_half_left,
+        &cfg.snapping.snap_half_right,
+        &cfg.snapping.snap_half_top,
+        &cfg.snapping.snap_half_bottom,
+        &cfg.snapping.snap_maximize,
+        &cfg.snapping.snap_third_left,
+        &cfg.snapping.snap_third_middle,
+        &cfg.snapping.snap_third_right,
+        &cfg.layout.move_next_monitor_shortcut,
+        &cfg.snapping.snap_percent_left,
+        &cfg.snapping.snap_percent_right,
+        &cfg.snapping.snap_percent_top,
+        &cfg.snapping.snap_percent_bottom,
+        &cfg.layout.stack_shortcut,
+    ] {
+        Shortcut::parse(s).ok_or(RejectReason::InvalidShortcut)?;
+    }
 
     for pct in [
         cfg.snapping.percent_left,
@@ -176,24 +166,7 @@ pub fn validate(text: &str) -> Result<(Config, HookSnapshot, WorkerSnapshot), Re
         }
     }
 
-    let chords = crate::hook::Chords {
-        primary: Some(primary),
-        fallback: Some(fallback),
-        snap_left: Some(snap_left),
-        snap_right: Some(snap_right),
-        snap_top: Some(snap_top),
-        snap_bottom: Some(snap_bottom),
-        snap_maximize: Some(snap_maximize),
-        snap_third_left: Some(snap_third_left),
-        snap_third_middle: Some(snap_third_middle),
-        snap_third_right: Some(snap_third_right),
-        move_next_monitor: Some(move_next_monitor),
-        snap_percent_left: Some(snap_percent_left),
-        snap_percent_right: Some(snap_percent_right),
-        snap_percent_top: Some(snap_percent_top),
-        snap_percent_bottom: Some(snap_percent_bottom),
-        stack: Some(stack),
-    };
+    let chords = crate::hook::Chords::from_config(&cfg);
 
     // Reject reserved shortcuts on reload. Walked through the declared sequence rather than
     // a hand-listed array, so a chord added to `Chords` cannot be missed here — the omission
@@ -570,6 +543,27 @@ snap_half_right = \"ctrl+alt+left\"
         );
         assert!(sink.worker.borrow().is_empty());
         assert_eq!(warn.0.len(), 1, "exactly one Tier-2 warning per rejection");
+    }
+
+    #[test]
+    fn disabled_duplicate_shortcut_is_accepted_on_reload() {
+        let text = format!(
+            "{VALID}
+[snapping]
+snap_half_left = \"ctrl+alt+left\"
+snap_half_right = \"ctrl+alt+left\"
+snap_half_right_enabled = false
+"
+        );
+        let (outcome, sink, _, _) = run(FakeSource(Ok(text)));
+        assert!(matches!(outcome, ReloadOutcome::Applied { .. }));
+        let delivered = sink.hook.borrow();
+        assert_eq!(delivered.len(), 1);
+        assert_eq!(
+            delivered[0].chords.snap_left,
+            Shortcut::parse("ctrl+alt+left")
+        );
+        assert_eq!(delivered[0].chords.snap_right, None);
     }
 
     #[test]
