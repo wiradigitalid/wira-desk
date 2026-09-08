@@ -3,7 +3,7 @@ id: SPEC-5-03
 component: settings
 satisfies: [UC-4, UC-9]
 blocked_by: [SPEC-5-02]
-status: open
+status: done
 tests:
   - shortcut_row_slint_snapshot::tests::a_multi_digit_keystroke_sequence_keeps_each_intermediate_digit_before_departure
   - shortcut_row_slint_snapshot::tests::a_real_keystroke_sequence_commits_a_typed_percentage
@@ -23,7 +23,7 @@ the first digit lands, before a second keystroke can be typed. Read `DEF-13` in 
 first and rebasing this defect fix onto their shape is the smaller conflict surface, matching `SPEC-4`'s own
 precedent of sequencing its defect fix last.
 
-- [ ] **Root-cause with `wdi-systematic-debugging` before writing any fix.** This repo's own standing rule
+- [x] **Root-cause with `wdi-systematic-debugging` before writing any fix.** This repo's own standing rule
       for a bug with an unknown cause applies here without exception. `DEF-13`'s own `why_it_hid` names one
       candidate worth ruling in or out, not a prescription of which is right: `pct_input`'s `edited` callback
       fires on every keystroke and calls `root.editing_changed(...)` whenever the in-progress text already
@@ -33,31 +33,31 @@ precedent of sequencing its defect fix last.
       to `editing_changed` in a way that clobbers the in-progress text, and whether this reproduces
       identically on every percentage row or only ones with a tighter minimum (e.g. the `Stack` row's 10–100
       bound versus a `Snap to custom` row's 1–99).
-- [ ] Once root-caused, the fix makes a real simulated multi-digit keystroke sequence (typing each digit as
+- [x] Once root-caused, the fix makes a real simulated multi-digit keystroke sequence (typing each digit as
       its own key event, not one string set at once) leave the field showing the FULL in-progress text after
       every keystroke before the last — not reverted to the prior committed value partway through.
-- [ ] A new test types a multi-digit value one keystroke at a time and asserts the field's displayed text
+- [x] A new test types a multi-digit value one keystroke at a time and asserts the field's displayed text
       after each intermediate keystroke, not only the final result — this is the exact window `SPEC-4-04`'s
       own tests never exercised.
-- [ ] The multi-digit test above is run against a row from EACH percent-bound family this pane ships — a
+- [x] The multi-digit test above is run against a row from EACH percent-bound family this pane ships — a
       `Snap to custom` row (1–99) and the `Stack` row (10–100, folded onto Overlapping Stack by `SPEC-4-02`)
       — not only one. `DEF-13`'s own `why_it_hid` names the bound difference as an open candidate for why the
       symptom might not reproduce identically everywhere; verifying only one family risks shipping a fix that
       still reverts mid-keystroke on the other. (Edge-case-hunter finding, resolved in this pass.)
-- [ ] A backspace/deletion sequence is exercised too, not only forward typing: deleting a digit down to a
+- [x] A backspace/deletion sequence is exercised too, not only forward typing: deleting a digit down to a
       shorter, momentarily out-of-range value (e.g. clearing a two-digit `Stack`-row value back to a single
       below-minimum digit) must behave the same way as typing forward — the in-progress text survives until
       departure, rather than reverting the instant the interim value is out of range. (Edge-case-hunter
       finding, resolved in this pass.)
-- [ ] `SPEC-4-04`'s three existing real-keystroke tests
+- [x] `SPEC-4-04`'s three existing real-keystroke tests
       (`a_real_keystroke_sequence_commits_a_typed_percentage`,
       `a_real_keystroke_sequence_out_of_range_is_refused`,
       `a_real_keystroke_sequence_commits_a_typed_stack_percentage`) stay green and unweakened — they cover
       the fully-typed-then-departed path, which this ticket does not change.
-- [ ] The out-of-range-refused behaviour on departure is unaffected: a value that is still out of range once
+- [x] The out-of-range-refused behaviour on departure is unaffected: a value that is still out of range once
       the field is actually departed (not mid-typing) is refused with the existing actionable message, never
       silently accepted or clamped just because this fix lets an in-progress digit sequence survive.
-- [ ] Full test suite green once, not only this ticket's own tests.
+- [x] Full test suite green once, not only this ticket's own tests.
 
 ## Out of scope, deliberately
 

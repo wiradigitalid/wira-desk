@@ -322,6 +322,158 @@ pub(crate) mod tests {
     }
 
     #[test]
+    fn a_multi_digit_keystroke_sequence_keeps_each_intermediate_digit_before_departure() {
+        run_on_ui_thread(|| {
+            let (window, _model, save_path) = setup_shortcuts_window();
+
+            // --- 1. Snap to custom family (1-99) ---
+            let field = ElementHandle::find_by_accessible_label(&window, "Snap percentage field")
+                .next()
+                .expect("Snap percentage field element found");
+            field.invoke_accessible_default_action();
+
+            let input = ElementHandle::find_by_accessible_label(&window, "Snap percentage input")
+                .next()
+                .expect("Snap percentage input element found");
+
+            // Clear field
+            for _ in 0..3 {
+                window
+                    .window()
+                    .dispatch_event(slint::platform::WindowEvent::KeyPressed {
+                        text: slint::platform::Key::Backspace.into(),
+                    });
+            }
+
+            // Type first digit '5'
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::KeyPressed {
+                    text: slint::SharedString::from("5"),
+                });
+            let intermediate_1 = input.accessible_value().unwrap_or_default();
+            assert_eq!(
+                intermediate_1.as_str(),
+                "5",
+                "Intermediate single digit '5' must not be reverted before departure"
+            );
+
+            // A live KeyCheck update while input has focus must not clobber the in-progress text
+            crate::sync_key_check(&window, &_model.borrow());
+            assert_eq!(
+                input.accessible_value().unwrap_or_default().as_str(),
+                "5",
+                "Live KeyCheck update while input has focus must not clobber in-progress typed text"
+            );
+
+            // Type second digit '5' to make '55'
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::KeyPressed {
+                    text: slint::SharedString::from("5"),
+                });
+            let intermediate_2 = input.accessible_value().unwrap_or_default();
+            assert_eq!(
+                intermediate_2.as_str(),
+                "55",
+                "Full value '55' must be present after second digit"
+            );
+
+            // Test backspace down to single digit '5'
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::KeyPressed {
+                    text: slint::platform::Key::Backspace.into(),
+                });
+            let after_backspace = input.accessible_value().unwrap_or_default();
+            assert_eq!(
+                after_backspace.as_str(),
+                "5",
+                "Field must read '5' after backspace, not revert to previous value"
+            );
+
+            let _ = std::fs::remove_file(&save_path);
+
+            // --- 2. Stack family (10-100) on a clean window ---
+            let (window, _model, save_path) = setup_shortcuts_window();
+
+            // Scroll down to bring the Overlapping Stack row into view
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::PointerScrolled {
+                    position: slint::LogicalPosition::new(300.0, 300.0),
+                    delta_x: 0.0,
+                    delta_y: -600.0,
+                });
+
+            let stack_field = ElementHandle::find_by_accessible_label(
+                &window,
+                crate::theme::STACK_WIDTH_FIELD.name,
+            )
+            .next()
+            .expect("Stack width field element found");
+            stack_field.invoke_accessible_default_action();
+
+            let stack_input = ElementHandle::find_by_accessible_label(
+                &window,
+                crate::theme::STACK_WIDTH_INPUT.name,
+            )
+            .next()
+            .expect("Stack width input element found");
+
+            // Clear what is there
+            for _ in 0..3 {
+                window
+                    .window()
+                    .dispatch_event(slint::platform::WindowEvent::KeyPressed {
+                        text: slint::platform::Key::Backspace.into(),
+                    });
+            }
+
+            // Type first digit '7' (momentarily below Stack min 10)
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::KeyPressed {
+                    text: slint::SharedString::from("7"),
+                });
+            let stack_intermediate_1 = stack_input.accessible_value().unwrap_or_default();
+            assert_eq!(
+                stack_intermediate_1.as_str(),
+                "7",
+                "Stack intermediate single digit '7' must not revert even if below min 10"
+            );
+
+            // Type second digit '5' to make '75'
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::KeyPressed {
+                    text: slint::SharedString::from("5"),
+                });
+            let stack_intermediate_2 = stack_input.accessible_value().unwrap_or_default();
+            assert_eq!(
+                stack_intermediate_2.as_str(),
+                "75",
+                "Stack field must read '75' after second digit"
+            );
+
+            // Test backspace deletion down to '7' (momentarily below min 10)
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::KeyPressed {
+                    text: slint::platform::Key::Backspace.into(),
+                });
+            let stack_after_bs = stack_input.accessible_value().unwrap_or_default();
+            assert_eq!(
+                stack_after_bs.as_str(),
+                "7",
+                "Stack field must survive backspace deletion down to out-of-range '7' before departure"
+            );
+
+            let _ = std::fs::remove_file(&save_path);
+        });
+    }
+
+    #[test]
     fn a_real_keystroke_sequence_out_of_range_is_refused() {
         use crate::app::SaveFeedback;
         run_on_ui_thread(|| {
