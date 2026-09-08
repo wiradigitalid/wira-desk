@@ -110,6 +110,7 @@ export component MainWindow inherits Window {
     // Footer & Save State
     in property <bool> is_dirty: false;
     in property <bool> has_conflict: false;
+    in property <int> revert_generation: 0;
     in property <string> status_message: "Wira Desk is Active";
     in property <bool> status_is_error: false;
     in property <bool> status_is_warning: false;
@@ -300,6 +301,7 @@ export component MainWindow inherits Window {
                                 rows_snap_custom: root.rows_snap_custom;
                                 rows_arrange: root.rows_arrange;
                                 listening_field: root.listening_field;
+                                revert_generation: root.revert_generation;
 
                                 start_capture(idx) => { root.start_capture(idx); }
                                 swap_shortcuts(idx) => { root.swap_shortcuts(idx); }

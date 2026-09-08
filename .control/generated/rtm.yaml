@@ -309,6 +309,51 @@ rtm:
   FR: FR-18
   DEC: []
   UC: UC-4
+  ticket: SPEC-5-01
+  spec: SPEC-5
+  release: 0.5.0
+  test:
+  - shortcut_row_slint_snapshot::tests::tooltip_does_not_overlap_the_row_title
+  - shortcut_row_slint_snapshot::tests::tooltip_height_fits_its_own_text
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
+- BG: BG-2
+  CAP: CAP-5
+  FR: FR-18
+  DEC: []
+  UC: UC-4
+  ticket: SPEC-5-02
+  spec: SPEC-5
+  release: 0.5.0
+  test:
+  - shortcut_row_slint_snapshot::tests::row_height_is_identical_toggle_on_and_toggle_off
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
+- BG: BG-2
+  CAP: CAP-5
+  FR: FR-18
+  DEC: []
+  UC: UC-4
+  ticket: SPEC-5-03
+  spec: SPEC-5
+  release: 0.5.0
+  test:
+  - shortcut_row_slint_snapshot::tests::a_multi_digit_keystroke_sequence_keeps_each_intermediate_digit_before_departure
+  - shortcut_row_slint_snapshot::tests::a_real_keystroke_sequence_commits_a_typed_percentage
+  - shortcut_row_slint_snapshot::tests::a_real_keystroke_sequence_out_of_range_is_refused
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
+- BG: BG-2
+  CAP: CAP-5
+  FR: FR-18
+  DEC: []
+  UC: UC-4
   ticket: W1-S4
   spec: W1
   release: 0.1.0
@@ -547,6 +592,22 @@ rtm:
   - app::tests::the_stack_row_carries_its_own_percent_bounds
   - app::tests::every_percentage_row_reaches_all_four_percent_seams
   - theme::tests::every_rendered_percent_control_name_comes_from_theme
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
+- BG: BG-3
+  CAP: CAP-14
+  FR: FR-26
+  DEC: []
+  UC: UC-9
+  ticket: SPEC-5-03
+  spec: SPEC-5
+  release: 0.5.0
+  test:
+  - shortcut_row_slint_snapshot::tests::a_multi_digit_keystroke_sequence_keeps_each_intermediate_digit_before_departure
+  - shortcut_row_slint_snapshot::tests::a_real_keystroke_sequence_commits_a_typed_percentage
+  - shortcut_row_slint_snapshot::tests::a_real_keystroke_sequence_out_of_range_is_refused
   status: done
   exempt: false
   green: true
@@ -807,6 +868,51 @@ rtm:
   - shortcut_row_slint_snapshot::tests::an_unconsumed_key_still_reaches_rust_after_focus_moves_into_a_row
   - shortcut_row_slint_snapshot::tests::tab_is_forwarded_to_rust_before_it_is_rejected_for_focus_traversal
   - shortcut_row_slint_snapshot::tests::description_renders_as_a_tooltip_not_a_visible_line
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
+- BG: BG-2
+  CAP: CAP-3
+  FR: FR-7
+  DEC: []
+  UC: UC-4
+  ticket: SPEC-5-01
+  spec: SPEC-5
+  release: 0.5.0
+  test:
+  - shortcut_row_slint_snapshot::tests::tooltip_does_not_overlap_the_row_title
+  - shortcut_row_slint_snapshot::tests::tooltip_height_fits_its_own_text
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
+- BG: BG-2
+  CAP: CAP-3
+  FR: FR-7
+  DEC: []
+  UC: UC-4
+  ticket: SPEC-5-02
+  spec: SPEC-5
+  release: 0.5.0
+  test:
+  - shortcut_row_slint_snapshot::tests::row_height_is_identical_toggle_on_and_toggle_off
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
+- BG: BG-2
+  CAP: CAP-3
+  FR: FR-7
+  DEC: []
+  UC: UC-4
+  ticket: SPEC-5-03
+  spec: SPEC-5
+  release: 0.5.0
+  test:
+  - shortcut_row_slint_snapshot::tests::a_multi_digit_keystroke_sequence_keeps_each_intermediate_digit_before_departure
+  - shortcut_row_slint_snapshot::tests::a_real_keystroke_sequence_commits_a_typed_percentage
+  - shortcut_row_slint_snapshot::tests::a_real_keystroke_sequence_out_of_range_is_refused
   status: done
   exempt: false
   green: true

@@ -34,6 +34,7 @@ component ShortcutGroup inherits VerticalLayout {
     in property <string> heading;
     in property <[ShortcutRowData]> rows;
     in property <int> listening_field: -1;
+    in property <int> revert_generation: 0;
 
     callback capture(int);
     callback swap(int);
@@ -77,6 +78,7 @@ component ShortcutGroup inherits VerticalLayout {
                     accessible_label_keycap: row.accessible_label_keycap;
                     accessible_label_description: row.accessible_label_description;
                     enabled: row.enabled;
+                    revert_generation: root.revert_generation;
                     capture_clicked => {
                         root.capture(row.index);
                     }
@@ -105,6 +107,7 @@ export component ShortcutsPane inherits VerticalLayout {
     in property <[ShortcutRowData]> rows_snap_third;
     in property <[ShortcutRowData]> rows_snap_custom;
     in property <[ShortcutRowData]> rows_arrange;
+    in property <int> revert_generation: 0;
 
     in property <int> listening_field: -1; // -1 = idle, otherwise the action's index
 
@@ -159,6 +162,7 @@ export component ShortcutsPane inherits VerticalLayout {
         heading: "Switching";
         rows: root.rows_switching;
         listening_field: root.listening_field;
+        revert_generation: root.revert_generation;
         capture(i) => {
             root.start_capture(i);
         }
@@ -180,6 +184,7 @@ export component ShortcutsPane inherits VerticalLayout {
         heading: "Snap to half";
         rows: root.rows_snap_half;
         listening_field: root.listening_field;
+        revert_generation: root.revert_generation;
         capture(i) => {
             root.start_capture(i);
         }
@@ -201,6 +206,7 @@ export component ShortcutsPane inherits VerticalLayout {
         heading: "Snap to third";
         rows: root.rows_snap_third;
         listening_field: root.listening_field;
+        revert_generation: root.revert_generation;
         capture(i) => {
             root.start_capture(i);
         }
@@ -222,6 +228,7 @@ export component ShortcutsPane inherits VerticalLayout {
         heading: "Snap to custom";
         rows: root.rows_snap_custom;
         listening_field: root.listening_field;
+        revert_generation: root.revert_generation;
         capture(i) => {
             root.start_capture(i);
         }
@@ -243,6 +250,7 @@ export component ShortcutsPane inherits VerticalLayout {
         heading: "Resize, move & arrange";
         rows: root.rows_arrange;
         listening_field: root.listening_field;
+        revert_generation: root.revert_generation;
         capture(i) => {
             root.start_capture(i);
         }

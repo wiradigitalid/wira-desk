@@ -29,6 +29,7 @@ import { ToggleSwitch } from "toggle_switch.slint";
 // tree is (`description_renders_as_a_tooltip_not_a_visible_line`), and the overflow it used to
 // cause is a hand-verified smoke-test item.
 export component ShortcutRow inherits Rectangle {
+    min-height: 53px;
     in property <string> title: "Shortcut";
     in property <string> description: "Description text";
     in property <string> current_shortcut: "Win + `";
@@ -48,6 +49,7 @@ export component ShortcutRow inherits Rectangle {
     in property <string> accessible_label_description: "";
     in-out property <string> typed_text: "\{root.percent}";
     in property <bool> enabled: true;
+    in property <int> revert_generation: 0;
 
     callback capture_clicked();
     callback swap_clicked();
@@ -77,6 +79,10 @@ export component ShortcutRow inherits Rectangle {
     }
 
     changed percent => {
+        root.typed_text = "\{root.percent}";
+    }
+
+    changed revert_generation => {
         root.typed_text = "\{root.percent}";
     }
 
@@ -415,11 +421,12 @@ export component ShortcutRow inherits Rectangle {
         x: 16px;
         y: root.height + 2px;
         z: 100;
-        background: Palette.bg_card;
+        background: Palette.bg_tooltip;
         border-width: 1px;
-        border-color: Palette.stroke_card;
+        border-color: Palette.stroke_tooltip;
         border-radius: 4px;
-        width: min(320px, tooltip_layout.preferred-width);
+        width: min(480px, tooltip_layout.preferred-width);
+        height: tooltip_layout.preferred-height;
 
         tooltip_layout := HorizontalLayout {
             padding-left: 8px;

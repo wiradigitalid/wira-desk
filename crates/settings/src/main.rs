@@ -115,6 +115,17 @@ fn is_win_key_down() -> bool {
     }
 }
 
+pub(crate) fn sync_key_check(window: &MainWindow, model: &SettingsModel) {
+    window.set_kc_mod_ctrl(model.key_check.mod_ctrl);
+    window.set_kc_mod_win(model.key_check.mod_win);
+    window.set_kc_mod_alt(model.key_check.mod_alt);
+    window.set_kc_mod_shift(model.key_check.mod_shift);
+    window.set_kc_last_display(slint::SharedString::from(&model.key_check.last_display));
+    window.set_kc_last_canonical(slint::SharedString::from(&model.key_check.last_canonical));
+    window.set_kc_verdict(model.key_check.verdict as i32);
+    window.set_kc_beat(model.key_check.beat);
+}
+
 pub(crate) fn sync_model_to_ui(window: &MainWindow, model: &SettingsModel) {
     // Mode
     let is_onboarding = model.onboarding.is_some();
@@ -245,14 +256,7 @@ pub(crate) fn sync_model_to_ui(window: &MainWindow, model: &SettingsModel) {
         window.set_listening_field(listening_idx);
 
         // KeyCheck Diagnostic State
-        window.set_kc_mod_ctrl(model.key_check.mod_ctrl);
-        window.set_kc_mod_win(model.key_check.mod_win);
-        window.set_kc_mod_alt(model.key_check.mod_alt);
-        window.set_kc_mod_shift(model.key_check.mod_shift);
-        window.set_kc_last_display(slint::SharedString::from(&model.key_check.last_display));
-        window.set_kc_last_canonical(slint::SharedString::from(&model.key_check.last_canonical));
-        window.set_kc_verdict(model.key_check.verdict as i32);
-        window.set_kc_beat(model.key_check.beat);
+        sync_key_check(window, model);
 
         // About
         window.set_app_version(slint::SharedString::from(env!("CARGO_PKG_VERSION")));
@@ -466,6 +470,7 @@ pub(crate) fn bind_callbacks(
             let mut m = model_rc.borrow_mut();
             m.revert();
             if let Some(w) = window_weak.upgrade() {
+                w.set_revert_generation(w.get_revert_generation() + 1);
                 sync_model_to_ui(&w, &m);
             }
         });
@@ -837,7 +842,7 @@ fn main() -> Result<(), slint::PlatformError> {
             } else {
                 // Sync KeyCheck live state changes when Idle
                 if let Some(w) = window_weak.upgrade() {
-                    sync_model_to_ui(&w, &m);
+                    sync_key_check(&w, &m);
                 }
             }
         });
@@ -852,7 +857,7 @@ fn main() -> Result<(), slint::PlatformError> {
             let win_active = meta || is_win_key_down();
             m.key_check.update_modifiers(ctrl, win_active, alt, shift);
             if let Some(w) = window_weak.upgrade() {
-                sync_model_to_ui(&w, &m);
+                sync_key_check(&w, &m);
             }
         });
     }
@@ -865,7 +870,7 @@ fn main() -> Result<(), slint::PlatformError> {
             let mut m = model_rc.borrow_mut();
             m.key_check.clear_beat();
             if let Some(w) = window_weak.upgrade() {
-                sync_model_to_ui(&w, &m);
+                sync_key_check(&w, &m);
             }
         });
     }

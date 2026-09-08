@@ -306,3 +306,34 @@ decisions:
     file: decisions/DEC-018-the-declared-shortcut-sequence-has-one-home-in-shared.md
     created: '2026-09-07'
     touches: []
+
+  - id: DEC-019
+    title: Autopilot mandate for SPEC-5 delivery
+    status: applied
+    file: decisions/DEC-019-autopilot-mandate-for-spec-5-delivery.md
+    created: '2026-09-08'
+    touches:
+      - .control/decisions/DEC-019-autopilot-mandate-for-spec-5-delivery.md
+      - .control/memlog/autopilot-DEC-019.md
+      - .control/registry/decisions.yaml
+      - .control/registry/defects.yaml
+      - .control/registry/specs.yaml
+      - .scratch/smoke-dec-019.md
+      - .scratch/spec-5-shortcuts-pane-follow-up/issues/01-defect-def-14-tooltip-oversized-and-overlaps-title.md
+      - .scratch/spec-5-shortcuts-pane-follow-up/issues/02-defect-def-15-row-height-changes-with-toggle-state.md
+      - .scratch/spec-5-shortcuts-pane-follow-up/issues/03-defect-def-13-percentage-field-reverts-mid-keystroke.md
+      - crates/settings/src/main.rs
+      - crates/settings/src/shortcut_row_slint_snapshot.rs
+      - crates/settings/ui/components/shortcut_row.slint
+    mandate:
+      from_gate: G5
+      scope: all
+      parked: [ad-n]
+      smoke_test: agent
+      loop: 10m
+      expires: '2026-09-15'
+      run_branch: autopilot/DEC-019
+      worktree: ../wira-desk-autopilot
+      build_target_dir: ../wira-desk/target
+      ledger: .control/memlog/autopilot-DEC-019.md
+

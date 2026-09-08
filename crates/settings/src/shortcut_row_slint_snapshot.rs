@@ -322,6 +322,218 @@ pub(crate) mod tests {
     }
 
     #[test]
+    fn a_multi_digit_keystroke_sequence_keeps_each_intermediate_digit_before_departure() {
+        run_on_ui_thread(|| {
+            let (window, _model, save_path) = setup_shortcuts_window();
+
+            // --- 1. Snap to custom family (1-99) ---
+            let field = ElementHandle::find_by_accessible_label(&window, "Snap percentage field")
+                .next()
+                .expect("Snap percentage field element found");
+            field.invoke_accessible_default_action();
+
+            let input = ElementHandle::find_by_accessible_label(&window, "Snap percentage input")
+                .next()
+                .expect("Snap percentage input element found");
+
+            // Clear field
+            for _ in 0..3 {
+                window
+                    .window()
+                    .dispatch_event(slint::platform::WindowEvent::KeyPressed {
+                        text: slint::platform::Key::Backspace.into(),
+                    });
+            }
+
+            // Type first digit '5'
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::KeyPressed {
+                    text: slint::SharedString::from("5"),
+                });
+            let intermediate_1 = input.accessible_value().unwrap_or_default();
+            assert_eq!(
+                intermediate_1.as_str(),
+                "5",
+                "Intermediate single digit '5' must not be reverted before departure"
+            );
+
+            // A live KeyCheck update while input has focus must not clobber the in-progress text
+            crate::sync_key_check(&window, &_model.borrow());
+            assert_eq!(
+                input.accessible_value().unwrap_or_default().as_str(),
+                "5",
+                "Live KeyCheck update while input has focus must not clobber in-progress typed text"
+            );
+
+            // Type second digit '5' to make '55'
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::KeyPressed {
+                    text: slint::SharedString::from("5"),
+                });
+            let intermediate_2 = input.accessible_value().unwrap_or_default();
+            assert_eq!(
+                intermediate_2.as_str(),
+                "55",
+                "Full value '55' must be present after second digit"
+            );
+
+            // Test backspace down to single digit '5'
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::KeyPressed {
+                    text: slint::platform::Key::Backspace.into(),
+                });
+            let after_backspace = input.accessible_value().unwrap_or_default();
+            assert_eq!(
+                after_backspace.as_str(),
+                "5",
+                "Field must read '5' after backspace, not revert to previous value"
+            );
+
+            let _ = std::fs::remove_file(&save_path);
+
+            // --- 2. Stack family (10-100) on a clean window ---
+            let (window, _model, save_path) = setup_shortcuts_window();
+
+            // Scroll down to bring the Overlapping Stack row into view
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::PointerScrolled {
+                    position: slint::LogicalPosition::new(300.0, 300.0),
+                    delta_x: 0.0,
+                    delta_y: -600.0,
+                });
+
+            let stack_field = ElementHandle::find_by_accessible_label(
+                &window,
+                crate::theme::STACK_WIDTH_FIELD.name,
+            )
+            .next()
+            .expect("Stack width field element found");
+            stack_field.invoke_accessible_default_action();
+
+            let stack_input = ElementHandle::find_by_accessible_label(
+                &window,
+                crate::theme::STACK_WIDTH_INPUT.name,
+            )
+            .next()
+            .expect("Stack width input element found");
+
+            // Clear what is there
+            for _ in 0..3 {
+                window
+                    .window()
+                    .dispatch_event(slint::platform::WindowEvent::KeyPressed {
+                        text: slint::platform::Key::Backspace.into(),
+                    });
+            }
+
+            // Type first digit '7' (momentarily below Stack min 10)
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::KeyPressed {
+                    text: slint::SharedString::from("7"),
+                });
+            let stack_intermediate_1 = stack_input.accessible_value().unwrap_or_default();
+            assert_eq!(
+                stack_intermediate_1.as_str(),
+                "7",
+                "Stack intermediate single digit '7' must not revert even if below min 10"
+            );
+
+            // Type second digit '5' to make '75'
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::KeyPressed {
+                    text: slint::SharedString::from("5"),
+                });
+            let stack_intermediate_2 = stack_input.accessible_value().unwrap_or_default();
+            assert_eq!(
+                stack_intermediate_2.as_str(),
+                "75",
+                "Stack field must read '75' after second digit"
+            );
+
+            // Test backspace deletion down to '7' (momentarily below min 10)
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::KeyPressed {
+                    text: slint::platform::Key::Backspace.into(),
+                });
+            let stack_after_bs = stack_input.accessible_value().unwrap_or_default();
+            assert_eq!(
+                stack_after_bs.as_str(),
+                "7",
+                "Stack field must survive backspace deletion down to out-of-range '7' before departure"
+            );
+
+            let _ = std::fs::remove_file(&save_path);
+        });
+    }
+
+    #[test]
+    fn revert_discards_in_progress_typed_percentage_even_if_focused() {
+        run_on_ui_thread(|| {
+            let (window, model, save_path) = setup_shortcuts_window();
+
+            let field = ElementHandle::find_by_accessible_label(&window, "Snap percentage field")
+                .next()
+                .expect("Snap percentage field element found");
+            field.invoke_accessible_default_action();
+
+            let input = ElementHandle::find_by_accessible_label(&window, "Snap percentage input")
+                .next()
+                .expect("Snap percentage input element found");
+
+            // Clear what is there, then type '75'
+            for _ in 0..3 {
+                window
+                    .window()
+                    .dispatch_event(slint::platform::WindowEvent::KeyPressed {
+                        text: slint::platform::Key::Backspace.into(),
+                    });
+            }
+            type_digits(&window, "75");
+
+            assert_eq!(
+                input.accessible_value().unwrap_or_default().as_str(),
+                "75",
+                "Field must show '75' while being typed"
+            );
+
+            // User clicks Revert without blurring the field
+            window.invoke_revert_clicked();
+
+            let input_after =
+                ElementHandle::find_by_accessible_label(&window, "Snap percentage input")
+                    .next()
+                    .expect("Snap percentage input element found after revert");
+
+            // The field must return to the saved value 50, NOT retain 75
+            let reverted_val = input_after.accessible_value().unwrap_or_default();
+            assert_eq!(
+                reverted_val.as_str(),
+                "50",
+                "Clicking Revert must restore saved value in the field even while focused; got {reverted_val:?}"
+            );
+
+            // Now blur the field (e.g. by advancing focus or clicking elsewhere)
+            window.invoke_start_capture(ShortcutField::Switcher as i32);
+
+            // The draft must still be 50, NOT 75
+            assert_eq!(
+                model.borrow().draft.snapping.percent_left,
+                50,
+                "Subsequent blur must not commit the abandoned typed value 75"
+            );
+
+            let _ = std::fs::remove_file(&save_path);
+        });
+    }
+
+    #[test]
     fn a_real_keystroke_sequence_out_of_range_is_refused() {
         use crate::app::SaveFeedback;
         run_on_ui_thread(|| {
@@ -798,6 +1010,264 @@ pub(crate) mod tests {
             assert!(
                 cleared_desc.is_none(),
                 "Description must cease rendering when pointer leaves the title block"
+            );
+
+            let _ = std::fs::remove_file(&save_path);
+        });
+    }
+
+    #[test]
+    fn tooltip_does_not_overlap_the_row_title() {
+        run_on_ui_thread(|| {
+            let (window, _model, save_path) = setup_shortcuts_window();
+
+            // Scroll to top
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::PointerScrolled {
+                    position: slint::LogicalPosition::new(300.0, 300.0),
+                    delta_x: 0.0,
+                    delta_y: 1200.0,
+                });
+
+            let desc = ShortcutField::Switcher.description();
+            let title_label = ShortcutField::Switcher.label();
+            let switcher_desc_label = theme::shortcut_description_label(title_label);
+
+            let switcher_block =
+                ElementHandle::find_by_accessible_label(&window, &switcher_desc_label)
+                    .next()
+                    .expect("Switcher description block found");
+            let block_pos = switcher_block.absolute_position();
+            let block_sz = switcher_block.size();
+
+            // 1. Mouse hover: tooltip surfaces and does not intersect title bounds
+            let hover_pos = slint::LogicalPosition::new(
+                block_pos.x + block_sz.width / 2.0,
+                block_pos.y + block_sz.height / 2.0,
+            );
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::PointerMoved {
+                    position: hover_pos,
+                });
+
+            let title_elem = ElementHandle::find_by_accessible_label(&window, title_label)
+                .next()
+                .expect("Title element found");
+            let title_pos = title_elem.absolute_position();
+            let title_sz = title_elem.size();
+
+            let tooltip_elem = ElementHandle::find_by_accessible_label(&window, desc)
+                .next()
+                .expect("Tooltip element found on hover");
+            let tooltip_pos = tooltip_elem.absolute_position();
+            let tooltip_sz = tooltip_elem.size();
+
+            // Assert no intersection in 2D bounding boxes (y interval does not overlap title y interval)
+            let title_bottom = title_pos.y + title_sz.height;
+            let tooltip_bottom = tooltip_pos.y + tooltip_sz.height;
+            let y_overlaps = tooltip_pos.y < title_bottom && tooltip_bottom > title_pos.y;
+            let x_overlaps = tooltip_pos.x < (title_pos.x + title_sz.width)
+                && (tooltip_pos.x + tooltip_sz.width) > title_pos.x;
+            assert!(
+                !(x_overlaps && y_overlaps),
+                "Hover tooltip bounds ({tooltip_pos:?}, {tooltip_sz:?}) must not intersect title bounds ({title_pos:?}, {title_sz:?})"
+            );
+
+            // 2. Clear hover and verify with keyboard Tab focus
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::PointerMoved {
+                    position: slint::LogicalPosition::new(0.0, 0.0),
+                });
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::KeyPressed {
+                    text: slint::platform::Key::Tab.into(),
+                });
+
+            let kb_tooltip = ElementHandle::find_by_accessible_label(&window, desc)
+                .next()
+                .expect("Tooltip element found on keyboard focus");
+            let kb_tooltip_pos = kb_tooltip.absolute_position();
+            let kb_tooltip_sz = kb_tooltip.size();
+
+            let kb_y_overlaps = kb_tooltip_pos.y < title_bottom
+                && (kb_tooltip_pos.y + kb_tooltip_sz.height) > title_pos.y;
+            let kb_x_overlaps = kb_tooltip_pos.x < (title_pos.x + title_sz.width)
+                && (kb_tooltip_pos.x + kb_tooltip_sz.width) > title_pos.x;
+            assert!(
+                !(kb_x_overlaps && kb_y_overlaps),
+                "Focus tooltip bounds must not intersect title bounds"
+            );
+
+            let _ = std::fs::remove_file(&save_path);
+        });
+    }
+
+    #[test]
+    fn tooltip_height_fits_its_own_text() {
+        run_on_ui_thread(|| {
+            let (window, _model, save_path) = setup_shortcuts_window();
+
+            // 1. Check a standard short description (Switcher: "Cycles windows of the active app on this monitor.")
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::PointerScrolled {
+                    position: slint::LogicalPosition::new(300.0, 300.0),
+                    delta_x: 0.0,
+                    delta_y: 1200.0,
+                });
+
+            let desc = ShortcutField::Switcher.description();
+            let title_label = ShortcutField::Switcher.label();
+            let switcher_desc_label = theme::shortcut_description_label(title_label);
+
+            let switcher_block =
+                ElementHandle::find_by_accessible_label(&window, &switcher_desc_label)
+                    .next()
+                    .expect("Switcher description block found");
+            let block_pos = switcher_block.absolute_position();
+            let block_sz = switcher_block.size();
+
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::PointerMoved {
+                    position: slint::LogicalPosition::new(
+                        block_pos.x + block_sz.width / 2.0,
+                        block_pos.y + block_sz.height / 2.0,
+                    ),
+                });
+
+            let tooltip_elem = ElementHandle::find_by_accessible_label(&window, desc)
+                .next()
+                .expect("Tooltip element found for Switcher");
+            let tooltip_sz = tooltip_elem.size();
+
+            // Natural line height for 12px Segoe UI caption is ~14-16px, never the old unconstrained 42px
+            assert!(
+                tooltip_sz.height <= 20.0,
+                "Tooltip rendered height ({}) must fit its single-line text, not a stretched box (was 42px)",
+                tooltip_sz.height
+            );
+
+            // 2. Check the LONGEST description string shipped in this pane (SnapPercentBottom: 65 chars)
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::PointerMoved {
+                    position: slint::LogicalPosition::new(0.0, 0.0),
+                });
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::PointerScrolled {
+                    position: slint::LogicalPosition::new(300.0, 300.0),
+                    delta_x: 0.0,
+                    delta_y: -700.0,
+                });
+
+            let longest_desc = ShortcutField::SnapPercentBottom.description();
+            let longest_label = ShortcutField::SnapPercentBottom.label();
+            let longest_block_label = theme::shortcut_description_label(longest_label);
+
+            let longest_block =
+                ElementHandle::find_by_accessible_label(&window, &longest_block_label)
+                    .next()
+                    .expect("SnapPercentBottom description block found");
+            let l_pos = longest_block.absolute_position();
+            let l_sz = longest_block.size();
+
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::PointerMoved {
+                    position: slint::LogicalPosition::new(
+                        l_pos.x + l_sz.width / 2.0,
+                        l_pos.y + l_sz.height / 2.0,
+                    ),
+                });
+
+            let l_tooltip = ElementHandle::find_by_accessible_label(&window, longest_desc)
+                .next()
+                .expect("Tooltip element found for longest description");
+            let l_tooltip_sz = l_tooltip.size();
+
+            assert!(
+                l_tooltip_sz.height <= 20.0,
+                "Longest description tooltip height ({}) must still fit single-line height, not wrap/stretch",
+                l_tooltip_sz.height
+            );
+
+            let _ = std::fs::remove_file(&save_path);
+        });
+    }
+
+    #[test]
+    fn row_height_is_identical_toggle_on_and_toggle_off() {
+        run_on_ui_thread(|| {
+            let (window, _model, save_path) = setup_shortcuts_window();
+
+            // Scroll to the top so Switching group is in view
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::PointerScrolled {
+                    position: slint::LogicalPosition::new(300.0, 300.0),
+                    delta_x: 0.0,
+                    delta_y: 1200.0,
+                });
+
+            let switcher_label = ShortcutField::Switcher.label();
+            let switcher_kc_label = theme::shortcut_keycap_label(switcher_label);
+            let fallback_label = ShortcutField::Fallback.label();
+            let fallback_kc_label = theme::shortcut_keycap_label(fallback_label);
+
+            let get_keycap_y = |label: &str| -> f32 {
+                ElementHandle::find_by_accessible_label(&window, label)
+                    .next()
+                    .unwrap_or_else(|| panic!("keycap for '{label}' not found"))
+                    .absolute_position()
+                    .y
+            };
+
+            // 1. Initial state (both toggles on)
+            let kc0_on = get_keycap_y(&switcher_kc_label);
+            let kc1_on = get_keycap_y(&fallback_kc_label);
+            let pitch_on = kc1_on - kc0_on;
+            eprintln!("Toggle ON: kc0={kc0_on}, kc1={kc1_on}, pitch={pitch_on}");
+
+            // 2. Toggle Switcher off
+            let toggle_label = format!("Enable {switcher_label}");
+            let toggle_elem = ElementHandle::find_by_accessible_label(&window, &toggle_label)
+                .next()
+                .expect("Switcher toggle switch found");
+            toggle_elem.invoke_accessible_default_action();
+
+            let kc0_off = get_keycap_y(&switcher_kc_label);
+            let kc1_off = get_keycap_y(&fallback_kc_label);
+            let pitch_off = kc1_off - kc0_off;
+            eprintln!("Toggle OFF: kc0={kc0_off}, kc1={kc1_off}, pitch={pitch_off}");
+
+            const TOLERANCE: f32 = 0.5;
+            assert!(
+                (pitch_off - pitch_on).abs() <= TOLERANCE,
+                "Row pitch must be identical toggle-on ({pitch_on}px) and toggle-off ({pitch_off}px)"
+            );
+
+            // 3. Confirm "Disabled" caption is rendered when toggle is off
+            let disabled_caption =
+                ElementHandle::find_by_accessible_label(&window, "Disabled").next();
+            assert!(
+                disabled_caption.is_some(),
+                "'Disabled' caption must be rendered in the tree when toggle is off"
+            );
+
+            // 4. Toggle back on and confirm row pitch returns
+            toggle_elem.invoke_accessible_default_action();
+            let kc0_back = get_keycap_y(&switcher_kc_label);
+            let kc1_back = get_keycap_y(&fallback_kc_label);
+            let pitch_back = kc1_back - kc0_back;
+            assert!(
+                (pitch_back - pitch_on).abs() <= TOLERANCE,
+                "Row pitch after toggling back on ({pitch_back}px) must match initial ({pitch_on}px)"
             );
 
             let _ = std::fs::remove_file(&save_path);
