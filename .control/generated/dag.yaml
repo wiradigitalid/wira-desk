@@ -28,6 +28,11 @@ dag:
     - SPEC-5-01
     - SPEC-5-02
     - SPEC-5-03
+- spec: SPEC-6
+  order:
+  - parallel:
+    - SPEC-6-01
+    - SPEC-6-02
 - spec: W1
   order:
   - parallel:

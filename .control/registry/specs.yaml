@@ -748,3 +748,64 @@ specs:
           - shortcut_row_slint_snapshot::tests::a_multi_digit_keystroke_sequence_keeps_each_intermediate_digit_before_departure
           - shortcut_row_slint_snapshot::tests::a_real_keystroke_sequence_commits_a_typed_percentage
           - shortcut_row_slint_snapshot::tests::a_real_keystroke_sequence_out_of_range_is_refused
+
+  - id: SPEC-6
+    release: "0.5.0"
+    prd: [wira-desk]
+    size: S
+    status: open
+    # No SPEC.md by Phase 1's own rule at size S (SPEC-2/SPEC-3/SPEC-5's precedent) -- the two
+    # tickets below are the contract. Opened from the owner's live manual retest of PR #20's
+    # SPEC-5-01/SPEC-5-03 fixes, 2026-09-08. Both tickets are new symptoms on surface those two
+    # tickets already touched, not a reopening of either: SPEC-5-01 fixed DEF-14's oversized
+    # tooltip and its own residual named a viewport-clip risk it could not settle from a headless
+    # test; what the owner found instead is a paint-order fault (a later sibling draws over a
+    # fully-visible tooltip), a different failure from clipping, hence a new defect (DEF-16)
+    # rather than a DEF-14 reopen. SPEC-5-03 fixed DEF-13's mid-keystroke revert so a multi-digit
+    # out-of-range value can now be typed to completion; DEF-17 is the consequence the owner found
+    # once that value sits in the field uncommitted -- the stepper buttons' own boundary guards
+    # assumed a value already inside bounds, which stopped being true the moment free-typed text
+    # was allowed past it.
+    #
+    # A third owner observation from the same retest -- Revert evaluates on blur/Enter rather than
+    # "in real time" as described conversationally during the prior session -- is not a defect or
+    # a ticket: grepped the corpus (`SDD-settings.md`, `DEC-019`, the run's own memlog) and no
+    # written artifact ever made a "real-time" claim, so there is nothing stale to correct. Filed
+    # nowhere; the owner's own words already close it ("hasil sekarang oke juga").
+    #
+    # Reviewed by the coordinator directly (bmad-review, edge-case-hunter) at contract-authoring
+    # time -- 2 findings, both resolved in the same pass: SPEC-6-01's fix-direction naming a
+    # concrete Slint mechanism (`PopupWindow`) without first confirming it actually renders above
+    # a sibling `ShortcutRow` and above `KeyCheck` specifically (now stated as a root-cause step,
+    # not a prescribed fix); SPEC-6-02's boundary-guard fix only being tested one-sided (above max)
+    # when the pane ships both a 1-99 family and a 10-100 (stack) family, and only above-max, never
+    # below-min (both directions and both families now required explicitly). No deferred findings.
+    spec_reviewed:
+      date: '2026-09-08'
+      sha: '97c1b1d'
+      lenses: [edge-case-hunter]
+    depends_on: [SPEC-5]
+    spec_folder: .scratch/spec-6-shortcuts-pane-second-follow-up/
+    fr: [FR-15, FR-26]
+    tickets:
+      - id: SPEC-6-01
+        title: "Defect DEF-16 — hover tooltip paints behind a later sibling instead of above it"
+        spec_folder: .scratch/spec-6-shortcuts-pane-second-follow-up/
+        component: settings
+        satisfies: [UC-4]
+        depends_on: []
+        tests:
+          - shortcut_row_slint_snapshot::tests::tooltip_paints_above_the_next_row_when_it_overflows_into_it
+          - shortcuts_pane_slint_snapshot::tests::the_last_rows_tooltip_paints_above_the_key_check_panel
+      - id: SPEC-6-02
+        title: "Defect DEF-17 — an out-of-range typed percentage freezes both stepper buttons"
+        spec_folder: .scratch/spec-6-shortcuts-pane-second-follow-up/
+        component: settings
+        satisfies: [UC-4, UC-9]
+        depends_on: []
+        tests:
+          - shortcut_row_slint_snapshot::tests::stepper_recovers_from_an_above_max_typed_value
+          - shortcut_row_slint_snapshot::tests::stepper_recovers_from_a_below_min_typed_value
+          - shortcut_row_slint_snapshot::tests::stack_row_stepper_recovers_from_an_out_of_range_typed_value
+          - shortcut_row_slint_snapshot::tests::a_real_keystroke_sequence_commits_a_typed_percentage
+          - shortcut_row_slint_snapshot::tests::a_multi_digit_keystroke_sequence_keeps_each_intermediate_digit_before_departure

@@ -730,6 +730,102 @@ defects:
       its own text," not a specific pixel size.
     owner: repo owner
 
+  - id: DEF-16
+    title: A row's hover tooltip paints behind a later sibling — the next row's controls, or the Key Check panel — instead of above them
+    status: open
+    severity: low
+    component: settings
+    violates: [SPEC-5-01]
+    found_in: "0.5.0"
+    found_by: Owner live manual retest of SPEC-5-01's fix, 2026-09-08 (post-merge of PR #20 / DEC-019 mandate)
+    tests: []
+    summary: >-
+      `SPEC-5-01` fixed `DEF-14`'s oversized/transparent tooltip, but the owner's retest of the resized
+      tooltip surfaces the layout question `DEF-14`'s own residual anticipated and could not settle: the
+      tooltip, positioned at `x: 16px; y: root.height + 2px; z: 100` inside `ShortcutRow`
+      (`crates/settings/ui/components/shortcut_row.slint:420-447`), renders BEHIND content that overflows
+      into where it is drawn, in two concrete cases the owner screenshotted. (1) Hovering the title of the
+      pane's last row (Overlapping Stack) draws the tooltip under the always-visible Key Check panel below
+      it. (2) Hovering a row's title anywhere else draws the tooltip under the next row's own -/+ stepper,
+      percentage field, and keycap button. Both are the same fault: the tooltip is a local overlay confined
+      to `root`'s own stacking context, not a window-level one.
+    why_it_hid: >-
+      `z: 100` reads as "always on top," but a `z` value only orders an element among its OWN parent's
+      children — here, `root`'s (this `ShortcutRow`'s) other children. It does nothing against a DIFFERENT
+      `ShortcutRow` instance (the next row in `shortcuts_pane.slint`'s list) or the `KeyCheck` panel
+      (`main_window.slint:373`), both of which are separate elements painted in the outer tree's document
+      order — after this row, since they come later in it — regardless of any `z` set inside this row.
+      `SPEC-5-01`'s own guards (`tooltip_does_not_overlap_the_row_title`,
+      `tooltip_height_fits_its_own_text`) check the tooltip's geometry against its OWN row's title, which is
+      correct for what they test, but neither renders a second row or the Key Check panel to see either
+      paint-order collision — `DEF-14`'s residual named the adjacent risk ("clips against the Flickable
+      boundary") but that is a viewport-clip concern, a different failure from a same-viewport element
+      painting on top of a fully-visible tooltip, which is what the owner actually found.
+    impact: >-
+      The tooltip becomes unreadable exactly when it collides with something else on screen, which is the
+      case the pane's own density (five stacked groups, a docked Key Check band) makes common rather than
+      rare — the owner reproduced it on the very last row and on an ordinary row, not an edge case. No
+      functional loss: the description is still reachable via the same hover/focus and via the accessible
+      description on the title element.
+    fix_direction: >-
+      The tooltip needs a window-level (or pane-level) overlay layer that paints above every `ShortcutRow`
+      and above `KeyCheck`, not a `Rectangle` scoped inside the hovered row — Slint's own `PopupWindow`
+      exists for exactly this shape (anchored to a parent element, rendered in its own top-level layer) and
+      is worth root-causing as the fix before inventing a hand-rolled overlay, per this repo's standing rule
+      against patching blind. Whatever the mechanism, it MUST be provable by a test that renders at least
+      two adjacent rows (or a row plus `KeyCheck`) together and asserts the tooltip's bounds are the
+      topmost element at its own pixel region, not merely non-overlapping with its own row's title — the
+      gap `SPEC-5-01`'s two guards left. Do not reopen `DEF-14`/`SPEC-5-01`'s tests to make room for this;
+      they check a real, narrower property and stay green and unweakened.
+    owner: repo owner
+
+  - id: DEF-17
+    title: Typing a percentage past its boundary freezes both stepper buttons on that row
+    status: open
+    severity: medium
+    component: settings
+    violates: [SPEC-2-01, SPEC-5-03]
+    found_in: "0.5.0"
+    found_by: Owner live manual retest of SPEC-5-03's fix, 2026-09-08 (post-merge of PR #20 / DEC-019 mandate)
+    tests: []
+    summary: >-
+      The owner reports that typing a value past a percentage field's own bound (e.g. `101` where the
+      bound is 1-99) is accepted into the field as free text, exactly as `SPEC-5-03` intended so a
+      multi-digit value can be finished — but once the field holds that out-of-range value, BOTH the `-`
+      and `+` stepper buttons on that row stop responding to clicks. Save-time validation already refuses
+      the out-of-range value correctly, per the owner's own confirmation; only the live stepper buttons are
+      affected.
+    why_it_hid: >-
+      Root-caused directly against `crates/settings/ui/components/shortcut_row.slint`'s `step_plus`
+      (line 67) and `step_minus` (line 74): both read `let base = root.current_value()` and only move by
+      one when a boundary guard holds — `step_plus`'s is `base >= percent_min && base < percent_max`,
+      `step_minus`'s is `base > percent_min && base <= percent_max` — and set `next = base` (i.e. UNCHANGED)
+      whenever the guard is false. Both guards assume `base` is already inside `[percent_min, percent_max]`,
+      which held when the only way to change a row's value was through these same two buttons. `SPEC-4-04`
+      and `SPEC-5-03` deliberately let free-typed text past that boundary sit in `typed_text` uncommitted
+      (checked: `app.rs::set_percent`, line 981, stores whatever value is passed with no clamping, so an
+      out-of-range value is not even corrected once committed) — so `current_value()` can now legitimately
+      return 101, and at 101 neither guard is ever true again: `step_minus`'s `101 <= percent_max(99)` is
+      false, so decrementing is refused exactly as incrementing is, and the row is stuck until something
+      else overwrites `typed_text` (a `percent`/`revert_generation` change from outside the row).
+    impact: >-
+      A user who overshoots while typing — the exact scenario `SPEC-5-03` was written to make possible —
+      loses both stepper buttons on that row until they either retype a valid value by hand or trigger an
+      external resync (Revert, or switching panes and back). The field's own text does not visibly explain
+      why the buttons stopped working, so the row reads as broken rather than as "waiting for a valid
+      value."
+    fix_direction: >-
+      Clamp `base` into `[percent_min, percent_max]` before applying the guard, rather than assuming it is
+      already there — e.g. a value above `percent_max` steps DOWN to `percent_max` on the next `-` press
+      (and stays refused on `+`, correctly), and symmetrically below `percent_min`. The fix must be provable
+      by a test that types an out-of-range value (both above max and below min, per this repo's own
+      standing rule to cover a genuine boundary rather than one side of it) and then clicks each stepper
+      button, asserting the row recovers a value inside bounds rather than staying frozen. `SPEC-5-03`'s own
+      tests (multi-digit keystroke retention, valid-value commit, out-of-range-is-refused-at-save) must stay
+      green and unweakened — this defect is about the STEPPER buttons, not the typed-text or save-time
+      paths those already cover.
+    owner: repo owner
+
   - id: DEF-15
     title: A row's container grows and shrinks noticeably when its toggle is switched off and on, because of the "Disabled" caption's own height rather than a fixed row height
     status: fixed
