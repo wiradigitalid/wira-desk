@@ -13,7 +13,7 @@ date: 2026-09-08
 - `SPEC-6` closed — both tickets (`SPEC-6-01`, `SPEC-6-02`) `done`. Both defects (`DEF-16`, `DEF-17`) `fixed`.
 - Scope: all open tickets and specs completed; promise progress 100% (52/52 counted RTM rows green).
 - Run branch: `autopilot/DEC-020`. One PR opened from this branch.
-- Suite: **568 passed / 0 failed / 2 ignored**; `cargo clippy --workspace --all-targets -- -D warnings`, `cargo fmt --all`, `validate.py --generate` all clean.
+- Suite: **569 passed / 0 failed / 2 ignored**; `cargo clippy --workspace --all-targets -- -D warnings`, `cargo fmt --all`, `validate.py --generate` all clean.
 - Publication hygiene: `scripts/verify-public-export.ps1` passes 10/10 checks.
 - Smoke test: automated agent run (`build.ps1 -Mode prod`) completed with 11 PASS / 0 FAIL / 0 NOT VERIFIABLE recorded in `.scratch/smoke-dec-020.md`.
 - Blocked: —
