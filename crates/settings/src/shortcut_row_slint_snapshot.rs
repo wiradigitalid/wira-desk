@@ -1860,4 +1860,287 @@ pub(crate) mod tests {
             let _ = std::fs::remove_file(&save_path);
         });
     }
+
+    #[test]
+    fn typed_percentage_above_max_reverts_on_enter() {
+        run_on_ui_thread(|| {
+            let (window, model, save_path) = setup_shortcuts_window();
+
+            let field = ElementHandle::find_by_accessible_label(&window, "Snap percentage field")
+                .next()
+                .expect("Snap percentage field element found");
+            field.invoke_accessible_default_action();
+
+            let input = ElementHandle::find_by_accessible_label(&window, "Snap percentage input")
+                .next()
+                .expect("Snap percentage input element found");
+
+            // Clear what is there, then type '101' (above max 99 for snap family)
+            for _ in 0..3 {
+                window
+                    .window()
+                    .dispatch_event(slint::platform::WindowEvent::KeyPressed {
+                        text: slint::platform::Key::Backspace.into(),
+                    });
+            }
+            type_digits(&window, "101");
+
+            let typed = input.accessible_value().unwrap_or_default();
+            assert_eq!(typed.as_str(), "101", "Field must hold '101' while typing");
+
+            // Press Return/Enter to depart the field
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::KeyPressed {
+                    text: slint::platform::Key::Return.into(),
+                });
+
+            // On Enter, out-of-range value 101 must revert to previous percent (50)
+            field.invoke_accessible_default_action();
+            let input_refocused =
+                ElementHandle::find_by_accessible_label(&window, "Snap percentage input")
+                    .next()
+                    .expect("Snap percentage input element found");
+            let reverted = input_refocused.accessible_value().unwrap_or_default();
+            assert_eq!(
+                reverted.as_str(),
+                "50",
+                "Out-of-range typed percentage (101) must revert to previous value (50) on Enter"
+            );
+
+            // Draft must remain 50 (no percent_changed signal fired for out-of-range value)
+            assert_eq!(
+                model.borrow().draft.snapping.percent_left,
+                50,
+                "Draft must remain untouched at 50 after out-of-range Enter departure"
+            );
+
+            let _ = std::fs::remove_file(&save_path);
+        });
+    }
+
+    #[test]
+    fn typed_percentage_below_min_reverts_on_enter() {
+        run_on_ui_thread(|| {
+            let (window, model, save_path) = setup_shortcuts_window();
+
+            let field = ElementHandle::find_by_accessible_label(&window, "Snap percentage field")
+                .next()
+                .expect("Snap percentage field element found");
+            field.invoke_accessible_default_action();
+
+            let input = ElementHandle::find_by_accessible_label(&window, "Snap percentage input")
+                .next()
+                .expect("Snap percentage input element found");
+
+            // Clear what is there, then type '0' (below min 1 for snap family)
+            for _ in 0..3 {
+                window
+                    .window()
+                    .dispatch_event(slint::platform::WindowEvent::KeyPressed {
+                        text: slint::platform::Key::Backspace.into(),
+                    });
+            }
+            type_digits(&window, "0");
+
+            let typed = input.accessible_value().unwrap_or_default();
+            assert_eq!(typed.as_str(), "0", "Field must hold '0' while typing");
+
+            // Press Return/Enter to depart the field
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::KeyPressed {
+                    text: slint::platform::Key::Return.into(),
+                });
+
+            // On Enter, below-min value 0 must revert to previous percent (50)
+            field.invoke_accessible_default_action();
+            let input_refocused =
+                ElementHandle::find_by_accessible_label(&window, "Snap percentage input")
+                    .next()
+                    .expect("Snap percentage input element found");
+            let reverted = input_refocused.accessible_value().unwrap_or_default();
+            assert_eq!(
+                reverted.as_str(),
+                "50",
+                "Below-min typed percentage (0) must revert to previous value (50) on Enter"
+            );
+
+            // Draft must remain 50
+            assert_eq!(
+                model.borrow().draft.snapping.percent_left,
+                50,
+                "Draft must remain untouched at 50 after below-min Enter departure"
+            );
+
+            let _ = std::fs::remove_file(&save_path);
+        });
+    }
+
+    #[test]
+    fn typed_percentage_out_of_range_reverts_on_blur() {
+        run_on_ui_thread(|| {
+            let (window, model, save_path) = setup_shortcuts_window();
+
+            let field = ElementHandle::find_by_accessible_label(&window, "Snap percentage field")
+                .next()
+                .expect("Snap percentage field element found");
+            field.invoke_accessible_default_action();
+
+            let input = ElementHandle::find_by_accessible_label(&window, "Snap percentage input")
+                .next()
+                .expect("Snap percentage input element found");
+
+            // Clear what is there, then type '120'
+            for _ in 0..3 {
+                window
+                    .window()
+                    .dispatch_event(slint::platform::WindowEvent::KeyPressed {
+                        text: slint::platform::Key::Backspace.into(),
+                    });
+            }
+            type_digits(&window, "120");
+
+            let typed = input.accessible_value().unwrap_or_default();
+            assert_eq!(typed.as_str(), "120", "Field must hold '120' while typing");
+
+            // Move focus away to trigger blur (`changed has-focus => if !self.has-focus`)
+            window.invoke_start_capture(ShortcutField::Switcher as i32);
+
+            // On blur, out-of-range value 120 must revert to previous percent (50)
+            field.invoke_accessible_default_action();
+            let input_refocused =
+                ElementHandle::find_by_accessible_label(&window, "Snap percentage input")
+                    .next()
+                    .expect("Snap percentage input element found");
+            let reverted = input_refocused.accessible_value().unwrap_or_default();
+            assert_eq!(
+                reverted.as_str(),
+                "50",
+                "Out-of-range typed percentage (120) must revert to previous value (50) on blur"
+            );
+
+            // Draft must remain 50
+            assert_eq!(
+                model.borrow().draft.snapping.percent_left,
+                50,
+                "Draft must remain untouched at 50 after out-of-range blur departure"
+            );
+
+            let _ = std::fs::remove_file(&save_path);
+        });
+    }
+
+    #[test]
+    fn stack_row_typed_percentage_out_of_range_reverts_on_enter() {
+        run_on_ui_thread(|| {
+            let (window, model, save_path) = setup_shortcuts_window();
+
+            // Scroll down to bring Overlapping Stack row into view
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::PointerScrolled {
+                    position: slint::LogicalPosition::new(300.0, 300.0),
+                    delta_x: 0.0,
+                    delta_y: -600.0,
+                });
+
+            let stack_field = ElementHandle::find_by_accessible_label(
+                &window,
+                crate::theme::STACK_WIDTH_FIELD.name,
+            )
+            .next()
+            .expect("Stack width field element found");
+            stack_field.invoke_accessible_default_action();
+
+            let stack_input = ElementHandle::find_by_accessible_label(
+                &window,
+                crate::theme::STACK_WIDTH_INPUT.name,
+            )
+            .next()
+            .expect("Stack width input element found");
+
+            // 1. Test ABOVE max (150 > 100)
+            for _ in 0..3 {
+                window
+                    .window()
+                    .dispatch_event(slint::platform::WindowEvent::KeyPressed {
+                        text: slint::platform::Key::Backspace.into(),
+                    });
+            }
+            type_digits(&window, "150");
+            assert_eq!(
+                stack_input.accessible_value().unwrap_or_default().as_str(),
+                "150",
+                "Stack input must hold 150 while typing"
+            );
+
+            // Press Enter
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::KeyPressed {
+                    text: slint::platform::Key::Return.into(),
+                });
+
+            // Default stack width is 50. Revert must restore 50.
+            stack_field.invoke_accessible_default_action();
+            let stack_input_refocused = ElementHandle::find_by_accessible_label(
+                &window,
+                crate::theme::STACK_WIDTH_INPUT.name,
+            )
+            .next()
+            .expect("Stack width input element found after Enter");
+            let reverted_above = stack_input_refocused.accessible_value().unwrap_or_default();
+            assert_eq!(
+                reverted_above.as_str(),
+                "50",
+                "Stack row out-of-range value (150) must revert to 50 on Enter"
+            );
+            assert_eq!(
+                model.borrow().draft.layout.stack_width_percent,
+                50,
+                "Draft stack percent must remain 50"
+            );
+
+            // 2. Test BELOW min (5 < 10 for Stack family)
+            for _ in 0..3 {
+                window
+                    .window()
+                    .dispatch_event(slint::platform::WindowEvent::KeyPressed {
+                        text: slint::platform::Key::Backspace.into(),
+                    });
+            }
+            type_digits(&window, "5");
+
+            // Press Enter
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::KeyPressed {
+                    text: slint::platform::Key::Return.into(),
+                });
+
+            stack_field.invoke_accessible_default_action();
+            let stack_input_refocused2 = ElementHandle::find_by_accessible_label(
+                &window,
+                crate::theme::STACK_WIDTH_INPUT.name,
+            )
+            .next()
+            .expect("Stack width input element found after Enter");
+            let reverted_below = stack_input_refocused2
+                .accessible_value()
+                .unwrap_or_default();
+            assert_eq!(
+                reverted_below.as_str(),
+                "50",
+                "Stack row below-min value (5) must revert to 50 on Enter"
+            );
+            assert_eq!(
+                model.borrow().draft.layout.stack_width_percent,
+                50,
+                "Draft stack percent must remain 50 after below-min Enter"
+            );
+
+            let _ = std::fs::remove_file(&save_path);
+        });
+    }
 }

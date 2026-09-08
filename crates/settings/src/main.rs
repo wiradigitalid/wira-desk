@@ -350,7 +350,11 @@ pub(crate) fn bind_callbacks(
         main_window.on_pane_selected(move |idx| {
             let mut m = model_rc.borrow_mut();
             if let Some((field, val)) = uncommitted_pct.borrow_mut().take() {
-                m.set_percent(field, val);
+                if let Some((min, max)) = field.percent_bounds() {
+                    if val >= min && val <= max {
+                        m.set_percent(field, val);
+                    }
+                }
             }
             let pane = Pane::from_index(idx);
             m.set_pane(pane);
@@ -379,7 +383,11 @@ pub(crate) fn bind_callbacks(
         main_window.on_start_capture(move |idx| {
             let mut m = model_rc.borrow_mut();
             if let Some((field, val)) = uncommitted_pct.borrow_mut().take() {
-                m.set_percent(field, val);
+                if let Some((min, max)) = field.percent_bounds() {
+                    if val >= min && val <= max {
+                        m.set_percent(field, val);
+                    }
+                }
             }
             let field = ShortcutField::from_index(idx);
             if m.capture.is_listening_for(field) {
@@ -399,7 +407,11 @@ pub(crate) fn bind_callbacks(
         main_window.on_swap_shortcuts(move |idx| {
             let mut m = model_rc.borrow_mut();
             if let Some((field, val)) = uncommitted_pct.borrow_mut().take() {
-                m.set_percent(field, val);
+                if let Some((min, max)) = field.percent_bounds() {
+                    if val >= min && val <= max {
+                        m.set_percent(field, val);
+                    }
+                }
             }
             let field = ShortcutField::from_index(idx);
             if let Some(conf) = m.find_conflict(field) {
@@ -419,12 +431,20 @@ pub(crate) fn bind_callbacks(
             let field = ShortcutField::from_index(idx);
             if let Some((pending_field, pending_val)) = uncommitted_pct.borrow_mut().take() {
                 if pending_field != field {
-                    m.set_percent(pending_field, pending_val);
+                    if let Some((min, max)) = pending_field.percent_bounds() {
+                        if pending_val >= min && pending_val <= max {
+                            m.set_percent(pending_field, pending_val);
+                        }
+                    }
                 }
             }
             if field.has_percent() {
                 let uval = if val < 0 { 0 } else { val as u32 };
-                m.set_percent(field, uval);
+                if let Some((min, max)) = field.percent_bounds() {
+                    if uval >= min && uval <= max {
+                        m.set_percent(field, uval);
+                    }
+                }
             }
             if let Some(w) = window_weak.upgrade() {
                 sync_model_to_ui(&w, &m);
