@@ -5,7 +5,9 @@ pub(crate) mod tests {
     use crate::app::{Pane, SaveFeedback, SettingsModel, ShortcutField};
     use crate::theme;
     use crate::{bind_callbacks, sync_model_to_ui, MainWindow};
-    use i_slint_backend_testing::{ElementHandle, TestingBackend, TestingBackendOptions};
+    use i_slint_backend_testing::{
+        ElementHandle, ElementRoot, TestingBackend, TestingBackendOptions,
+    };
     use shared::Config;
     use slint::ComponentHandle;
     use std::cell::RefCell;
@@ -1195,6 +1197,87 @@ pub(crate) mod tests {
                 l_tooltip_sz.height <= 20.0,
                 "Longest description tooltip height ({}) must still fit single-line height, not wrap/stretch",
                 l_tooltip_sz.height
+            );
+
+            let _ = std::fs::remove_file(&save_path);
+        });
+    }
+
+    #[test]
+    fn tooltip_paints_above_the_next_row_when_it_overflows_into_it() {
+        run_on_ui_thread(|| {
+            let (window, _model, save_path) = setup_shortcuts_window();
+
+            // Scroll to the top so Switcher and Fallback rows are in view
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::PointerScrolled {
+                    position: slint::LogicalPosition::new(300.0, 300.0),
+                    delta_x: 0.0,
+                    delta_y: 1200.0,
+                });
+
+            let switcher_label = ShortcutField::Switcher.label();
+            let switcher_desc = ShortcutField::Switcher.description();
+            let switcher_desc_label = theme::shortcut_description_label(switcher_label);
+
+            let fallback_label = ShortcutField::Fallback.label();
+            let fallback_desc_label = theme::shortcut_description_label(fallback_label);
+
+            let switcher_block =
+                ElementHandle::find_by_accessible_label(&window, &switcher_desc_label)
+                    .next()
+                    .expect("Switcher title block found");
+            let s_pos = switcher_block.absolute_position();
+            let s_sz = switcher_block.size();
+
+            let fallback_block =
+                ElementHandle::find_by_accessible_label(&window, &fallback_desc_label)
+                    .next()
+                    .expect("Fallback title block found");
+            let f_pos = fallback_block.absolute_position();
+            let f_sz = fallback_block.size();
+
+            // Hover Switcher row title block to surface its tooltip
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::PointerMoved {
+                    position: slint::LogicalPosition::new(
+                        s_pos.x + s_sz.width / 2.0,
+                        s_pos.y + s_sz.height / 2.0,
+                    ),
+                });
+
+            let tooltip_elem = ElementHandle::find_by_accessible_label(&window, switcher_desc)
+                .next()
+                .expect("Tooltip element found on hover");
+            let tooltip_pos = tooltip_elem.absolute_position();
+            let tooltip_sz = tooltip_elem.size();
+
+            // The tooltip overflows vertically into the next row's bounding region
+            let tooltip_bottom = tooltip_pos.y + tooltip_sz.height;
+            let fallback_bottom = f_pos.y + f_sz.height;
+            assert!(
+                tooltip_bottom > f_pos.y && tooltip_pos.y < fallback_bottom,
+                "Tooltip (y={:?}..{:?}) must extend into next row's vertical bounds (y={:?}..{:?}) to demonstrate overflow",
+                tooltip_pos.y, tooltip_bottom, f_pos.y, fallback_bottom
+            );
+
+            // Paint-order verification: The tooltip element MUST appear later in document/traversal
+            // order than the next row's elements, ensuring it is painted ON TOP OF the next row.
+            let all_elems = window.root_element().query_descendants().find_all();
+            let tooltip_idx = all_elems
+                .iter()
+                .position(|e| e.accessible_label().as_deref() == Some(switcher_desc))
+                .expect("Tooltip in element tree");
+            let fallback_idx = all_elems
+                .iter()
+                .position(|e| e.accessible_label().as_deref() == Some(&fallback_desc_label))
+                .expect("Fallback row title in element tree");
+
+            assert!(
+                tooltip_idx > fallback_idx,
+                "Tooltip (idx={tooltip_idx}) must be visited/painted LATER than the next row (idx={fallback_idx}) so it renders above it"
             );
 
             let _ = std::fs::remove_file(&save_path);

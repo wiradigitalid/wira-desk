@@ -56,6 +56,8 @@ export component ShortcutRow inherits Rectangle {
     callback percent_changed(int);
     callback editing_changed(int);
     callback toggle_enabled(bool);
+    callback show_tooltip(string, length);
+    callback hide_tooltip();
 
     function current_value() -> int {
         if root.typed_text.is-float() {
@@ -101,9 +103,33 @@ export component ShortcutRow inherits Rectangle {
             accessible-label: root.accessible_label_description;
             accessible-description: root.description;
 
+            focus_gained => {
+                if root.description != "" {
+                    root.show_tooltip(root.description, root.y + root.height + 2px);
+                }
+            }
+
+            focus_lost => {
+                if !title_touch.has-hover {
+                    root.hide_tooltip();
+                }
+            }
+
             title_touch := TouchArea {
                 width: 100%;
                 height: 100%;
+
+                changed has-hover => {
+                    if self.has-hover {
+                        if root.description != "" {
+                            root.show_tooltip(root.description, root.y + root.height + 2px);
+                        }
+                    } else {
+                        if !title_block.has-focus {
+                            root.hide_tooltip();
+                        }
+                    }
+                }
             }
 
             VerticalLayout {
@@ -413,36 +439,6 @@ export component ShortcutRow inherits Rectangle {
             }
         }
 
-        }
-    }
-
-    // Floating tooltip carrying full un-truncated description on hover/focus of title block
-    if (title_touch.has-hover || title_block.has-focus) && root.description != "" : Rectangle {
-        x: 16px;
-        y: root.height + 2px;
-        z: 100;
-        background: Palette.bg_tooltip;
-        border-width: 1px;
-        border-color: Palette.stroke_tooltip;
-        border-radius: 4px;
-        width: min(480px, tooltip_layout.preferred-width);
-        height: tooltip_layout.preferred-height;
-
-        tooltip_layout := HorizontalLayout {
-            padding-left: 8px;
-            padding-right: 8px;
-            padding-top: 4px;
-            padding-bottom: 4px;
-
-            Text {
-                text: root.description;
-                font-family: Typography.font_family;
-                font-size: Typography.size_caption;
-                color: Palette.text_primary;
-                wrap: word-wrap;
-                accessible-role: text;
-                accessible-label: root.description;
-            }
         }
     }
 }

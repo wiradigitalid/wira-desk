@@ -116,6 +116,11 @@ export component MainWindow inherits Window {
     in property <bool> status_is_warning: false;
     in property <bool> status_is_success: false;
 
+    // Floating Active Tooltip
+    in-out property <string> active_tooltip_text: "";
+    in-out property <length> active_tooltip_y: 0px;
+    in-out property <bool> active_tooltip_visible: false;
+
     // Callbacks to Rust
     callback window_drag_requested();
     callback window_minimize_clicked();
@@ -308,6 +313,14 @@ export component MainWindow inherits Window {
                                 percent_changed(idx, val) => { root.percent_changed(idx, val); }
                                 editing_percent_changed(idx, val) => { root.editing_percent_changed(idx, val); }
                                 toggle_enabled(idx, val) => { root.shortcut_enabled_toggled(idx, val); }
+                                show_tooltip(desc, pane_y) => {
+                                    root.active_tooltip_text = desc;
+                                    root.active_tooltip_y = 16px + sv.viewport-y + pane_y;
+                                    root.active_tooltip_visible = true;
+                                }
+                                hide_tooltip => {
+                                    root.active_tooltip_visible = false;
+                                }
                             }
 
                             if root.current_pane == 2 : VmExceptionsPane {
@@ -386,6 +399,36 @@ export component MainWindow inherits Window {
                         }
                     }
 
+                    }
+
+                    // Floating Tooltip Overlay (drawn above ScrollView, above rows, and above KeyCheck)
+                    if root.active_tooltip_visible && root.active_tooltip_text != "" : Rectangle {
+                        x: 36px;
+                        y: root.active_tooltip_y;
+                        z: 1000;
+                        background: Palette.bg_tooltip;
+                        border-width: 1px;
+                        border-color: Palette.stroke_tooltip;
+                        border-radius: 4px;
+                        width: min(480px, tooltip_layout.preferred-width);
+                        height: tooltip_layout.preferred-height;
+
+                        tooltip_layout := HorizontalLayout {
+                            padding-left: 8px;
+                            padding-right: 8px;
+                            padding-top: 4px;
+                            padding-bottom: 4px;
+
+                            Text {
+                                text: root.active_tooltip_text;
+                                font-family: Typography.font_family;
+                                font-size: Typography.size_caption;
+                                color: Palette.text_primary;
+                                wrap: word-wrap;
+                                accessible-role: text;
+                                accessible-label: root.active_tooltip_text;
+                            }
+                        }
                     }
                 }
             }
