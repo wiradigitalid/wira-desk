@@ -29,6 +29,7 @@ import { ToggleSwitch } from "toggle_switch.slint";
 // tree is (`description_renders_as_a_tooltip_not_a_visible_line`), and the overflow it used to
 // cause is a hand-verified smoke-test item.
 export component ShortcutRow inherits Rectangle {
+    min-height: 53px;
     in property <string> title: "Shortcut";
     in property <string> description: "Description text";
     in property <string> current_shortcut: "Win + `";

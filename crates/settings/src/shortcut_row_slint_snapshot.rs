@@ -985,6 +985,78 @@ pub(crate) mod tests {
         });
     }
 
+    #[test]
+    fn row_height_is_identical_toggle_on_and_toggle_off() {
+        run_on_ui_thread(|| {
+            let (window, _model, save_path) = setup_shortcuts_window();
+
+            // Scroll to the top so Switching group is in view
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::PointerScrolled {
+                    position: slint::LogicalPosition::new(300.0, 300.0),
+                    delta_x: 0.0,
+                    delta_y: 1200.0,
+                });
+
+            let switcher_label = ShortcutField::Switcher.label();
+            let switcher_kc_label = theme::shortcut_keycap_label(switcher_label);
+            let fallback_label = ShortcutField::Fallback.label();
+            let fallback_kc_label = theme::shortcut_keycap_label(fallback_label);
+
+            let get_keycap_y = |label: &str| -> f32 {
+                ElementHandle::find_by_accessible_label(&window, label)
+                    .next()
+                    .unwrap_or_else(|| panic!("keycap for '{label}' not found"))
+                    .absolute_position()
+                    .y
+            };
+
+            // 1. Initial state (both toggles on)
+            let kc0_on = get_keycap_y(&switcher_kc_label);
+            let kc1_on = get_keycap_y(&fallback_kc_label);
+            let pitch_on = kc1_on - kc0_on;
+            eprintln!("Toggle ON: kc0={kc0_on}, kc1={kc1_on}, pitch={pitch_on}");
+
+            // 2. Toggle Switcher off
+            let toggle_label = format!("Enable {switcher_label}");
+            let toggle_elem = ElementHandle::find_by_accessible_label(&window, &toggle_label)
+                .next()
+                .expect("Switcher toggle switch found");
+            toggle_elem.invoke_accessible_default_action();
+
+            let kc0_off = get_keycap_y(&switcher_kc_label);
+            let kc1_off = get_keycap_y(&fallback_kc_label);
+            let pitch_off = kc1_off - kc0_off;
+            eprintln!("Toggle OFF: kc0={kc0_off}, kc1={kc1_off}, pitch={pitch_off}");
+
+            const TOLERANCE: f32 = 0.5;
+            assert!(
+                (pitch_off - pitch_on).abs() <= TOLERANCE,
+                "Row pitch must be identical toggle-on ({pitch_on}px) and toggle-off ({pitch_off}px)"
+            );
+
+            // 3. Confirm "Disabled" caption is rendered when toggle is off
+            let disabled_caption = ElementHandle::find_by_accessible_label(&window, "Disabled").next();
+            assert!(
+                disabled_caption.is_some(),
+                "'Disabled' caption must be rendered in the tree when toggle is off"
+            );
+
+            // 4. Toggle back on and confirm row pitch returns
+            toggle_elem.invoke_accessible_default_action();
+            let kc0_back = get_keycap_y(&switcher_kc_label);
+            let kc1_back = get_keycap_y(&fallback_kc_label);
+            let pitch_back = kc1_back - kc0_back;
+            assert!(
+                (pitch_back - pitch_on).abs() <= TOLERANCE,
+                "Row pitch after toggling back on ({pitch_back}px) must match initial ({pitch_on}px)"
+            );
+
+            let _ = std::fs::remove_file(&save_path);
+        });
+    }
+
     /// The row pitch of one group, measured between two of its visible group headings.
     ///
     /// No element spans a row, so a row's height cannot be read directly. Consecutive keycaps sit
