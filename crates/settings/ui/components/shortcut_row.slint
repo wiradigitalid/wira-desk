@@ -80,6 +80,21 @@ export component ShortcutRow inherits Rectangle {
         root.percent_changed(next);
     }
 
+    public function commit_departure() {
+        if root.typed_text.is-float() {
+            let val = Math.round(root.typed_text.to-float());
+            if val >= root.percent_min && val <= root.percent_max {
+                root.percent_changed(val);
+            } else {
+                root.typed_text = "\{root.percent}";
+                root.editing_changed(root.percent);
+            }
+        } else {
+            root.typed_text = "\{root.percent}";
+            root.editing_changed(root.percent);
+        }
+    }
+
     changed percent => {
         root.typed_text = "\{root.percent}";
     }
@@ -269,6 +284,7 @@ export component ShortcutRow inherits Rectangle {
 
                             accessible-role: text;
                             accessible-label: root.accessible_label_input;
+                            accessible-value: root.typed_text;
                             accessible-action-set-value(val) => {
                                 root.typed_text = val;
                                 if val.is-float() {
@@ -283,29 +299,17 @@ export component ShortcutRow inherits Rectangle {
                             }
 
                             accepted => {
-                                if root.typed_text.is-float() {
-                                    root.percent_changed(Math.round(root.typed_text.to-float()));
-                                } else {
-                                    root.typed_text = "\{root.percent}";
-                                }
+                                root.commit_departure();
                                 self.clear-focus();
                             }
                             changed has-focus => {
                                 if !self.has-focus {
-                                    if root.typed_text.is-float() {
-                                        root.percent_changed(Math.round(root.typed_text.to-float()));
-                                    } else {
-                                        root.typed_text = "\{root.percent}";
-                                    }
+                                    root.commit_departure();
                                 }
                             }
                             key-pressed(event) => {
                                 if event.text == Key.Tab || event.text == Key.Backtab {
-                                    if root.typed_text.is-float() {
-                                        root.percent_changed(Math.round(root.typed_text.to-float()));
-                                    } else {
-                                        root.typed_text = "\{root.percent}";
-                                    }
+                                    root.commit_departure();
                                     return reject;
                                 }
                                 reject

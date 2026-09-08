@@ -814,7 +814,7 @@ specs:
     release: "0.5.0"
     prd: [wira-desk]
     size: S
-    status: open
+    status: closed
     # No SPEC.md by Phase 1's own rule at size S (SPEC-2/SPEC-3/SPEC-5/SPEC-6's precedent) -- the one
     # ticket below is the contract. Opened from the owner's live manual retest of PR #21's SPEC-6-02
     # fix, 2026-09-08. SPEC-6-02 fixed DEF-17 by clamping the STEPPER buttons' own boundary guards; the
@@ -822,6 +822,10 @@ specs:
     # is committed to the draft on Enter/blur/Tab rather than reverting to the previous value, and is
     # only refused later, at save. DEF-18 is that consequence, not a DEF-17 reopen: a different pair of
     # call sites (the field's departure paths, not the stepper buttons) in the same file.
+    spec_reviewed:
+      date: '2026-09-08'
+      sha: '05602b6'
+      lenses: [edge-case-hunter]
     depends_on: [SPEC-6]
     spec_folder: .scratch/spec-7-shortcuts-pane-third-follow-up/
     fr: [FR-15, FR-26]
@@ -832,4 +836,8 @@ specs:
         component: settings
         satisfies: [UC-4, UC-9]
         depends_on: []
-        tests: []
+        tests:
+          - shortcut_row_slint_snapshot::tests::typed_percentage_above_max_reverts_on_enter
+          - shortcut_row_slint_snapshot::tests::typed_percentage_below_min_reverts_on_enter
+          - shortcut_row_slint_snapshot::tests::typed_percentage_out_of_range_reverts_on_blur
+          - shortcut_row_slint_snapshot::tests::stack_row_typed_percentage_out_of_range_reverts_on_enter
