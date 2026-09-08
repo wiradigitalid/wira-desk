@@ -3,7 +3,7 @@ id: SPEC-5-01
 component: settings
 satisfies: [UC-4]
 blocked_by: []
-status: open
+status: done
 tests:
   - shortcut_row_slint_snapshot::tests::tooltip_does_not_overlap_the_row_title
   - shortcut_row_slint_snapshot::tests::tooltip_height_fits_its_own_text
@@ -22,34 +22,34 @@ extending up into and past the row's title line.
 
 **Blocked by:** None (can start immediately)
 
-- [ ] **Root-cause the current tooltip's size and placement in `crates/settings/ui/components/shortcut_row.slint`
+- [x] **Root-cause the current tooltip's size and placement in `crates/settings/ui/components/shortcut_row.slint`
       before changing anything.** Establish what currently sizes the tooltip's container — a fixed height on
       the element carrying the description, a default from whatever tooltip mechanism Slint 1.17 provides, or
       something else — rather than assuming a specific cause and patching blind.
-- [ ] The tooltip's rendered height fits its own text (one line, for the descriptions this pane currently
+- [x] The tooltip's rendered height fits its own text (one line, for the descriptions this pane currently
       ships) rather than a taller default box. A new snapshot test asserts the tooltip element's rendered
       height is close to its text's natural line height, not a fixed larger constant.
-- [ ] The tooltip no longer overlaps the row's title when shown on hover or keyboard focus. A new snapshot
+- [x] The tooltip no longer overlaps the row's title when shown on hover or keyboard focus. A new snapshot
       test asserts the tooltip's rendered bounds do not intersect the title `Text` element's bounds for at
       least one row exercised in the existing tooltip test
       (`description_renders_as_a_tooltip_not_a_visible_line`'s row is reasonable prior art to reuse).
-- [ ] Positioning follows how a tooltip conventionally behaves elsewhere — appearing beside or just below the
+- [x] Positioning follows how a tooltip conventionally behaves elsewhere — appearing beside or just below the
       hovered control, close-fitted to its own text — rather than a specific pixel offset the owner
       prescribed. The acceptance bar is "does not overlap the title" and "closely fits its own text," not a
       named position; use your own judgement for the concrete placement.
-- [ ] `SPEC-4-03`'s own tooltip guard
+- [x] `SPEC-4-03`'s own tooltip guard
       (`shortcut_row_slint_snapshot::tests::description_renders_as_a_tooltip_not_a_visible_line`) stays green
       and unweakened — this ticket changes the tooltip's size and position, not whether it exists as a
       tooltip rather than a permanently visible line.
-- [ ] The "fits its own text" check is exercised against the LONGEST description string this pane currently
+- [x] The "fits its own text" check is exercised against the LONGEST description string this pane currently
       ships, not only a short one-line example — a fix that fits a short description while still misfitting
       or clipping the longest one is not done. (Edge-case-hunter finding, resolved in this pass.)
-- [ ] A row near the bottom of the pane's visible area is explicitly considered: if the chosen tooltip
+- [x] A row near the bottom of the pane's visible area is explicitly considered: if the chosen tooltip
       placement can open downward past what is visible without scrolling, either constrain it to open upward
       when there is no room below, or say plainly in the closing report that this case was checked and is out
       of reach for this ticket's own test harness (a real viewport clip is not something a Slint snapshot test
       can see). Do not leave it unconsidered. (Edge-case-hunter finding, resolved in this pass.)
-- [ ] Full test suite green once, not only this ticket's own tests.
+- [x] Full test suite green once, not only this ticket's own tests.
 
 ## Out of scope, deliberately
 

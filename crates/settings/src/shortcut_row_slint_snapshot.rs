@@ -804,6 +804,187 @@ pub(crate) mod tests {
         });
     }
 
+    #[test]
+    fn tooltip_does_not_overlap_the_row_title() {
+        run_on_ui_thread(|| {
+            let (window, _model, save_path) = setup_shortcuts_window();
+
+            // Scroll to top
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::PointerScrolled {
+                    position: slint::LogicalPosition::new(300.0, 300.0),
+                    delta_x: 0.0,
+                    delta_y: 1200.0,
+                });
+
+            let desc = ShortcutField::Switcher.description();
+            let title_label = ShortcutField::Switcher.label();
+            let switcher_desc_label = theme::shortcut_description_label(title_label);
+
+            let switcher_block = ElementHandle::find_by_accessible_label(&window, &switcher_desc_label)
+                .next()
+                .expect("Switcher description block found");
+            let block_pos = switcher_block.absolute_position();
+            let block_sz = switcher_block.size();
+
+            // 1. Mouse hover: tooltip surfaces and does not intersect title bounds
+            let hover_pos = slint::LogicalPosition::new(
+                block_pos.x + block_sz.width / 2.0,
+                block_pos.y + block_sz.height / 2.0,
+            );
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::PointerMoved {
+                    position: hover_pos,
+                });
+
+            let title_elem = ElementHandle::find_by_accessible_label(&window, title_label)
+                .next()
+                .expect("Title element found");
+            let title_pos = title_elem.absolute_position();
+            let title_sz = title_elem.size();
+
+            let tooltip_elem = ElementHandle::find_by_accessible_label(&window, desc)
+                .next()
+                .expect("Tooltip element found on hover");
+            let tooltip_pos = tooltip_elem.absolute_position();
+            let tooltip_sz = tooltip_elem.size();
+
+            // Assert no intersection in 2D bounding boxes (y interval does not overlap title y interval)
+            let title_bottom = title_pos.y + title_sz.height;
+            let tooltip_bottom = tooltip_pos.y + tooltip_sz.height;
+            let y_overlaps = tooltip_pos.y < title_bottom && tooltip_bottom > title_pos.y;
+            let x_overlaps = tooltip_pos.x < (title_pos.x + title_sz.width)
+                && (tooltip_pos.x + tooltip_sz.width) > title_pos.x;
+            assert!(
+                !(x_overlaps && y_overlaps),
+                "Hover tooltip bounds ({tooltip_pos:?}, {tooltip_sz:?}) must not intersect title bounds ({title_pos:?}, {title_sz:?})"
+            );
+
+            // 2. Clear hover and verify with keyboard Tab focus
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::PointerMoved {
+                    position: slint::LogicalPosition::new(0.0, 0.0),
+                });
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::KeyPressed {
+                    text: slint::platform::Key::Tab.into(),
+                });
+
+            let kb_tooltip = ElementHandle::find_by_accessible_label(&window, desc)
+                .next()
+                .expect("Tooltip element found on keyboard focus");
+            let kb_tooltip_pos = kb_tooltip.absolute_position();
+            let kb_tooltip_sz = kb_tooltip.size();
+
+            let kb_y_overlaps = kb_tooltip_pos.y < title_bottom && (kb_tooltip_pos.y + kb_tooltip_sz.height) > title_pos.y;
+            let kb_x_overlaps = kb_tooltip_pos.x < (title_pos.x + title_sz.width)
+                && (kb_tooltip_pos.x + kb_tooltip_sz.width) > title_pos.x;
+            assert!(
+                !(kb_x_overlaps && kb_y_overlaps),
+                "Focus tooltip bounds must not intersect title bounds"
+            );
+
+            let _ = std::fs::remove_file(&save_path);
+        });
+    }
+
+    #[test]
+    fn tooltip_height_fits_its_own_text() {
+        run_on_ui_thread(|| {
+            let (window, _model, save_path) = setup_shortcuts_window();
+
+            // 1. Check a standard short description (Switcher: "Cycles windows of the active app on this monitor.")
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::PointerScrolled {
+                    position: slint::LogicalPosition::new(300.0, 300.0),
+                    delta_x: 0.0,
+                    delta_y: 1200.0,
+                });
+
+            let desc = ShortcutField::Switcher.description();
+            let title_label = ShortcutField::Switcher.label();
+            let switcher_desc_label = theme::shortcut_description_label(title_label);
+
+            let switcher_block = ElementHandle::find_by_accessible_label(&window, &switcher_desc_label)
+                .next()
+                .expect("Switcher description block found");
+            let block_pos = switcher_block.absolute_position();
+            let block_sz = switcher_block.size();
+
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::PointerMoved {
+                    position: slint::LogicalPosition::new(
+                        block_pos.x + block_sz.width / 2.0,
+                        block_pos.y + block_sz.height / 2.0,
+                    ),
+                });
+
+            let tooltip_elem = ElementHandle::find_by_accessible_label(&window, desc)
+                .next()
+                .expect("Tooltip element found for Switcher");
+            let tooltip_sz = tooltip_elem.size();
+
+            // Natural line height for 12px Segoe UI caption is ~14-16px, never the old unconstrained 42px
+            assert!(
+                tooltip_sz.height <= 20.0,
+                "Tooltip rendered height ({}) must fit its single-line text, not a stretched box (was 42px)",
+                tooltip_sz.height
+            );
+
+            // 2. Check the LONGEST description string shipped in this pane (SnapPercentBottom: 65 chars)
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::PointerMoved {
+                    position: slint::LogicalPosition::new(0.0, 0.0),
+                });
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::PointerScrolled {
+                    position: slint::LogicalPosition::new(300.0, 300.0),
+                    delta_x: 0.0,
+                    delta_y: -700.0,
+                });
+
+            let longest_desc = ShortcutField::SnapPercentBottom.description();
+            let longest_label = ShortcutField::SnapPercentBottom.label();
+            let longest_block_label = theme::shortcut_description_label(longest_label);
+
+            let longest_block = ElementHandle::find_by_accessible_label(&window, &longest_block_label)
+                .next()
+                .expect("SnapPercentBottom description block found");
+            let l_pos = longest_block.absolute_position();
+            let l_sz = longest_block.size();
+
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::PointerMoved {
+                    position: slint::LogicalPosition::new(
+                        l_pos.x + l_sz.width / 2.0,
+                        l_pos.y + l_sz.height / 2.0,
+                    ),
+                });
+
+            let l_tooltip = ElementHandle::find_by_accessible_label(&window, longest_desc)
+                .next()
+                .expect("Tooltip element found for longest description");
+            let l_tooltip_sz = l_tooltip.size();
+
+            assert!(
+                l_tooltip_sz.height <= 20.0,
+                "Longest description tooltip height ({}) must still fit single-line height, not wrap/stretch",
+                l_tooltip_sz.height
+            );
+
+            let _ = std::fs::remove_file(&save_path);
+        });
+    }
+
     /// The row pitch of one group, measured between two of its visible group headings.
     ///
     /// No element spans a row, so a row's height cannot be read directly. Consecutive keycaps sit
