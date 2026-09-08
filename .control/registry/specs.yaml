@@ -682,3 +682,69 @@ specs:
           - shortcut_row_slint_snapshot::tests::an_unconsumed_key_still_reaches_rust_after_focus_moves_into_a_row
           - shortcut_row_slint_snapshot::tests::tab_is_forwarded_to_rust_before_it_is_rejected_for_focus_traversal
           - shortcut_row_slint_snapshot::tests::description_renders_as_a_tooltip_not_a_visible_line
+
+  - id: SPEC-5
+    release: "0.5.0"
+    prd: [wira-desk]
+    size: S
+    status: open
+    # No SPEC.md by Phase 1's own rule at size S (SPEC-2/SPEC-3's precedent) -- the three tickets
+    # below are the contract. Opened from the owner's live manual test of the current build,
+    # 2026-09-08, post-merge of PR #19 (the DEC-017 mandate). Two findings from that test are
+    # confirmations, not defects, and change nothing here: DEF-9 (fixed by SPEC-4-05) and SPEC-4-01/
+    # SPEC-4-02's own delivered shape both read back exactly as intended, per the owner's own words.
+    # The three tickets below are the remaining findings that ARE actionable, all against surface
+    # `SPEC-4-03`/`SPEC-4-04` already shipped: `DEF-14` and `DEF-15` both touch the row markup
+    # `SPEC-4-03` last touched and are sequenced together for that reason; `DEF-13` is a distinct
+    # symptom on the percentage control `SPEC-4-04` already fixed once (typed digits now land, but a
+    # multi-digit value cannot be finished before the field reverts mid-keystroke) and is sequenced
+    # last, matching `SPEC-4`'s own precedent of landing a defect fix after the row polish around it
+    # settles.
+    #
+    # Reviewed by the coordinator directly (bmad-review, edge-case-hunter) at contract-authoring
+    # time -- 5 findings, all resolved in the same pass: SPEC-5-01's tooltip-fits-its-text criterion
+    # only naming a short description (now also checked against the pane's longest one) and no
+    # criterion for a bottom-of-pane row's tooltip overflowing downward (now named, with the real
+    # viewport-clip limit of a Slint snapshot test stated rather than hidden); SPEC-5-02's fixed row
+    # height never checked against the pane's overall vertical fit at the shell's default window size
+    # (SPEC-4-03's own no-scroll guard is width-only); SPEC-5-03 only exercising forward typing, not
+    # a backspace/deletion sequence down to a shorter out-of-range value, and only one percent-bound
+    # family (never both the 1-99 and 10-100 rows this pane actually ships). No deferred findings.
+    spec_reviewed:
+      date: '2026-09-08'
+      sha: '55f7b3b'
+      lenses: [edge-case-hunter]
+    depends_on: [SPEC-4]
+    spec_folder: .scratch/spec-5-shortcuts-pane-follow-up/
+    fr: [FR-15, FR-26]
+    tickets:
+      - id: SPEC-5-01
+        title: "Defect DEF-14 — hover tooltip renders oversized and overlaps the row's title"
+        spec_folder: .scratch/spec-5-shortcuts-pane-follow-up/
+        component: settings
+        satisfies: [UC-4]
+        depends_on: []
+        # Planned by /to-tickets, not yet written or passing -- named here so the ticket's
+        # acceptance criteria have a concrete test identity from birth, per this repo's own
+        # dense per-behaviour naming convention (SPEC-1's precedent).
+        tests:
+          - shortcut_row_slint_snapshot::tests::tooltip_does_not_overlap_the_row_title
+          - shortcut_row_slint_snapshot::tests::tooltip_height_fits_its_own_text
+      - id: SPEC-5-02
+        title: "Defect DEF-15 — row container height changes between a row's toggle-on and toggle-off state"
+        spec_folder: .scratch/spec-5-shortcuts-pane-follow-up/
+        component: settings
+        satisfies: [UC-4]
+        depends_on: [SPEC-5-01]
+        tests:
+          - shortcut_row_slint_snapshot::tests::row_height_is_identical_toggle_on_and_toggle_off
+      - id: SPEC-5-03
+        title: "Defect DEF-13 — a percentage field reverts mid-keystroke before a multi-digit value can be finished"
+        spec_folder: .scratch/spec-5-shortcuts-pane-follow-up/
+        component: settings
+        satisfies: [UC-4, UC-9]
+        depends_on: [SPEC-5-02]
+        tests:
+          - shortcut_row_slint_snapshot::tests::a_multi_digit_keystroke_sequence_keeps_each_intermediate_digit_before_departure
+          - shortcut_row_slint_snapshot::tests::a_real_keystroke_sequence_commits_a_typed_percentage
+          - shortcut_row_slint_snapshot::tests::a_real_keystroke_sequence_out_of_range_is_refused

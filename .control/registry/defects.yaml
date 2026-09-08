@@ -632,3 +632,114 @@ defects:
       that `false` explains why the branch folds away, and the shipped keystroke path is not the
       place to add a test hook.
     owner: repo owner
+
+  - id: DEF-13
+    title: A percentage field resets to its last committed value mid-keystroke, before the user can finish typing a multi-digit number
+    status: open
+    severity: medium
+    component: settings
+    violates: [SPEC-4-04]
+    found_in: "0.4.0"
+    found_by: Owner live manual test on the current build, 2026-09-08 (post-merge of PR #19 / DEC-017 mandate, after SPEC-4-04's fix for DEF-5)
+    tests: []
+    summary: >-
+      The owner reports that typing a multi-digit value by hand into a Shortcuts-pane percentage field
+      (`crates/settings/ui/components/shortcut_row.slint`'s `pct_input`) -- for example typing `5` then `5`
+      again to reach `55` -- does not reach the second digit: the field snaps back to its last committed
+      value as soon as the first digit lands, before a second keystroke can be typed. `SPEC-4-04` fixed
+      `DEF-5`'s symptom of typed digits having no effect at all; this is a different symptom on the same
+      control, visible only once digits DO land -- an intermediate, not-yet-complete typed value is treated
+      as final and reverted rather than left alone until the field is departed.
+    why_it_hid: >-
+      `SPEC-4-04`'s own tests (`a_real_keystroke_sequence_commits_a_typed_percentage` and its siblings) type
+      a complete valid value in one simulated sequence and then assert on departure; none of them asserts on
+      the INTERMEDIATE state after only the first character of a multi-digit number, which is exactly the
+      window this report describes. `pct_input`'s `edited` callback (`shortcut_row.slint`) fires on every
+      keystroke and calls `root.editing_changed(...)` whenever the in-progress text already parses as a
+      float -- a single digit already does -- but whether anything downstream of that per-keystroke callback
+      writes back into the field before the user finishes typing is not yet established; this row does not
+      name a cause it has not verified.
+    impact: >-
+      A user typing a two-digit (or longer) percentage by hand cannot complete the value if the field reacts
+      to the first digit before the second is pressed -- the opposite of `SPEC-2-01`'s "type freetext, with
+      validation" acceptance criterion, and a regression in usability even though `SPEC-4-04`'s own tests
+      (which never simulate a multi-digit sequence one keystroke at a time with an assertion in between) stay
+      green throughout.
+    fix_direction: >-
+      Root-cause with `wdi-systematic-debugging` before proposing a fix, per this repo's standing rule for a
+      bug with an unknown cause -- do not guess at the `edited`/`editing_changed` interaction and patch
+      blind. Whatever the cause, the fix must be provable by a test that types a multi-digit value ONE
+      keystroke at a time and asserts the field still reads the partial, in-progress text after each
+      keystroke before the last -- not only the fully-typed value after the whole sequence, which is what
+      `SPEC-4-04`'s existing tests already cover and which must stay green and unweakened.
+    owner: repo owner
+
+  - id: DEF-14
+    title: A row's hover tooltip renders as an oversized, near-transparent block that covers the row's title instead of a normal tooltip
+    status: open
+    severity: low
+    component: settings
+    violates: [SPEC-4-03]
+    found_in: "0.4.0"
+    found_by: Owner live manual test on the current build, 2026-09-08 (post-merge of PR #19 / DEC-017 mandate)
+    tests: []
+    summary: >-
+      `SPEC-4-03` moved a shortcut row's description from a permanently visible line to a hover/focus
+      tooltip, and the tooltip does appear on hover as intended. The owner reports its rendered shape is
+      much taller than the one line of text it holds, and because the shape itself is near-transparent with
+      only a thin outline, the extra height reads as a faint box overlapping the row's title rather than a
+      normal tooltip that sits beside or above the text without touching it. Screenshot on file: the
+      "Fallback switch shortcut" row's tooltip, on hover, visibly extends up into and past the row's own
+      title line.
+    why_it_hid: >-
+      `SPEC-4-03`'s own guard
+      (`shortcut_row_slint_snapshot::tests::description_renders_as_a_tooltip_not_a_visible_line`) asserts
+      that the description text is absent from the always-rendered tree and present as a tooltip/accessible
+      description -- it does not assert anything about the tooltip's rendered height or its position relative
+      to the title, so a tooltip that exists but is oversized and misplaced still passes.
+    impact: >-
+      Cosmetic, but on the row the owner tested it visibly degrades readability of the row it is meant to
+      describe -- the opposite of the ticket's own intent (the previous permanently-visible, truncated
+      description was the problem `SPEC-4-03` set out to fix). No functional loss: the tooltip's text is
+      still reachable by hover or keyboard focus.
+    fix_direction: >-
+      Size the tooltip to its content (or close to it) rather than to whatever default the current markup
+      gives it, and position it so it does not overlap the row's title -- the owner asks that it read as
+      close as practical to how a tooltip behaves in other native applications generally (appearing beside or
+      just below the hovered control, close-fitted to its text, not overlapping neighbouring rows). Exact
+      layout is left to the ticket; the acceptance bar is "no longer overlaps the title" plus "closely fits
+      its own text," not a specific pixel size.
+    owner: repo owner
+
+  - id: DEF-15
+    title: A row's container grows and shrinks noticeably when its toggle is switched off and on, because of the "Disabled" caption's own height rather than a fixed row height
+    status: open
+    severity: low
+    component: settings
+    violates: [SPEC-4-03]
+    found_in: "0.4.0"
+    found_by: Owner live manual test on the current build, 2026-09-08 (post-merge of PR #19 / DEC-017 mandate)
+    tests: []
+    summary: >-
+      Switching a shortcut row's toggle off shows a "Disabled" caption under the row's title, which is
+      wanted, but the row's own container grows taller to fit it and shrinks back when the toggle is
+      switched back on -- so every row's height changes depending on its own toggle state, rather than
+      staying constant. Screenshot on file: the same "Switching" group shown toggle-on (compact row height)
+      and toggle-off (visibly taller rows, extra space below the "Disabled" caption before the row ends).
+    why_it_hid: >-
+      No test in `SPEC-4-03` asserts row height while toggling a row off — its own
+      `row_height_is_independent_of_description_length` guard is about description length at a FIXED toggle
+      state, not about height across the two toggle states.
+    impact: >-
+      Cosmetic. Toggling any one row off shifts the vertical position of every row below it in the same
+      group, which the owner finds visually inconsistent rather than broken.
+    fix_direction: >-
+      An idea from the owner, offered as a direction rather than a decided design: give the row a little more
+      base height than its current toggle-on height, calling it done at a height that comfortably fits
+      "Disabled" close against the row's lower edge without growing further when the caption appears -- so the
+      container is the same height in both states, and the caption's appearance/disappearance is what
+      changes, not the row's own height. The builder is free to land on a different concrete height as long
+      as the row height is IDENTICAL toggle-on vs toggle-off; a new test asserting that equality is the
+      acceptance bar, not any specific pixel value. Sequenced with `DEF-14` since both touch the same row
+      markup `SPEC-4-03` last touched.
+    owner: repo owner
