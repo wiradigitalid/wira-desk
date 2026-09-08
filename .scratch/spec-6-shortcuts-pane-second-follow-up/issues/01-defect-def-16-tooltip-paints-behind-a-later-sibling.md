@@ -46,15 +46,16 @@ control on the same row markup)
       (`tooltip_does_not_overlap_the_row_title`, `tooltip_height_fits_its_own_text`) stay green and
       unweakened — this ticket changes paint order, not the tooltip's size or its own-row
       positioning.
-- [ ] `OQ-38` (`.control/questions/assumptions.md`) — whether the tooltip's anchor-below-the-row
-      positioning can read as "too far from the cursor" when hovering near the top of a row's
-      title — is a separate, deferred question and is OUT OF SCOPE for this ticket. Do not change
-      the tooltip's vertical offset to chase it; the acceptance bar here is paint order, not
-      distance from the cursor.
+- [ ] While fixing paint order, the builder MAY also make the tooltip's positioning cursor-aware
+      (or otherwise adaptive — flipping to open upward or sideways near a screen edge) rather than
+      always anchoring to the row's bottom edge, since it is the same underlying "fixed-direction,
+      anchor-based" tooltip design that produces `DEF-16` in the first place. This is a judgement
+      call, not a required acceptance criterion — the required bar for this ticket is paint order,
+      not distance from the cursor — but is worth doing in the same pass if the paint-order fix
+      already changes how the tooltip is anchored.
 - [ ] Full test suite green once, not only this ticket's own tests.
 
 ## Out of scope, deliberately
 
-- `OQ-38` — cursor-distance question, deferred, not this ticket's fix.
 - `DEF-17` (stepper buttons freezing on an out-of-range typed value) — a different control on the
   same row, `SPEC-6-02`.
