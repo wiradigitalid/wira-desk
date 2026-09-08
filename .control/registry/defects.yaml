@@ -732,13 +732,23 @@ defects:
 
   - id: DEF-16
     title: A row's hover tooltip paints behind a later sibling — the next row's controls, or the Key Check panel — instead of above them
-    status: open
+    status: fixed
     severity: low
     component: settings
     violates: [SPEC-5-01]
     found_in: "0.5.0"
     found_by: Owner live manual retest of SPEC-5-01's fix, 2026-09-08 (post-merge of PR #20 / DEC-019 mandate)
-    tests: []
+    tests:
+      - shortcut_row_slint_snapshot::tests::tooltip_paints_above_the_next_row_when_it_overflows_into_it
+      - shortcuts_pane_slint_snapshot::tests::the_last_rows_tooltip_paints_above_the_key_check_panel
+    fixed_in: SPEC-6-01
+    fixed_by: >-
+      Root-caused that Slint's `z` property only orders immediate children of the same element at compile time,
+      while `PopupWindow.show()` steals keyboard focus from main window items, causing recursive focus oscillation loops.
+      Fixed by moving the tooltip presentation to a dedicated window-level floating overlay in `MainWindow`'s mica content area,
+      painted after `VerticalLayout` (which hosts both `ScrollView` rows and `KeyCheck`). Tooltip trigger events bubble via callbacks
+      (`ShortcutRow -> ShortcutGroup -> ShortcutsPane -> MainWindow`) with viewport-relative coordinate translation,
+      rendering the tooltip on top of all sibling rows and the KeyCheck panel without stealing keyboard focus or disrupting Slint's repeater.
     summary: >-
       `SPEC-5-01` fixed `DEF-14`'s oversized/transparent tooltip, but the owner's retest of the resized
       tooltip surfaces the layout question `DEF-14`'s own residual anticipated and could not settle: the
@@ -781,13 +791,25 @@ defects:
 
   - id: DEF-17
     title: Typing a percentage past its boundary freezes both stepper buttons on that row
-    status: open
+    status: fixed
     severity: medium
     component: settings
     violates: [SPEC-2-01, SPEC-5-03]
     found_in: "0.5.0"
     found_by: Owner live manual retest of SPEC-5-03's fix, 2026-09-08 (post-merge of PR #20 / DEC-019 mandate)
-    tests: []
+    tests:
+      - shortcut_row_slint_snapshot::tests::stepper_recovers_from_an_above_max_typed_value
+      - shortcut_row_slint_snapshot::tests::stepper_recovers_from_a_below_min_typed_value
+      - shortcut_row_slint_snapshot::tests::stack_row_stepper_recovers_from_an_out_of_range_typed_value
+      - shortcut_row_slint_snapshot::tests::a_real_keystroke_sequence_commits_a_typed_percentage
+      - shortcut_row_slint_snapshot::tests::a_multi_digit_keystroke_sequence_keeps_each_intermediate_digit_before_departure
+    fixed_in: SPEC-6-02
+    fixed_by: >-
+      Updated `step_plus` and `step_minus` in `crates/settings/ui/components/shortcut_row.slint` to clamp `raw` value into
+      `[percent_min, percent_max]`. On an above-max typed value (e.g. 101 for a 1-99 row, or 150 for 10-100 stack), clicking `-`
+      steps down directly to `percent_max` (recovering from frozen state), and `+` stays clamped at `percent_max`. On a below-min
+      typed value (e.g. 0 for 1-99, or 5 for 10-100), clicking `+` steps up directly to `percent_min`, and `-` stays clamped at
+      `percent_min`. Tested symmetrically for both above-max and below-min bounds across both the 1-99 snap family and the 10-100 stack family.
     summary: >-
       The owner reports that typing a value past a percentage field's own bound (e.g. `101` where the
       bound is 1-99) is accepted into the field as free text, exactly as `SPEC-5-03` intended so a

@@ -1,16 +1,22 @@
 ---
 type: mandate
 id: DEC-020
-status: accepted
+status: applied
 touches:
   - .control/decisions/DEC-020-autopilot-mandate-for-spec-6-delivery.md
   - .control/memlog/autopilot-DEC-020.md
   - .control/registry/decisions.yaml
   - .control/registry/defects.yaml
   - .control/registry/specs.yaml
+  - .scratch/smoke-dec-020.md
   - .scratch/spec-6-shortcuts-pane-second-follow-up/issues/01-defect-def-16-tooltip-paints-behind-a-later-sibling.md
   - .scratch/spec-6-shortcuts-pane-second-follow-up/issues/02-defect-def-17-stepper-freezes-on-out-of-range-typed-value.md
+  - 3p.md
+  - crates/settings/src/shortcut_row_slint_snapshot.rs
+  - crates/settings/src/shortcuts_pane_slint_snapshot.rs
   - crates/settings/ui/components/shortcut_row.slint
+  - crates/settings/ui/main_window.slint
+  - crates/settings/ui/panes/shortcuts_pane.slint
 supersedes: null
 superseded_by: null
 created: '2026-09-08'
