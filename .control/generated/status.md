@@ -30,7 +30,7 @@ work_progress:
   tickets_total: 5
   work_progress: 100%
 - spec: SPEC-5
-  status: open
+  status: closed
   tickets_done: 3
   tickets_total: 3
   work_progress: 100%

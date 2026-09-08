@@ -8,12 +8,17 @@ date: 2026-09-08
 
 ## Resume
 
-Iteration: 1 at 43a050e
-Run branch: autopilot/DEC-019, PR not yet open
-Stopped at: in progress
-Blocked: —
-Parked: —
-Next: Verification & Smoke Test (all 3 tickets done)
+**The run is finished.** This block is its end state, not a step that never came.
+
+- `SPEC-5` closed — all three tickets (`SPEC-5-01`, `SPEC-5-02`, `SPEC-5-03`) `done`. All defects (`DEF-13`, `DEF-14`, `DEF-15`) `fixed`.
+- Scope: all open tickets and specs completed.
+- Run branch: `autopilot/DEC-019`. One PR opened from this branch.
+- Suite: **563 passed / 0 failed / 2 ignored**; `cargo clippy --workspace --all-targets -- -D warnings`, `cargo fmt --all`, `validate.py --generate` all clean.
+- Publication hygiene: `scripts/verify-public-export.ps1` passes 10/10 checks.
+- Smoke test: automated agent run (`build.ps1 -Mode prod`) completed with 11 PASS / 0 FAIL / 0 NOT VERIFIABLE recorded in `.scratch/smoke-dec-019.md`.
+- Blocked: —
+- Parked: —
+- The loop is cancelled. Mandate `DEC-019` is `applied`. The owner merges; the run never does.
 
 ## Decisions
 

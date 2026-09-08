@@ -1,11 +1,20 @@
 ---
 type: mandate
 id: DEC-019
-status: accepted
+status: applied
 touches:
   - .control/decisions/DEC-019-autopilot-mandate-for-spec-5-delivery.md
   - .control/memlog/autopilot-DEC-019.md
   - .control/registry/decisions.yaml
+  - .control/registry/defects.yaml
+  - .control/registry/specs.yaml
+  - .scratch/smoke-dec-019.md
+  - .scratch/spec-5-shortcuts-pane-follow-up/issues/01-defect-def-14-tooltip-oversized-and-overlaps-title.md
+  - .scratch/spec-5-shortcuts-pane-follow-up/issues/02-defect-def-15-row-height-changes-with-toggle-state.md
+  - .scratch/spec-5-shortcuts-pane-follow-up/issues/03-defect-def-13-percentage-field-reverts-mid-keystroke.md
+  - crates/settings/src/main.rs
+  - crates/settings/src/shortcut_row_slint_snapshot.rs
+  - crates/settings/ui/components/shortcut_row.slint
 supersedes: null
 superseded_by: null
 created: '2026-09-08'

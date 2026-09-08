@@ -687,7 +687,7 @@ specs:
     release: "0.5.0"
     prd: [wira-desk]
     size: S
-    status: open
+    status: closed
     # No SPEC.md by Phase 1's own rule at size S (SPEC-2/SPEC-3's precedent) -- the three tickets
     # below are the contract. Opened from the owner's live manual test of the current build,
     # 2026-09-08, post-merge of PR #19 (the DEC-017 mandate). Two findings from that test are

@@ -635,13 +635,20 @@ defects:
 
   - id: DEF-13
     title: A percentage field resets to its last committed value mid-keystroke, before the user can finish typing a multi-digit number
-    status: open
+    status: fixed
     severity: medium
     component: settings
     violates: [SPEC-4-04]
     found_in: "0.4.0"
     found_by: Owner live manual test on the current build, 2026-09-08 (post-merge of PR #19 / DEC-017 mandate, after SPEC-4-04's fix for DEF-5)
-    tests: []
+    tests:
+      - shortcut_row_slint_snapshot::tests::a_multi_digit_keystroke_sequence_keeps_each_intermediate_digit_before_departure
+      - shortcut_row_slint_snapshot::tests::a_real_keystroke_sequence_commits_a_typed_percentage
+      - shortcut_row_slint_snapshot::tests::a_real_keystroke_sequence_out_of_range_is_refused
+    fixed_in: SPEC-5-03
+    fixed_by: >-
+      Guarded typed_text against external sync during focus via is_editing_pct, and isolated live
+      KeyCheck updates to sync_key_check in main.rs so row models are not recreated mid-typing.
     summary: >-
       The owner reports that typing a multi-digit value by hand into a Shortcuts-pane percentage field
       (`crates/settings/ui/components/shortcut_row.slint`'s `pct_input`) -- for example typing `5` then `5`
@@ -676,13 +683,19 @@ defects:
 
   - id: DEF-14
     title: A row's hover tooltip renders as an oversized, near-transparent block that covers the row's title instead of a normal tooltip
-    status: open
+    status: fixed
     severity: low
     component: settings
     violates: [SPEC-4-03]
     found_in: "0.4.0"
     found_by: Owner live manual test on the current build, 2026-09-08 (post-merge of PR #19 / DEC-017 mandate)
-    tests: []
+    tests:
+      - shortcut_row_slint_snapshot::tests::tooltip_does_not_overlap_the_row_title
+      - shortcut_row_slint_snapshot::tests::tooltip_height_fits_its_own_text
+    fixed_in: SPEC-5-01
+    fixed_by: >-
+      Sized tooltip to tooltip_layout.preferred-height and capped width at 480px, fitting single-line
+      text (~22px height) with elevated background and clear stroke.
     summary: >-
       `SPEC-4-03` moved a shortcut row's description from a permanently visible line to a hover/focus
       tooltip, and the tooltip does appear on hover as intended. The owner reports its rendered shape is
@@ -713,13 +726,18 @@ defects:
 
   - id: DEF-15
     title: A row's container grows and shrinks noticeably when its toggle is switched off and on, because of the "Disabled" caption's own height rather than a fixed row height
-    status: open
+    status: fixed
     severity: low
     component: settings
     violates: [SPEC-4-03]
     found_in: "0.4.0"
     found_by: Owner live manual test on the current build, 2026-09-08 (post-merge of PR #19 / DEC-017 mandate)
-    tests: []
+    tests:
+      - shortcut_row_slint_snapshot::tests::row_height_is_identical_toggle_on_and_toggle_off
+    fixed_in: SPEC-5-02
+    fixed_by: >-
+      Held ShortcutRow container at min-height 53px, keeping keycap pitch constant at 54.0px in both
+      toggle-on and toggle-off states.
     summary: >-
       Switching a shortcut row's toggle off shows a "Disabled" caption under the row's title, which is
       wanted, but the row's own container grows taller to fit it and shrinks back when the toggle is
