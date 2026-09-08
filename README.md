@@ -15,18 +15,25 @@ Windows 11 as one lightweight, keyboard-driven tray daemon.
   stack three windows, each with one dedicated keyboard shortcut instead of a mouse drag or menu.
 - The one third-party tool that came close to same-app window cycling had been unmaintained for
   years, so this exists to fill that specific gap.
+- **A self-contained alternative to PowerToys FancyZones for zone-based snapping**, for anyone who
+  wants that but not a second tray app to keep running: halves, thirds, and a per-edge custom
+  percentage (`Ctrl+Alt+Shift+Left/Right/Up/Down`, `Ctrl+Alt+1/2/3`) live in the same daemon
+  already doing window cycling, with no separate zone editor to configure.
 
 ## Default shortcuts
 
-All of these are remappable from the Settings app.
+All of these are remappable, and can be individually turned on or off, from the Settings app.
 
 | Shortcut | Action |
 |---|---|
 | `` Win + ` `` | Cycle windows of the app you're currently using (e.g. Chrome window 1 → Chrome window 2 → ...) |
+| `` Alt + ` `` | Fallback cycling shortcut, for when the primary one collides with another app |
 | `Ctrl+Alt+Left/Right/Up/Down` | Snap the window to that half of the screen (50%) |
+| `Ctrl+Alt+Shift+Left/Right/Up/Down` | Snap the window to that edge at a percentage you set per direction in Settings |
+| `Ctrl+Alt+1/2/3` | Snap the window to the left, middle, or right third of the screen |
 | `Ctrl+Alt+Enter` | Maximize the window to full screen |
 | `Ctrl+Alt+Shift+Enter` | Move the window to the next monitor (multi-monitor setups) |
-| `Ctrl+Alt+Shift+Down` | Stack 3 windows at 50% width each — useful on a small monitor when you still want another window visible |
+| `Ctrl+Alt+Shift+S` | Stack 3 windows at a configurable width each — useful on a small monitor when you still want another window visible |
 
 ## About
 
@@ -50,7 +57,7 @@ Download `WiraDesk-<version>-x64-setup.exe` from the
 Verify it against the published `SHA256SUMS` first:
 
 ```powershell
-Get-FileHash .\WiraDesk-0.1.4-x64-setup.exe -Algorithm SHA256
+Get-FileHash .\WiraDesk-0.2.0-x64-setup.exe -Algorithm SHA256
 ```
 
 The installer needs Administrator, installs to `%ProgramFiles%\Wira Desk`, and offers no per-user
@@ -123,7 +130,7 @@ defaults.
 
 ## Status
 
-Pre-release (`0.1.4`). Behavior and packaging may change. Not code-signed yet, so Windows
+Pre-release (`0.2.0`). Behavior and packaging may change. Not code-signed yet, so Windows
 SmartScreen and the UAC prompt will show an unverified publisher warning - verify the published
 `SHA256SUMS` before running.
 

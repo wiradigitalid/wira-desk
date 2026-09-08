@@ -18,9 +18,7 @@ owner decides.
 
 ## [Unreleased]
 
-Needs a minor bump (0.2.0) once shipped: new behaviour, new settings, and one shipped default
-changes. Not yet released — tracked here per `AGENTS.md`'s versioning rule until the owner bumps
-`Cargo.toml`.
+## [0.2.0] - 2026-09-08
 
 ### Added
 
@@ -28,6 +26,11 @@ changes. Not yet released — tracked here per `AGENTS.md`'s versioning rule unt
   per direction in Settings, instead of the fixed half (`Ctrl+Alt+Shift+Left/Right/Up/Down`).
 - Snap to thirds: snap the active window to the left, middle, or right third of the screen
   (`Ctrl+Alt+1/2/3`).
+- Per-action shortcut on/off: every remappable shortcut — not just Overlapping Stack, previously
+  the only one with a switch of its own — now has its own enable/disable control in Settings.
+  Turning one off drops its chord from the keyboard hook entirely, so the key combination reaches
+  whatever app is focused unchanged, exactly as if Wira Desk were not installed; the stored chord
+  itself is untouched, and turning the action back on needs no re-entry.
 
 ### Changed
 
