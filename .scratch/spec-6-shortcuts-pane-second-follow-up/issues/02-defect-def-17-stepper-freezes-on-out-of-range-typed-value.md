@@ -3,7 +3,7 @@ id: SPEC-6-02
 component: settings
 satisfies: [UC-4, UC-9]
 blocked_by: []
-status: open
+status: done
 tests:
   - shortcut_row_slint_snapshot::tests::stepper_recovers_from_an_above_max_typed_value
   - shortcut_row_slint_snapshot::tests::stepper_recovers_from_a_below_min_typed_value
@@ -26,7 +26,7 @@ root cause is already established there, not left for this ticket to find.
 **Blocked by:** None (can start immediately; independent of `SPEC-6-01`, which touches a different
 control on the same row markup)
 
-- [ ] **Confirm the established root cause before changing anything**: `step_plus` and
+- [x] **Confirm the established root cause before changing anything**: `step_plus` and
       `step_minus` in `crates/settings/ui/components/shortcut_row.slint` (currently lines 67 and
       74) each read `base = root.current_value()` and set `next = base` (i.e. leave the value
       UNCHANGED) whenever their boundary guard is false. Both guards assume `base` is already
@@ -34,24 +34,24 @@ control on the same row markup)
       SPEC-5-03` let free-typed text past that boundary sit in `typed_text` uncommitted — and
       `app.rs::set_percent` (currently line 981) stores whatever value is committed with no
       clamping, so an out-of-range value is not corrected even once departure commits it.
-- [ ] Clamp `base` into `[percent_min, percent_max]` before applying each guard, rather than
+- [x] Clamp `base` into `[percent_min, percent_max]` before applying each guard, rather than
       assuming it is already there — an above-max value steps DOWN to `percent_max` on the next
       `-` press (and stays refused on `+`, correctly, since it is now exactly at the max); a
       below-min value steps UP to `percent_min` on the next `+` press symmetrically.
-- [ ] A new test types an ABOVE-max value (e.g. `101` on a 1-99 row) and clicks each stepper
+- [x] A new test types an ABOVE-max value (e.g. `101` on a 1-99 row) and clicks each stepper
       button, asserting the row recovers a value inside bounds rather than staying frozen.
-- [ ] A new test types a BELOW-min value (e.g. `0` on a 1-99 row, or below 10 on the 10-100 Stack
+- [x] A new test types a BELOW-min value (e.g. `0` on a 1-99 row, or below 10 on the 10-100 Stack
       row) and does the same — both directions, not only the one the owner happened to type.
       (Fixing only the above-max side because it is the one reported risks shipping a fix that
       still freezes below the minimum.)
-- [ ] The above-max recovery test is also run against the Stack row's 10-100 bound family, not only
+- [x] The above-max recovery test is also run against the Stack row's 10-100 bound family, not only
       a 1-99 `Snap to custom` row — `DEF-13`'s own precedent named this exact family split as a
       candidate the fix must not assume away, and it applies here identically.
-- [ ] `SPEC-5-03`'s existing tests (multi-digit keystroke retention, valid-value commit-on-departure,
+- [x] `SPEC-5-03`'s existing tests (multi-digit keystroke retention, valid-value commit-on-departure,
       out-of-range-refused-at-save) stay green and unweakened — this ticket is about the STEPPER
       buttons' own boundary guards, not the typed-text retention or save-time validation paths
       those already cover.
-- [ ] Full test suite green once, not only this ticket's own tests.
+- [x] Full test suite green once, not only this ticket's own tests.
 
 ## Out of scope, deliberately
 

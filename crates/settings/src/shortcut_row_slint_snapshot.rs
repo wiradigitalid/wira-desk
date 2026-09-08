@@ -5,7 +5,9 @@ pub(crate) mod tests {
     use crate::app::{Pane, SaveFeedback, SettingsModel, ShortcutField};
     use crate::theme;
     use crate::{bind_callbacks, sync_model_to_ui, MainWindow};
-    use i_slint_backend_testing::{ElementHandle, TestingBackend, TestingBackendOptions};
+    use i_slint_backend_testing::{
+        ElementHandle, ElementRoot, TestingBackend, TestingBackendOptions,
+    };
     use shared::Config;
     use slint::ComponentHandle;
     use std::cell::RefCell;
@@ -804,6 +806,227 @@ pub(crate) mod tests {
     }
 
     #[test]
+    fn stepper_recovers_from_an_above_max_typed_value() {
+        run_on_ui_thread(|| {
+            let (window, model, save_path) = setup_shortcuts_window();
+
+            let mut fields =
+                ElementHandle::find_by_accessible_label(&window, "Snap percentage field");
+            let field_btn = fields.next().expect("Snap percentage field element found");
+            field_btn.invoke_accessible_default_action();
+
+            let mut inputs =
+                ElementHandle::find_by_accessible_label(&window, "Snap percentage input");
+            let left_input = inputs.next().expect("Snap percentage input element found");
+
+            // Type above-max '101' into percentage field
+            left_input.set_accessible_value("101");
+
+            // Minus button is clicked: DEF-17 fix ensures it recovers to percent_max (99)
+            let mut minus_buttons =
+                ElementHandle::find_by_accessible_label(&window, "Decrease snap percentage");
+            let minus_btn = minus_buttons
+                .next()
+                .expect("Decrease snap percentage button");
+            minus_btn.invoke_accessible_default_action();
+
+            let seen = ElementHandle::find_by_accessible_label(&window, "Snap percentage input")
+                .next()
+                .expect("Snap percentage input element found after '-'")
+                .accessible_value()
+                .unwrap_or_default();
+            assert_eq!(
+                seen.as_str(),
+                "99",
+                "clicking '-' after typing 101 must recover to max bound (99), not stay frozen at 101"
+            );
+            assert_eq!(
+                model.borrow().draft.snapping.percent_left,
+                99,
+                "draft must be updated to recovered value 99"
+            );
+
+            // Plus button is clicked at max: stays clamped at 99 (refused to exceed max)
+            let mut plus_buttons =
+                ElementHandle::find_by_accessible_label(&window, "Increase snap percentage");
+            let plus_btn = plus_buttons
+                .next()
+                .expect("Increase snap percentage button");
+            plus_btn.invoke_accessible_default_action();
+
+            let seen_after_plus =
+                ElementHandle::find_by_accessible_label(&window, "Snap percentage input")
+                    .next()
+                    .expect("Snap percentage input element found after '+'")
+                    .accessible_value()
+                    .unwrap_or_default();
+            assert_eq!(seen_after_plus.as_str(), "99");
+
+            // Save succeeds with the recovered value
+            window.invoke_save_clicked();
+            assert_eq!(model.borrow().saved.snapping.percent_left, 99);
+
+            let _ = std::fs::remove_file(&save_path);
+        });
+    }
+
+    #[test]
+    fn stepper_recovers_from_a_below_min_typed_value() {
+        run_on_ui_thread(|| {
+            let (window, model, save_path) = setup_shortcuts_window();
+
+            let mut fields =
+                ElementHandle::find_by_accessible_label(&window, "Snap percentage field");
+            let field_btn = fields.next().expect("Snap percentage field element found");
+            field_btn.invoke_accessible_default_action();
+
+            let mut inputs =
+                ElementHandle::find_by_accessible_label(&window, "Snap percentage input");
+            let left_input = inputs.next().expect("Snap percentage input element found");
+
+            // Type below-min '0' into percentage field
+            left_input.set_accessible_value("0");
+
+            // Plus button is clicked: DEF-17 fix ensures it recovers to percent_min (1)
+            let mut plus_buttons =
+                ElementHandle::find_by_accessible_label(&window, "Increase snap percentage");
+            let plus_btn = plus_buttons
+                .next()
+                .expect("Increase snap percentage button");
+            plus_btn.invoke_accessible_default_action();
+
+            let seen = ElementHandle::find_by_accessible_label(&window, "Snap percentage input")
+                .next()
+                .expect("Snap percentage input element found after '+'")
+                .accessible_value()
+                .unwrap_or_default();
+            assert_eq!(
+                seen.as_str(),
+                "1",
+                "clicking '+' after typing 0 must recover to min bound (1), not stay frozen at 0"
+            );
+            assert_eq!(
+                model.borrow().draft.snapping.percent_left,
+                1,
+                "draft must be updated to recovered value 1"
+            );
+
+            // Minus button is clicked at min: stays clamped at 1 (refused to go below min)
+            let mut minus_buttons =
+                ElementHandle::find_by_accessible_label(&window, "Decrease snap percentage");
+            let minus_btn = minus_buttons
+                .next()
+                .expect("Decrease snap percentage button");
+            minus_btn.invoke_accessible_default_action();
+
+            let seen_after_minus =
+                ElementHandle::find_by_accessible_label(&window, "Snap percentage input")
+                    .next()
+                    .expect("Snap percentage input element found after '-'")
+                    .accessible_value()
+                    .unwrap_or_default();
+            assert_eq!(seen_after_minus.as_str(), "1");
+
+            // Save succeeds with the recovered value
+            window.invoke_save_clicked();
+            assert_eq!(model.borrow().saved.snapping.percent_left, 1);
+
+            let _ = std::fs::remove_file(&save_path);
+        });
+    }
+
+    #[test]
+    fn stack_row_stepper_recovers_from_an_out_of_range_typed_value() {
+        run_on_ui_thread(|| {
+            let (window, model, save_path) = setup_shortcuts_window();
+
+            // Scroll down to Stack row (10-100 bound family)
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::PointerScrolled {
+                    position: slint::LogicalPosition::new(300.0, 300.0),
+                    delta_x: 0.0,
+                    delta_y: -600.0,
+                });
+
+            let stack_field = ElementHandle::find_by_accessible_label(
+                &window,
+                crate::theme::STACK_WIDTH_FIELD.name,
+            )
+            .next()
+            .expect("Stack width field element found");
+            stack_field.invoke_accessible_default_action();
+
+            let stack_input = ElementHandle::find_by_accessible_label(
+                &window,
+                crate::theme::STACK_WIDTH_INPUT.name,
+            )
+            .next()
+            .expect("Stack width input element found");
+
+            // 1. Above max (150 for a 10..100 bound family): click '-' recovers to 100
+            stack_input.set_accessible_value("150");
+
+            let minus_btn = ElementHandle::find_by_accessible_label(
+                &window,
+                crate::theme::STACK_WIDTH_DECREASE.name,
+            )
+            .next()
+            .expect("Stack width decrease button found");
+            minus_btn.invoke_accessible_default_action();
+
+            let seen_above = ElementHandle::find_by_accessible_label(
+                &window,
+                crate::theme::STACK_WIDTH_INPUT.name,
+            )
+            .next()
+            .expect("Stack width input found after '-'")
+            .accessible_value()
+            .unwrap_or_default();
+            assert_eq!(
+                seen_above.as_str(),
+                "100",
+                "clicking '-' after typing 150 into stack width must recover to max bound (100)"
+            );
+            assert_eq!(model.borrow().draft.layout.stack_width_percent, 100);
+
+            // 2. Below min (5 for a 10..100 bound family): click '+' recovers to 10
+            let stack_input2 = ElementHandle::find_by_accessible_label(
+                &window,
+                crate::theme::STACK_WIDTH_INPUT.name,
+            )
+            .next()
+            .expect("Stack width input element found before second typing");
+            stack_input2.set_accessible_value("5");
+
+            let plus_btn = ElementHandle::find_by_accessible_label(
+                &window,
+                crate::theme::STACK_WIDTH_INCREASE.name,
+            )
+            .next()
+            .expect("Stack width increase button found");
+            plus_btn.invoke_accessible_default_action();
+
+            let seen_below = ElementHandle::find_by_accessible_label(
+                &window,
+                crate::theme::STACK_WIDTH_INPUT.name,
+            )
+            .next()
+            .expect("Stack width input found after '+'")
+            .accessible_value()
+            .unwrap_or_default();
+            assert_eq!(
+                seen_below.as_str(),
+                "10",
+                "clicking '+' after typing 5 into stack width must recover to min bound (10)"
+            );
+            assert_eq!(model.borrow().draft.layout.stack_width_percent, 10);
+
+            let _ = std::fs::remove_file(&save_path);
+        });
+    }
+
+    #[test]
     fn stack_row_percent_commits_on_save_click() {
         run_on_ui_thread(|| {
             let (window, model, save_path) = setup_shortcuts_window();
@@ -1195,6 +1418,87 @@ pub(crate) mod tests {
                 l_tooltip_sz.height <= 20.0,
                 "Longest description tooltip height ({}) must still fit single-line height, not wrap/stretch",
                 l_tooltip_sz.height
+            );
+
+            let _ = std::fs::remove_file(&save_path);
+        });
+    }
+
+    #[test]
+    fn tooltip_paints_above_the_next_row_when_it_overflows_into_it() {
+        run_on_ui_thread(|| {
+            let (window, _model, save_path) = setup_shortcuts_window();
+
+            // Scroll to the top so Switcher and Fallback rows are in view
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::PointerScrolled {
+                    position: slint::LogicalPosition::new(300.0, 300.0),
+                    delta_x: 0.0,
+                    delta_y: 1200.0,
+                });
+
+            let switcher_label = ShortcutField::Switcher.label();
+            let switcher_desc = ShortcutField::Switcher.description();
+            let switcher_desc_label = theme::shortcut_description_label(switcher_label);
+
+            let fallback_label = ShortcutField::Fallback.label();
+            let fallback_desc_label = theme::shortcut_description_label(fallback_label);
+
+            let switcher_block =
+                ElementHandle::find_by_accessible_label(&window, &switcher_desc_label)
+                    .next()
+                    .expect("Switcher title block found");
+            let s_pos = switcher_block.absolute_position();
+            let s_sz = switcher_block.size();
+
+            let fallback_block =
+                ElementHandle::find_by_accessible_label(&window, &fallback_desc_label)
+                    .next()
+                    .expect("Fallback title block found");
+            let f_pos = fallback_block.absolute_position();
+            let f_sz = fallback_block.size();
+
+            // Hover Switcher row title block to surface its tooltip
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::PointerMoved {
+                    position: slint::LogicalPosition::new(
+                        s_pos.x + s_sz.width / 2.0,
+                        s_pos.y + s_sz.height / 2.0,
+                    ),
+                });
+
+            let tooltip_elem = ElementHandle::find_by_accessible_label(&window, switcher_desc)
+                .next()
+                .expect("Tooltip element found on hover");
+            let tooltip_pos = tooltip_elem.absolute_position();
+            let tooltip_sz = tooltip_elem.size();
+
+            // The tooltip overflows vertically into the next row's bounding region
+            let tooltip_bottom = tooltip_pos.y + tooltip_sz.height;
+            let fallback_bottom = f_pos.y + f_sz.height;
+            assert!(
+                tooltip_bottom > f_pos.y && tooltip_pos.y < fallback_bottom,
+                "Tooltip (y={:?}..{:?}) must extend into next row's vertical bounds (y={:?}..{:?}) to demonstrate overflow",
+                tooltip_pos.y, tooltip_bottom, f_pos.y, fallback_bottom
+            );
+
+            // Paint-order verification: The tooltip element MUST appear later in document/traversal
+            // order than the next row's elements, ensuring it is painted ON TOP OF the next row.
+            let all_elems = window.root_element().query_descendants().find_all();
+            let tooltip_idx = all_elems
+                .iter()
+                .position(|e| e.accessible_label().as_deref() == Some(switcher_desc))
+                .expect("Tooltip in element tree");
+            let fallback_idx = all_elems
+                .iter()
+                .position(|e| e.accessible_label().as_deref() == Some(&fallback_desc_label))
+                .expect("Fallback row title in element tree");
+
+            assert!(
+                tooltip_idx > fallback_idx,
+                "Tooltip (idx={tooltip_idx}) must be visited/painted LATER than the next row (idx={fallback_idx}) so it renders above it"
             );
 
             let _ = std::fs::remove_file(&save_path);

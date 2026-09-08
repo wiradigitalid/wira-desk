@@ -5,7 +5,7 @@ pub(crate) mod tests {
     use crate::app::ShortcutField;
     use crate::shortcut_row_slint_snapshot::tests::{run_on_ui_thread, setup_shortcuts_window};
     use crate::theme;
-    use i_slint_backend_testing::ElementHandle;
+    use i_slint_backend_testing::{ElementHandle, ElementRoot};
     use slint::ComponentHandle;
 
     /// One scroll gesture larger than the pane's scrollable extent, used to return to the top.
@@ -172,6 +172,83 @@ pub(crate) mod tests {
                  {} distinct keycap edges, {} distinct toggles",
                 keycap_edges.len(),
                 toggles_seen.len()
+            );
+
+            let _ = std::fs::remove_file(&save_path);
+        });
+    }
+
+    #[test]
+    fn the_last_rows_tooltip_paints_above_the_key_check_panel() {
+        run_on_ui_thread(|| {
+            let (window, _model, save_path) = setup_shortcuts_window();
+
+            // Sourced directly from main_window.slint's declared normal window dimensions
+            let window_width = window.get_normal_width();
+            let window_height = window.get_normal_height();
+            window
+                .window()
+                .set_size(slint::LogicalSize::new(window_width, window_height));
+
+            // The last row is Overlapping Stack
+            let last_field = ShortcutField::Stack;
+            let last_label = last_field.label();
+            let last_desc = last_field.description();
+            let last_desc_label = theme::shortcut_description_label(last_label);
+
+            // Scroll down to the bottom of the pane so the last row sits near the bottom
+            scroll_by(&window, -1200.0);
+            let stack_block = ElementHandle::find_by_accessible_label(&window, &last_desc_label)
+                .next()
+                .expect("Overlapping Stack title block found in rendered tree at bottom");
+            let s_pos = stack_block.absolute_position();
+            let s_sz = stack_block.size();
+
+            // Hover Overlapping Stack's title block to surface its tooltip
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::PointerMoved {
+                    position: slint::LogicalPosition::new(
+                        s_pos.x + s_sz.width / 2.0,
+                        s_pos.y + s_sz.height / 2.0,
+                    ),
+                });
+
+            let tooltip_elem = ElementHandle::find_by_accessible_label(&window, last_desc)
+                .next()
+                .expect("Tooltip element found on hover for last row");
+            let tooltip_pos = tooltip_elem.absolute_position();
+            let tooltip_sz = tooltip_elem.size();
+
+            // Find Key Check element in the pinned band
+            let keycheck_title = ElementHandle::find_by_accessible_label(&window, "Key check")
+                .next()
+                .expect("Key check panel element found in rendered tree");
+            let kc_pos = keycheck_title.absolute_position();
+
+            // The tooltip's position extends into / over the Key Check zone:
+            let tooltip_bottom = tooltip_pos.y + tooltip_sz.height;
+            let kc_band_top = kc_pos.y - 10.0;
+            assert!(
+                tooltip_bottom >= kc_band_top,
+                "Last row's tooltip bottom ({tooltip_bottom}) must reach or extend into Key Check vertical band ({kc_band_top})",
+            );
+
+            // Paint-order verification: The tooltip element MUST appear later in document/traversal
+            // order than the Key Check panel, ensuring it is painted ON TOP OF Key Check.
+            let all_elems = window.root_element().query_descendants().find_all();
+            let tooltip_idx = all_elems
+                .iter()
+                .position(|e| e.accessible_label().as_deref() == Some(last_desc))
+                .expect("Tooltip in element tree");
+            let keycheck_idx = all_elems
+                .iter()
+                .position(|e| e.accessible_label().as_deref() == Some("Key check"))
+                .expect("Key check in element tree");
+
+            assert!(
+                tooltip_idx > keycheck_idx,
+                "Tooltip (idx={tooltip_idx}) must be visited/painted LATER than Key Check panel (idx={keycheck_idx}) so it renders above it"
             );
 
             let _ = std::fs::remove_file(&save_path);

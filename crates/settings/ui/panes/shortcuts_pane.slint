@@ -41,6 +41,8 @@ component ShortcutGroup inherits VerticalLayout {
     callback percent_changed(int, int);
     callback editing_changed(int, int);
     callback toggle_enabled(int, bool);
+    callback show_tooltip(string, length);
+    callback hide_tooltip();
 
     spacing: 6px;
 
@@ -55,7 +57,7 @@ component ShortcutGroup inherits VerticalLayout {
         color: Palette.text_secondary;
     }
 
-    Card {
+    card := Card {
         VerticalLayout {
             padding: 0px;
             for row[i] in root.rows: VerticalLayout {
@@ -94,6 +96,12 @@ component ShortcutGroup inherits VerticalLayout {
                     toggle_enabled(val) => {
                         root.toggle_enabled(row.index, val);
                     }
+                    show_tooltip(desc, row_y) => {
+                        root.show_tooltip(desc, card.y + (i * 54px) + 55px);
+                    }
+                    hide_tooltip => {
+                        root.hide_tooltip();
+                    }
                 }
             }
         }
@@ -121,6 +129,8 @@ export component ShortcutsPane inherits VerticalLayout {
     callback percent_changed(int, int);
     callback editing_percent_changed(int, int);
     callback toggle_enabled(int, bool);
+    callback show_tooltip(string, length);
+    callback hide_tooltip();
 
     spacing: 14px;
     alignment: start;
@@ -178,6 +188,12 @@ export component ShortcutsPane inherits VerticalLayout {
         toggle_enabled(i, val) => {
             root.toggle_enabled(i, val);
         }
+        show_tooltip(desc, group_y) => {
+            root.show_tooltip(desc, self.y + group_y);
+        }
+        hide_tooltip => {
+            root.hide_tooltip();
+        }
     }
 
     ShortcutGroup {
@@ -199,6 +215,12 @@ export component ShortcutsPane inherits VerticalLayout {
         }
         toggle_enabled(i, val) => {
             root.toggle_enabled(i, val);
+        }
+        show_tooltip(desc, group_y) => {
+            root.show_tooltip(desc, self.y + group_y);
+        }
+        hide_tooltip => {
+            root.hide_tooltip();
         }
     }
 
@@ -222,6 +244,12 @@ export component ShortcutsPane inherits VerticalLayout {
         toggle_enabled(i, val) => {
             root.toggle_enabled(i, val);
         }
+        show_tooltip(desc, group_y) => {
+            root.show_tooltip(desc, self.y + group_y);
+        }
+        hide_tooltip => {
+            root.hide_tooltip();
+        }
     }
 
     ShortcutGroup {
@@ -244,6 +272,12 @@ export component ShortcutsPane inherits VerticalLayout {
         toggle_enabled(i, val) => {
             root.toggle_enabled(i, val);
         }
+        show_tooltip(desc, group_y) => {
+            root.show_tooltip(desc, self.y + group_y);
+        }
+        hide_tooltip => {
+            root.hide_tooltip();
+        }
     }
 
     ShortcutGroup {
@@ -265,6 +299,12 @@ export component ShortcutsPane inherits VerticalLayout {
         }
         toggle_enabled(i, val) => {
             root.toggle_enabled(i, val);
+        }
+        show_tooltip(desc, group_y) => {
+            root.show_tooltip(desc, self.y + group_y);
+        }
+        hide_tooltip => {
+            root.hide_tooltip();
         }
     }
 }

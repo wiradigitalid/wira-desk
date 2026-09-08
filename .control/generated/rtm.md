@@ -365,10 +365,10 @@ rtm:
   test:
   - shortcut_row_slint_snapshot::tests::tooltip_paints_above_the_next_row_when_it_overflows_into_it
   - shortcuts_pane_slint_snapshot::tests::the_last_rows_tooltip_paints_above_the_key_check_panel
-  status: open
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-5
   FR: FR-18
@@ -383,10 +383,10 @@ rtm:
   - shortcut_row_slint_snapshot::tests::stack_row_stepper_recovers_from_an_out_of_range_typed_value
   - shortcut_row_slint_snapshot::tests::a_real_keystroke_sequence_commits_a_typed_percentage
   - shortcut_row_slint_snapshot::tests::a_multi_digit_keystroke_sequence_keeps_each_intermediate_digit_before_departure
-  status: open
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-5
   FR: FR-18
@@ -664,10 +664,10 @@ rtm:
   - shortcut_row_slint_snapshot::tests::stack_row_stepper_recovers_from_an_out_of_range_typed_value
   - shortcut_row_slint_snapshot::tests::a_real_keystroke_sequence_commits_a_typed_percentage
   - shortcut_row_slint_snapshot::tests::a_multi_digit_keystroke_sequence_keeps_each_intermediate_digit_before_departure
-  status: open
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-3
   CAP: CAP-15
   FR: FR-27
@@ -984,10 +984,10 @@ rtm:
   test:
   - shortcut_row_slint_snapshot::tests::tooltip_paints_above_the_next_row_when_it_overflows_into_it
   - shortcuts_pane_slint_snapshot::tests::the_last_rows_tooltip_paints_above_the_key_check_panel
-  status: open
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-3
   FR: FR-7
@@ -1002,10 +1002,10 @@ rtm:
   - shortcut_row_slint_snapshot::tests::stack_row_stepper_recovers_from_an_out_of_range_typed_value
   - shortcut_row_slint_snapshot::tests::a_real_keystroke_sequence_commits_a_typed_percentage
   - shortcut_row_slint_snapshot::tests::a_multi_digit_keystroke_sequence_keeps_each_intermediate_digit_before_departure
-  status: open
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-3
   FR: FR-7

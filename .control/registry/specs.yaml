@@ -753,7 +753,7 @@ specs:
     release: "0.5.0"
     prd: [wira-desk]
     size: S
-    status: open
+    status: closed
     # No SPEC.md by Phase 1's own rule at size S (SPEC-2/SPEC-3/SPEC-5's precedent) -- the two
     # tickets below are the contract. Opened from the owner's live manual retest of PR #20's
     # SPEC-5-01/SPEC-5-03 fixes, 2026-09-08. Both tickets are new symptoms on surface those two
