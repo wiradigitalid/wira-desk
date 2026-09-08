@@ -470,6 +470,7 @@ pub(crate) fn bind_callbacks(
             let mut m = model_rc.borrow_mut();
             m.revert();
             if let Some(w) = window_weak.upgrade() {
+                w.set_revert_generation(w.get_revert_generation() + 1);
                 sync_model_to_ui(&w, &m);
             }
         });

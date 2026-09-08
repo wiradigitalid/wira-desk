@@ -696,6 +696,12 @@ defects:
     fixed_by: >-
       Sized tooltip to tooltip_layout.preferred-height and capped width at 480px, fitting single-line
       text (~22px height) with elevated background and clear stroke.
+    residual: >-
+      The tooltip opens downward (y: root.height + 2px) and fits its single-line text (~22px). For a
+      row at the very bottom edge of the visible scroll area, whether the tooltip clips against the
+      Flickable boundary before the user scrolls is determined by the Flickable container and is out
+      of reach of the testing backend (a real viewport clip cannot be observed by an automated Slint
+      snapshot test). Verified manual-only in smoke test.
     summary: >-
       `SPEC-4-03` moved a shortcut row's description from a permanently visible line to a hover/focus
       tooltip, and the tooltip does appear on hover as intended. The owner reports its rendered shape is

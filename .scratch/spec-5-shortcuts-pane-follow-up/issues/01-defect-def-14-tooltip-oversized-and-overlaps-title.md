@@ -49,6 +49,11 @@ extending up into and past the row's title line.
       when there is no room below, or say plainly in the closing report that this case was checked and is out
       of reach for this ticket's own test harness (a real viewport clip is not something a Slint snapshot test
       can see). Do not leave it unconsidered. (Edge-case-hunter finding, resolved in this pass.)
+      *Note on bottom-of-pane row:* The tooltip placement opens downward (`y: root.height + 2px`) fitting its
+      compact 22px single-line height. For rows at the bottom of the scroll viewport, whether the downward box
+      clips against the Flickable viewport edge is governed by Slint's scroll container clipping, which is
+      out of reach of the headless TestingBackend snapshot harness. Stated plainly and recorded as a residual
+      item on DEF-14.
 - [x] Full test suite green once, not only this ticket's own tests.
 
 ## Out of scope, deliberately

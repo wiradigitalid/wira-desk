@@ -474,6 +474,66 @@ pub(crate) mod tests {
     }
 
     #[test]
+    fn revert_discards_in_progress_typed_percentage_even_if_focused() {
+        run_on_ui_thread(|| {
+            let (window, model, save_path) = setup_shortcuts_window();
+
+            let field = ElementHandle::find_by_accessible_label(&window, "Snap percentage field")
+                .next()
+                .expect("Snap percentage field element found");
+            field.invoke_accessible_default_action();
+
+            let input = ElementHandle::find_by_accessible_label(&window, "Snap percentage input")
+                .next()
+                .expect("Snap percentage input element found");
+
+            // Clear what is there, then type '75'
+            for _ in 0..3 {
+                window
+                    .window()
+                    .dispatch_event(slint::platform::WindowEvent::KeyPressed {
+                        text: slint::platform::Key::Backspace.into(),
+                    });
+            }
+            type_digits(&window, "75");
+
+            assert_eq!(
+                input.accessible_value().unwrap_or_default().as_str(),
+                "75",
+                "Field must show '75' while being typed"
+            );
+
+            // User clicks Revert without blurring the field
+            window.invoke_revert_clicked();
+
+            let input_after =
+                ElementHandle::find_by_accessible_label(&window, "Snap percentage input")
+                    .next()
+                    .expect("Snap percentage input element found after revert");
+
+            // The field must return to the saved value 50, NOT retain 75
+            let reverted_val = input_after.accessible_value().unwrap_or_default();
+            assert_eq!(
+                reverted_val.as_str(),
+                "50",
+                "Clicking Revert must restore saved value in the field even while focused; got {reverted_val:?}"
+            );
+
+            // Now blur the field (e.g. by advancing focus or clicking elsewhere)
+            window.invoke_start_capture(ShortcutField::Switcher as i32);
+
+            // The draft must still be 50, NOT 75
+            assert_eq!(
+                model.borrow().draft.snapping.percent_left,
+                50,
+                "Subsequent blur must not commit the abandoned typed value 75"
+            );
+
+            let _ = std::fs::remove_file(&save_path);
+        });
+    }
+
+    #[test]
     fn a_real_keystroke_sequence_out_of_range_is_refused() {
         use crate::app::SaveFeedback;
         run_on_ui_thread(|| {
