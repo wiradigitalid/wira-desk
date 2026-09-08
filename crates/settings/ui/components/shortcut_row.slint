@@ -67,15 +67,15 @@ export component ShortcutRow inherits Rectangle {
     }
 
     public function step_plus() {
-        let base = root.current_value();
-        let next = (base >= root.percent_min && base < root.percent_max) ? (base + 1) : base;
+        let raw = root.current_value();
+        let next = raw < root.percent_min ? root.percent_min : (raw < root.percent_max ? (raw + 1) : root.percent_max);
         root.typed_text = "\{next}";
         root.percent_changed(next);
     }
 
     public function step_minus() {
-        let base = root.current_value();
-        let next = (base > root.percent_min && base <= root.percent_max) ? (base - 1) : base;
+        let raw = root.current_value();
+        let next = raw > root.percent_max ? root.percent_max : (raw > root.percent_min ? (raw - 1) : root.percent_min);
         root.typed_text = "\{next}";
         root.percent_changed(next);
     }
