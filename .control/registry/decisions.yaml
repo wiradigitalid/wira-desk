@@ -306,3 +306,25 @@ decisions:
     file: decisions/DEC-018-the-declared-shortcut-sequence-has-one-home-in-shared.md
     created: '2026-09-07'
     touches: []
+
+  - id: DEC-019
+    title: Autopilot mandate for SPEC-5 delivery
+    status: accepted
+    file: decisions/DEC-019-autopilot-mandate-for-spec-5-delivery.md
+    created: '2026-09-08'
+    touches:
+      - .control/decisions/DEC-019-autopilot-mandate-for-spec-5-delivery.md
+      - .control/memlog/autopilot-DEC-019.md
+      - .control/registry/decisions.yaml
+    mandate:
+      from_gate: G5
+      scope: all
+      parked: [ad-n]
+      smoke_test: agent
+      loop: 10m
+      expires: '2026-09-15'
+      run_branch: autopilot/DEC-019
+      worktree: ../wira-desk-autopilot
+      build_target_dir: ../wira-desk/target
+      ledger: .control/memlog/autopilot-DEC-019.md
+

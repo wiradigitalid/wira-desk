@@ -22,6 +22,12 @@ dag:
     - SPEC-4-03
     - SPEC-4-04
     - SPEC-4-05
+- spec: SPEC-5
+  order:
+  - parallel:
+    - SPEC-5-01
+    - SPEC-5-02
+    - SPEC-5-03
 - spec: W1
   order:
   - parallel:
