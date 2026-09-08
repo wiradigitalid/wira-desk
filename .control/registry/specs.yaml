@@ -814,7 +814,7 @@ specs:
     release: "0.5.0"
     prd: [wira-desk]
     size: S
-    status: open
+    status: closed
     # No SPEC.md by Phase 1's own rule at size S (SPEC-2/SPEC-3/SPEC-5/SPEC-6's precedent) -- the one
     # ticket below is the contract. Opened from the owner's live manual retest of PR #21's SPEC-6-02
     # fix, 2026-09-08. SPEC-6-02 fixed DEF-17 by clamping the STEPPER buttons' own boundary guards; the

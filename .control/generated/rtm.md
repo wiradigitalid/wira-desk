@@ -400,10 +400,10 @@ rtm:
   - shortcut_row_slint_snapshot::tests::typed_percentage_below_min_reverts_on_enter
   - shortcut_row_slint_snapshot::tests::typed_percentage_out_of_range_reverts_on_blur
   - shortcut_row_slint_snapshot::tests::stack_row_typed_percentage_out_of_range_reverts_on_enter
-  status: open
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-5
   FR: FR-18
@@ -698,10 +698,10 @@ rtm:
   - shortcut_row_slint_snapshot::tests::typed_percentage_below_min_reverts_on_enter
   - shortcut_row_slint_snapshot::tests::typed_percentage_out_of_range_reverts_on_blur
   - shortcut_row_slint_snapshot::tests::stack_row_typed_percentage_out_of_range_reverts_on_enter
-  status: open
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-3
   CAP: CAP-15
   FR: FR-27
@@ -1053,10 +1053,10 @@ rtm:
   - shortcut_row_slint_snapshot::tests::typed_percentage_below_min_reverts_on_enter
   - shortcut_row_slint_snapshot::tests::typed_percentage_out_of_range_reverts_on_blur
   - shortcut_row_slint_snapshot::tests::stack_row_typed_percentage_out_of_range_reverts_on_enter
-  status: open
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-3
   FR: FR-7

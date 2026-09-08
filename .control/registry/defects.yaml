@@ -888,7 +888,7 @@ defects:
 
   - id: DEF-18
     title: An out-of-range typed percentage commits to the draft on Enter/blur, instead of reverting to the previous value
-    status: open
+    status: fixed
     severity: low
     component: settings
     violates: [SPEC-2-01, SPEC-6-02]
@@ -899,6 +899,14 @@ defects:
       - shortcut_row_slint_snapshot::tests::typed_percentage_below_min_reverts_on_enter
       - shortcut_row_slint_snapshot::tests::typed_percentage_out_of_range_reverts_on_blur
       - shortcut_row_slint_snapshot::tests::stack_row_typed_percentage_out_of_range_reverts_on_enter
+    fixed_in: SPEC-7-01
+    fixed_by: >-
+      Centralized field departure handling into `commit_departure` in `crates/settings/ui/components/shortcut_row.slint`,
+      enforcing `val >= root.percent_min && val <= root.percent_max` on Enter (`accepted`), blur (`changed has-focus`),
+      and Tab navigation (`key-pressed`). Out-of-range values reset `typed_text` to `root.percent`, suppress `percent_changed`,
+      and synchronize `editing_changed(root.percent)`. In `crates/settings/src/main.rs`, guarded cross-row departures in
+      `on_pane_selected`, `on_start_capture`, `on_swap_shortcuts`, and `on_percent_changed` against applying out-of-range percentages
+      to the model draft. Covered by 4 snapshot tests across both bound families (1-99 snap and 10-100 stack).
     summary: >-
       `SPEC-6-02` fixed `DEF-17` so the stepper buttons recover a row's value once it holds an
       out-of-range typed number. The owner's follow-up manual test asks for a second recovery path:

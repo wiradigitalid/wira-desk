@@ -1,14 +1,18 @@
 ---
 type: mandate
 id: DEC-021
-status: accepted
+status: applied
 touches:
   - .control/decisions/DEC-021-autopilot-mandate-for-spec-7-delivery.md
   - .control/memlog/autopilot-DEC-021.md
   - .control/registry/decisions.yaml
   - .control/registry/defects.yaml
   - .control/registry/specs.yaml
+  - .scratch/smoke-dec-021.md
   - .scratch/spec-7-shortcuts-pane-third-follow-up/issues/01-defect-def-18-percentage-not-reverted-on-enter-or-blur.md
+  - 3p.md
+  - crates/settings/src/main.rs
+  - crates/settings/src/shortcut_row_slint_snapshot.rs
   - crates/settings/ui/components/shortcut_row.slint
 supersedes: null
 superseded_by: null

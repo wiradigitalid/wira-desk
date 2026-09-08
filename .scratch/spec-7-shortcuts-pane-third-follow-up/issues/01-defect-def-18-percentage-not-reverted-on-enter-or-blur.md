@@ -3,7 +3,7 @@ id: SPEC-7-01
 component: settings
 satisfies: [UC-4, UC-9]
 blocked_by: []
-status: open
+status: done
 tests:
   - shortcut_row_slint_snapshot::tests::typed_percentage_above_max_reverts_on_enter
   - shortcut_row_slint_snapshot::tests::typed_percentage_below_min_reverts_on_enter
@@ -23,7 +23,7 @@ in full before starting — the root cause is already established there, not lef
 
 **Blocked by:** None (can start immediately; independent of any other open ticket)
 
-- [ ] **Confirm the established root cause before changing anything**: in
+- [x] **Confirm the established root cause before changing anything**: in
       `crates/settings/ui/components/shortcut_row.slint`, the `pct_input` `TextInput`'s `accepted`
       callback (currently line 285), its `changed has-focus` callback (line 293, the blur path), and its
       `key-pressed` `Tab`/`Backtab` handler (line 302) all call
@@ -34,27 +34,27 @@ in full before starting — the root cause is already established there, not lef
       `value` it is given into `self.draft` with no clamping — so an out-of-range value (e.g. `101` on a
       1-99 row) is committed straight into the draft the moment Enter, blur, or Tab fires, and is
       refused only later, at actual save (`persistence::validate_config`).
-- [ ] In each of the three call sites above (`accepted`, `changed has-focus`, `key-pressed` Tab/Backtab),
+- [x] In each of the three call sites above (`accepted`, `changed has-focus`, `key-pressed` Tab/Backtab),
       add the same bounds check: if the parsed value is inside `[root.percent_min, root.percent_max]`,
       keep firing `percent_changed` exactly as today; if it is OUTSIDE that range, do NOT fire
       `percent_changed` at all — instead reset `root.typed_text = "\{root.percent}"`, reverting the field
       to its previous value, the same way an unparseable value already does.
-- [ ] A new test types an ABOVE-max value (e.g. `101` on a 1-99 row), presses Enter, and asserts the
+- [x] A new test types an ABOVE-max value (e.g. `101` on a 1-99 row), presses Enter, and asserts the
       field's `typed_text` reverts to the row's previous `percent` and that no `percent_changed` signal
       was fired for the out-of-range value.
-- [ ] A new test types a BELOW-min value (e.g. `0` on a 1-99 row, or below 10 on the 10-100 Stack row)
+- [x] A new test types a BELOW-min value (e.g. `0` on a 1-99 row, or below 10 on the 10-100 Stack row)
       and does the same for Enter — both directions, not only the one the owner happened to type.
-- [ ] A new test covers the BLUR path (focus lost, not Enter) with an out-of-range value and asserts the
+- [x] A new test covers the BLUR path (focus lost, not Enter) with an out-of-range value and asserts the
       same revert — Enter and blur are two different callbacks in the Slint source and neither test
       substitutes for the other.
-- [ ] The above-max and below-min revert tests are also run against the Stack row's 10-100 bound family,
+- [x] The above-max and below-min revert tests are also run against the Stack row's 10-100 bound family,
       not only a 1-99 `Snap to custom` row — `DEF-17`'s own precedent named this exact family split as a
       candidate a fix must not assume away, and it applies here identically.
-- [ ] `SPEC-2-01`'s existing commit-on-departure tests and `SPEC-5-03`'s/`SPEC-6-02`'s existing
+- [x] `SPEC-2-01`'s existing commit-on-departure tests and `SPEC-5-03`'s/`SPEC-6-02`'s existing
       multi-digit and stepper-recovery tests stay green and unweakened — this ticket only changes what
       happens when the departing value is OUT OF RANGE; an in-range value must still commit on departure
       exactly as before.
-- [ ] Full test suite green once, not only this ticket's own tests.
+- [x] Full test suite green once, not only this ticket's own tests.
 
 ## Out of scope, deliberately
 
