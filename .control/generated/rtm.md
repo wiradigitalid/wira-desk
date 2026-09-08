@@ -320,10 +320,10 @@ rtm:
   test:
   - shortcut_row_slint_snapshot::tests::tooltip_does_not_overlap_the_row_title
   - shortcut_row_slint_snapshot::tests::tooltip_height_fits_its_own_text
-  status: open
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-5
   FR: FR-18
@@ -334,10 +334,10 @@ rtm:
   release: 0.5.0
   test:
   - shortcut_row_slint_snapshot::tests::row_height_is_identical_toggle_on_and_toggle_off
-  status: open
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-5
   FR: FR-18
@@ -350,10 +350,10 @@ rtm:
   - shortcut_row_slint_snapshot::tests::a_multi_digit_keystroke_sequence_keeps_each_intermediate_digit_before_departure
   - shortcut_row_slint_snapshot::tests::a_real_keystroke_sequence_commits_a_typed_percentage
   - shortcut_row_slint_snapshot::tests::a_real_keystroke_sequence_out_of_range_is_refused
-  status: open
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-5
   FR: FR-18
@@ -613,10 +613,10 @@ rtm:
   - shortcut_row_slint_snapshot::tests::a_multi_digit_keystroke_sequence_keeps_each_intermediate_digit_before_departure
   - shortcut_row_slint_snapshot::tests::a_real_keystroke_sequence_commits_a_typed_percentage
   - shortcut_row_slint_snapshot::tests::a_real_keystroke_sequence_out_of_range_is_refused
-  status: open
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-3
   CAP: CAP-15
   FR: FR-27
@@ -888,10 +888,10 @@ rtm:
   test:
   - shortcut_row_slint_snapshot::tests::tooltip_does_not_overlap_the_row_title
   - shortcut_row_slint_snapshot::tests::tooltip_height_fits_its_own_text
-  status: open
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-3
   FR: FR-7
@@ -902,10 +902,10 @@ rtm:
   release: 0.5.0
   test:
   - shortcut_row_slint_snapshot::tests::row_height_is_identical_toggle_on_and_toggle_off
-  status: open
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-3
   FR: FR-7
@@ -918,10 +918,10 @@ rtm:
   - shortcut_row_slint_snapshot::tests::a_multi_digit_keystroke_sequence_keeps_each_intermediate_digit_before_departure
   - shortcut_row_slint_snapshot::tests::a_real_keystroke_sequence_commits_a_typed_percentage
   - shortcut_row_slint_snapshot::tests::a_real_keystroke_sequence_out_of_range_is_refused
-  status: open
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-2
   CAP: CAP-3
   FR: FR-7

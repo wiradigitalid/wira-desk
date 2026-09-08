@@ -974,9 +974,10 @@ pub(crate) mod tests {
             let title_label = ShortcutField::Switcher.label();
             let switcher_desc_label = theme::shortcut_description_label(title_label);
 
-            let switcher_block = ElementHandle::find_by_accessible_label(&window, &switcher_desc_label)
-                .next()
-                .expect("Switcher description block found");
+            let switcher_block =
+                ElementHandle::find_by_accessible_label(&window, &switcher_desc_label)
+                    .next()
+                    .expect("Switcher description block found");
             let block_pos = switcher_block.absolute_position();
             let block_sz = switcher_block.size();
 
@@ -1032,7 +1033,8 @@ pub(crate) mod tests {
             let kb_tooltip_pos = kb_tooltip.absolute_position();
             let kb_tooltip_sz = kb_tooltip.size();
 
-            let kb_y_overlaps = kb_tooltip_pos.y < title_bottom && (kb_tooltip_pos.y + kb_tooltip_sz.height) > title_pos.y;
+            let kb_y_overlaps = kb_tooltip_pos.y < title_bottom
+                && (kb_tooltip_pos.y + kb_tooltip_sz.height) > title_pos.y;
             let kb_x_overlaps = kb_tooltip_pos.x < (title_pos.x + title_sz.width)
                 && (kb_tooltip_pos.x + kb_tooltip_sz.width) > title_pos.x;
             assert!(
@@ -1062,9 +1064,10 @@ pub(crate) mod tests {
             let title_label = ShortcutField::Switcher.label();
             let switcher_desc_label = theme::shortcut_description_label(title_label);
 
-            let switcher_block = ElementHandle::find_by_accessible_label(&window, &switcher_desc_label)
-                .next()
-                .expect("Switcher description block found");
+            let switcher_block =
+                ElementHandle::find_by_accessible_label(&window, &switcher_desc_label)
+                    .next()
+                    .expect("Switcher description block found");
             let block_pos = switcher_block.absolute_position();
             let block_sz = switcher_block.size();
 
@@ -1107,9 +1110,10 @@ pub(crate) mod tests {
             let longest_label = ShortcutField::SnapPercentBottom.label();
             let longest_block_label = theme::shortcut_description_label(longest_label);
 
-            let longest_block = ElementHandle::find_by_accessible_label(&window, &longest_block_label)
-                .next()
-                .expect("SnapPercentBottom description block found");
+            let longest_block =
+                ElementHandle::find_by_accessible_label(&window, &longest_block_label)
+                    .next()
+                    .expect("SnapPercentBottom description block found");
             let l_pos = longest_block.absolute_position();
             let l_sz = longest_block.size();
 
@@ -1189,7 +1193,8 @@ pub(crate) mod tests {
             );
 
             // 3. Confirm "Disabled" caption is rendered when toggle is off
-            let disabled_caption = ElementHandle::find_by_accessible_label(&window, "Disabled").next();
+            let disabled_caption =
+                ElementHandle::find_by_accessible_label(&window, "Disabled").next();
             assert!(
                 disabled_caption.is_some(),
                 "'Disabled' caption must be rendered in the tree when toggle is off"
