@@ -885,3 +885,48 @@ defects:
       acceptance bar, not any specific pixel value. Sequenced with `DEF-14` since both touch the same row
       markup `SPEC-4-03` last touched.
     owner: repo owner
+
+  - id: DEF-18
+    title: An out-of-range typed percentage commits to the draft on Enter/blur, instead of reverting to the previous value
+    status: open
+    severity: low
+    component: settings
+    violates: [SPEC-2-01, SPEC-6-02]
+    found_in: "0.5.0"
+    found_by: Owner live manual retest of SPEC-6-02's fix, 2026-09-08 (post-merge of PR #21 / SPEC-6 closure)
+    tests: []
+    summary: >-
+      `SPEC-6-02` fixed `DEF-17` so the stepper buttons recover a row's value once it holds an
+      out-of-range typed number. The owner's follow-up manual test asks for a second recovery path:
+      typing a value past a percentage field's own bound (e.g. `101` where the bound is 1-99), then
+      pressing Enter, clicking away, or tabbing off the field, commits that out-of-range value into the
+      in-memory draft exactly as a valid value would -- it is refused only later, at save. The owner
+      wants this departure to behave as if no change had been made at all: the field should revert
+      immediately to the row's previous value on Enter, on blur (mouse leaving the field / losing
+      focus), the same way an unparseable value already reverts today.
+    why_it_hid: >-
+      `SPEC-2-01` built commit-on-departure and `SPEC-4-04`/`SPEC-5-03` deliberately let free-typed text
+      past a field's bound sit in `typed_text` uncommitted so a multi-digit value can be typed to
+      completion -- but none of the three departure paths in
+      `crates/settings/ui/components/shortcut_row.slint` (`accepted`, `changed has-focus`, `key-pressed`
+      Tab/Backtab) ever compares the parsed value against `percent_min`/`percent_max` before firing
+      `percent_changed`; they only fall back to the previous value when the text fails to parse as a
+      number AT ALL. `Settings::set_percent` (`crates/settings/src/app.rs:981`) then stores whatever
+      value it receives into the draft with no clamping. `DEF-17`'s own investigation of this exact
+      neighborhood stopped at the STEPPER buttons' boundary guards, because that is what the owner
+      reported at the time; the departure paths were never in that ticket's scope.
+    impact: >-
+      Low. Save-time validation still refuses the out-of-range value (`SPEC-2-01`), so nothing invalid
+      reaches disk. Between departure and save, though, the draft (and the visible field) sits holding a
+      value the product already knows it will refuse, which is confusing state to carry and one save
+      attempt away from surfacing as a rejection the owner did not expect from a field that looked
+      accepted.
+    fix_direction: >-
+      Add the same bounds check to all three departure call sites named above: if the parsed value is
+      inside `[percent_min, percent_max]`, keep the current commit behavior unchanged; if it is outside
+      that range, do not fire `percent_changed` at all and instead reset `typed_text` to the row's
+      current `percent`, the same recovery `SPEC-6-02` already gives the stepper path. Test both
+      directions (above-max, below-min) and both bound families (the 1-99 snap rows and the 10-100 Stack
+      row), and both departure triggers (Enter, blur) rather than only the one the owner happened to
+      type -- `DEF-17`'s own precedent is the reason this ticket asks for that symmetry up front.
+    owner: repo owner
