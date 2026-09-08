@@ -894,7 +894,11 @@ defects:
     violates: [SPEC-2-01, SPEC-6-02]
     found_in: "0.5.0"
     found_by: Owner live manual retest of SPEC-6-02's fix, 2026-09-08 (post-merge of PR #21 / SPEC-6 closure)
-    tests: []
+    tests:
+      - shortcut_row_slint_snapshot::tests::typed_percentage_above_max_reverts_on_enter
+      - shortcut_row_slint_snapshot::tests::typed_percentage_below_min_reverts_on_enter
+      - shortcut_row_slint_snapshot::tests::typed_percentage_out_of_range_reverts_on_blur
+      - shortcut_row_slint_snapshot::tests::stack_row_typed_percentage_out_of_range_reverts_on_enter
     summary: >-
       `SPEC-6-02` fixed `DEF-17` so the stepper buttons recover a row's value once it holds an
       out-of-range typed number. The owner's follow-up manual test asks for a second recovery path:

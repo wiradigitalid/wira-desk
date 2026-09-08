@@ -4,7 +4,11 @@ component: settings
 satisfies: [UC-4, UC-9]
 blocked_by: []
 status: open
-tests: []
+tests:
+  - shortcut_row_slint_snapshot::tests::typed_percentage_above_max_reverts_on_enter
+  - shortcut_row_slint_snapshot::tests::typed_percentage_below_min_reverts_on_enter
+  - shortcut_row_slint_snapshot::tests::typed_percentage_out_of_range_reverts_on_blur
+  - shortcut_row_slint_snapshot::tests::stack_row_typed_percentage_out_of_range_reverts_on_enter
 ---
 
 # 01: Defect DEF-18 — an out-of-range typed percentage is not reverted at Enter/blur, only at save

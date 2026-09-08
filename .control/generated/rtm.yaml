@@ -387,6 +387,23 @@ rtm:
   FR: FR-18
   DEC: []
   UC: UC-4
+  ticket: SPEC-7-01
+  spec: SPEC-7
+  release: 0.5.0
+  test:
+  - shortcut_row_slint_snapshot::tests::typed_percentage_above_max_reverts_on_enter
+  - shortcut_row_slint_snapshot::tests::typed_percentage_below_min_reverts_on_enter
+  - shortcut_row_slint_snapshot::tests::typed_percentage_out_of_range_reverts_on_blur
+  - shortcut_row_slint_snapshot::tests::stack_row_typed_percentage_out_of_range_reverts_on_enter
+  status: open
+  exempt: false
+  green: false
+  broken_at: status
+- BG: BG-2
+  CAP: CAP-5
+  FR: FR-18
+  DEC: []
+  UC: UC-4
   ticket: W1-S4
   spec: W1
   release: 0.1.0
@@ -663,6 +680,23 @@ rtm:
   exempt: false
   green: true
   broken_at: ''
+- BG: BG-3
+  CAP: CAP-14
+  FR: FR-26
+  DEC: []
+  UC: UC-9
+  ticket: SPEC-7-01
+  spec: SPEC-7
+  release: 0.5.0
+  test:
+  - shortcut_row_slint_snapshot::tests::typed_percentage_above_max_reverts_on_enter
+  - shortcut_row_slint_snapshot::tests::typed_percentage_below_min_reverts_on_enter
+  - shortcut_row_slint_snapshot::tests::typed_percentage_out_of_range_reverts_on_blur
+  - shortcut_row_slint_snapshot::tests::stack_row_typed_percentage_out_of_range_reverts_on_enter
+  status: open
+  exempt: false
+  green: false
+  broken_at: status
 - BG: BG-3
   CAP: CAP-15
   FR: FR-27
@@ -1001,6 +1035,23 @@ rtm:
   exempt: false
   green: true
   broken_at: ''
+- BG: BG-2
+  CAP: CAP-3
+  FR: FR-7
+  DEC: []
+  UC: UC-4
+  ticket: SPEC-7-01
+  spec: SPEC-7
+  release: 0.5.0
+  test:
+  - shortcut_row_slint_snapshot::tests::typed_percentage_above_max_reverts_on_enter
+  - shortcut_row_slint_snapshot::tests::typed_percentage_below_min_reverts_on_enter
+  - shortcut_row_slint_snapshot::tests::typed_percentage_out_of_range_reverts_on_blur
+  - shortcut_row_slint_snapshot::tests::stack_row_typed_percentage_out_of_range_reverts_on_enter
+  status: open
+  exempt: false
+  green: false
+  broken_at: status
 - BG: BG-2
   CAP: CAP-3
   FR: FR-7
