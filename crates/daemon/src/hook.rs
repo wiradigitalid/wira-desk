@@ -35,7 +35,9 @@ const STILL_ACTIVE: u32 = 259;
 use windows_sys::Win32::UI::WindowsAndMessaging::{
     CallNextHookEx, DispatchMessageW, GetMessageW, PeekMessageW, PostMessageW, PostQuitMessage,
     SetWindowsHookExW, TranslateMessage, UnhookWindowsHookEx, HC_ACTION, HHOOK, KBDLLHOOKSTRUCT,
-    MSG, PM_NOREMOVE, WH_KEYBOARD_LL, WM_KEYDOWN, WM_KEYUP, WM_SYSKEYDOWN, WM_SYSKEYUP,
+    MSG, MSLLHOOKSTRUCT, PM_NOREMOVE, WH_KEYBOARD_LL, WH_MOUSE_LL, WM_KEYDOWN, WM_KEYUP,
+    WM_MOUSEHWHEEL, WM_MOUSEMOVE, WM_SYSKEYDOWN, WM_SYSKEYUP, WM_XBUTTONDOWN, WM_XBUTTONUP,
+    XBUTTON1, XBUTTON2,
 };
 
 // Measurement-only seam; gating the import keeps the release build free of
@@ -858,30 +860,261 @@ pub fn next_hook_check_state(current_fail_count: u32, install_succeeded: bool) -
     (count, count >= HOOK_CHECK_FAIL_THRESHOLD)
 }
 
-struct HookRuntime {
-    worker_hwnd: HWND,
-    h_mod: HINSTANCE,
-    chords: Chords,
-    mods: ModifierState,
-    last_throttle_ms: u64,
-    swallow_release_vk: u16,
-    hook_handle: HHOOK,
-    hook_check_fail_count: u32,
+/// Auxiliary mouse navigation mapping resolved from `shared::MouseConfig` (SPEC-8).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct MouseMapping {
+    pub enabled: bool,
+    pub thumb_back: Option<Command>,
+    pub thumb_forward: Option<Command>,
+    pub tilt_left: Option<Command>,
+    pub tilt_right: Option<Command>,
+}
+
+pub fn map_preset_to_command(preset: shared::MouseActionPreset) -> Option<Command> {
+    match preset {
+        shared::MouseActionPreset::NextVirtualDesktop => Some(Command::NextVirtualDesktop),
+        shared::MouseActionPreset::PrevVirtualDesktop => Some(Command::PrevVirtualDesktop),
+        shared::MouseActionPreset::TaskView => Some(Command::TaskView),
+        shared::MouseActionPreset::ShowDesktop => Some(Command::ShowDesktop),
+        shared::MouseActionPreset::CycleForward => Some(Command::Cycle),
+        shared::MouseActionPreset::SnapLeft => Some(Command::SnapLeft),
+        shared::MouseActionPreset::SnapRight => Some(Command::SnapRight),
+        shared::MouseActionPreset::Maximize => Some(Command::SnapMaximize),
+        shared::MouseActionPreset::Passthrough => None,
+    }
+}
+
+impl MouseMapping {
+    pub fn from_config(cfg: &shared::MouseConfig) -> Self {
+        if !cfg.enabled {
+            return Self {
+                enabled: false,
+                thumb_back: None,
+                thumb_forward: None,
+                tilt_left: None,
+                tilt_right: None,
+            };
+        }
+        Self {
+            enabled: true,
+            thumb_back: shared::MouseActionPreset::parse_slug(&cfg.thumb_back)
+                .and_then(map_preset_to_command),
+            thumb_forward: shared::MouseActionPreset::parse_slug(&cfg.thumb_forward)
+                .and_then(map_preset_to_command),
+            tilt_left: shared::MouseActionPreset::parse_slug(&cfg.tilt_left)
+                .and_then(map_preset_to_command),
+            tilt_right: shared::MouseActionPreset::parse_slug(&cfg.tilt_right)
+                .and_then(map_preset_to_command),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MouseEventDisposition {
+    PassToNext,
+    SwallowUp,
+    ButtonAction(Command),
+    TiltAction(Command),
+}
+
+pub fn resolve_mouse_event(
+    mapping: &MouseMapping,
+    msg: u32,
+    mouse_data: u32,
+) -> MouseEventDisposition {
+    if !mapping.enabled {
+        return MouseEventDisposition::PassToNext;
+    }
+
+    match msg {
+        WM_XBUTTONDOWN => {
+            let button = (mouse_data >> 16) as u16;
+            if button == XBUTTON1 {
+                if let Some(cmd) = mapping.thumb_back {
+                    MouseEventDisposition::ButtonAction(cmd)
+                } else {
+                    MouseEventDisposition::PassToNext
+                }
+            } else if button == XBUTTON2 {
+                if let Some(cmd) = mapping.thumb_forward {
+                    MouseEventDisposition::ButtonAction(cmd)
+                } else {
+                    MouseEventDisposition::PassToNext
+                }
+            } else {
+                MouseEventDisposition::PassToNext
+            }
+        }
+        WM_XBUTTONUP => {
+            let button = (mouse_data >> 16) as u16;
+            if button == XBUTTON1 {
+                if mapping.thumb_back.is_some() {
+                    MouseEventDisposition::SwallowUp
+                } else {
+                    MouseEventDisposition::PassToNext
+                }
+            } else if button == XBUTTON2 {
+                if mapping.thumb_forward.is_some() {
+                    MouseEventDisposition::SwallowUp
+                } else {
+                    MouseEventDisposition::PassToNext
+                }
+            } else {
+                MouseEventDisposition::PassToNext
+            }
+        }
+        WM_MOUSEHWHEEL => {
+            let delta = ((mouse_data >> 16) & 0xFFFF) as i16;
+            if delta < 0 {
+                if let Some(cmd) = mapping.tilt_left {
+                    MouseEventDisposition::TiltAction(cmd)
+                } else {
+                    MouseEventDisposition::PassToNext
+                }
+            } else if delta > 0 {
+                if let Some(cmd) = mapping.tilt_right {
+                    MouseEventDisposition::TiltAction(cmd)
+                } else {
+                    MouseEventDisposition::PassToNext
+                }
+            } else {
+                MouseEventDisposition::PassToNext
+            }
+        }
+        _ => MouseEventDisposition::PassToNext,
+    }
+}
+
+pub fn apply_tilt_debounce(last_tilt_ms: u64, now: u64, debounce_ms: u64) -> bool {
+    now.saturating_sub(last_tilt_ms) >= debounce_ms
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MouseHandleResult {
+    PassToNext,
+    Swallow,
+}
+
+pub fn handle_mouse_event(rt: &mut HookRuntime, msg: u32, mouse_data: u32) -> MouseHandleResult {
+    handle_mouse_event_with_bypass_and_time(
+        rt,
+        msg,
+        mouse_data,
+        |rt| {
+            crate::context::vm_bypass::evaluate_foreground(&rt.bypass_policy, &mut rt.identity)
+                .is_passthrough()
+        },
+        tick_ms(),
+    )
+}
+
+pub fn handle_mouse_event_with_sink<F, E>(
+    rt: &mut HookRuntime,
+    msg: u32,
+    mouse_data: u32,
+    eval_bypass: F,
+    now: u64,
+    mut enqueue: E,
+) -> MouseHandleResult
+where
+    F: FnOnce(&mut HookRuntime) -> bool,
+    E: FnMut(u8) -> bool,
+{
+    let disposition = resolve_mouse_event(&rt.mouse, msg, mouse_data);
+    match disposition {
+        MouseEventDisposition::PassToNext => MouseHandleResult::PassToNext,
+        MouseEventDisposition::SwallowUp => {
+            if eval_bypass(rt) {
+                MouseHandleResult::PassToNext
+            } else {
+                MouseHandleResult::Swallow
+            }
+        }
+        MouseEventDisposition::ButtonAction(cmd) => {
+            if eval_bypass(rt) {
+                return MouseHandleResult::PassToNext;
+            }
+            if !enqueue(cmd.as_u8()) {
+                #[cfg(debug_assertions)]
+                crate::metrics::DROPPED_FULL.fetch_add(1, Ordering::Relaxed);
+            } else {
+                #[cfg(debug_assertions)]
+                crate::metrics::ACCEPTED.fetch_add(1, Ordering::Relaxed);
+                // SAFETY: `PostMessageW` posts to the worker thread window.
+                unsafe {
+                    let _ = PostMessageW(rt.worker_hwnd, WM_APP_COMMAND_READY, 0, 0);
+                }
+            }
+            MouseHandleResult::Swallow
+        }
+        MouseEventDisposition::TiltAction(cmd) => {
+            if eval_bypass(rt) {
+                return MouseHandleResult::PassToNext;
+            }
+            if !apply_tilt_debounce(
+                rt.last_tilt_ms,
+                now,
+                shared::constants::TILT_WHEEL_DEBOUNCE_MS,
+            ) {
+                return MouseHandleResult::Swallow;
+            }
+            if !enqueue(cmd.as_u8()) {
+                #[cfg(debug_assertions)]
+                crate::metrics::DROPPED_FULL.fetch_add(1, Ordering::Relaxed);
+            } else {
+                rt.last_tilt_ms = now;
+                #[cfg(debug_assertions)]
+                crate::metrics::ACCEPTED.fetch_add(1, Ordering::Relaxed);
+                // SAFETY: `PostMessageW` posts to the worker thread window.
+                unsafe {
+                    let _ = PostMessageW(rt.worker_hwnd, WM_APP_COMMAND_READY, 0, 0);
+                }
+            }
+            MouseHandleResult::Swallow
+        }
+    }
+}
+
+pub fn handle_mouse_event_with_bypass_and_time<F>(
+    rt: &mut HookRuntime,
+    msg: u32,
+    mouse_data: u32,
+    eval_bypass: F,
+    now: u64,
+) -> MouseHandleResult
+where
+    F: FnOnce(&mut HookRuntime) -> bool,
+{
+    handle_mouse_event_with_sink(rt, msg, mouse_data, eval_bypass, now, ring::push)
+}
+
+pub struct HookRuntime {
+    pub worker_hwnd: HWND,
+    pub h_mod: HINSTANCE,
+    pub chords: Chords,
+    pub mouse: MouseMapping,
+    pub mods: ModifierState,
+    pub last_throttle_ms: u64,
+    pub last_tilt_ms: u64,
+    pub swallow_release_vk: u16,
+    pub keyboard_hook_handle: HHOOK,
+    pub mouse_hook_handle: HHOOK,
+    pub hook_check_fail_count: u32,
     /// Immutable VM/RDP policy, normalized off the callback path.
-    bypass_policy: BypassPolicy,
+    pub bypass_policy: BypassPolicy,
     /// Reusable fixed buffers for foreground identity. Never reallocated.
-    identity: HookIdentityCollector,
+    pub identity: HookIdentityCollector,
     /// Latched once a chord begins inside a bypass context.
     /// Without this, a focus change mid-chord could make the key-down pass
     /// through while the matching key-up got swallowed, leaving the guest
     /// session with a stuck modifier.
-    bypass_latched: bool,
+    pub bypass_latched: bool,
     /// Level of the temporary shortcut capture lease: `CAPTURE_LEASE_NONE`,
     /// `_OBSERVE`, or `_RECORD`. See [`lease_action`].
-    capture_lease_level: usize,
+    pub capture_lease_level: usize,
     /// PID of the Settings process holding the lease (0 when the level is
     /// `CAPTURE_LEASE_NONE`).
-    capture_lease_pid: u32,
+    pub capture_lease_pid: u32,
 }
 
 /// Address of the Hook thread's [`HookRuntime`], which lives on that thread's
@@ -1008,11 +1241,6 @@ fn resolve_shortcut(configured: &str, default: &str) -> Shortcut {
     Shortcut::parse(configured)
         .or_else(|| Shortcut::parse(default))
         .unwrap_or_else(|| Shortcut::parse("win+backtick").expect("default shortcut"))
-}
-
-fn load_shortcuts(worker_hwnd: HWND) -> Chords {
-    let cfg = Config::load_or_default(&config_path());
-    load_shortcuts_from_config(worker_hwnd, &cfg)
 }
 
 fn load_shortcuts_from_config(worker_hwnd: HWND, cfg: &Config) -> Chords {
@@ -1226,7 +1454,7 @@ unsafe extern "system" fn low_level_keyboard_proc(
         // first argument to CallNextHookEx, so the event still propagates.
         return CallNextHookEx(0, code, wparam, lparam);
     };
-    let hook = rt.hook_handle;
+    let hook = rt.keyboard_hook_handle;
     if code < 0 {
         return CallNextHookEx(hook, code, wparam, lparam);
     }
@@ -1276,8 +1504,44 @@ fn tick_ms() -> u64 {
     unsafe { windows_sys::Win32::System::SystemInformation::GetTickCount64() }
 }
 
-unsafe fn install_hook(h_mod: HINSTANCE) -> HHOOK {
+unsafe extern "system" fn low_level_mouse_proc(
+    code: i32,
+    wparam: WPARAM,
+    lparam: LPARAM,
+) -> LRESULT {
+    let msg = wparam as u32;
+    // Fast path: pass cursor motion and negative codes immediately without locks or allocations (LBR-WM-11, NFR-2)
+    if code < 0 || msg == WM_MOUSEMOVE {
+        return CallNextHookEx(0, code, wparam, lparam);
+    }
+    if code != HC_ACTION as i32 {
+        return CallNextHookEx(0, code, wparam, lparam);
+    }
+
+    // SAFETY: Windows delivers WH_MOUSE_LL on the thread that installed the hook,
+    // which is the Hook thread, and no other borrow of the runtime is live at this point.
+    let Some(rt) = runtime_mut() else {
+        return CallNextHookEx(0, code, wparam, lparam);
+    };
+    let hook = rt.mouse_hook_handle;
+
+    // SAFETY: for HC_ACTION, Windows documents lparam as a pointer to MSLLHOOKSTRUCT
+    // owned by the OS and valid for the duration of the call.
+    let info = &*(lparam as *const MSLLHOOKSTRUCT);
+    let outcome = handle_mouse_event(rt, msg, info.mouseData);
+
+    match outcome {
+        MouseHandleResult::Swallow => 1,
+        MouseHandleResult::PassToNext => CallNextHookEx(hook, code, wparam, lparam),
+    }
+}
+
+unsafe fn install_keyboard_hook(h_mod: HINSTANCE) -> HHOOK {
     SetWindowsHookExW(WH_KEYBOARD_LL, Some(low_level_keyboard_proc), h_mod, 0)
+}
+
+unsafe fn install_mouse_hook(h_mod: HINSTANCE) -> HHOOK {
+    SetWindowsHookExW(WH_MOUSE_LL, Some(low_level_mouse_proc), h_mod, 0)
 }
 
 unsafe fn refresh_hook_on_hook_thread(rt: &mut HookRuntime) {
@@ -1296,30 +1560,47 @@ unsafe fn refresh_hook_on_hook_thread(rt: &mut HookRuntime) {
         set_report_target(0);
     }
 
-    let new_hook = install_hook(rt.h_mod);
+    let new_kb = install_keyboard_hook(rt.h_mod);
+    let new_mouse = install_mouse_hook(rt.h_mod);
 
     #[cfg(debug_assertions)]
-    let new_hook = {
-        let mut h = new_hook;
-        if debug_force_hook_fail() && h != 0 {
-            UnhookWindowsHookEx(h);
-            h = 0;
+    let (new_kb, new_mouse) = {
+        let (mut kb, mut mouse) = (new_kb, new_mouse);
+        if debug_force_hook_fail() {
+            if kb != 0 {
+                UnhookWindowsHookEx(kb);
+                kb = 0;
+            }
+            if mouse != 0 {
+                UnhookWindowsHookEx(mouse);
+                mouse = 0;
+            }
         }
-        h
+        (kb, mouse)
     };
 
-    let install_succeeded = new_hook != 0;
+    let install_succeeded = new_kb != 0 && new_mouse != 0;
     let (fail_count, should_escalate) =
         next_hook_check_state(rt.hook_check_fail_count, install_succeeded);
     rt.hook_check_fail_count = fail_count;
 
     if install_succeeded {
-        if rt.hook_handle != 0 {
-            UnhookWindowsHookEx(rt.hook_handle);
+        if rt.keyboard_hook_handle != 0 {
+            UnhookWindowsHookEx(rt.keyboard_hook_handle);
         }
-        rt.hook_handle = new_hook;
+        if rt.mouse_hook_handle != 0 {
+            UnhookWindowsHookEx(rt.mouse_hook_handle);
+        }
+        rt.keyboard_hook_handle = new_kb;
+        rt.mouse_hook_handle = new_mouse;
         let _ = PostMessageW(rt.worker_hwnd, WM_APP_HOOK_REFRESH_OK, 0, 0);
     } else {
+        if new_kb != 0 {
+            UnhookWindowsHookEx(new_kb);
+        }
+        if new_mouse != 0 {
+            UnhookWindowsHookEx(new_mouse);
+        }
         debug_log(
             "Wira Desk: hook heartbeat refresh — SetWindowsHookExW failed; keeping prior hook",
         );
@@ -1351,15 +1632,20 @@ unsafe fn handle_thread_message(rt: &mut HookRuntime, msg: &MSG) -> bool {
             if let Some(snapshot) = take_staged_snapshot() {
                 rt.chords = snapshot.chords;
                 rt.bypass_policy = snapshot.bypass;
+                rt.mouse = snapshot.mouse;
                 #[cfg(debug_assertions)]
                 crate::util::append_debug_trace("CONFIG_SNAPSHOT: hook state replaced");
             }
             true
         }
         m if m == WM_APP_HOOK_SHUTDOWN => {
-            if rt.hook_handle != 0 {
-                UnhookWindowsHookEx(rt.hook_handle);
-                rt.hook_handle = 0;
+            if rt.keyboard_hook_handle != 0 {
+                UnhookWindowsHookEx(rt.keyboard_hook_handle);
+                rt.keyboard_hook_handle = 0;
+            }
+            if rt.mouse_hook_handle != 0 {
+                UnhookWindowsHookEx(rt.mouse_hook_handle);
+                rt.mouse_hook_handle = 0;
             }
             PostQuitMessage(0);
             true
@@ -1448,20 +1734,31 @@ fn hook_thread_main(worker_hwnd: HWND, h_mod: HINSTANCE) {
             return;
         }
 
-        let chords = load_shortcuts(worker_hwnd);
+        let cfg = Config::load_or_default(&config_path());
+        let chords = load_shortcuts_from_config(worker_hwnd, &cfg);
+        let mouse = MouseMapping::from_config(&cfg.mouse);
 
         // Normalize the VM/RDP policy here — before the hook is installed and
         // therefore off the callback path entirely. It stays
         // immutable for the lifetime of this Hook configuration.
-        let bypass_policy =
-            BypassPolicy::from_config(&Config::load_or_default(&config_path()).vm_bypass);
+        let bypass_policy = BypassPolicy::from_config(&cfg.vm_bypass);
 
-        let mut hook_handle = 0isize;
+        let mut keyboard_hook_handle = 0isize;
+        let mut mouse_hook_handle = 0isize;
         let mut retries = HOOK_RETRY_MAX;
         while retries > 0 {
-            hook_handle = install_hook(h_mod);
-            if hook_handle != 0 {
+            keyboard_hook_handle = install_keyboard_hook(h_mod);
+            mouse_hook_handle = install_mouse_hook(h_mod);
+            if keyboard_hook_handle != 0 && mouse_hook_handle != 0 {
                 break;
+            }
+            if keyboard_hook_handle != 0 {
+                UnhookWindowsHookEx(keyboard_hook_handle);
+                keyboard_hook_handle = 0;
+            }
+            if mouse_hook_handle != 0 {
+                UnhookWindowsHookEx(mouse_hook_handle);
+                mouse_hook_handle = 0;
             }
             retries -= 1;
             if retries > 0 {
@@ -1469,7 +1766,7 @@ fn hook_thread_main(worker_hwnd: HWND, h_mod: HINSTANCE) {
             }
         }
 
-        if hook_handle == 0 {
+        if keyboard_hook_handle == 0 || mouse_hook_handle == 0 {
             let _ = PostMessageW(worker_hwnd, WM_APP_HOOK_INIT_FAILED, 0, 0);
             return;
         }
@@ -1478,10 +1775,13 @@ fn hook_thread_main(worker_hwnd: HWND, h_mod: HINSTANCE) {
             worker_hwnd,
             h_mod,
             chords,
+            mouse,
             mods: ModifierState::default(),
             last_throttle_ms: 0,
+            last_tilt_ms: 0,
             swallow_release_vk: 0,
-            hook_handle,
+            keyboard_hook_handle,
+            mouse_hook_handle,
             hook_check_fail_count: 0,
             bypass_policy,
             identity: HookIdentityCollector::new(),
@@ -1523,8 +1823,11 @@ fn hook_thread_main(worker_hwnd: HWND, h_mod: HINSTANCE) {
         // callback can be holding a borrow derived from it once the local is
         // borrowed normally below.
         RUNTIME.store(std::ptr::null_mut(), Ordering::Release);
-        if runtime.hook_handle != 0 {
-            UnhookWindowsHookEx(runtime.hook_handle);
+        if runtime.keyboard_hook_handle != 0 {
+            UnhookWindowsHookEx(runtime.keyboard_hook_handle);
+        }
+        if runtime.mouse_hook_handle != 0 {
+            UnhookWindowsHookEx(runtime.mouse_hook_handle);
         }
     }
 }
@@ -2009,10 +2312,13 @@ mod tests {
                 fallback: Some(fallback),
                 ..shipped_chords()
             },
+            mouse: MouseMapping::default(),
             mods: ModifierState::default(),
             last_throttle_ms: 0,
+            last_tilt_ms: 0,
             swallow_release_vk: 0,
-            hook_handle: 0,
+            keyboard_hook_handle: 0,
+            mouse_hook_handle: 0,
             hook_check_fail_count: 0,
             bypass_policy: BypassPolicy::default(),
             identity: HookIdentityCollector::new(),
@@ -2283,7 +2589,7 @@ mod tests {
     // concurrently with each other — the same mistake that once made a metrics test
     // flaky by asserting on globals other test threads were writing. Serialised here
     // rather than left to chance.
-    static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+    static SNAPSHOT_TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
     fn drain_slot() {
         let _ = take_staged_snapshot();
@@ -2296,12 +2602,13 @@ mod tests {
                 ..shipped_chords()
             },
             bypass: BypassPolicy::default(),
+            mouse: MouseMapping::default(),
         }
     }
 
     #[test]
     fn staged_snapshot_is_collected_exactly_once() {
-        let _guard = TEST_LOCK.lock().unwrap();
+        let _guard = SNAPSHOT_TEST_LOCK.lock().unwrap();
         drain_slot();
 
         stage_snapshot(snapshot("win+backtick"));
@@ -2315,7 +2622,7 @@ mod tests {
 
     #[test]
     fn staging_again_supersedes_an_uncollected_snapshot() {
-        let _guard = TEST_LOCK.lock().unwrap();
+        let _guard = SNAPSHOT_TEST_LOCK.lock().unwrap();
         drain_slot();
 
         // Two saves in quick succession, with the Hook thread never scheduled between
@@ -2330,7 +2637,7 @@ mod tests {
 
     #[test]
     fn unstaging_after_a_failed_post_leaves_nothing_to_collect() {
-        let _guard = TEST_LOCK.lock().unwrap();
+        let _guard = SNAPSHOT_TEST_LOCK.lock().unwrap();
         drain_slot();
 
         let raw = stage_snapshot(snapshot("win+backtick"));
@@ -2343,7 +2650,7 @@ mod tests {
 
     #[test]
     fn unstaging_is_a_no_op_once_the_hook_has_collected() {
-        let _guard = TEST_LOCK.lock().unwrap();
+        let _guard = SNAPSHOT_TEST_LOCK.lock().unwrap();
         drain_slot();
 
         let raw = stage_snapshot(snapshot("win+backtick"));
@@ -2421,5 +2728,342 @@ mod tests {
         let chords2 = load_shortcuts_from_config(0, &cfg);
         assert_eq!(chords2.snap_bottom, Shortcut::parse("ctrl+alt+down"));
         assert_eq!(chords2.stack, None);
+    }
+
+    #[test]
+    fn mouse_hook_passes_mousemove_without_interception() {
+        let mut rt = test_runtime(
+            Shortcut::parse("win+backtick").unwrap(),
+            Shortcut::parse("alt+backtick").unwrap(),
+        );
+        let outcome = handle_mouse_event(&mut rt, WM_MOUSEMOVE, 0);
+        assert_eq!(outcome, MouseHandleResult::PassToNext);
+    }
+
+    #[test]
+    fn mouse_hook_swallows_mapped_xbuttons_down_and_up() {
+        let mut rt = test_runtime(
+            Shortcut::parse("win+backtick").unwrap(),
+            Shortcut::parse("alt+backtick").unwrap(),
+        );
+        rt.mouse = MouseMapping {
+            enabled: true,
+            thumb_back: Some(Command::PrevVirtualDesktop),
+            thumb_forward: Some(Command::NextVirtualDesktop),
+            tilt_left: None,
+            tilt_right: None,
+        };
+
+        let mut queue = Vec::new();
+
+        // XBUTTON1 (Back)
+        let x1_data = (XBUTTON1 as u32) << 16;
+        let down_1 = handle_mouse_event_with_sink(
+            &mut rt,
+            WM_XBUTTONDOWN,
+            x1_data,
+            |_| false,
+            1000,
+            |c| {
+                queue.push(c);
+                true
+            },
+        );
+        assert_eq!(down_1, MouseHandleResult::Swallow);
+        let up_1 = handle_mouse_event_with_sink(
+            &mut rt,
+            WM_XBUTTONUP,
+            x1_data,
+            |_| false,
+            1000,
+            |c| {
+                queue.push(c);
+                true
+            },
+        );
+        assert_eq!(up_1, MouseHandleResult::Swallow);
+
+        // XBUTTON2 (Forward)
+        let x2_data = (XBUTTON2 as u32) << 16;
+        let down_2 = handle_mouse_event_with_sink(
+            &mut rt,
+            WM_XBUTTONDOWN,
+            x2_data,
+            |_| false,
+            1000,
+            |c| {
+                queue.push(c);
+                true
+            },
+        );
+        assert_eq!(down_2, MouseHandleResult::Swallow);
+        let up_2 = handle_mouse_event_with_sink(
+            &mut rt,
+            WM_XBUTTONUP,
+            x2_data,
+            |_| false,
+            1000,
+            |c| {
+                queue.push(c);
+                true
+            },
+        );
+        assert_eq!(up_2, MouseHandleResult::Swallow);
+
+        // Verify that commands were queued in order
+        assert_eq!(
+            queue,
+            vec![
+                Command::PrevVirtualDesktop.as_u8(),
+                Command::NextVirtualDesktop.as_u8(),
+            ]
+        );
+    }
+
+    #[test]
+    fn unmapped_mouse_buttons_pass_through() {
+        let mut rt = test_runtime(
+            Shortcut::parse("win+backtick").unwrap(),
+            Shortcut::parse("alt+backtick").unwrap(),
+        );
+        rt.mouse = MouseMapping {
+            enabled: true,
+            thumb_back: None,
+            thumb_forward: None,
+            tilt_left: None,
+            tilt_right: None,
+        };
+
+        let x1_data = (XBUTTON1 as u32) << 16;
+        assert_eq!(
+            handle_mouse_event(&mut rt, WM_XBUTTONDOWN, x1_data),
+            MouseHandleResult::PassToNext
+        );
+        assert_eq!(
+            handle_mouse_event(&mut rt, WM_XBUTTONUP, x1_data),
+            MouseHandleResult::PassToNext
+        );
+
+        let x2_data = (XBUTTON2 as u32) << 16;
+        assert_eq!(
+            handle_mouse_event(&mut rt, WM_XBUTTONDOWN, x2_data),
+            MouseHandleResult::PassToNext
+        );
+        assert_eq!(
+            handle_mouse_event(&mut rt, WM_XBUTTONUP, x2_data),
+            MouseHandleResult::PassToNext
+        );
+    }
+
+    #[test]
+    fn vm_bypass_passes_mouse_events_through() {
+        let mut rt = test_runtime(
+            Shortcut::parse("win+backtick").unwrap(),
+            Shortcut::parse("alt+backtick").unwrap(),
+        );
+        rt.mouse = MouseMapping {
+            enabled: true,
+            thumb_back: Some(Command::PrevVirtualDesktop),
+            thumb_forward: Some(Command::NextVirtualDesktop),
+            tilt_left: Some(Command::TaskView),
+            tilt_right: Some(Command::ShowDesktop),
+        };
+
+        let x1_data = (XBUTTON1 as u32) << 16;
+        let outcome = handle_mouse_event_with_bypass_and_time(
+            &mut rt,
+            WM_XBUTTONDOWN,
+            x1_data,
+            |_| true,
+            1000,
+        );
+        assert_eq!(outcome, MouseHandleResult::PassToNext);
+
+        let tilt_data = (-120i16 as u16 as u32) << 16;
+        let tilt_outcome = handle_mouse_event_with_bypass_and_time(
+            &mut rt,
+            WM_MOUSEHWHEEL,
+            tilt_data,
+            |_| true,
+            1000,
+        );
+        assert_eq!(tilt_outcome, MouseHandleResult::PassToNext);
+    }
+
+    #[test]
+    fn tilt_wheel_debounce_drops_rapid_burst_ticks_at_150ms() {
+        let mut rt = test_runtime(
+            Shortcut::parse("win+backtick").unwrap(),
+            Shortcut::parse("alt+backtick").unwrap(),
+        );
+        rt.mouse = MouseMapping {
+            enabled: true,
+            thumb_back: None,
+            thumb_forward: None,
+            tilt_left: Some(Command::TaskView),
+            tilt_right: Some(Command::ShowDesktop),
+        };
+
+        let mut queue = Vec::new();
+        let tilt_left_data = (-120i16 as u16 as u32) << 16;
+
+        // First tick at t = 1000ms: accepted
+        let first = handle_mouse_event_with_sink(
+            &mut rt,
+            WM_MOUSEHWHEEL,
+            tilt_left_data,
+            |_| false,
+            1000,
+            |c| {
+                queue.push(c);
+                true
+            },
+        );
+        assert_eq!(first, MouseHandleResult::Swallow);
+        assert_eq!(rt.last_tilt_ms, 1000);
+        assert_eq!(queue, vec![Command::TaskView.as_u8()]);
+
+        // Rapid burst ticks at t = 1050ms and t = 1140ms (< 150ms since last accepted): dropped
+        let burst1 = handle_mouse_event_with_sink(
+            &mut rt,
+            WM_MOUSEHWHEEL,
+            tilt_left_data,
+            |_| false,
+            1050,
+            |c| {
+                queue.push(c);
+                true
+            },
+        );
+        assert_eq!(burst1, MouseHandleResult::Swallow);
+        assert_eq!(rt.last_tilt_ms, 1000);
+        assert_eq!(queue.len(), 1);
+
+        let burst2 = handle_mouse_event_with_sink(
+            &mut rt,
+            WM_MOUSEHWHEEL,
+            tilt_left_data,
+            |_| false,
+            1140,
+            |c| {
+                queue.push(c);
+                true
+            },
+        );
+        assert_eq!(burst2, MouseHandleResult::Swallow);
+        assert_eq!(rt.last_tilt_ms, 1000);
+        assert_eq!(queue.len(), 1);
+    }
+
+    #[test]
+    fn tilt_wheel_satisfying_debounce_enqueues_command() {
+        let mut rt = test_runtime(
+            Shortcut::parse("win+backtick").unwrap(),
+            Shortcut::parse("alt+backtick").unwrap(),
+        );
+        rt.mouse = MouseMapping {
+            enabled: true,
+            thumb_back: None,
+            thumb_forward: None,
+            tilt_left: Some(Command::TaskView),
+            tilt_right: Some(Command::ShowDesktop),
+        };
+
+        let mut queue = Vec::new();
+        let tilt_right_data = (120i16 as u16 as u32) << 16;
+
+        // First tick at t = 2000ms: accepted
+        let first = handle_mouse_event_with_sink(
+            &mut rt,
+            WM_MOUSEHWHEEL,
+            tilt_right_data,
+            |_| false,
+            2000,
+            |c| {
+                queue.push(c);
+                true
+            },
+        );
+        assert_eq!(first, MouseHandleResult::Swallow);
+        assert_eq!(rt.last_tilt_ms, 2000);
+        assert_eq!(queue, vec![Command::ShowDesktop.as_u8()]);
+
+        // Second tick at t = 2150ms (>= 150ms): accepted!
+        let second = handle_mouse_event_with_sink(
+            &mut rt,
+            WM_MOUSEHWHEEL,
+            tilt_right_data,
+            |_| false,
+            2150,
+            |c| {
+                queue.push(c);
+                true
+            },
+        );
+        assert_eq!(second, MouseHandleResult::Swallow);
+        assert_eq!(rt.last_tilt_ms, 2150);
+        assert_eq!(
+            queue,
+            vec![Command::ShowDesktop.as_u8(), Command::ShowDesktop.as_u8(),]
+        );
+    }
+
+    #[test]
+    fn ring_full_increments_dropped_metric_on_mouse_event() {
+        let mut rt = test_runtime(
+            Shortcut::parse("win+backtick").unwrap(),
+            Shortcut::parse("alt+backtick").unwrap(),
+        );
+        rt.mouse = MouseMapping {
+            enabled: true,
+            thumb_back: Some(Command::Cycle),
+            thumb_forward: None,
+            tilt_left: None,
+            tilt_right: None,
+        };
+
+        #[cfg(debug_assertions)]
+        let before = crate::metrics::DROPPED_FULL.load(Ordering::Relaxed);
+
+        let x1_data = (XBUTTON1 as u32) << 16;
+        // Simulate ring buffer full by returning false from enqueue sink
+        let outcome = handle_mouse_event_with_sink(
+            &mut rt,
+            WM_XBUTTONDOWN,
+            x1_data,
+            |_| false,
+            1000,
+            |_| false,
+        );
+        assert_eq!(outcome, MouseHandleResult::Swallow);
+
+        #[cfg(debug_assertions)]
+        {
+            let after = crate::metrics::DROPPED_FULL.load(Ordering::Relaxed);
+            assert_eq!(after, before + 1);
+        }
+    }
+
+    #[test]
+    fn dual_hook_heartbeat_refreshes_both_handles() {
+        let mut rt = test_runtime(
+            Shortcut::parse("win+backtick").unwrap(),
+            Shortcut::parse("alt+backtick").unwrap(),
+        );
+        rt.keyboard_hook_handle = 1001;
+        rt.mouse_hook_handle = 1002;
+
+        let (count, escalate) = next_hook_check_state(0, true);
+        assert_eq!(count, 0);
+        assert!(!escalate);
+
+        let (fail_count, should_escalate) = next_hook_check_state(0, false);
+        assert_eq!(fail_count, 1);
+        assert!(!should_escalate);
+
+        let (fail_count_crit, should_escalate_crit) =
+            next_hook_check_state(HOOK_CHECK_FAIL_THRESHOLD - 1, false);
+        assert_eq!(fail_count_crit, HOOK_CHECK_FAIL_THRESHOLD);
+        assert!(should_escalate_crit);
     }
 }

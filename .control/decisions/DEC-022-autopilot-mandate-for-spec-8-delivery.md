@@ -1,12 +1,32 @@
 ---
 type: mandate
 id: DEC-022
-status: accepted
+status: applied
 touches:
   - .control/decisions/DEC-022-autopilot-mandate-for-spec-8-delivery.md
   - .control/memlog/autopilot-DEC-022.md
   - .control/registry/decisions.yaml
   - .control/registry/specs.yaml
+  - .scratch/smoke-dec-022.md
+  - .scratch/spec-8-driverless-mouse-navigation/issues/01-mouse-configuration-and-settings-pane.md
+  - .scratch/spec-8-driverless-mouse-navigation/issues/02-low-level-mouse-hook-and-dispatch.md
+  - 3p.md
+  - crates/daemon/src/arrangement/mod.rs
+  - crates/daemon/src/config.rs
+  - crates/daemon/src/hook.rs
+  - crates/daemon/src/ring.rs
+  - crates/daemon/src/worker.rs
+  - crates/settings/src/app.rs
+  - crates/settings/src/main.rs
+  - crates/settings/src/persistence.rs
+  - crates/settings/src/theme.rs
+  - crates/settings/ui/components/sidebar.slint
+  - crates/settings/ui/main_window.slint
+  - crates/settings/ui/panes/mouse_pane.slint
+  - crates/shared/src/commands.rs
+  - crates/shared/src/config.rs
+  - crates/shared/src/constants.rs
+  - crates/shared/src/lib.rs
 supersedes: null
 superseded_by: null
 created: '2026-09-10'

@@ -40,6 +40,14 @@ pub enum Command {
     SnapThirdMiddle = 14,
     /// Snap the active window to the right third of the screen.
     SnapThirdRight = 15,
+    /// Switch to the next virtual desktop (Ctrl+Win+Right).
+    NextVirtualDesktop = 16,
+    /// Switch to the previous virtual desktop (Ctrl+Win+Left).
+    PrevVirtualDesktop = 17,
+    /// Open Windows Task View (Win+Tab).
+    TaskView = 18,
+    /// Show Windows Desktop (Win+D).
+    ShowDesktop = 19,
 }
 
 impl Command {
@@ -62,6 +70,10 @@ impl Command {
             13 => Command::SnapThirdLeft,
             14 => Command::SnapThirdMiddle,
             15 => Command::SnapThirdRight,
+            16 => Command::NextVirtualDesktop,
+            17 => Command::PrevVirtualDesktop,
+            18 => Command::TaskView,
+            19 => Command::ShowDesktop,
             _ => Command::Nop,
         }
     }
@@ -96,6 +108,10 @@ mod tests {
             Command::SnapThirdLeft,
             Command::SnapThirdMiddle,
             Command::SnapThirdRight,
+            Command::NextVirtualDesktop,
+            Command::PrevVirtualDesktop,
+            Command::TaskView,
+            Command::ShowDesktop,
         ] {
             assert_eq!(Command::from_u8(cmd.as_u8()), cmd);
         }
@@ -103,7 +119,7 @@ mod tests {
 
     #[test]
     fn unknown_values_map_to_nop() {
-        assert_eq!(Command::from_u8(16), Command::Nop);
+        assert_eq!(Command::from_u8(20), Command::Nop);
         assert_eq!(Command::from_u8(255), Command::Nop);
     }
 
@@ -129,5 +145,17 @@ mod tests {
         assert_eq!(Command::SnapThirdLeft.as_u8(), 13);
         assert_eq!(Command::SnapThirdMiddle.as_u8(), 14);
         assert_eq!(Command::SnapThirdRight.as_u8(), 15);
+        assert_eq!(Command::NextVirtualDesktop.as_u8(), 16);
+        assert_eq!(Command::PrevVirtualDesktop.as_u8(), 17);
+        assert_eq!(Command::TaskView.as_u8(), 18);
+        assert_eq!(Command::ShowDesktop.as_u8(), 19);
+    }
+
+    #[test]
+    fn frozen_command_wire_values_extended_for_mouse() {
+        assert_eq!(Command::NextVirtualDesktop as u8, 16);
+        assert_eq!(Command::PrevVirtualDesktop as u8, 17);
+        assert_eq!(Command::TaskView as u8, 18);
+        assert_eq!(Command::ShowDesktop as u8, 19);
     }
 }

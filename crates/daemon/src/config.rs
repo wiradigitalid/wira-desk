@@ -28,6 +28,7 @@ use crate::context::BypassPolicy;
 pub struct HookSnapshot {
     pub chords: crate::hook::Chords,
     pub bypass: BypassPolicy,
+    pub mouse: crate::hook::MouseMapping,
 }
 
 /// Owned, immutable configuration for the Worker actor.
@@ -193,9 +194,21 @@ pub fn validate(text: &str) -> Result<(Config, HookSnapshot, WorkerSnapshot), Re
         }
     }
 
+    for slug in [
+        &cfg.mouse.thumb_back,
+        &cfg.mouse.thumb_forward,
+        &cfg.mouse.tilt_left,
+        &cfg.mouse.tilt_right,
+    ] {
+        if shared::MouseActionPreset::parse_slug(slug).is_none() {
+            return Err(RejectReason::InvalidShortcut);
+        }
+    }
+
     let hook = HookSnapshot {
         chords,
         bypass: BypassPolicy::from_config(&cfg.vm_bypass),
+        mouse: crate::hook::MouseMapping::from_config(&cfg.mouse),
     };
     let worker = WorkerSnapshot {
         layout: cfg.layout.clone(),

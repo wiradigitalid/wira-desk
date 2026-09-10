@@ -117,8 +117,80 @@ pub fn drain_commands() {
             }
             Command::OverlappingStack => execute_stack(),
             Command::MoveToNextMonitor => execute_monitor_move(),
+            Command::NextVirtualDesktop
+            | Command::PrevVirtualDesktop
+            | Command::TaskView
+            | Command::ShowDesktop => {
+                execute_mouse_navigation(Command::from_u8(raw));
+            }
         }
     }
+}
+
+fn execute_mouse_navigation(command: Command) {
+    use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
+        VK_LCONTROL, VK_LEFT, VK_LWIN, VK_RIGHT, VK_TAB,
+    };
+    let keys: &[u16] = match command {
+        Command::NextVirtualDesktop => &[VK_LCONTROL, VK_LWIN, VK_RIGHT],
+        Command::PrevVirtualDesktop => &[VK_LCONTROL, VK_LWIN, VK_LEFT],
+        Command::TaskView => &[VK_LWIN, VK_TAB],
+        Command::ShowDesktop => &[VK_LWIN, 0x44 /* 'D' */],
+        _ => return,
+    };
+    synthesize_chord(keys);
+}
+
+fn synthesize_chord(keys: &[u16]) {
+    use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
+        SendInput, INPUT, INPUT_KEYBOARD, KEYBDINPUT, KEYEVENTF_KEYUP,
+    };
+
+    if keys.is_empty() {
+        return;
+    }
+
+    let mut inputs: Vec<INPUT> = Vec::with_capacity(keys.len() * 2);
+
+    for &vk in keys {
+        // SAFETY: `zeroed` is valid for `INPUT` as it is a union of plain integer structs.
+        let mut input: INPUT = unsafe { std::mem::zeroed() };
+        input.r#type = INPUT_KEYBOARD;
+        input.Anonymous.ki = KEYBDINPUT {
+            wVk: vk,
+            wScan: 0,
+            dwFlags: 0,
+            time: 0,
+            dwExtraInfo: 0,
+        };
+        inputs.push(input);
+    }
+
+    for &vk in keys.iter().rev() {
+        // SAFETY: `zeroed` is valid for `INPUT` as it is a union of plain integer structs.
+        let mut input: INPUT = unsafe { std::mem::zeroed() };
+        input.r#type = INPUT_KEYBOARD;
+        input.Anonymous.ki = KEYBDINPUT {
+            wVk: vk,
+            wScan: 0,
+            dwFlags: KEYEVENTF_KEYUP,
+            time: 0,
+            dwExtraInfo: 0,
+        };
+        inputs.push(input);
+    }
+
+    // SAFETY: `inputs.as_ptr()` points to a contiguous slice of `INPUT` items with length `inputs.len()`,
+    // matching the stride `size_of::<INPUT>()`. The buffer outlives the call.
+    unsafe {
+        SendInput(
+            inputs.len() as u32,
+            inputs.as_ptr(),
+            std::mem::size_of::<INPUT>() as i32,
+        );
+    }
+
+    suppress_start_menu();
 }
 
 // ── Context-safe cycling ────────────────────────────────────────────
@@ -661,5 +733,18 @@ mod tests {
         // 4 then 2 - least-recently-used first - with 3 removed by the
         // spatial gate and 1 (active) never retried.
         assert_eq!(activator.attempts, vec![WindowId(4), WindowId(2)]);
+    }
+
+    #[test]
+    fn mouse_virtual_desktop_commands_dispatch_safely() {
+        for cmd in [
+            Command::NextVirtualDesktop,
+            Command::PrevVirtualDesktop,
+            Command::TaskView,
+            Command::ShowDesktop,
+        ] {
+            // Must dispatch without panicking in test environment
+            execute_mouse_navigation(cmd);
+        }
     }
 }

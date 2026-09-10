@@ -845,7 +845,7 @@ specs:
     release: "0.3.0"
     prd: [wira-desk]
     size: M
-    status: open
+    status: closed
     depends_on: []
     spec_folder: .scratch/spec-8-driverless-mouse-navigation/
     fr: [FR-30, FR-31, FR-32]
