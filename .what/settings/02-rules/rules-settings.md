@@ -32,6 +32,7 @@ Local component business rules binding the `settings` Product Component. Global 
 | LBR-ST-15 | Settings must not open without a running daemon — everything it does changes something only the daemon acts on — and must close itself, once, the moment the daemon it opened against goes away. A daemon that starts later does not reopen a window that already refused or closed. | `settings` | FR-25, DEC-004 | active |
 | LBR-ST-16 | A chord tested against the reserved-catalogue refusal must, when refused, be offered a deterministic alternative — the same modifier ladder tried in the same order every time — or no alternative at all when none of the ladder clears the catalogue and the current draft. | `settings` | FR-18, DEC-003, DEC-008 | active |
 | LBR-ST-17 | Turning a shortcut action off must retain its stored chord unchanged and must exclude it from collision-precedence checking (`find_conflict` and its save-time equivalent) while off; turning it back on must restore the same chord with no re-entry required. A disabled action must read as unambiguously distinct from one `DEC-009`'s collision resolution left unbound. A configuration written before this feature existed, or otherwise missing the flag, must load every action as enabled — absence must never read as the user having disabled it. | `settings`, `window-management` | FR-28, FR-29, CAP-16, BR-9, DEC-009 | active |
+| LBR-ST-18 | Mouse navigation actions are selected from curated preset options per physical input (Thumb Buttons 1/2, Tilt Wheel Left/Right) in the dedicated Mouse pane. Selecting a preset updates the draft and persists to `[mouse]` in `config.toml` upon save, notifying the daemon via `WM_APP_RELOAD_CONFIG`. | `settings` | FR-32, BR-10 | active |
 
 ## Rationale — LBR-ST-14
 
@@ -44,6 +45,10 @@ Grouping is explicitly permitted and explicitly constrained. Sixteen undifferent
 ## Rationale — LBR-ST-15
 
 Everything Settings does is a change to something only the daemon acts on — shortcuts, arrangement, auto-start, the live key check. Without the daemon, every one of those is either inert or actively misleading: the Shortcuts pane would show fields that record nothing, and the key check would report "not running" for every chord no matter what was pressed. A Settings window left behind after the daemon exits is not a degraded window — it is a lying one, so the rule is refuse-to-open plus auto-close rather than a degraded read-only mode. Firing once, rather than reopening if the daemon comes back, keeps the rule simple: the window that closed already told the user what to do about it.
+
+## Rationale — LBR-ST-18
+
+Productivity mice with extra physical inputs benefit most from direct operating system multitasking flows. Providing curated action presets (such as Virtual Desktop navigation, Task View, and window snapping) via intuitive dropdown selectors eliminates the friction, confusion, and error rate associated with recording complex raw keyboard chords, while maintaining complete schema validation across both processes.
 
 ## Retired
 

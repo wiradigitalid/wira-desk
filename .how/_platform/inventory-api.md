@@ -33,7 +33,7 @@ Wira Desk contains no HTTP, REST, GraphQL, or RPC network APIs of its own — it
 
 | OS API Category | Win32 API Functions | Consumer | Purpose |
 | --- | --- | --- | --- |
-| **Keyboard Hooks** | `SetWindowsHookExW`, `UnhookWindowsHookEx`, `CallNextHookEx` | `daemon::hook` | Low-level global keyboard interception (`WH_KEYBOARD_LL`). |
+| **Keyboard & Mouse Hooks** | `SetWindowsHookExW`, `UnhookWindowsHookEx`, `CallNextHookEx` | `daemon::hook` | Low-level global keyboard and mouse interception (`WH_KEYBOARD_LL`, `WH_MOUSE_LL`). |
 | **Window Enumeration** | `EnumWindows`, `IsWindowVisible`, `GetWindowLongPtrW`, `GetClassNameW` | `daemon::worker`, `daemon::cycling` | Live, non-blocking Z-order traversal and candidate filtering. |
 | **Process Identity** | `GetWindowThreadProcessId`, `OpenProcess`, `QueryFullProcessImageNameW` | `daemon::cycling` | Multi-process executable filename matching (AD-4). |
 | **Focus & Positioning** | `SetForegroundWindow`, `SetWindowPos`, `ShowWindowAsync` | `daemon::worker`, `daemon::arrangement` | Active window focus switching and DPI-aware snapping. |

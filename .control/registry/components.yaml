@@ -25,6 +25,7 @@ product_components:
       - user-shortcut-preference
       - onboarding-completion
       - auto-start-preference
+      - user-mouse-preference
     containers: [settings]
     g4_passed: true
 

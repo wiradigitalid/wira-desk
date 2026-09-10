@@ -142,3 +142,18 @@ This table survives the retirement of `_bmad-output/planning-artifacts/prds/prd-
 - The window remains on the virtual desktop it was on; moving it never changes which desktop shows it.
 - The destination placement is derived from proportion, never from copying the window's pixel width and height.
 - No other window on either monitor is moved or resized.
+
+### FR-30 — Low-Level Mouse Hook Input Capture
+- The low-level mouse hook (WH_MOUSE_LL) runs on the dedicated hook thread.
+- WM_MOUSEMOVE messages are forwarded immediately to CallNextHookEx with no synchronization locks, memory allocations, or logging to avoid cursor micro-stutter.
+- WM_XBUTTONDOWN (XBUTTON1, XBUTTON2) and WM_MOUSEHWHEEL events are intercepted and swallowed (
+eturn 1) when mapped to a Wira Desk action, preventing default browser navigation or scrolling.
+
+### FR-31 — Action Dispatch and Tilt-Wheel Debounce
+- Horizontal tilt-wheel signals (WM_MOUSEHWHEEL) apply a time-based debounce filter (150–200 ms) so that a single physical wheel flick triggers exactly one action.
+- Action execution (e.g. SendInput for Virtual Desktop switching or Task View) is dispatched to the worker thread via the lock-free ring buffer, keeping the hook thread non-blocking.
+
+### FR-32 — Dedicated Mouse Configuration Pane
+- The Settings UI provides a dedicated Mouse pane with a master enable/disable toggle.
+- Four dropdown controls configure Thumb Button 1, Thumb Button 2, Tilt Wheel Left, and Tilt Wheel Right with curated action presets.
+- Selecting and saving mouse actions persists to the [mouse] section of config.toml and signals the daemon via WM_APP_RELOAD_CONFIG.

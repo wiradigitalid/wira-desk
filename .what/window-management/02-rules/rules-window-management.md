@@ -25,6 +25,7 @@ Local component business rules binding the `window-management` Product Component
 | LBR-WM-8 | A half-screen snap divides the work area at one boundary computed fresh on every press, so the two halves exactly tile the work area with neither a gap nor an overlap; an odd extent gives the floor to the first half; a half that would be empty is refused rather than emitted as a zero-extent placement. | `window-management` | FR-14, FR-22 | active |
 | LBR-WM-9 | A custom-percentage edge snap resizes the active window to the percentage configured for that edge — of the work area's width for left/right, of its height for top/bottom — computed fresh on every press and independent of every other edge's configured percentage; a percentage that would produce a zero or negative extent is refused rather than emitted as a degenerate placement. | `window-management` | FR-26 | active |
 | LBR-WM-10 | A thirds snap divides the work area's width into three columns computed fresh on every press, so the three columns exactly tile the work area with neither a gap nor an overlap; a width not evenly divisible by three gives the remainder to the middle column; a column that would be empty is refused rather than emitted as a zero-extent placement. | `window-management` | FR-27 | active |
+| LBR-WM-11 | When mouse navigation is active, all `WM_MOUSEMOVE` events are forwarded immediately via `CallNextHookEx` with zero locks, allocations, or logging; mapped auxiliary mouse inputs (`WM_XBUTTONDOWN`, `WM_MOUSEHWHEEL`) are swallowed and dispatched to the worker actor via the ring buffer; unmapped inputs pass through; horizontal tilt-wheel signals apply a 150–200 ms debounce window. | `window-management` | FR-30, FR-31, AD-15 | active |
 
 ## Rationale — LBR-WM-6
 
@@ -45,6 +46,10 @@ Each edge's percentage is independent rather than paired with its opposite edge,
 ## Rationale — LBR-WM-10
 
 The remainder goes to the middle column rather than the first, unlike `LBR-WM-8`'s floor-to-the-first-half rule: a thirds layout is read as symmetric (left, center, right), and a stray pixel on an outer column would be visible against the other outer column in a way the same pixel hidden in the middle is not.
+
+## Rationale — LBR-WM-11
+
+Optical and laser mice report cursor movements at high polling rates (125 Hz to 1000 Hz). Executing locks, heap allocations, or logging in `LowLevelMouseProc` during cursor motion induces perceptible jitter and risks hook removal under Windows `LowLevelHooksTimeout`. Mechanical tilt-wheel switches also fire multiple burst ticks per physical flick; debouncing them over a 150–200 ms window ensures predictable single-step navigation without erratic skipping.
 
 ## Retired
 

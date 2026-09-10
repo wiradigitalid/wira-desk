@@ -20,7 +20,7 @@ Configuration customization and user onboarding are episodic, UI-intensive tasks
 
 | Actor | Who they are | What they may do |
 | --- | --- | --- |
-| Power User | Desktop user wanting customized shortcut chords, auto-start management, or diagnostic preferences. | Customize primary/fallback shortcuts, toggle auto-start on boot, modify passthrough lists, turn any individual shortcut action on or off. |
+| Power User | Desktop user wanting customized shortcut chords, auto-start management, or diagnostic preferences. | Customize primary/fallback shortcuts, toggle auto-start on boot, modify passthrough lists, turn any individual shortcut action on or off, configure mouse navigation action presets and toggles. |
 | New User | First-time user encountering Wira Desk upon installation or initial launch. | Step through interactive mock window cycling simulation or dismiss onboarding via Skip Tutorial. |
 
 
@@ -35,6 +35,7 @@ Rendered from `usecases.yaml`.
 | `UC-6` | Turn auto-start on boot on or off | `settings` | `FR-13` | no |
 | `UC-8` | Check for updates from the About pane | `settings` | `FR-25` | no |
 | `UC-11` | Turn a shortcut action on or off | `settings` | `FR-28` | no |
+| `UC-14` | Configure mouse navigation actions and presets in Settings | `settings` | `FR-32` | no |
 
 
 ## Constraints
@@ -105,6 +106,7 @@ Local component business rules binding the `settings` Product Component. Global 
 | LBR-ST-15 | Settings must not open without a running daemon — everything it does changes something only the daemon acts on — and must close itself, once, the moment the daemon it opened against goes away. A daemon that starts later does not reopen a window that already refused or closed. | `settings` | FR-25, DEC-004 | active |
 | LBR-ST-16 | A chord tested against the reserved-catalogue refusal must, when refused, be offered a deterministic alternative — the same modifier ladder tried in the same order every time — or no alternative at all when none of the ladder clears the catalogue and the current draft. | `settings` | FR-18, DEC-003, DEC-008 | active |
 | LBR-ST-17 | Turning a shortcut action off must retain its stored chord unchanged and must exclude it from collision-precedence checking (`find_conflict` and its save-time equivalent) while off; turning it back on must restore the same chord with no re-entry required. A disabled action must read as unambiguously distinct from one `DEC-009`'s collision resolution left unbound. A configuration written before this feature existed, or otherwise missing the flag, must load every action as enabled — absence must never read as the user having disabled it. | `settings`, `window-management` | FR-28, FR-29, CAP-16, BR-9, DEC-009 | active |
+| LBR-ST-18 | Mouse navigation actions are selected from curated preset options per physical input (Thumb Buttons 1/2, Tilt Wheel Left/Right) in the dedicated Mouse pane. Selecting a preset updates the draft and persists to `[mouse]` in `config.toml` upon save, notifying the daemon via `WM_APP_RELOAD_CONFIG`. | `settings` | FR-32, BR-10 | active |
 
 #### Rationale — LBR-ST-14
 
@@ -117,6 +119,10 @@ Grouping is explicitly permitted and explicitly constrained. Sixteen undifferent
 #### Rationale — LBR-ST-15
 
 Everything Settings does is a change to something only the daemon acts on — shortcuts, arrangement, auto-start, the live key check. Without the daemon, every one of those is either inert or actively misleading: the Shortcuts pane would show fields that record nothing, and the key check would report "not running" for every chord no matter what was pressed. A Settings window left behind after the daemon exits is not a degraded window — it is a lying one, so the rule is refuse-to-open plus auto-close rather than a degraded read-only mode. Firing once, rather than reopening if the daemon comes back, keeps the rule simple: the window that closed already told the user what to do about it.
+
+#### Rationale — LBR-ST-18
+
+Productivity mice with extra physical inputs benefit most from direct operating system multitasking flows. Providing curated action presets (such as Virtual Desktop navigation, Task View, and window snapping) via intuitive dropdown selectors eliminates the friction, confusion, and error rate associated with recording complex raw keyboard chords, while maintaining complete schema validation across both processes.
 
 #### Retired
 
@@ -174,6 +180,7 @@ Conceptual domain model for the `settings` component. Represents domain entities
 - **Skip Tutorial Availability Invariant:** The "Skip Tutorial" action must remain accessible and clearly visible on every step of the first-run onboarding flow (FR-17).
 - **Per-User Task Alignment Invariant:** Auto-start scheduled tasks must always be created with `/RU %USERNAME%` and `/RL HIGHEST`, never under the `SYSTEM` account (BR-4, AD-13).
 - **Full Accessibility Invariant:** All interactive settings controls, toggles, and modal dialogs must be fully navigable via keyboard and expose name, role, and state to screen readers via Windows UI Automation (FR-20, FR-21, AD-11a).
+- **Mouse Preset Invariant:** Mouse input actions are selected from curated preset options and validated against supported desktop and window management actions without requiring manual physical keystroke recording (FR-32).
 - **Per-Action Enablement Invariant:** `disabled` (the user turned an action off) and `unbound` (`window-management` left an action's chord unreachable because it collided with an earlier one, `BR-6`/`DEC-009`) are two different domain concepts and must never be presented as the same state, even though both currently resolve to the identical "chord absent from hook registration" representation at the daemon boundary. `disabled` is a preference the user set on purpose and this component owns it; `unbound` is a runtime derivation `window-management` computes and this component only displays. A row's chord string is retained across a disable, not discarded — disabling never invalidates a chord the way an empty capture does (FR-28).
 
 
@@ -400,6 +407,62 @@ because the user chose that or because a chord collision left it unbound.
 - `BR-9`
 - `LBR-ST-14`
 - `LBR-ST-17`
+
+
+### `UC-14-configure-mouse-navigation-actions-and-presets.md`
+
+### UC-14 — Configure mouse navigation actions and presets in Settings
+
+#### Trigger
+
+User opens the Settings window and selects the "Mouse" tab in the sidebar.
+
+#### Precondition
+
+- Wira Desk daemon is running elevated.
+- Settings process (`wiradesk-settings.exe`) has launched and loaded `%APPDATA%\WiraDesk\config.toml`.
+
+#### Main Flow
+
+1. User navigates to the Mouse tab in the Settings sidebar.
+2. System displays the Mouse configuration pane featuring:
+   - A master toggle: "Enable Mouse Navigation" (On/Off).
+   - Four input configuration rows: Thumb Button 1 (Back), Thumb Button 2 (Forward), Tilt Wheel Left, Tilt Wheel Right.
+   - Each row displays a dropdown selector containing curated action presets (e.g. Next Virtual Desktop, Previous Virtual Desktop, Task View, Show Desktop, Cycle Same-App Window Forward/Backward, Snap Window Left/Right, or Default/Passthrough).
+3. User toggles the master switch or changes the dropdown selection for one or more inputs.
+4. System marks the settings state as dirty and enables the Save button.
+5. User clicks Save (or presses Ctrl + S).
+6. System serializes the configuration, writes `config.toml.tmp` atomically, and renames it over `%APPDATA%\WiraDesk\config.toml` (`BR-2`, `LBR-ST-2`).
+7. System dispatches `WM_APP_RELOAD_CONFIG` to the daemon hidden message window (`WiraDeskDaemonHiddenWindow`).
+8. System displays confirmation feedback, clears the dirty indicator, and the daemon reloads and activates the new mouse bindings immediately.
+
+#### Alternate Flows
+
+| From step | Condition | What happens |
+| --- | --- | --- |
+| Step 2 | Configuration file did not yet contain a `[mouse]` section (legacy config) | System populates the UI with default values (`enabled = true`, default recommended presets), without modifying the file until the user saves. |
+| Step 3 | User sets an input to "Default / Passthrough" | That physical mouse button or tilt direction is marked unmapped; upon save, the daemon will pass that event through to Windows/active applications via `CallNextHookEx`. |
+| Step 4 | User switches sidebar tabs or closes Settings without saving | System retains unsaved working draft until user confirms discard or applies changes. |
+
+#### Failure Flows
+
+| From step | Failure | What the system does | What the user is left with |
+| --- | --- | --- | --- |
+| Step 6 | File write error or permissions refusal on `%APPDATA%\WiraDesk\` | System retains the working draft in memory and displays an inline error alert | Working copy remains intact in GUI; user can re-try saving |
+| Step 7 | Daemon hidden window cannot be resolved | System reports a reload warning | Saved configuration is on disk; daemon will load it upon its next restart |
+
+#### Outcome
+
+The user easily configures mouse navigation actions from an intuitive dropdown UI without needing to record complex keyboard macros or install bloated vendor utilities.
+
+#### Business Rules
+
+- `BR-1` (Explicit IPC Configuration Reload)
+- `BR-2` (Canonical Shared Configuration Schema)
+- `BR-10` (Mouse Navigation Action Mapping and Passthrough)
+- `LBR-ST-2` (Atomic configuration persistence)
+- `LBR-ST-5` (Deterministic Tab navigation order)
+- `LBR-ST-18` (Curated mouse action presets)
 
 
 ### `UC-4-change-shortcut.md`

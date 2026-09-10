@@ -4,7 +4,7 @@ component: settings
 status: reviewed
 created: 2026-08-21
 updated: 2026-08-25
-satisfies: [FR-7, FR-13, FR-16, FR-17, FR-18, FR-19, FR-20, FR-21, FR-25, FR-28]
+satisfies: [FR-7, FR-13, FR-16, FR-17, FR-18, FR-19, FR-20, FR-21, FR-25, FR-28, FR-32]
 reviewed:
   date: '2026-09-07'
   sha: 'f989238'
@@ -25,7 +25,7 @@ Configuration customization and user onboarding are episodic, UI-intensive tasks
 
 | Actor | Who they are | What they may do |
 | --- | --- | --- |
-| Power User | Desktop user wanting customized shortcut chords, auto-start management, or diagnostic preferences. | Customize primary/fallback shortcuts, toggle auto-start on boot, modify passthrough lists, turn any individual shortcut action on or off. |
+| Power User | Desktop user wanting customized shortcut chords, auto-start management, or diagnostic preferences. | Customize primary/fallback shortcuts, toggle auto-start on boot, modify passthrough lists, turn any individual shortcut action on or off, configure mouse navigation action presets and toggles. |
 | New User | First-time user encountering Wira Desk upon installation or initial launch. | Step through interactive mock window cycling simulation or dismiss onboarding via Skip Tutorial. |
 
 ## UC Catalogue

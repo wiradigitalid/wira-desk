@@ -4,11 +4,11 @@
 
 ## Why
 
-Wira Desk is a lightweight, background Windows productivity utility that brings the intuitive same-application window cycling behavior of macOS (`Command + ~`) to Windows 11 and 10 via a dedicated keyboard shortcut (`Win + backtick`). Windows natively lacks any mechanism to cycle strictly among windows belonging to the current foreground process, forcing users into multi-app `Alt + Tab` switchers or taskbar hunting that breaks focus and disrupts spatial workflows across multi-monitor setups. Existing third-party commercial utilities have been abandoned since 2022, leaving power users without a reliable, active solution.
+Wira Desk is a lightweight, background Windows productivity utility that brings intuitive same-application window cycling (macOS-style `Win + backtick`) and driverless, zero-overhead mouse desktop navigation to Windows 11 and 10. Windows natively lacks any mechanism to cycle strictly among windows belonging to the current foreground process, forcing users into multi-app `Alt + Tab` switchers or taskbar hunting that breaks focus and disrupts spatial workflows across multi-monitor setups. Concurrently, standard multi-button productivity mice offer physical auxiliary controls (thumb buttons and tilt wheels) that default to basic browser navigation; unlocking them for desktop multitasking traditionally requires heavy, multi-process vendor companion suites that consume gigabytes of disk space, hundreds of megabytes of RAM, and run persistent background telemetry agents.
 
-Built in Rust with pure Win32 bindings (`windows-sys`), Wira Desk runs as an elevated tray daemon with an uncompromising resource budget of under 2 MB idle RAM and near-zero CPU usage. It performs instantaneous, overlay-free window cycling while preserving monitor boundaries and spatial context. Companion settings and onboarding operations are isolated into a separate process, ensuring the core input interception loop remains lightweight, rock-solid, and responsive.
+Built in Rust with pure Win32 bindings (`windows-sys`), Wira Desk runs as an elevated tray daemon with an uncompromising resource budget of under 2 MB idle RAM and near-zero CPU usage. It performs instantaneous, overlay-free window cycling while preserving monitor boundaries and spatial context, and maps standard mouse inputs directly to virtual desktop switching and desktop navigation without third-party vendor bloat. Companion settings and onboarding operations are isolated into a separate process, ensuring the core input interception loop remains lightweight, rock-solid, and responsive.
 
-Wira Desk establishes itself as the essential, invisible window navigation companion for power users on Windows—delivering the effortless elegance of macOS same-application switching while honoring the speed, stability, and resource constraints demanded by modern high-performance desktop environments.
+Wira Desk establishes itself as the essential, invisible window and desktop navigation companion for power users on Windows—delivering effortless same-application switching and mouse-driven multitasking while honoring the speed, stability, and resource constraints demanded by modern high-performance desktop environments.
 
 **This initiative:** <!-- New shape wants a delta against the brief's `Why`, not a restatement. No sentence below is
      word-for-word identical to brief.md's `Why`, so none was removed — deciding which paraphrases
@@ -66,6 +66,14 @@ Operating as an ultra-lightweight, invisible background tray utility written in 
 - **Climax:** The specification arrives on the external monitor still occupying the top half — the same share of the working area it held on the laptop, not the same number of pixels — so the arrangement she built survives the move. Her browser and terminal stay exactly where they were.
 - **Resolution:** Sari works across both screens with a layout she assembled from the keyboard in a few seconds, and rebuilds it the same way whenever she docks.
 - **Edge case:** With only the laptop screen attached, the move shortcut does nothing at all — no window jump, no message, no error. On a screen too short to divide, the snap declines rather than producing a window with no height.
+
+#### UJ-5. Dimas navigates virtual desktops and tasks via mouse thumb buttons and tilt wheel
+- **Persona + context:** Dimas, a full-stack developer multitasking across four virtual desktops (frontend, backend, database client, messaging) using an ergonomic multi-button productivity mouse.
+- **Entry state:** Wira Desk daemon running in the tray; foreground focus active in VS Code on Virtual Desktop 1; vendor mouse software is not installed.
+- **Path:** Dimas clicks Thumb Button 2 (forward) to advance to the next virtual desktop, and tilts the scroll wheel to the left to open Task View (Win + Tab).
+- **Climax:** Virtual Desktop transitions smoothly to Desktop 2 with zero perceived latency; tilting the wheel left immediately displays the overview of all open application windows without cursor stutter or hitching.
+- **Resolution:** Dimas navigates between multiple workspaces entirely from his mouse hand without reaching for the keyboard, maintaining high coding flow while consuming under 2 MB background RAM.
+- **Edge case:** Rapidly flicking the tilt wheel left triggers exactly one Task View or desktop switch due to software debounce filtering (150–200 ms), preventing erratic multiple transitions.
 
 ## Features
 
@@ -431,6 +439,43 @@ The system excludes a disabled action's chord from low-level keyboard hook regis
 
 ---
 
+### 3.16 Driverless Mouse Desktop Navigation
+
+**Capability:** CAP-17 — serves BG-4.
+
+**Description:** Captures standard auxiliary mouse buttons (Thumb Buttons 1 & 2 via WM_XBUTTONDOWN) and horizontal tilt-wheel signals (WM_MOUSEHWHEEL) via a low-level Win32 mouse hook (WH_MOUSE_LL) without third-party vendor companion software. Provides curated action presets (Next/Previous Virtual Desktop, Task View, Show Desktop, and Wira Desk window management) configured via a dedicated Mouse pane in Settings, with debounce filtering on horizontal wheel tilts and zero-overhead WM_MOUSEMOVE passthrough to guarantee micro-stutter-free cursor movement. Realizes UJ-5.
+
+#### FR-30 — Low-level mouse hook captures thumb buttons and horizontal tilt wheel, immediately passing cursor movement through.
+
+The daemon can capture standard auxiliary mouse inputs (Thumb Button 1/2 via `WM_XBUTTONDOWN` and horizontal tilt wheel via `WM_MOUSEHWHEEL`) using a low-level Win32 mouse hook (`WH_MOUSE_LL`) on the dedicated hook thread, while forwarding `WM_MOUSEMOVE` messages immediately without locks, heap allocations, or blocking to guarantee zero cursor latency.
+
+**Proof of done:** Moving the cursor while Wira Desk mouse navigation is active produces zero detectable cursor micro-stutter or hitching, and clicking thumb buttons or tilting the scroll wheel intercepts the designated events without passing them to the active application.  
+**Capability:** `CAP-17`  
+**Component:** `window-management`
+
+#### FR-31 — Dispatch configured actions for mouse inputs, with debounce filtering for tilt-wheel burst signals.
+
+The daemon can map intercepted auxiliary mouse inputs to configured system or window management actions (including Next/Previous Virtual Desktop, Task View, Show Desktop, and Same-App Window Cycling), applying a time-based debounce filter (150–200 ms) to horizontal tilt-wheel signals to prevent multiple triggers from a single physical wheel flick.
+
+**Proof of done:** Flicking the tilt wheel left once with Next Virtual Desktop configured triggers exactly one virtual desktop switch rather than multiple rapid desktop transitions.  
+**Capability:** `CAP-17`  
+**Component:** `window-management`
+
+#### FR-32 — Dedicated Mouse pane in Settings provides a master toggle and curated action preset dropdowns per physical input.
+
+The Settings application provides a dedicated Mouse configuration pane containing a master enable/disable toggle and dropdown selectors for Thumb Button 1, Thumb Button 2, Tilt Wheel Left, and Tilt Wheel Right, offering curated preset actions without requiring manual keyboard shortcut recording.
+
+**Proof of done:** Opening the Mouse tab in Settings allows selecting "Next Virtual Desktop" for Thumb Button 2 and "Task View" for Tilt Wheel Left from dropdown menus; saving the configuration immediately updates `config.toml` and signals the daemon to apply the new mouse mappings.  
+**Capability:** `CAP-17`  
+**Component:** `settings`
+
+**Out of Scope:**
+- Emulating proprietary vendor driver protocols or reverse-engineering proprietary wireless packets.
+- Arbitrary multi-step keyboard macro sequence recording for mouse buttons.
+- Multi-device cross-computer network clipboard or file synchronization protocols.
+
+---
+
 ### Capabilities
 
 | id | Serves | Capability | Priority | Release | Depends on |
@@ -451,6 +496,7 @@ The system excludes a disabled action's chord from low-level keyboard hook regis
 | `CAP-14` | `BG-3` | Snap the active window to a screen edge at a user-configurable percentage instead of a fixed half. | — | — | — |
 | `CAP-15` | `BG-3` | Snap the active window to one of three equal horizontal thirds of the current monitor. | — | — | — |
 | `CAP-16` | `BG-3` | Let the user turn any individual shortcut action off, returning its chord to Windows instead of leaving it claimed and inert. | — | — | — |
+| `CAP-17` | `BG-4` | Provide driverless, low-overhead mouse desktop navigation for standard auxiliary mouse inputs (thumb buttons and tilt wheels) with configurable action presets. | — | — | — |
 
 ### User journeys
 
@@ -460,6 +506,7 @@ The system excludes a disabled action's chord from low-level keyboard hook regis
 | `UJ-2` | Designer encounters a hung Chrome window during cycling and sees the honest Not Responding state. |
 | `UJ-3` | Sysadmin cycles between normal and elevated CMD windows without OS refusal. |
 | `UJ-4` | Technical writer stacks two windows as top and bottom halves on a short laptop screen, then moves one to a larger external display and it keeps the same share of the screen. |
+| `UJ-5` | Developer navigates virtual desktops and tasks seamlessly via mouse thumb buttons and tilt wheel without vendor background software. |
 
 ### Non-functional requirements not attached to a feature above
 
@@ -505,6 +552,7 @@ The system excludes a disabled action's chord from low-level keyboard hook regis
 - DPI-aware keyboard snapping to a user-configurable edge percentage (`Ctrl + Alt + Shift + Arrows`) and to left/middle/right thirds (`Ctrl + Alt + 1/2/3`).
 - Moving the active window to the next physical monitor from the keyboard, keeping its share of the working area.
 - Turning any individual shortcut action off from Settings, returning its chord to Windows rather than leaving it claimed and inert.
+  - Driverless auxiliary mouse input capture (Thumb Buttons 1/2 and Tilt Wheel) with tilt debounce and curated action presets for desktop navigation.
 - Separate settings binary with first-run onboarding, physical key listening, and UI Automation accessibility.
 - Silent auto-start via Windows Task Scheduler.
 - Local TOML configuration parsing and logging.
@@ -590,6 +638,9 @@ Structure of the Settings Window (`wiradesk-settings.exe`):
 
 - Graphical window previews, thumbnail matrices, or Alt+Tab-style visual switchers.
 - Cloud synchronization, background telemetry, or remote telemetry collection.
+- Proprietary vendor driver emulation or Bluetooth low-energy protocol reverse-engineering.
+- Cross-device network clipboard or file transfer protocols (e.g., Logitech Flow equivalents).
+- Custom gaming macro scripting or arbitrary multi-key macro sequence recording for mice.
 - Per-virtual-desktop isolated snap configurations.
 - Direct distribution pipelines within public continuous integration (local verified builds only).
 - Automatic tiling window management (e.g. Komorebi/i3).
@@ -615,4 +666,5 @@ Release-specific exclusions are under **MVP Scope → Out of Scope for MVP** abo
 | 2026-09-03 | Added Update Checking (CAP-13, FR-24, FR-25): the product already shipped an optional, toggleable HTTPS check for a newer release, disclosed in `PRIVACY.md` but never promised here; §7's Constraints corrected to state the one exception instead of an absolute zero; FR-16's tray menu order corrected to match what ships (an "Update to \<version\>..." item only when one is available, not an always-present "Check for Updates...") | `wdi-reconcile` traced the shipped code against the corpus and found the update-check subsystem — real, deliberate, already privacy-documented — had no promise anywhere in `.what/`, and that FR-16's proof no longer matched the running menu | v0.4.0 |
 | 2026-09-06 | Added custom-percentage edge snap (CAP-14, FR-26) and snap-to-thirds (CAP-15, FR-27), both `window-management`; FR-15's proof corrected from `Ctrl + Alt + Shift + Down` to `Ctrl + Alt + Shift + S`, the Overlapping Stack default `DEC-011` moved it to so the new percentage-snap feature could claim the arrow tier | The owner asked for a configurable-percentage snap and a thirds snap, and wanted the first bound to arrow keys; freeing that tier required moving the Overlapping Stack default, recorded as `DEC-011` | Unreleased |
 | 2026-09-07 | Added per-action shortcut enable/disable (CAP-16): FR-28 (`settings`) gives every editable action its own on/off control, distinct from a `DEC-009` chord-collision unbind; FR-29 (`window-management`) excludes a disabled action's chord from hook registration entirely rather than registering and then discarding it | Overlapping Stack was the only action with an on/off control and no `FR`/`UC`/`DEC` explained why. Every other action's chord is claimed from Windows permanently regardless of whether the user wants that feature — and even Overlapping Stack's own existing toggle checked state inside the arrangement planner, after the hook had already consumed the keystroke, so "disabled" still stole the chord without using it | Unreleased |
+| 2026-09-10 | Added driverless mouse desktop navigation (CAP-17, FR-30, FR-31, FR-32): intercepts standard auxiliary mouse buttons (Thumb Button 1/2 via WM_XBUTTONDOWN) and horizontal tilt wheel (WM_MOUSEHWHEEL) with software debounce and zero-overhead WM_MOUSEMOVE passthrough, dispatching to virtual desktop switching, Task View, Show Desktop, or Wira Desk actions via a dedicated Mouse settings pane with preset action dropdowns | Standard productivity mice omit on-board EEPROM macro storage, forcing users into heavy vendor companion suites (>500MB disk, hundreds of MBs RAM, multiple background processes) to customize auxiliary inputs; Wira Desk delivers native, zero-overhead desktop navigation via standard Win32 hooks (<2MB static RAM) without third-party vendor bloat | Unreleased |
 

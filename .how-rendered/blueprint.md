@@ -8,7 +8,7 @@ This is what the owner reads at **G3 Blueprint** — one page, every one of the 
 
 ## Use case catalogue
 
-**12 use cases**, 0 marked `critical`. Rendered from `usecases.yaml`.
+**14 use cases**, 0 marked `critical`. Rendered from `usecases.yaml`.
 
 | id | Use case | Component | Satisfies | critical |
 | --- | --- | --- | --- | --- |
@@ -24,6 +24,8 @@ This is what the owner reads at **G3 Blueprint** — one page, every one of the 
 | `UC-10` | Snap the active window to a third of the screen | `window-management` | `FR-27` | no |
 | `UC-11` | Turn a shortcut action on or off | `settings` | `FR-28` | no |
 | `UC-12` | A disabled shortcut action's chord is not claimed at the hook | `window-management` | `FR-29` | no |
+| `UC-13` | Navigate virtual desktops or tasks via mouse thumb buttons and tilt wheel | `window-management` | `FR-30`, `FR-31` | no |
+| `UC-14` | Configure mouse navigation actions and presets in Settings | `settings` | `FR-32` | no |
 
 
 ## Actor list
@@ -33,14 +35,14 @@ This is what the owner reads at **G3 Blueprint** — one page, every one of the 
 
 | Actor | Who they are | What they may do |
 | --- | --- | --- |
-| Power User | Desktop user wanting customized shortcut chords, auto-start management, or diagnostic preferences. | Customize primary/fallback shortcuts, toggle auto-start on boot, modify passthrough lists, turn any individual shortcut action on or off. |
+| Power User | Desktop user wanting customized shortcut chords, auto-start management, or diagnostic preferences. | Customize primary/fallback shortcuts, toggle auto-start on boot, modify passthrough lists, turn any individual shortcut action on or off, configure mouse navigation action presets and toggles. |
 | New User | First-time user encountering Wira Desk upon installation or initial launch. | Step through interactive mock window cycling simulation or dismiss onboarding via Skip Tutorial. |
 
 ### window-management
 
 | Actor | Who they are | What they may do |
 | --- | --- | --- |
-| Power User | Desktop user managing multiple windows of the same application across multi-monitor or virtual desktop workspaces. | Trigger same-app cycling, snap active windows to any half or to full screen, to a custom percentage of a screen edge, or to a left/middle/right third, move the active window to the next monitor, turn off any shortcut action so Windows and other applications receive its chord instead, access tray menu, open diagnostic logs. |
+| Power User | Desktop user managing multiple windows of the same application across multi-monitor or virtual desktop workspaces. | Trigger same-app cycling, snap active windows to any half or to full screen, to a custom percentage of a screen edge, or to a left/middle/right third, move the active window to the next monitor, navigate virtual desktops or trigger tasks via mouse thumb buttons and tilt wheel, turn off any shortcut action so Windows and other applications receive its chord instead, access tray menu, open diagnostic logs. |
 | New User | First-time user running Wira Desk on Windows. | Experience default cycling and snapping shortcuts without opening configuration. |
 | Sysadmin | System administrator operating standard and elevated command shells or administrative tools. | Cycle seamlessly between standard and elevated administrator windows without UIPI refusal. |
 
@@ -95,6 +97,7 @@ Conceptual domain model for the `settings` component. Represents domain entities
 - **Skip Tutorial Availability Invariant:** The "Skip Tutorial" action must remain accessible and clearly visible on every step of the first-run onboarding flow (FR-17).
 - **Per-User Task Alignment Invariant:** Auto-start scheduled tasks must always be created with `/RU %USERNAME%` and `/RL HIGHEST`, never under the `SYSTEM` account (BR-4, AD-13).
 - **Full Accessibility Invariant:** All interactive settings controls, toggles, and modal dialogs must be fully navigable via keyboard and expose name, role, and state to screen readers via Windows UI Automation (FR-20, FR-21, AD-11a).
+- **Mouse Preset Invariant:** Mouse input actions are selected from curated preset options and validated against supported desktop and window management actions without requiring manual physical keystroke recording (FR-32).
 - **Per-Action Enablement Invariant:** `disabled` (the user turned an action off) and `unbound` (`window-management` left an action's chord unreachable because it collided with an earlier one, `BR-6`/`DEC-009`) are two different domain concepts and must never be presented as the same state, even though both currently resolve to the identical "chord absent from hook registration" representation at the daemon boundary. `disabled` is a preference the user set on purpose and this component owns it; `unbound` is a runtime derivation `window-management` computes and this component only displays. A row's chord string is retained across a disable, not discarded — disabling never invalidates a chord the way an empty capture does (FR-28).
 
 ### window-management
@@ -151,6 +154,8 @@ A disabled action's chord never enters this lifecycle at all: it is excluded at 
 - **One Chord, One Action Invariant:** No two actions may be reachable by the same chord. When configuration says otherwise, the chord belongs to the first action in the fixed precedence order and the later action is unbound rather than ambiguous (BR-6, DEC-009). A `disabled` action (`BR-9`) is a different concept reaching the same registration-time exclusion: it never enters the precedence resolution at all, having no chord to contend with in the first place, so this invariant's collision handling needs no change to also exclude disabled rows.
 - **Registration Exclusion Invariant:** A shortcut action's chord is registered at the low-level keyboard hook only when `settings` records it as enabled; a disabled action's physical key combination is never intercepted and reaches the foreground application or Windows exactly as it would if Wira Desk were not installed (FR-29, BR-9).
 - **UX Honesty Invariant:** Unresponsive ("Not Responding") windows must receive focus when reached in the cycling sequence and must never be filtered out (FR-4).
+- **Mouse Motion Passthrough Invariant:** When the low-level mouse hook (WH_MOUSE_LL) is active, all WM_MOUSEMOVE messages must be passed immediately to CallNextHookEx without locks, heap allocations, or logging to ensure zero cursor latency and eliminate micro-stutter (FR-30, NFR-2).
+- **Tilt Wheel Debounce Invariant:** Horizontal tilt-wheel signals (WM_MOUSEHWHEEL) must be throttled with a 150–200 ms debounce timer so that a single physical wheel flick triggers exactly one navigation action (FR-31).
 - **Hook Callback Speed Invariant:** The low-level keyboard hook callback must complete within 10 ms without executing heap allocations or blocking synchronous APIs (NFR-2, NFR-3).
 - **Single Instance Invariant:** Exactly one background daemon instance may run per user logon session (NFR-6).
 
@@ -191,6 +196,7 @@ Rendered from `.how/_platform/ARCHITECTURE-SPINE.md`. G3 asks of every row: does
 | `AD-12` | Cargo Workspace: Three Crates | all | Duplicated type definitions (config structs, command enums) between daemon and settings, causing silent divergence. | The project is a single Cargo Workspace with three crates: `daemon` (`wiradesk.exe`), `settings` (`wiradesk-settings.exe`), and `shared` (Config TOML types, `u8` command enum, constants, `%APPDATA%` path). Both binaries depend on `shared`. |
 | `AD-13` | Auto-Start: Windows Task Scheduler | CAP-10 | UAC prompt on every boot (a registry `Run`-key entry cannot launch an elevated process silently); `%APPDATA%` path mismatch if the task runs as SYSTEM; DLL Hijacking via the task's working directory; a stored path outliving the executable it named. | Auto-start is registered as a Windows Scheduled Task (`schtasks`): trigger `ONLOGON`, run level `/RL HIGHEST`, run-as user `/RU "%USERNAME%"` (the specific active user, never SYSTEM — keeping `%APPDATA%` aligned between daemon and settings GUI). The task action (`/TR`) must use the absolute executable path and the `Start in` parameter must be left empty or point to the secure install directory, mitigating DLL Hijacking. The registry `Run`-key mechanism (`HKCU\...\CurrentVersion\Run`) is prohibited. Toggle (create/delete task) is exposed via the tray context menu and settings UI. |
 | `AD-14` | Monitor Enumeration: Stateless Just-in-Time | CAP-2, CAP-7, CAP-12 | A cached monitor list outliving the display configuration it described — placing a window onto a monitor that has been unplugged, or refusing to reach one that has just been attached. Also prevents an `HMONITOR` being treated as a durable identity, which it is not. | On every command that needs to know what monitors exist, the Worker Thread enumerates them live via `EnumDisplayMonitors` and reads each one's work area and DPI at that moment. No monitor list, work area, or `HMONITOR` may be cached, memoized, or held in a `static` between keypresses. Display-change notifications are not subscribed to, because nothing is stored for them to invalidate. This is `AD-3`'s rule applied to the display set rather than to the Z-order, and it is stated separately because the two are enumerated by different APIs and it would otherwise be read as covered by implication. |
+| `AD-15` | Low-Level Mouse Hooking: WH_MOUSE_LL & Motion Passthrough | CAP-17 | Cursor micro-stutter, input lag, and OS unhooking timeouts from heavy processing in the mouse hook; accidental multi-trigger navigation jumps from physical tilt-wheel bounce. | The Hook Thread installs WH_MOUSE_LL on the same thread and message pump as WH_KEYBOARD_LL. WM_MOUSEMOVE is forwarded immediately via CallNextHookEx with zero synchronization locks, heap allocations, or logging. Auxiliary mouse inputs (WM_XBUTTONDOWN, WM_MOUSEHWHEEL) are swallowed ( |
 
 
 ## Containers, and which components live in each
@@ -210,8 +216,8 @@ Rendered from `components.yaml` — the table C4 L2 used to carry by hand.
 
 | Container | Binary | Technology | Responsibilities |
 | --- | --- | --- | --- |
-| **daemon** | `wiradesk.exe` | Rust, `windows-sys`, Win32 API | Installs global `WH_KEYBOARD_LL` hook, maintains lock-free command ring buffer, executes stateless Z-order window cycling and DPI-aware snapping, manages tray icon / context menu, monitors hook health (10s heartbeat). Runs elevated (`requireAdministrator`). |
-| **settings** | `wiradesk-settings.exe` | Rust, `slint` (`accessibility` feature), `i-slint-backend-winit` | Provides accessible GUI for editing shortcut bindings, VM bypass list, snapping preferences, and auto-start. Hosts first-run onboarding tutorial. Writes `config.toml` atomically and dispatches `WM_APP_RELOAD_CONFIG` to daemon. |
+| **daemon** | `wiradesk.exe` | Rust, `windows-sys`, Win32 API | Installs global `WH_KEYBOARD_LL` and `WH_MOUSE_LL` hooks, maintains lock-free command ring buffer, executes stateless Z-order window cycling and DPI-aware snapping, manages tray icon / context menu, monitors hook health (10s heartbeat). Runs elevated (`requireAdministrator`). |
+| **settings** | `wiradesk-settings.exe` | Rust, `slint` (`accessibility` feature), `i-slint-backend-winit` | Provides accessible GUI for editing shortcut bindings, mouse navigation presets, VM bypass list, snapping preferences, and auto-start. Hosts first-run onboarding tutorial. Writes `config.toml` atomically and dispatches `WM_APP_RELOAD_CONFIG` to daemon. |
 | **shared** | (library crate) | Rust, `serde`, `toml` | Single source of truth for config schema, default bindings, `u8` command enum, IPC message IDs, APPDATA paths, and legacy WinTick migration logic. |
 
 #### Product Components per container
@@ -233,7 +239,7 @@ graph TB
         end
 
         subgraph SettingsContainer["settings (wiradesk-settings.exe) [Container: Rust / Slint]"]
-            SettingsUI["Settings GUI & Accessibility<br/>(General, Switcher, Snap, Bypass, About)"]
+            SettingsUI["Settings GUI & Accessibility<br/>(General, Switcher, Snap, Mouse, Bypass, About)"]
             OnboardingUI["First-Run Onboarding<br/>(--onboarding simulation)"]
             ConfigWriter["Config Writer<br/>(Atomic save to temp + rename)"]
             
@@ -269,7 +275,7 @@ graph TB
 | --- | --- | --- | --- |
 | `daemon` (tray menu) | `settings` | `ShellExecute` (`wiradesk-settings.exe`) | Open Settings GUI (or onboarding via `--onboarding` on first run). Inherits Administrator elevation. |
 | `settings` | `daemon` | `WM_APP_RELOAD_CONFIG` (Win32 `PostMessageW` / `SendMessageW` to hidden window) | Notify daemon that `config.toml` was atomically written to disk and needs immediate reload. |
-| `Hook Thread` | `Worker Thread` | In-process lock-free static ring buffer (`16` slots of `u8`) | Pass validated, throttled shortcut commands with zero heap allocation. |
+| `Hook Thread` | `Worker Thread` | In-process lock-free static ring buffer (`16` slots of `u8`) | Pass validated, throttled shortcut and mouse commands with zero heap allocation. |
 | `health.rs` | `Hook Thread` / Main | `WM_APP_HOOK_CHECK`, `WM_APP_HOOK_DEAD` | 10-second heartbeat check and Tier-3 critical escalation. |
 | `daemon` | Filesystem | Direct I/O (`%APPDATA%\WiraDesk\config.toml`, `wiradesk.log`) | Read config on boot/signal; append diagnostic warnings/errors. |
 | `settings` | Filesystem | Direct I/O (`config.toml.tmp` -> `config.toml`) | Atomically persist user changes without partial-read races. |
@@ -288,7 +294,7 @@ Wira Desk does not use an RDBMS or embedded SQL database. All persistence uses l
 
 | Store | Format | Owner | Path / Location | Schema & Keys | Lifetime & Access Pattern |
 | --- | --- | --- | --- | --- | --- |
-| **User Configuration** | TOML | `_platform` (shared) | `%APPDATA%\WiraDesk\config.toml` | **Sections:**<br/>- `[general]`: `auto_start` (bool)<br/>- `[switcher]`: `shortcut`, `fallback_shortcut`, plus a paired `*_enabled` (bool) per action (`CAP-16`)<br/>- `[snapping]`: `snap_half_left`, `snap_half_right`, `snap_maximize`, plus a paired `*_enabled` (bool) per action (`CAP-16`)<br/>- `[layout]`: `stack_shortcut_enabled`, `stack_width_percent`, `stack_shortcut` (`enable_overlapping_stack` retired, `CAP-16`)<br/>- `[vm_bypass]`: `bypass_processes` (vec), `bypass_classes` (vec) | Written atomically by `settings` process via temp file + rename. Read on startup and on `WM_APP_RELOAD_CONFIG` by `daemon`. |
+| **User Configuration** | TOML | `_platform` (shared) | `%APPDATA%\WiraDesk\config.toml` | **Sections:**<br/>- `[general]`: `auto_start` (bool)<br/>- `[switcher]`: `shortcut`, `fallback_shortcut`, plus a paired `*_enabled` (bool) per action (`CAP-16`)<br/>- `[snapping]`: `snap_half_left`, `snap_half_right`, `snap_maximize`, plus a paired `*_enabled` (bool) per action (`CAP-16`)<br/>- `[layout]`: `stack_shortcut_enabled`, `stack_width_percent`, `stack_shortcut` (`enable_overlapping_stack` retired, `CAP-16`)<br/>- `[vm_bypass]`: `bypass_processes` (vec), `bypass_classes` (vec)<br/>- `[mouse]`: `enabled` (bool), `thumb_back` (str), `thumb_forward` (str), `tilt_left` (str), `tilt_right` (str) | Written atomically by `settings` process via temp file + rename. Read on startup and on `WM_APP_RELOAD_CONFIG` by `daemon`. |
 | **Diagnostic Log** | Plaintext (append-only) | `_platform` (shared) | `%APPDATA%\WiraDesk\wiradesk.log` | Formatted log lines: `[YYYY-MM-DD HH:MM:SS.mmm] [LEVEL] Message` | Append-only. Written by `daemon` on warnings/errors. Opened as a file in `notepad.exe` via tray "View Logs". |
 | **Legacy Config (Migration)** | TOML | `_platform` (shared) | `%APPDATA%\WinTick\config.toml` | Legacy schema (WinTick keys). | Read-only during one-time bootstrap migration if `%APPDATA%\WiraDesk\config.toml` does not yet exist. |
 
@@ -310,6 +316,7 @@ Wira Desk does not use an RDBMS or embedded SQL database. All persistence uses l
 | 3 | `config.toml [snapping]` | `_platform` | Persisted user configuration for snapping | `snap_half_left`, `snap_half_right`, `snap_maximize`, per-action `*_enabled` | active |
 | 4 | `config.toml [layout]` | `_platform` | Persisted user configuration for layout | `stack_shortcut_enabled`, `stack_width_percent`, `stack_shortcut` | active |
 | 5 | `config.toml [vm_bypass]` | `_platform` | Persisted user configuration for vm bypass | `bypass_processes`, `bypass_classes` | active |
+| 6 | `config.toml [mouse]` | `_platform` | Persisted user configuration for mouse navigation | `enabled`, `thumb_back`, `thumb_forward`, `tilt_left`, `tilt_right` | active |
 
 ### List of endpoints — `inventory-api.md`
 
@@ -342,7 +349,7 @@ Wira Desk contains no HTTP, REST, GraphQL, or RPC network APIs of its own — it
 
 | OS API Category | Win32 API Functions | Consumer | Purpose |
 | --- | --- | --- | --- |
-| **Keyboard Hooks** | `SetWindowsHookExW`, `UnhookWindowsHookEx`, `CallNextHookEx` | `daemon::hook` | Low-level global keyboard interception (`WH_KEYBOARD_LL`). |
+| **Keyboard & Mouse Hooks** | `SetWindowsHookExW`, `UnhookWindowsHookEx`, `CallNextHookEx` | `daemon::hook` | Low-level global keyboard and mouse interception (`WH_KEYBOARD_LL`, `WH_MOUSE_LL`). |
 | **Window Enumeration** | `EnumWindows`, `IsWindowVisible`, `GetWindowLongPtrW`, `GetClassNameW` | `daemon::worker`, `daemon::cycling` | Live, non-blocking Z-order traversal and candidate filtering. |
 | **Process Identity** | `GetWindowThreadProcessId`, `OpenProcess`, `QueryFullProcessImageNameW` | `daemon::cycling` | Multi-process executable filename matching (AD-4). |
 | **Focus & Positioning** | `SetForegroundWindow`, `SetWindowPos`, `ShowWindowAsync` | `daemon::worker`, `daemon::arrangement` | Active window focus switching and DPI-aware snapping. |
@@ -390,7 +397,7 @@ This document catalogues all graphical user interface surfaces, dialogs, menus, 
 
 | Screen / Dialog | ID | Owner | Container | Entry Point | Technology | Description |
 | --- | --- | --- | --- | --- | --- | --- |
-| **Settings Dialog** | `SCR-SETTINGS` | `settings` | `settings` (`wiradesk-settings.exe`) | Tray Menu → "Settings", or manual CLI launch | Rust, `slint` (`accessibility` feature) | Tabbed/modular configuration UI: General (auto-start), Switcher shortcuts, Snapping bindings, VM/RDP bypass lists, About & typography display. |
+| **Settings Dialog** | `SCR-SETTINGS` | `settings` | `settings` (`wiradesk-settings.exe`) | Tray Menu → "Settings", or manual CLI launch | Rust, `slint` (`accessibility` feature) | Tabbed/modular configuration UI: General (auto-start), Switcher shortcuts, Snapping bindings, Mouse navigation presets, VM/RDP bypass lists, About & typography display. |
 | **First-Run Onboarding** | `SCR-ONBOARDING` | `settings` | `settings` (`wiradesk-settings.exe`) | Daemon launch with `--onboarding` on first run (no `config.toml`) | Rust, `slint` (`accessibility` feature) | Interactive multi-step tutorial featuring dummy test windows to practice same-app cycling and snapping before entering production usage. |
 | **About Dialog / View** | `SCR-ABOUT` | `settings` | `settings` (`wiradesk-settings.exe`) | Settings UI tab or Tray Menu → "About" | Rust, `slint` | Version info, licensing notice, website link, and active typography resolution (Segoe UI vs fallback). |
 | **Startup Error Dialog** | `SCR-FATAL-POPUP` | `window-management` | `daemon` (`wiradesk.exe`) | Tier 1 fatal startup failure (e.g. hook initialization failed after 5 retries) | Win32 `MessageBoxW` | Modal native message box with Error icon. Closes process immediately on dismissal. |
@@ -424,6 +431,7 @@ The system tray icon reflects the 3-Tier error protocol via visual overlays:
 | 5 | `onboarding/Welcome` | `/welcome` | — | `settings` | `UC-5` |
 | 6 | `onboarding/TrySwitching` | `/try-switching` | — | `settings` | `UC-5` |
 | 7 | `onboarding/Done` | `/done` | — | `settings` | `UC-5` |
+| 9 | `settings/Mouse` | `/mouse` | — | `settings` | `UC-14` |
 
 ## Error envelope
 

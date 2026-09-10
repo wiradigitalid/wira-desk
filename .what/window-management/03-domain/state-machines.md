@@ -85,3 +85,34 @@ stateDiagram-v2
 | `Degraded` | `Dead` | Reinstall fails (`fail_count >= 3`) | Retain fail count; post `WM_APP_HOOK_DEAD` to Worker; Worker escalates tray to Tier 3 Critical. |
 | `Dead` | `Active` | Reinstall succeeds on later heartbeat | Unhook prior handle; reset `hook_check_fail_count = 0`; post `WM_APP_HOOK_REFRESH_OK` to Worker (recovering tray state). |
 | Any | `ShuttingDown` | `WM_APP_HOOK_SHUTDOWN` | Unhook active `HHOOK`; reset runtime atomic pointer; call `PostQuitMessage(0)` to terminate Hook Thread message loop. |
+
+---
+
+## 3. Low-Level Mouse Hook Dispatch State Machine (`WH_MOUSE_LL`)
+
+Governs the per-message dispatch lifecycle of low-level mouse input interception on the Hook Thread.
+
+```mermaid
+stateDiagram-v2
+    [*] --> Idle: Mouse Hook Installed & Active
+    Idle --> ForwardingMotion: WM_MOUSEMOVE (Cursor motion)
+    ForwardingMotion --> Idle: CallNextHookEx (zero locks, zero allocations)
+    Idle --> InspectingAuxiliary: WM_XBUTTONDOWN or WM_MOUSEHWHEEL
+    InspectingAuxiliary --> PassingThrough: Action == Passthrough / Unmapped
+    PassingThrough --> Idle: CallNextHookEx
+    InspectingAuxiliary --> DroppingDebounce: WM_MOUSEHWHEEL and (now - last_tilt_ms < debounce_window)
+    DroppingDebounce --> Idle: return 1 (Swallow event)
+    InspectingAuxiliary --> DispatchingAction: Mapped Action and Debounce OK
+    DispatchingAction --> Idle: ring::push(cmd) and PostMessageW(WM_APP_COMMAND_READY) and return 1
+```
+
+### Transition Table
+
+| From | To | Trigger / Message | Condition & Action |
+| --- | --- | --- | --- |
+| `Idle` | `ForwardingMotion` | `WM_MOUSEMOVE` | High-frequency cursor position report; immediately invoke `CallNextHookEx` without locks, memory allocations, or logging. |
+| `ForwardingMotion` | `Idle` | Forward complete | Return hook code to Windows; cursor movement continues with zero latency. |
+| `Idle` | `InspectingAuxiliary` | `WM_XBUTTONDOWN` / `WM_MOUSEHWHEEL` | Auxiliary input received; check if mouse navigation is enabled and resolve configured action preset. |
+| `InspectingAuxiliary` | `PassingThrough` | Unmapped / Passthrough action | Input is configured for default OS handling; invoke `CallNextHookEx` so active application receives the standard input. |
+| `InspectingAuxiliary` | `DroppingDebounce` | `WM_MOUSEHWHEEL` burst tick | Elapsed time since `last_tilt_ms` is under 150 ms; drop event and return `1` to suppress OS horizontal scroll. |
+| `InspectingAuxiliary` | `DispatchingAction` | Valid action & debounce satisfied | Update `last_tilt_ms`; push corresponding `Command` opcode to static ring buffer; post `WM_APP_COMMAND_READY` to Worker; return `1` to swallow input. |

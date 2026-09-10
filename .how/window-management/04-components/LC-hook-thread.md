@@ -14,7 +14,7 @@ created: 2026-08-21
 
 ## Responsibility
 
-`LC-hook-thread` runs on a dedicated OS thread elevated to `THREAD_PRIORITY_TIME_CRITICAL` and is the sole component that installs and manages the global Win32 `WH_KEYBOARD_LL` input hook (`crates/daemon/src/hook.rs`). It is responsible for:
+`LC-hook-thread` runs on a dedicated OS thread elevated to `THREAD_PRIORITY_TIME_CRITICAL` and is the sole component that installs and manages the global Win32 `WH_KEYBOARD_LL` and `WH_MOUSE_LL` input hooks (`crates/daemon/src/hook.rs`). It is responsible for:
 1. Intercepting raw low-level keyboard messages (`WM_KEYDOWN`, `WM_SYSKEYDOWN`, `WM_KEYUP`, `WM_SYSKEYUP`) delivered by Windows.
 2. Tracking modifier key states (`Win`, `Ctrl`, `Alt`, `Shift`) without calling `GetAsyncKeyState`.
 3. Enforcing the 50 ms anti-macro throttle window (`ANTI_MACRO_THROTTLE_MS`) using high-resolution QPC timestamps to discard noisy repeated inputs.
@@ -24,6 +24,9 @@ created: 2026-08-21
 7. Responding to periodic heartbeat checks (`WM_APP_HOOK_CHECK`) from `health::heartbeat` and managing hook re-registration and failure escalation.
 8. Deciding, per keystroke, whether an armed capture lease (`DEC-004`) applies — and if so, reporting the observed chord back to Settings (`observe`), or reporting and additionally swallowing it (`record`) — fail-closed to no-op whenever Settings does not currently hold the foreground window.
 9. Excluding a disabled action's chord from the match set entirely when building `Chords` from a config snapshot — `[MISSING]` (`FR-29`, `BR-9`). A disabled action never reaches step 5 above: there is no configured chord for the hook to translate, so a keystroke that would have matched it falls through `match_shortcut` unmatched and is passed to `CallNextHookEx` the same as any chord Wira Desk was never configured to claim.
+
+10. Intercepting auxiliary mouse input events (`WM_XBUTTONDOWN` for Thumb Buttons 1/2, `WM_MOUSEHWHEEL` for horizontal tilt wheel) via `WH_MOUSE_LL` (`FR-30`, `AD-15`). `WM_MOUSEMOVE` is forwarded immediately via `CallNextHookEx` with zero locks, heap allocations, or logging to ensure zero cursor latency.
+11. Debouncing horizontal tilt-wheel signals (`WM_MOUSEHWHEEL`) across a 150–200 ms window to eliminate multi-trigger bursts from a single physical flick (`FR-31`), swallowing mapped events and pushing corresponding command opcodes to the ring buffer.
 
 `LC-hook-thread` never performs heap allocations during keypress processing, never invokes blocking kernel or COM APIs, never executes window enumeration, and never waits for worker thread execution.
 
@@ -52,6 +55,8 @@ created: 2026-08-21
 - `PostMessageW(settings_hwnd, WM_APP_RECORDED_CHORD, vk, packed_modifiers)`: While an observe or record lease is armed, reports the chord the hook actually observed back to Settings' hidden receiver window (`report_recorded_chord`). A no-op when no receiver window has been resolved.
 
 ## Notes
+
+- **Mouse motion passthrough and tilt debounce (`FR-30`, `FR-31`, `AD-15`):** `WH_MOUSE_LL` runs on the same hook thread and message pump as `WH_KEYBOARD_LL`. Cursor movement (`WM_MOUSEMOVE`) is passed to `CallNextHookEx` within 1–2 CPU instructions without acquiring locks. When mouse navigation is enabled, mapped thumb clicks and debounced horizontal tilt wheel flicks are swallowed (`return 1`) and pushed to the ring buffer as commands, keeping mouse input handling non-blocking.
 
 - **Sticky Modifier Prevention:** Swallowing `Win` key releases causes Windows to believe `Win` is permanently pressed, corrupting subsequent input. `LC-hook-thread` specifically passes all modifier `key_up` events (`VK_LWIN`, `VK_RWIN`, `VK_LCONTROL`, `VK_LMENU`, `VK_LSHIFT`) to `CallNextHookEx`, while swallowing only the main chord key down/up events (`VK_BACKTICK` or configured key).
 - **Capture lease (`DEC-004`):** The lease decision (`lease_action`) is pure and fails closed — a lease armed at level `observe` or `record` does nothing unless Settings currently holds the foreground window, checked fresh on every keystroke it reaches. `record` additionally swallows the chord; `observe` only reports it. The heartbeat thread, never the callback, reaps a lease whose holder process has exited (`lease_holder_alive`) — `OQ-17` records this narrows rather than closes the process-id-reuse window, since a recycled pid can still pass the liveness check.

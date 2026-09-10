@@ -23,6 +23,7 @@ provenance: >-
 | 2026-09-03 | Added Update Checking (CAP-13, FR-24, FR-25): the product already shipped an optional, toggleable HTTPS check for a newer release, disclosed in `PRIVACY.md` but never promised here; §7's Constraints corrected to state the one exception instead of an absolute zero; FR-16's tray menu order corrected to match what ships (an "Update to \<version\>..." item only when one is available, not an always-present "Check for Updates...") | `wdi-reconcile` traced the shipped code against the corpus and found the update-check subsystem — real, deliberate, already privacy-documented — had no promise anywhere in `.what/`, and that FR-16's proof no longer matched the running menu | v0.4.0 |
 | 2026-09-06 | Added custom-percentage edge snap (CAP-14, FR-26) and snap-to-thirds (CAP-15, FR-27), both `window-management`; FR-15's proof corrected from `Ctrl + Alt + Shift + Down` to `Ctrl + Alt + Shift + S`, the Overlapping Stack default `DEC-011` moved it to so the new percentage-snap feature could claim the arrow tier | The owner asked for a configurable-percentage snap and a thirds snap, and wanted the first bound to arrow keys; freeing that tier required moving the Overlapping Stack default, recorded as `DEC-011` | Unreleased |
 | 2026-09-07 | Added per-action shortcut enable/disable (CAP-16): FR-28 (`settings`) gives every editable action its own on/off control, distinct from a `DEC-009` chord-collision unbind; FR-29 (`window-management`) excludes a disabled action's chord from hook registration entirely rather than registering and then discarding it | Overlapping Stack was the only action with an on/off control and no `FR`/`UC`/`DEC` explained why. Every other action's chord is claimed from Windows permanently regardless of whether the user wants that feature — and even Overlapping Stack's own existing toggle checked state inside the arrangement planner, after the hook had already consumed the keystroke, so "disabled" still stole the chord without using it | Unreleased |
+| 2026-09-10 | Added driverless mouse desktop navigation (CAP-17, FR-30, FR-31, FR-32): intercepts standard auxiliary mouse buttons (Thumb Button 1/2 via WM_XBUTTONDOWN) and horizontal tilt wheel (WM_MOUSEHWHEEL) with software debounce and zero-overhead WM_MOUSEMOVE passthrough, dispatching to virtual desktop switching, Task View, Show Desktop, or Wira Desk actions via a dedicated Mouse settings pane with preset action dropdowns | Standard productivity mice omit on-board EEPROM macro storage, forcing users into heavy vendor companion suites (>500MB disk, hundreds of MBs RAM, multiple background processes) to customize auxiliary inputs; Wira Desk delivers native, zero-overhead desktop navigation via standard Win32 hooks (<2MB static RAM) without third-party vendor bloat | Unreleased |
 
 ## 1. Why This Initiative
 
@@ -82,6 +83,14 @@ Operating as an ultra-lightweight, invisible background tray utility written in 
 - **Climax:** The specification arrives on the external monitor still occupying the top half — the same share of the working area it held on the laptop, not the same number of pixels — so the arrangement she built survives the move. Her browser and terminal stay exactly where they were.
 - **Resolution:** Sari works across both screens with a layout she assembled from the keyboard in a few seconds, and rebuilds it the same way whenever she docks.
 - **Edge case:** With only the laptop screen attached, the move shortcut does nothing at all — no window jump, no message, no error. On a screen too short to divide, the snap declines rather than producing a window with no height.
+
+#### UJ-5. Dimas navigates virtual desktops and tasks via mouse thumb buttons and tilt wheel
+- **Persona + context:** Dimas, a full-stack developer multitasking across four virtual desktops (frontend, backend, database client, messaging) using an ergonomic multi-button productivity mouse.
+- **Entry state:** Wira Desk daemon running in the tray; foreground focus active in VS Code on Virtual Desktop 1; vendor mouse software is not installed.
+- **Path:** Dimas clicks Thumb Button 2 (forward) to advance to the next virtual desktop, and tilts the scroll wheel to the left to open Task View (Win + Tab).
+- **Climax:** Virtual Desktop transitions smoothly to Desktop 2 with zero perceived latency; tilting the wheel left immediately displays the overview of all open application windows without cursor stutter or hitching.
+- **Resolution:** Dimas navigates between multiple workspaces entirely from his mouse hand without reaching for the keyboard, maintaining high coding flow while consuming under 2 MB background RAM.
+- **Edge case:** Rapidly flicking the tilt wheel left triggers exactly one Task View or desktop switch due to software debounce filtering (150–200 ms), preventing erratic multiple transitions.
 
 ## 3. Features
 
@@ -245,6 +254,21 @@ another action's, so the user is never left guessing which state they are lookin
 
 ---
 
+### 3.16 Driverless Mouse Desktop Navigation
+
+**Capability:** CAP-17 — serves BG-4.
+
+**Description:** Captures standard auxiliary mouse buttons (Thumb Buttons 1 & 2 via WM_XBUTTONDOWN) and horizontal tilt-wheel signals (WM_MOUSEHWHEEL) via a low-level Win32 mouse hook (WH_MOUSE_LL) without third-party vendor companion software. Provides curated action presets (Next/Previous Virtual Desktop, Task View, Show Desktop, and Wira Desk window management) configured via a dedicated Mouse pane in Settings, with debounce filtering on horizontal wheel tilts and zero-overhead WM_MOUSEMOVE passthrough to guarantee micro-stutter-free cursor movement. Realizes UJ-5.
+
+**Realizes:** FR-30, FR-31, FR-32
+
+**Out of Scope:**
+- Emulating proprietary vendor driver protocols or reverse-engineering proprietary wireless packets.
+- Arbitrary multi-step keyboard macro sequence recording for mouse buttons.
+- Multi-device cross-computer network clipboard or file synchronization protocols.
+
+---
+
 ## 4. MVP Scope
 
 ### 4.1 In Scope
@@ -257,6 +281,7 @@ another action's, so the user is never left guessing which state they are lookin
 - DPI-aware keyboard snapping to a user-configurable edge percentage (`Ctrl + Alt + Shift + Arrows`) and to left/middle/right thirds (`Ctrl + Alt + 1/2/3`).
 - Moving the active window to the next physical monitor from the keyboard, keeping its share of the working area.
 - Turning any individual shortcut action off from Settings, returning its chord to Windows rather than leaving it claimed and inert.
+  - Driverless auxiliary mouse input capture (Thumb Buttons 1/2 and Tilt Wheel) with tilt debounce and curated action presets for desktop navigation.
 - Separate settings binary with first-run onboarding, physical key listening, and UI Automation accessibility.
 - Silent auto-start via Windows Task Scheduler.
 - Local TOML configuration parsing and logging.

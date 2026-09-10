@@ -2,7 +2,7 @@
 topic: Wira Desk architecture spine
 artifact: .how/_platform/ARCHITECTURE-SPINE.md
 skill: wdi-blueprint intents catalog + platform
-updated: 2026-09-03T16:01
+updated: 2026-09-10T17:57
 ---
 
 - (change) AD-2 command set extended to 6=SnapTop, 7=SnapBottom, 8=MoveToNextMonitor; Binds gained CAP-12; the extend-never-renumber rule and the out-of-set-decodes-to-Nop rule written down explicitly, because both were only asserted in tests.
@@ -16,3 +16,4 @@ updated: 2026-09-03T16:01
 - (review by wdi-review) Re-reviewed ARCHITECTURE-SPINE.md (structure + prose, re-review baseline — delta is factual, no money/personal-data/irreversible-action/third-party). Zero findings. Stamped reviewed: 2026-09-03, sha 67d9fb5.
 - (decision by wdi-decision, applied by wdi-blueprint) cross-cutting.md's IPC Command Protocol payload list, row `5` (`OverlappingStack`): chord annotation corrected from `Ctrl+Win+Down` to `Ctrl+Alt+Shift+S`, per `DEC-011` (`layout.stack_shortcut`'s default moves off the arrow tier so a new percentage-snap tier can claim `Ctrl+Alt+Shift+Arrow`). Reported, not fixed: rows `2`-`4` (`SnapLeft`/`SnapRight`/`SnapMaximize`) are ALSO stale — still showing the pre-`DEC-008` `Ctrl+Win` family, never updated when `DEC-008` moved them to `Ctrl+Alt` on 2026-08-26. Out of scope for `DEC-011`; left for `wdi-reconcile`.
 - (change by wdi-blueprint, drift fix reported by wdi-reconcile) c4-l1-system-context.md's mermaid edge label ("Global key shortcuts (Win+`, Ctrl+Win+Arrows)") and cross-cutting.md's IPC payload list rows 2-4 (`SnapLeft`/`SnapRight`/`SnapMaximize`) both still named the pre-`DEC-008` `Ctrl+Win` family, never updated when `DEC-008` moved every shipped arrangement default to `Ctrl+Alt` on 2026-08-26. Corrected to `Ctrl+Alt+Arrows`/`Ctrl+Alt+Left`/`Ctrl+Alt+Right`/`Ctrl+Alt+Enter`. Found by `wdi-reconcile`'s full-product scan (2026-09-06).
+- (decision) intent platform: added AD-15 (WH_MOUSE_LL & Motion Passthrough), bound CAP-17; amended C4 L1 and C4 L2 with mouse hook; updated inventory-screen (settings/Mouse), inventory-db ([mouse] config), inventory-api (WH_MOUSE_LL), and cross-cutting.md

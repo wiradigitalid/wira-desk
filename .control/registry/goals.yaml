@@ -31,3 +31,9 @@ goals:
     text: >-
       Offer optional keyboard-driven window snapping without turning the product
       into a full window manager overlay.
+  - id: BG-4
+    text: >-
+      Provide zero-overhead, driverless desktop navigation for standard
+      multi-button productivity mice by mapping thumb buttons and tilt wheels
+      to virtual desktop switching and window management without proprietary
+      vendor background suites.

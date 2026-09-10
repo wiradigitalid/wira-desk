@@ -4,7 +4,7 @@ component: settings
 status: reviewed
 created: 2026-08-21
 updated: 2026-09-08
-realizes: [UC-4, UC-5, UC-6, UC-8, UC-11]
+realizes: [UC-4, UC-5, UC-6, UC-8, UC-11, UC-14]
 binds: [AD-1, AD-5, AD-11, AD-11a, AD-12, AD-13]
 reviewed:
   date: '2026-09-08'
@@ -28,7 +28,7 @@ The three Logical Components (LCs) operate strictly within the `settings` contai
 
 | LC | type | Responsibility |
 | --- | --- | --- |
-| `LC-settings-shell` | ui-composite | Hosts the retained-mode `Slint` window (`ui/main_window.slint`, compiled by `slint-build`) and its pane components; manages frameless window shell (`no-frame: true`) and 4-pane routing (`General`, `Shortcuts`, `VM & Exceptions`, `About`) — `DEC-014` retires the former `Layout` pane, folding its one control inline onto Shortcuts' Overlapping Stack row; detects OS theme (`AppsUseLightTheme`) once at startup and sets it on the `Palette` global for two-theme visuals with widened focus outlines; implements first-run onboarding wizard progression; renders save feedback and diagnostic typeface information. |
+| `LC-settings-shell` | ui-composite | Hosts the retained-mode `Slint` window (`ui/main_window.slint`, compiled by `slint-build`) and its pane components; manages frameless window shell (`no-frame: true`) and 5-pane routing (`General`, `Shortcuts`, `Mouse`, `VM & Exceptions`, `About`) — `DEC-014` retires the former `Layout` pane, folding its one control inline onto Shortcuts' Overlapping Stack row; detects OS theme (`AppsUseLightTheme`) once at startup and sets it on the `Palette` global for two-theme visuals with widened focus outlines; implements first-run onboarding wizard progression; renders save feedback and diagnostic typeface information. |
 | `LC-config-writer` | service | Executes strict pre-persistence shortcut validation; performs atomic file writes (`Config::save`) to `%APPDATA%\WiraDesk\config.toml`; dispatches non-blocking `WM_APP_RELOAD_CONFIG` (0x8001) signals via `PostMessageW` to `WiraDeskDaemonHiddenWindow`. It records the auto-start *preference* only; the scheduled task itself is created and deleted by the daemon (`daemon::autostart`) when it reloads config. |
 | `LC-shortcut-capturer` | control | Implements interactive key interception within the Settings window; while a field is `Listening`, the daemon's own hook report (drained from a channel by a 20ms Slint timer) is the source of truth for the chord — Slint's `key-pressed` text never arrives for a chord the Windows shell owns, so it survives only as a marked fallback for when no daemon is running (`DEC-004`); enforces modifier requirements; exposes live first-class `Listening` state and screen reader announcements via Slint's accessibility tree. |
 
@@ -115,7 +115,8 @@ The Robustness Analysis classifies the technical design for all realized use cas
 
 ### 1. Boundary Objects
 
-- **`B-SettingsUI` (Retained-Mode Graphic Surface):** Top-level `Slint` window (`ui/main_window.slint`) declaring panes, buttons, checkboxes, sliders, and feedback banners as components bound to Rust-side model properties.
+- **`B-SettingsUI` (Retained-Mode Graphic Surface):** Top-level `Slint` window (`ui/main_window.slint`) declaring panes, buttons, checkboxes, sliders, dropdowns, and feedback banners as components bound to Rust-side model properties.
+- **`B-MouseSettingsPane` (Mouse Navigation Graphic Surface):** Dedicated Slint pane component (`ui/panes/mouse_pane.slint`) displaying the master mouse navigation toggle and action preset dropdown selectors per physical input (`FR-32`).
 - **`B-ConfigFile` (TOML Storage on Disk):** Atomic file storage endpoint at `%APPDATA%\WiraDesk\config.toml` (and `.tmp` staging file).
 - **`B-DaemonWindow` (Win32 IPC Target):** Top-level message-only window `WiraDeskDaemonHiddenWindow` receiving `WM_APP_RELOAD_CONFIG` (0x8001) and `WM_APP_CAPTURE_LEASE`. The lease message carries its level in `wParam` (0 none, 1 observe, 2 record) and this process's id in `lParam` — a process id and not a window handle, because the hook's comparison is against a foreground process id and a handle would have to be converted on the daemon side (`DEC-004`, `DEF-3`). **This boundary crosses an integrity level.** The daemon is elevated; this process is elevated only when the tray launched it, and runs at medium integrity when a user starts it from Explorer. Both messages therefore depend on the daemon admitting them through UIPI with `ChangeWindowMessageFilterEx` — without that, every post from the non-elevated path is discarded by Windows and reported here as an ordinary failed post.
 - **`B-ChordReport` (Win32 IPC Source):** This process's own window, receiving the daemon's report of a chord its hook observed: a virtual-key code and a modifier set, posted never sent. The first channel in this product that runs daemon→settings, which is why `AD-1` names it explicitly.
@@ -137,6 +138,7 @@ The Robustness Analysis classifies the technical design for all realized use cas
 ### 3. Entity Objects
 
 - **`E-SettingsDraft` (`SettingsModel.draft`):** Working in-memory copy of `shared::Config` holding staged user modifications prior to validation and persistence.
+- **`E-UserMousePreference` (`user-mouse-preference`):** Staged and persisted representation of mouse navigation preferences in `shared::Config.mouse` (`enabled`, `thumb_back`, `thumb_forward`, `tilt_left`, `tilt_right`).
 - **`E-SavedConfig` (`SettingsModel.saved`):** Immutable baseline copy of `shared::Config` reflecting active on-disk configuration; used for dirty-state tracking (`is_dirty()`) and revert operations.
 - **`E-CaptureContext` (`CaptureState`):** First-class state machine entity tracking whether input capture is `Idle` or `Listening(ShortcutField)`.
 - **`E-SaveOutcome` (`SaveOutcome` / `SaveFeedback`):** Ephemeral outcome entity representing `Saved { reload_signalled: bool }`, `Rejected(&'static str, ShortcutError)`, or `WriteFailed(String)`.
@@ -227,3 +229,14 @@ All technical mechanisms, invariants (AD-1, AD-5, AD-11, AD-11a, AD-12, AD-13), 
 **`OQ-24` is answered.** It asked whether `accessible-role`/`accessible-label` coverage extends beyond the two `.slint` files confirmed at the time. It does: `SPEC-4-01` through `SPEC-4-05` put declared names on the group headings, the row keycap and the row description block, and `theme::ALL` plus `app::tests::every_field_has_a_distinct_key_label_and_description` are what hold them. One of the two files that question named no longer exists.
 
 **What is open instead** is narrower and load-bearing: the accessible NAME coverage is good, but keyboard reachability is not. `DEF-7` (nothing in the shell is focusable, so `FR-20`'s Tab order does not exist), `DEF-6` (the four custom-percentage rows still share one name set), `DEF-8` (`main()`'s keyboard registration is outside `bind_callbacks`, so the handler behind it is untested) and `DEF-10` (`.slint` is not scanned by the publication gate) each carry a piece of it.
+
+#### UC-14: Configure Mouse Navigation Actions and Presets
+
+1. User clicks the "Mouse" item in the sidebar of `B-SettingsUI`.
+2. `C-ShellController` switches `current_pane` to Mouse, rendering `B-MouseSettingsPane` bound to `E-SettingsDraft.mouse`.
+3. User toggles the master switch or selects a new action preset from the dropdown for Thumb Button 1, Thumb Button 2, Tilt Wheel Left, or Tilt Wheel Right.
+4. `C-ShellController` updates `E-SettingsDraft`, marks draft dirty, and reveals the Save button.
+5. User clicks Save.
+6. `C-PersistenceManager` serializes `E-SettingsDraft` to TOML, writes `config.toml.tmp` atomically, and renames it over `B-ConfigFile`.
+7. `C-PersistenceManager` dispatches `WM_APP_RELOAD_CONFIG` to `B-DaemonWindow`.
+8. Daemon re-reads configuration and updates its mouse hook bindings; Settings UI presents a success notification and resets dirty state.

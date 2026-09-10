@@ -11,7 +11,7 @@ reviewed:
 provenance: >-
   Harvested and updated from _bmad-output/planning-artifacts/architecture/architecture-WinTick-2026-07-06/ARCHITECTURE-SPINE.md
   for G3 Blueprint. Updated to Wira Desk product identity and workspace structure.
-binds: [CAP-1, CAP-2, CAP-3, CAP-4, CAP-5, CAP-6, CAP-7, CAP-8, CAP-9, CAP-10, CAP-11, CAP-12]
+binds: [CAP-1, CAP-2, CAP-3, CAP-4, CAP-5, CAP-6, CAP-7, CAP-8, CAP-9, CAP-10, CAP-11, CAP-12, CAP-17]
 sources:
   - .what/_prd/wira-desk/prd.md
   - .what/_product-brief/brief.md
@@ -127,6 +127,13 @@ The paradigm maps to the execution units:
 - **Rule:** Auto-start is registered as a Windows Scheduled Task (`schtasks`): trigger `ONLOGON`, run level `/RL HIGHEST`, run-as user `/RU "%USERNAME%"` (the specific active user, never SYSTEM — keeping `%APPDATA%` aligned between daemon and settings GUI). The task action (`/TR`) must use the absolute executable path and the `Start in` parameter must be left empty or point to the secure install directory, mitigating DLL Hijacking. The registry `Run`-key mechanism (`HKCU\...\CurrentVersion\Run`) is prohibited. Toggle (create/delete task) is exposed via the tray context menu and settings UI.
 - **Rule — the stored path tracks the running executable.** Because `/TR` is an absolute path frozen at registration, it can name a file that has since moved. Existence of the task must therefore never be read as the path being current: whenever a task is registered, the daemon re-registers it from its own `current_exe()` at startup. The check that answers "is auto-start on" stays a pure existence check and must not also validate the path — it is the source of truth for the menu checkmark, and a checkmark that went blank because a path had drifted would report the wrong state.
 - **Rule — the install location's permissions are observed, and only observed.** An unprompted elevated logon task makes the executable's filesystem permissions a privilege boundary, so the daemon reads the DACL of its own image and of the directory holding it, and raises a Tier-2 warning (`AD-7`) when a non-administrative principal holds a right that would let it replace either. This never blocks registration and never refuses the toggle: the judgement belongs to the owner, and a guard that stands between a maintainer and their own build directory is one that gets switched off rather than heeded. A DACL that cannot be read is a third answer, distinct from "safe", and produces no user-facing warning.
+
+### AD-15 — Low-Level Mouse Hooking: WH_MOUSE_LL & Motion Passthrough
+
+- **Binds:** CAP-17
+- **Prevents:** Cursor micro-stutter, input lag, and OS unhooking timeouts from heavy processing in the mouse hook; accidental multi-trigger navigation jumps from physical tilt-wheel bounce.
+- **Rule:** The Hook Thread installs WH_MOUSE_LL on the same thread and message pump as WH_KEYBOARD_LL. WM_MOUSEMOVE is forwarded immediately via CallNextHookEx with zero synchronization locks, heap allocations, or logging. Auxiliary mouse inputs (WM_XBUTTONDOWN, WM_MOUSEHWHEEL) are swallowed (
+eturn 1) only when mapped to an active action; unmapped inputs pass through. Tilt wheel horizontal signals are filtered through a 150–200 ms debounce window before pushing a command to the ring buffer. All action executions (such as SendInput for virtual desktop transitions or window cycling) occur exclusively on the Worker Thread off the critical input path.
 
 ### AD-14 — Monitor Enumeration: Stateless Just-in-Time
 

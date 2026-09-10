@@ -84,3 +84,16 @@ usecases:
     actor: Power User
     satisfies: [FR-29]
     critical: false
+  - id: UC-13
+    component: window-management
+    title: Navigate virtual desktops or tasks via mouse thumb buttons and tilt wheel
+    actor: Power User
+    satisfies: [FR-30, FR-31]
+    critical: false
+
+  - id: UC-14
+    component: settings
+    title: Configure mouse navigation actions and presets in Settings
+    actor: Power User
+    satisfies: [FR-32]
+    critical: false

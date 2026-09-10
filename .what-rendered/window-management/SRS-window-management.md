@@ -20,7 +20,7 @@ Users manage multiple windows within the same application (multiple browser sess
 
 | Actor | Who they are | What they may do |
 | --- | --- | --- |
-| Power User | Desktop user managing multiple windows of the same application across multi-monitor or virtual desktop workspaces. | Trigger same-app cycling, snap active windows to any half or to full screen, to a custom percentage of a screen edge, or to a left/middle/right third, move the active window to the next monitor, turn off any shortcut action so Windows and other applications receive its chord instead, access tray menu, open diagnostic logs. |
+| Power User | Desktop user managing multiple windows of the same application across multi-monitor or virtual desktop workspaces. | Trigger same-app cycling, snap active windows to any half or to full screen, to a custom percentage of a screen edge, or to a left/middle/right third, move the active window to the next monitor, navigate virtual desktops or trigger tasks via mouse thumb buttons and tilt wheel, turn off any shortcut action so Windows and other applications receive its chord instead, access tray menu, open diagnostic logs. |
 | New User | First-time user running Wira Desk on Windows. | Experience default cycling and snapping shortcuts without opening configuration. |
 | Sysadmin | System administrator operating standard and elevated command shells or administrative tools. | Cycle seamlessly between standard and elevated administrator windows without UIPI refusal. |
 
@@ -38,6 +38,7 @@ Rendered from `usecases.yaml`.
 | `UC-9` | Snap the active window to a screen edge at a custom percentage | `window-management` | `FR-26` | no |
 | `UC-10` | Snap the active window to a third of the screen | `window-management` | `FR-27` | no |
 | `UC-12` | A disabled shortcut action's chord is not claimed at the hook | `window-management` | `FR-29` | no |
+| `UC-13` | Navigate virtual desktops or tasks via mouse thumb buttons and tilt wheel | `window-management` | `FR-30`, `FR-31` | no |
 
 
 ## Constraints
@@ -106,6 +107,7 @@ Local component business rules binding the `window-management` Product Component
 | LBR-WM-8 | A half-screen snap divides the work area at one boundary computed fresh on every press, so the two halves exactly tile the work area with neither a gap nor an overlap; an odd extent gives the floor to the first half; a half that would be empty is refused rather than emitted as a zero-extent placement. | `window-management` | FR-14, FR-22 | active |
 | LBR-WM-9 | A custom-percentage edge snap resizes the active window to the percentage configured for that edge — of the work area's width for left/right, of its height for top/bottom — computed fresh on every press and independent of every other edge's configured percentage; a percentage that would produce a zero or negative extent is refused rather than emitted as a degenerate placement. | `window-management` | FR-26 | active |
 | LBR-WM-10 | A thirds snap divides the work area's width into three columns computed fresh on every press, so the three columns exactly tile the work area with neither a gap nor an overlap; a width not evenly divisible by three gives the remainder to the middle column; a column that would be empty is refused rather than emitted as a zero-extent placement. | `window-management` | FR-27 | active |
+| LBR-WM-11 | When mouse navigation is active, all `WM_MOUSEMOVE` events are forwarded immediately via `CallNextHookEx` with zero locks, allocations, or logging; mapped auxiliary mouse inputs (`WM_XBUTTONDOWN`, `WM_MOUSEHWHEEL`) are swallowed and dispatched to the worker actor via the ring buffer; unmapped inputs pass through; horizontal tilt-wheel signals apply a 150–200 ms debounce window. | `window-management` | FR-30, FR-31, AD-15 | active |
 
 #### Rationale — LBR-WM-6
 
@@ -126,6 +128,10 @@ Each edge's percentage is independent rather than paired with its opposite edge,
 #### Rationale — LBR-WM-10
 
 The remainder goes to the middle column rather than the first, unlike `LBR-WM-8`'s floor-to-the-first-half rule: a thirds layout is read as symmetric (left, center, right), and a stray pixel on an outer column would be visible against the other outer column in a way the same pixel hidden in the middle is not.
+
+#### Rationale — LBR-WM-11
+
+Optical and laser mice report cursor movements at high polling rates (125 Hz to 1000 Hz). Executing locks, heap allocations, or logging in `LowLevelMouseProc` during cursor motion induces perceptible jitter and risks hook removal under Windows `LowLevelHooksTimeout`. Mechanical tilt-wheel switches also fire multiple burst ticks per physical flick; debouncing them over a 150–200 ms window ensures predictable single-step navigation without erratic skipping.
 
 #### Retired
 
@@ -189,6 +195,8 @@ A disabled action's chord never enters this lifecycle at all: it is excluded at 
 - **One Chord, One Action Invariant:** No two actions may be reachable by the same chord. When configuration says otherwise, the chord belongs to the first action in the fixed precedence order and the later action is unbound rather than ambiguous (BR-6, DEC-009). A `disabled` action (`BR-9`) is a different concept reaching the same registration-time exclusion: it never enters the precedence resolution at all, having no chord to contend with in the first place, so this invariant's collision handling needs no change to also exclude disabled rows.
 - **Registration Exclusion Invariant:** A shortcut action's chord is registered at the low-level keyboard hook only when `settings` records it as enabled; a disabled action's physical key combination is never intercepted and reaches the foreground application or Windows exactly as it would if Wira Desk were not installed (FR-29, BR-9).
 - **UX Honesty Invariant:** Unresponsive ("Not Responding") windows must receive focus when reached in the cycling sequence and must never be filtered out (FR-4).
+- **Mouse Motion Passthrough Invariant:** When the low-level mouse hook (WH_MOUSE_LL) is active, all WM_MOUSEMOVE messages must be passed immediately to CallNextHookEx without locks, heap allocations, or logging to ensure zero cursor latency and eliminate micro-stutter (FR-30, NFR-2).
+- **Tilt Wheel Debounce Invariant:** Horizontal tilt-wheel signals (WM_MOUSEHWHEEL) must be throttled with a 150–200 ms debounce timer so that a single physical wheel flick triggers exactly one navigation action (FR-31).
 - **Hook Callback Speed Invariant:** The low-level keyboard hook callback must complete within 10 ms without executing heap allocations or blocking synchronous APIs (NFR-2, NFR-3).
 - **Single Instance Invariant:** Exactly one background daemon instance may run per user logon session (NFR-6).
 
@@ -282,6 +290,37 @@ stateDiagram-v2
 | `Degraded` | `Dead` | Reinstall fails (`fail_count >= 3`) | Retain fail count; post `WM_APP_HOOK_DEAD` to Worker; Worker escalates tray to Tier 3 Critical. |
 | `Dead` | `Active` | Reinstall succeeds on later heartbeat | Unhook prior handle; reset `hook_check_fail_count = 0`; post `WM_APP_HOOK_REFRESH_OK` to Worker (recovering tray state). |
 | Any | `ShuttingDown` | `WM_APP_HOOK_SHUTDOWN` | Unhook active `HHOOK`; reset runtime atomic pointer; call `PostQuitMessage(0)` to terminate Hook Thread message loop. |
+
+---
+
+#### 3. Low-Level Mouse Hook Dispatch State Machine (`WH_MOUSE_LL`)
+
+Governs the per-message dispatch lifecycle of low-level mouse input interception on the Hook Thread.
+
+```mermaid
+stateDiagram-v2
+    [*] --> Idle: Mouse Hook Installed & Active
+    Idle --> ForwardingMotion: WM_MOUSEMOVE (Cursor motion)
+    ForwardingMotion --> Idle: CallNextHookEx (zero locks, zero allocations)
+    Idle --> InspectingAuxiliary: WM_XBUTTONDOWN or WM_MOUSEHWHEEL
+    InspectingAuxiliary --> PassingThrough: Action == Passthrough / Unmapped
+    PassingThrough --> Idle: CallNextHookEx
+    InspectingAuxiliary --> DroppingDebounce: WM_MOUSEHWHEEL and (now - last_tilt_ms < debounce_window)
+    DroppingDebounce --> Idle: return 1 (Swallow event)
+    InspectingAuxiliary --> DispatchingAction: Mapped Action and Debounce OK
+    DispatchingAction --> Idle: ring::push(cmd) and PostMessageW(WM_APP_COMMAND_READY) and return 1
+```
+
+##### Transition Table
+
+| From | To | Trigger / Message | Condition & Action |
+| --- | --- | --- | --- |
+| `Idle` | `ForwardingMotion` | `WM_MOUSEMOVE` | High-frequency cursor position report; immediately invoke `CallNextHookEx` without locks, memory allocations, or logging. |
+| `ForwardingMotion` | `Idle` | Forward complete | Return hook code to Windows; cursor movement continues with zero latency. |
+| `Idle` | `InspectingAuxiliary` | `WM_XBUTTONDOWN` / `WM_MOUSEHWHEEL` | Auxiliary input received; check if mouse navigation is enabled and resolve configured action preset. |
+| `InspectingAuxiliary` | `PassingThrough` | Unmapped / Passthrough action | Input is configured for default OS handling; invoke `CallNextHookEx` so active application receives the standard input. |
+| `InspectingAuxiliary` | `DroppingDebounce` | `WM_MOUSEHWHEEL` burst tick | Elapsed time since `last_tilt_ms` is under 150 ms; drop event and return `1` to suppress OS horizontal scroll. |
+| `InspectingAuxiliary` | `DispatchingAction` | Valid action & debounce satisfied | Update `last_tilt_ms`; push corresponding `Command` opcode to static ring buffer; post `WM_APP_COMMAND_READY` to Worker; return `1` to swallow input. |
 
 
 ## Use cases — `04-usecases/`
@@ -459,6 +498,57 @@ left with a chord that is claimed and merely inert.
 - `BR-6` (One chord, one action — disabled actions are outside its scope entirely)
 - `LBR-ST-17`
 - `LBR-WM-1` (Exact shortcut matching only)
+
+
+### `UC-13-navigate-virtual-desktops-or-tasks-via-mouse.md`
+
+### UC-13 — Navigate virtual desktops or tasks via mouse thumb buttons and tilt wheel
+
+#### Trigger
+
+User clicks an auxiliary mouse button (Thumb Button 1 or 2) or tilts the scroll wheel horizontally (Left or Right) on a multi-button productivity mouse while mouse navigation is enabled in configuration.
+
+#### Precondition
+
+- Wira Desk daemon is running elevated with active low-level keyboard and mouse hooks (`WH_KEYBOARD_LL`, `WH_MOUSE_LL`).
+- Mouse navigation is enabled (`mouse.enabled = true`) in `config.toml`, and the physical mouse input is mapped to an action preset (e.g. Next Virtual Desktop, Previous Virtual Desktop, Task View, or Show Desktop).
+
+#### Main Flow
+
+1. User clicks a mapped thumb button or tilts the mouse wheel horizontally.
+2. System's low-level mouse hook (`WH_MOUSE_LL`) intercepts the input event (`WM_XBUTTONDOWN` or `WM_MOUSEHWHEEL`).
+3. System verifies mouse navigation is enabled and the input matches a configured action preset.
+4. For tilt-wheel events (`WM_MOUSEHWHEEL`), system checks the debounce timer; if the elapsed time since the previous tilt tick is within the debounce window (150–200 ms), the event is dropped.
+5. System swallows the event (`return 1`), preventing the host operating system or active application from executing default browser navigation or horizontal scrolling.
+6. Hook thread enqueues the mapped command byte to the lock-free ring buffer and signals the worker thread via `WM_APP_COMMAND_READY`.
+7. Worker thread drains the command and executes the target action (e.g. synthesizing `Ctrl + Win + Right` for Next Virtual Desktop, or executing window cycling/snapping).
+8. Windows desktop or window focus updates immediately without cursor hitching or visual overlays.
+
+#### Alternate Flows
+
+| From step | Condition | What happens |
+| --- | --- | --- |
+| Step 3 | The physical mouse input is set to `passthrough` or `default` | System calls `CallNextHookEx` immediately; the event reaches the active application as a standard Windows mouse event (e.g. browser back/forward). |
+| Step 4 | User rapidly flicks the tilt wheel generating multiple hardware ticks | First tick passes and resets debounce timer; subsequent ticks within 150–200 ms are swallowed without queuing duplicate commands (`SCN-04`). |
+| Step 7 | Configured action is an internal Wira Desk action (e.g. Cycle Same-App Window) | Worker thread initiates live Z-order traversal and shifts focus to the next same-application window (`UC-1`). |
+
+#### Failure Flows
+
+| From step | Failure | What the system does | What the user is left with |
+| --- | --- | --- | --- |
+| Step 2 | Mouse event is cursor movement (`WM_MOUSEMOVE`) | System immediately calls `CallNextHookEx` without locks, memory allocations, or logging | Continuous, fluid cursor movement with zero micro-stutter |
+| Step 6 | Ring buffer is completely full | Hook thread increments dropped-metric counter and returns `1` | Command is dropped; hook thread remains non-blocking |
+
+#### Outcome
+
+The user navigates virtual desktops, triggers Task View, or controls window layout seamlessly from their mouse hand with zero perceived input lag and without installing third-party vendor companion software.
+
+#### Business Rules
+
+- `BR-10` (Mouse Navigation Action Mapping and Passthrough)
+- `LBR-WM-3` (Non-blocking window enumeration)
+- `LBR-WM-4` (Command channel capacity)
+- `LBR-WM-11` (Mouse motion passthrough and tilt debounce)
 
 
 ### `UC-2-snap-window-half.md`
@@ -812,4 +902,37 @@ names the route out of it: the settings process showing the collision on the fie
 
 - `BR-6` (One chord, one action, answered differently on each side)
 - `LBR-WM-1` (Exact shortcut matching only)
+
+
+### `SCN-04-tilt-wheel-rapid-flick-debounced.md`
+
+### SCN-04 — A rapid tilt-wheel flick fires multiple hardware delta ticks
+
+#### Why this scenario exists
+
+Physical tilt-wheel mechanisms on productivity mice (such as Logitech M-series or MX Master) use mechanical or optical micro-switches that frequently emit multiple rapid `WM_MOUSEHWHEEL` delta events (e.g. 2 to 5 consecutive ticks with delta ±120) within tens of milliseconds from a single physical flick of the user's finger.
+
+Without software-level debounce filtering, a single intentional tilt flick to switch virtual desktops would trigger multiple rapid switches, skipping 2 to 4 desktops and landing on the wrong workspace. `LBR-WM-11` and `AD-15` define the debounce threshold (150–200 ms) to ensure exactly one action executes per physical flick.
+
+#### Flow — rapid tilt-wheel flick
+
+| Step | What happens |
+| --- | --- |
+| 1 | User physically tilts the mouse scroll wheel to the left to trigger Next Virtual Desktop. |
+| 2 | Hardware delivers the first `WM_MOUSEHWHEEL` message with negative delta (`WHEEL_DELTA`). |
+| 3 | System's low-level mouse hook (`WH_MOUSE_LL`) intercepts the message, verifies that elapsed time since `last_tilt_ms` exceeds the debounce window (e.g. 150 ms), updates `last_tilt_ms = now`, swallows the message (`return 1`), and enqueues the command to the ring buffer. |
+| 4 | Worker thread wakes up, synthesizes `Ctrl + Win + Right`, and Windows transitions smoothly to the next virtual desktop. |
+| 5 | Within 35 ms of step 2, the physical switch delivers second and third `WM_MOUSEHWHEEL` burst ticks. |
+| 6 | System's low-level mouse hook intercepts each burst tick, compares elapsed time (`now - last_tilt_ms < 150 ms`), drops the event from ring enqueueing, and swallows the message (`return 1`). |
+| 7 | User releases the tilt wheel. No further messages arrive until the next deliberate physical tilt. |
+
+#### What the user sees, and what they do not
+
+The user experiences exactly one instant, clean virtual desktop transition for their single finger flick. They do not see the desktop skip multiple workspaces, and the active application does not perform horizontal scrolling.
+
+#### Business Rules
+
+- `BR-10` (Mouse Navigation Action Mapping and Passthrough)
+- `LBR-WM-11` (Mouse motion passthrough and tilt debounce)
+- `AD-15` (WH_MOUSE_LL & Motion Passthrough)
 

@@ -4,8 +4,8 @@ component: window-management
 status: reviewed
 created: 2026-08-21
 updated: 2026-09-07
-realizes: [UC-1, UC-2, UC-3, UC-7, UC-9, UC-10, UC-12]
-binds: [AD-1, AD-2, AD-3, AD-4, AD-5, AD-6, AD-7, AD-8, AD-9, AD-10, AD-12]
+realizes: [UC-1, UC-2, UC-3, UC-7, UC-9, UC-10, UC-12, UC-13]
+binds: [AD-1, AD-2, AD-3, AD-4, AD-5, AD-6, AD-7, AD-8, AD-9, AD-10, AD-12, AD-15]
 reviewed:
   date: '2026-09-07'
   sha: 'f989238'
@@ -28,7 +28,7 @@ The four Logical Components (LCs) operate strictly within the `daemon` container
 
 | LC | type | Responsibility |
 | --- | --- | --- |
-| `LC-hook-thread` | service | Installs `WH_KEYBOARD_LL`, enforces 50 ms anti-macro throttle, evaluates allocation-free VM/RDP bypass, enqueues `u8` commands to the static ring buffer, and dispatches `WM_APP_COMMAND_READY`. |
+| `LC-hook-thread` | service | Installs `WH_KEYBOARD_LL` and `WH_MOUSE_LL`, enforces 50 ms anti-macro throttle and 150-200 ms tilt debounce, passes `WM_MOUSEMOVE` with zero locks/allocations, evaluates allocation-free VM/RDP bypass, enqueues `u8` commands to the static ring buffer, and dispatches `WM_APP_COMMAND_READY`. |
 | `LC-worker-thread` | service | Drains ring-buffer commands, executes stateless `EnumWindows` traversal, filters by exe name and virtual desktop, activates target windows via `SetForegroundWindow`, suppresses lone Win key-up Start menu pops, and coordinates snap placement. |
 | `LC-tray-controller` | service | Hosts the top-level hidden window message loop, owns tray icon lifecycle and context menu, handles `TaskbarCreated` shell recovery, and manages the 3-Tier error state machine (Normal / Warning / Critical) and one-shot toast notification. |
 | `LC-arrangement-engine` | service | Queries monitor work areas and DPI metrics, computes half-screen snap and overlapping stack target rectangles, and applies non-blocking window geometry updates via `SetWindowPos`. |
@@ -77,6 +77,7 @@ The following Architectural Decisions from `ARCHITECTURE-SPINE.md` bind the desi
 | **AD-8** | `crates/daemon/src/health.rs` ticks every 10 s (`HOOK_HEARTBEAT_SECS`). `LC-hook-thread` tracks consecutive refresh failures and posts `WM_APP_HOOK_DEAD` upon reaching threshold 3. |
 | **AD-9** | `crates/daemon/src/context/virtual_desktop.rs` encapsulates COM apartment initialization and vtable calls on the Worker actor. Any failure fails closed (skips candidate). |
 | **AD-14** | `crates/daemon/src/context/spatial.rs::enumerate_monitors()` calls `EnumDisplayMonitors` fresh on every invocation and hands the result to `LC-arrangement-engine`, which holds nothing between calls — the `[MISSING]` this row once carried is resolved. |
+| **AD-15** | Hook thread installs `WH_MOUSE_LL` on the same thread and message pump as `WH_KEYBOARD_LL`. `WM_MOUSEMOVE` is forwarded immediately via `CallNextHookEx` with zero locks, heap allocations, or logging. Auxiliary mouse inputs (`WM_XBUTTONDOWN`, `WM_MOUSEHWHEEL`) are swallowed (`return 1`) only when mapped to an active action; unmapped inputs pass through. Tilt wheel horizontal signals apply a 150–200 ms debounce window. All action executions occur on the Worker Thread. |
 | **AD-10** | `crates/daemon/src/tray.rs` registers `TaskbarCreated` via `RegisterWindowMessageW` and recreates `NOTIFYICONDATAW` when Explorer crashes and restarts. |
 
 ## Failure Behaviour
@@ -94,6 +95,7 @@ Failure modes across all internal and external Win32 / IPC boundaries:
 | **Config Reload IPC** (`WM_APP_RELOAD_CONFIG`) | Settings process slow to write TOML file. | `config.toml` missing on disk during reload signal. | TOML file contains malformed syntax or invalid key names. | Daemon falls back safely to default in-memory configuration; cycling continues uninterrupted. | `warn!` logging parse failure and fallback to defaults; tray icon shows Tier-2 Red Dot. |
 | **Monitor Enumeration** (`EnumDisplayMonitors`, `GetMonitorInfoW`, `GetDpiForMonitor`) | Enumeration callback runs long on a machine with many displays; it is off the hook thread, so the input path is unaffected. | No monitor is reported, or the foreground window resolves to no monitor (`MONITOR_DEFAULTTONULL`). | A monitor is reported and then unplugged before placement, so its work area describes a display that is gone. | **Absent:** nothing moves; the chord was consumed. **Lying:** Windows refuses or clamps the `SetWindowPos`, so the window lands on an attached monitor rather than off-screen, and the next press moves it again. Never a popup. | Tier-2 `warn!` naming the failing query. A single attached monitor is **not** logged — it is a successful no-op, not a failure. |
 | **Duplicate Chord Configuration** (`load_shortcuts`, `config::validate`) | No slow path: a comparison over nine values at load. | Not applicable — a chord is present or it is not. | Two fields name the same chord, so the configuration claims two actions are reachable by one keypress. | **At startup:** the later action is unbound and unreachable; every other setting is honoured. **On reload:** the whole candidate is refused and the previous configuration stays in force. Tray icon goes to its Warning state either way; no popup. | Exactly one Tier-2 `warn!` naming **both** fields and the chord. Never one warning per field, and never silence — silence is the failure `DEC-009` exists to stop. |
+| **Low-Level Mouse Hook** (`SetWindowsHookExW(WH_MOUSE_LL)`, `LowLevelMouseProc`) | High-frequency `WM_MOUSEMOVE` stream (125–1000 Hz). Hook callback must not block or allocate. | Initial registration fails or hook unhooked by OS timeout. | Mouse driver sends erratic burst tilt-wheel ticks. | **Startup:** Handled within hook initialization retry budget.<br/>**Runtime:** If unhooked, heartbeat attempts recovery; cursor motion never jitters. Debounce prevents rapid workspace skipping. | `warn!` on mouse hook installation or refresh failure; `debug!` on burst debounce drops. |
 | **Capture Lease IPC** (`WM_APP_CAPTURE_LEASE` → `WM_APP_HOOK_LEASE`) | No slow path: one integer comparison, forwarded off the callback thread. | Settings dies without disarming; the lease names a process id that no longer exists. | The lease names a process id Windows has since recycled onto an unrelated process. | Nothing: the lease is inert unless the named process also holds the foreground window, and a dead holder is reaped on the existing heartbeat. Under recycling the keyboard could reach Wira Desk while an unrelated process holds a lease — the residual risk `OQ-17` carries. | `debug!` trace recording the lease level and the process id as **received**, alongside what was sent, so a derived-value failure cannot be read as a silent sender (`DEF-3`). |
 
 **One failure mode both IPC rows above missed, found on hardware 2026-08-28.** Each row asks what
@@ -119,6 +121,7 @@ The Robustness Analysis classifies the technical design for all realized use cas
 ### 1. Boundary Objects
 
 - **`B-KbdHook` (OS Keyboard Hook Stream):** Raw `WH_KEYBOARD_LL` input stream delivered by Windows via the low-level hook callback on `LC-hook-thread`.
+- **`B-MouseHook` (OS Low-Level Mouse Hook Stream):** Raw `WH_MOUSE_LL` input stream delivered by Windows via the low-level mouse hook callback on `LC-hook-thread`, forwarding `WM_MOUSEMOVE` immediately with zero locks and intercepting auxiliary button/tilt inputs (`AD-15`).
 - **`B-WinMgr` (Win32 Window Manager Interface):** Win32 C-API surface (`EnumWindows`, `IsWindowVisible`, `GetWindowLongPtrW`, `SetForegroundWindow`, `SetWindowPos`, `ShowWindowAsync`).
 - **`B-VirtualDesktop` (COM Shell Interface):** Minimal COM vtable wrapper for `IVirtualDesktopManager::IsWindowOnCurrentVirtualDesktop`.
 - **`B-IdentityQuery` (Win32 Process/Class Query):** Allocation-free UTF-16 query adapter (`GetForegroundWindow`, `GetClassNameW`, `GetWindowThreadProcessId`, `OpenProcess`, `QueryFullProcessImageNameW`).
@@ -259,3 +262,18 @@ Every architectural claim and boundary behaviour is verified against source code
 ## Open Items
 
 `[NEEDS CONFIRMATION]` — the `IVirtualDesktopManager` COM path (AD-9) is verified at compile time — vtable layout and offsets match the documented interface, and the isolation tests pass — but has never actually executed against a live elevated desktop; the module's own header comment states this directly. Filed as `OQ-35`. All other technical mechanisms, invariants (AD-1..10, AD-12), and Win32 failure boundaries are verified against the codebase and ratified.
+
+#### UC-13: Navigate Virtual Desktops or Tasks via Mouse
+
+1. User clicks an auxiliary thumb button (`WM_XBUTTONDOWN`) or tilts the scroll wheel horizontally (`WM_MOUSEHWHEEL`).
+2. `B-MouseHook` invokes `C-HookController`.
+3. `C-HookController` checks if mouse navigation is enabled (`mouse.enabled`) and whether the input has a mapped action preset.
+4. For tilt-wheel events, `C-HookController` enforces the 150–200 ms debounce window against `last_tilt_ms`; burst ticks arriving within the window are swallowed (`return 1`) without enqueuing.
+5. If the input is unmapped or set to passthrough, `C-HookController` forwards it immediately to `CallNextHookEx`.
+6. For valid mapped events, `C-HookController` enqueues the mapped command opcode to `ring.rs`, posts `WM_APP_COMMAND_READY` to `B-HiddenWindow`, and returns `1` (swallowing the input).
+7. `C-WorkerDispatcher` wakes up and executes the mapped action:
+   - For virtual desktop navigation: synthesizes `Ctrl + Win + Left/Right` via elevated `SendInput`.
+   - For Task View: synthesizes `Win + Tab` via elevated `SendInput`.
+   - For Show Desktop: synthesizes `Win + D` via elevated `SendInput`.
+   - For window cycling or snapping: dispatches directly to `execute_cycle()` or `execute_snap()`.
+8. Desktop workspace or window focus transitions immediately with zero perceived latency.

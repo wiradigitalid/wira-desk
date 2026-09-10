@@ -4,7 +4,7 @@
 
 | ID | Kind | Owner | Description |
 | --- | --- | --- | --- |
-| `app-config` | Data | `_platform` | TOML configuration schema and on-disk file `%APPDATA%\WiraDesk\config.toml` shared by daemon and settings. |
+| `app-config` | Data | `_platform` | TOML configuration schema and on-disk file `%APPDATA%\WiraDesk\config.toml` (general, switcher, snapping, layout, vm_bypass, mouse) shared by daemon and settings. |
 | `ipc-reload-signal` | Control / Endpoint | `_platform` | Custom Win32 message `WM_APP_RELOAD_CONFIG` (`0x8001`) sent by settings to the daemon's hidden message-only window (`WiraDeskDaemonHiddenWindow`). |
 | `runtime-paths` | Data | `_platform` | Standard paths for `%APPDATA%\WiraDesk` (config, log), executable locations, and legacy `%APPDATA%\WinTick` migration paths. |
 

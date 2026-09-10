@@ -794,6 +794,73 @@ rtm:
   exempt: false
   green: true
   broken_at: ''
+- BG: BG-4
+  CAP: CAP-17
+  FR: FR-30
+  DEC: []
+  UC: UC-13
+  ticket: SPEC-8-02
+  spec: SPEC-8
+  release: 0.3.0
+  test:
+  - commands::tests::frozen_command_wire_values_extended_for_mouse
+  - hook::tests::mouse_hook_passes_mousemove_without_interception
+  - hook::tests::mouse_hook_swallows_mapped_xbuttons_down_and_up
+  - hook::tests::unmapped_mouse_buttons_pass_through
+  - hook::tests::vm_bypass_passes_mouse_events_through
+  - hook::tests::tilt_wheel_debounce_drops_rapid_burst_ticks_at_150ms
+  - hook::tests::tilt_wheel_satisfying_debounce_enqueues_command
+  - hook::tests::ring_full_increments_dropped_metric_on_mouse_event
+  - hook::tests::dual_hook_heartbeat_refreshes_both_handles
+  - worker::tests::mouse_virtual_desktop_commands_dispatch_safely
+  status: open
+  exempt: false
+  green: false
+  broken_at: status
+- BG: BG-4
+  CAP: CAP-17
+  FR: FR-31
+  DEC: []
+  UC: UC-13
+  ticket: SPEC-8-02
+  spec: SPEC-8
+  release: 0.3.0
+  test:
+  - commands::tests::frozen_command_wire_values_extended_for_mouse
+  - hook::tests::mouse_hook_passes_mousemove_without_interception
+  - hook::tests::mouse_hook_swallows_mapped_xbuttons_down_and_up
+  - hook::tests::unmapped_mouse_buttons_pass_through
+  - hook::tests::vm_bypass_passes_mouse_events_through
+  - hook::tests::tilt_wheel_debounce_drops_rapid_burst_ticks_at_150ms
+  - hook::tests::tilt_wheel_satisfying_debounce_enqueues_command
+  - hook::tests::ring_full_increments_dropped_metric_on_mouse_event
+  - hook::tests::dual_hook_heartbeat_refreshes_both_handles
+  - worker::tests::mouse_virtual_desktop_commands_dispatch_safely
+  status: open
+  exempt: false
+  green: false
+  broken_at: status
+- BG: BG-4
+  CAP: CAP-17
+  FR: FR-32
+  DEC: []
+  UC: UC-14
+  ticket: SPEC-8-01
+  spec: SPEC-8
+  release: 0.3.0
+  test:
+  - config::tests::mouse_config_roundtrips_through_toml
+  - config::tests::missing_mouse_section_defaults_safely
+  - config::tests::mouse_action_preset_slug_parsing
+  - persistence::tests::mouse_preferences_save_and_reload_signal
+  - persistence::tests::invalid_mouse_preset_string_is_rejected
+  - app::tests::mouse_pane_loads_configured_presets
+  - app::tests::toggling_mouse_navigation_updates_draft
+  - app::tests::five_pane_focus_order_includes_mouse
+  status: open
+  exempt: false
+  green: false
+  broken_at: status
 - BG: BG-1
   CAP: CAP-1
   FR: FR-4

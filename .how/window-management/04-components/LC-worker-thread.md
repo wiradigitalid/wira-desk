@@ -41,7 +41,7 @@ created: 2026-08-21
 - `install_config_snapshot(snapshot: WorkerSnapshot)`: Updates thread-local `WORKER_CONFIG` upon configuration reload (`WM_APP_RELOAD_CONFIG`).
 
 ### Execution Methods
-- `drain_commands()`: Drains the static ring buffer and dispatches to `execute_cycle()`, `execute_snap()`, `execute_stack()`, or `execute_monitor_move()`.
+- `drain_commands()`: Drains the static ring buffer and dispatches to `execute_cycle()`, `execute_snap()`, `execute_stack()`, `execute_monitor_move()`, or `execute_mouse_navigation()`.
 - `execute_cycle()`: Captures active context & spatial bounds, drives `run_context_safe_cycle()`, activates target, and suppresses Start menu.
 - `execute_snap(command)`: Resolves monitor context and applies single-window snap geometry (`PlacementPlan`); `SnapMaximize` tries a native maximize first, falling back to the geometric plan.
 - `execute_stack()`: Plans and applies overlapping cascade stack for up to 3 live same-app windows on the origin monitor.

@@ -9,7 +9,7 @@ graph TD
     end
     
     subgraph WindowsOS["Windows Desktop Operating System<br/>[External System]"]
-        WinHook["Win32 Low-Level Keyboard Hooks<br/>(WH_KEYBOARD_LL)"]
+        WinHook["Win32 Low-Level Keyboard & Mouse Hooks<br/>(WH_KEYBOARD_LL, WH_MOUSE_LL)"]
         WinWM["Windows Window Manager / DWM<br/>(Z-Order, Focus, Snapping)"]
         WinVD["Virtual Desktop Manager<br/>(IVirtualDesktopManager)"]
         WinTray["System Tray & Shell<br/>(Shell_NotifyIcon, Toast)"]
@@ -24,7 +24,7 @@ graph TD
         ReleaseFile["Release descriptor + installer<br/>(static, HTTPS)"]
     end
 
-    User -- "Global key shortcuts<br/>(Win+`, Ctrl+Alt+Arrows)" --> WinHook
+    User -- "Global shortcuts & mouse inputs<br/>(Win+`, Ctrl+Alt+Arrows, Thumb/Tilt)" --> WinHook
     WinHook -- "Hook events" --> WD
     User -- "Tray menu click / Configuration" --> WD
     
@@ -40,7 +40,7 @@ graph TD
 
 - **Wira Desk**: Lightweight, local Windows utility that delivers instant macOS-style same-application window cycling and DPI-aware snapping.
 - **External Systems**:
-  - **Windows Low-Level Hooks**: Intercepts physical key combinations globally before target applications receive them.
+  - **Windows Low-Level Hooks**: Intercepts physical key combinations and auxiliary mouse inputs globally before target applications receive them.
   - **Windows Window Manager / DWM**: Live Z-order enumeration, active window focus transitions, DPI-aware bounds retrieval, and window positioning.
   - **Virtual Desktop Manager**: Official COM interface (`IVirtualDesktopManager`) isolating cycling within the active virtual desktop.
   - **System Tray & Toast**: Native Win32 notification icon, context menu, and critical error toast notifications.
