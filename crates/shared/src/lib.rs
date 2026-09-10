@@ -12,8 +12,8 @@ pub mod update;
 
 pub use commands::Command;
 pub use config::{
-    app_data_dir, config_path, log_path, Config, GeneralConfig, LayoutConfig, SnappingConfig,
-    SwitcherConfig, VmBypassConfig,
+    app_data_dir, config_path, log_path, Config, GeneralConfig, LayoutConfig, MouseActionPreset,
+    MouseConfig, SnappingConfig, SwitcherConfig, VmBypassConfig,
 };
 pub use constants::{ONBOARDING_FLAG, SETTINGS_BIN_NAME, SETTINGS_EXE_NAME};
 pub use migrate::migrate_appdata;

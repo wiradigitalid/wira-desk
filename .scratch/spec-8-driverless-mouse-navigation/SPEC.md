@@ -12,7 +12,7 @@ status: ready-for-agent
 
 Standard productivity mice (such as Logitech M-series, MX Master, and similar ergonomic multi-button office mice) provide physical auxiliary controls — two thumb buttons and a horizontal tilt wheel — that default to generic browser back/forward and horizontal panning. Because office mice almost universally lack on-board non-volatile memory (EEPROM) for hardware-level macro storage, unlocking these controls for desktop multitasking traditionally mandates installing vendor companion suites.
 
-However, vendor companion suites modernly rely on web-runtime stacks (Electron / Chromium Embedded Framework), consuming gigabytes of disk space and hundreds of megabytes of idle RAM, while spawning 3 to 5 persistent background processes for telemetry, ad brokering, and auto-updating. Power users and developers who rely on Wira Desk for its extreme resource discipline (<2 MB static RAM) currently have no lightweight, native way to harness mouse auxiliary inputs for virtual desktop navigation and window management.
+However, vendor companion suites modernly rely on web-runtime stacks (Electron / Chromium Embedded Framework), consuming gigabytes of disk space and hundreds of megabytes of idle RAM, while spawning 3 to 5 persistent background processes for telemetry, ad brokering, and auto-updating. Power users and developers who rely on Wira Desk for its extreme resource discipline (minimal static RAM footprint) currently have no lightweight, native way to harness mouse auxiliary inputs for virtual desktop navigation and window management.
 
 ## Solution
 

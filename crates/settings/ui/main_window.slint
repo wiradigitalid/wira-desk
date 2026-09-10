@@ -5,6 +5,7 @@ import { Titlebar } from "components/titlebar.slint";
 import { Sidebar } from "components/sidebar.slint";
 import { GeneralPane } from "panes/general_pane.slint";
 import { ShortcutsPane, ShortcutRowData } from "panes/shortcuts_pane.slint";
+import { MousePane, MousePresetOption } from "panes/mouse_pane.slint";
 import { VmExceptionsPane } from "panes/vm_exceptions_pane.slint";
 import { AboutPane } from "panes/about_pane.slint";
 import { KeyCheck } from "components/key_check.slint";
@@ -92,6 +93,19 @@ export component MainWindow inherits Window {
         "VMwareUnityWindow",
         "TscShellContainerClass",
     ];
+
+    // Mouse Pane Properties & Callbacks
+    in-out property <bool> mouse_enabled: true;
+    in property <int> thumb_back_index: 1;
+    in property <int> thumb_forward_index: 0;
+    in property <int> tilt_left_index: 2;
+    in property <int> tilt_right_index: 3;
+    in property <[MousePresetOption]> mouse_preset_options: [];
+    callback toggle_mouse_navigation(bool);
+    callback thumb_back_changed(int);
+    callback thumb_forward_changed(int);
+    callback tilt_left_changed(int);
+    callback tilt_right_changed(int);
 
     // About Pane Properties
     in property <string> update_status: "";
@@ -323,12 +337,27 @@ export component MainWindow inherits Window {
                                 }
                             }
 
-                            if root.current_pane == 2 : VmExceptionsPane {
+                            if root.current_pane == 2 : MousePane {
+                                mouse_enabled <=> root.mouse_enabled;
+                                thumb_back_index: root.thumb_back_index;
+                                thumb_forward_index: root.thumb_forward_index;
+                                tilt_left_index: root.tilt_left_index;
+                                tilt_right_index: root.tilt_right_index;
+                                preset_options: root.mouse_preset_options;
+
+                                toggle_mouse_navigation(val) => { root.toggle_mouse_navigation(val); }
+                                thumb_back_changed(idx) => { root.thumb_back_changed(idx); }
+                                thumb_forward_changed(idx) => { root.thumb_forward_changed(idx); }
+                                tilt_left_changed(idx) => { root.tilt_left_changed(idx); }
+                                tilt_right_changed(idx) => { root.tilt_right_changed(idx); }
+                            }
+
+                            if root.current_pane == 3 : VmExceptionsPane {
                                 bypass_processes: root.bypass_processes;
                                 bypass_classes: root.bypass_classes;
                             }
 
-                            if root.current_pane == 3 : AboutPane {
+                            if root.current_pane == 4 : AboutPane {
                                 version: root.app_version;
                                 typeface: root.app_typeface;
                                 update_status: root.update_status;

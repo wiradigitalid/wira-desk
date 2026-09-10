@@ -813,10 +813,10 @@ rtm:
   - hook::tests::ring_full_increments_dropped_metric_on_mouse_event
   - hook::tests::dual_hook_heartbeat_refreshes_both_handles
   - worker::tests::mouse_virtual_desktop_commands_dispatch_safely
-  status: open
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-4
   CAP: CAP-17
   FR: FR-31
@@ -836,10 +836,10 @@ rtm:
   - hook::tests::ring_full_increments_dropped_metric_on_mouse_event
   - hook::tests::dual_hook_heartbeat_refreshes_both_handles
   - worker::tests::mouse_virtual_desktop_commands_dispatch_safely
-  status: open
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-4
   CAP: CAP-17
   FR: FR-32
@@ -857,10 +857,10 @@ rtm:
   - app::tests::mouse_pane_loads_configured_presets
   - app::tests::toggling_mouse_navigation_updates_draft
   - app::tests::five_pane_focus_order_includes_mouse
-  status: open
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-1
   FR: FR-4
