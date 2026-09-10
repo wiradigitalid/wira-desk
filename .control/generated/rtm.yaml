@@ -852,10 +852,10 @@ rtm:
   - app::tests::mouse_pane_loads_configured_presets
   - app::tests::toggling_mouse_navigation_updates_draft
   - app::tests::five_pane_focus_order_includes_mouse
-  status: open
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-1
   FR: FR-4

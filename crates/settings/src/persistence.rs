@@ -16,7 +16,7 @@ use windows_sys::Win32::UI::WindowsAndMessaging::{FindWindowW, PostMessageW};
 pub use shared::shortcut::{reservation, ReservedInfo};
 
 /// Why a submitted shortcut was rejected.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ShortcutError {
     /// A token that is not a modifier and not a known key name.
     UnsupportedToken,
@@ -35,6 +35,8 @@ pub enum ShortcutError {
     DuplicateShortcut(&'static str),
     /// A custom snap percentage was outside 1..=99.
     InvalidPercentage(u32),
+    /// An unrecognized or invalid mouse action preset string.
+    InvalidMousePreset(String),
 }
 
 /// Validate a submitted shortcut **before** any active configuration is
@@ -218,6 +220,17 @@ pub fn validate_config(cfg: &Config) -> Result<(), (&'static str, ShortcutError)
             "layout.stack_width_percent",
             ShortcutError::InvalidPercentage(cfg.layout.stack_width_percent),
         ));
+    }
+
+    for (field_name, val) in [
+        ("mouse.thumb_back", &cfg.mouse.thumb_back),
+        ("mouse.thumb_forward", &cfg.mouse.thumb_forward),
+        ("mouse.tilt_left", &cfg.mouse.tilt_left),
+        ("mouse.tilt_right", &cfg.mouse.tilt_right),
+    ] {
+        if shared::MouseActionPreset::parse_slug(val).is_none() {
+            return Err((field_name, ShortcutError::InvalidMousePreset(val.clone())));
+        }
     }
 
     Ok(())
@@ -728,6 +741,52 @@ mod tests {
     #[test]
     fn default_config_passes_its_own_validation() {
         assert!(validate_config(&Config::default()).is_ok());
+    }
+
+    #[test]
+    fn invalid_mouse_preset_string_is_rejected() {
+        let mut cfg = Config::default();
+        cfg.mouse.thumb_back = "invalid_action_preset".to_string();
+        assert_eq!(
+            validate_config(&cfg),
+            Err((
+                "mouse.thumb_back",
+                ShortcutError::InvalidMousePreset("invalid_action_preset".to_string())
+            ))
+        );
+
+        let mut cfg2 = Config::default();
+        cfg2.mouse.tilt_right = "non_existent_preset".to_string();
+        assert_eq!(
+            validate_config(&cfg2),
+            Err((
+                "mouse.tilt_right",
+                ShortcutError::InvalidMousePreset("non_existent_preset".to_string())
+            ))
+        );
+    }
+
+    #[test]
+    fn mouse_preferences_save_and_reload_signal() {
+        let dir = temp_dir();
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("mouse_save.toml");
+
+        let mut cfg = Config::default();
+        cfg.mouse.enabled = true;
+        cfg.mouse.thumb_back = "cycle_forward".to_string();
+        cfg.mouse.thumb_forward = "maximize".to_string();
+        cfg.mouse.tilt_left = "snap_left".to_string();
+        cfg.mouse.tilt_right = "snap_right".to_string();
+
+        assert!(matches!(
+            save_and_notify(&cfg, &path),
+            SaveOutcome::Saved { .. }
+        ));
+
+        let loaded = Config::load_or_default(&path);
+        assert_eq!(loaded.mouse, cfg.mouse);
+        let _ = std::fs::remove_file(&path);
     }
 
     // ── : validation before replacement ───────────────────────────

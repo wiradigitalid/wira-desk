@@ -258,6 +258,27 @@ pub(crate) fn sync_model_to_ui(window: &MainWindow, model: &SettingsModel) {
         // KeyCheck Diagnostic State
         sync_key_check(window, model);
 
+        // Mouse Pane
+        window.set_mouse_enabled(model.draft.mouse.enabled);
+        let preset_options: Vec<MousePresetOption> = shared::MouseActionPreset::ALL
+            .into_iter()
+            .map(|p| MousePresetOption {
+                slug: slint::SharedString::from(p.as_str()),
+                label: slint::SharedString::from(p.display_label()),
+            })
+            .collect();
+        window.set_mouse_preset_options(slint::ModelRc::new(slint::VecModel::from(preset_options)));
+
+        let find_preset_index = |slug: &str| -> i32 {
+            shared::MouseActionPreset::parse_slug(slug)
+                .map(|p| p.index() as i32)
+                .unwrap_or(0)
+        };
+        window.set_thumb_back_index(find_preset_index(&model.draft.mouse.thumb_back));
+        window.set_thumb_forward_index(find_preset_index(&model.draft.mouse.thumb_forward));
+        window.set_tilt_left_index(find_preset_index(&model.draft.mouse.tilt_left));
+        window.set_tilt_right_index(find_preset_index(&model.draft.mouse.tilt_right));
+
         // About
         window.set_app_version(slint::SharedString::from(env!("CARGO_PKG_VERSION")));
         let typeface_name = match theme::detect_ui_font() {
@@ -458,6 +479,71 @@ pub(crate) fn bind_callbacks(
             let mut m = model_rc.borrow_mut();
             let field = ShortcutField::from_index(idx);
             m.set_action_enabled(field, val);
+            if let Some(w) = window_weak.upgrade() {
+                sync_model_to_ui(&w, &m);
+            }
+        });
+    }
+
+    // Callbacks: Mouse
+    {
+        let model_rc = Rc::clone(model);
+        let window_weak = main_window.as_weak();
+        main_window.on_toggle_mouse_navigation(move |val| {
+            let mut m = model_rc.borrow_mut();
+            m.draft.mouse.enabled = val;
+            if let Some(w) = window_weak.upgrade() {
+                sync_model_to_ui(&w, &m);
+            }
+        });
+    }
+    {
+        let model_rc = Rc::clone(model);
+        let window_weak = main_window.as_weak();
+        main_window.on_thumb_back_changed(move |idx| {
+            let mut m = model_rc.borrow_mut();
+            if let Some(preset) = shared::MouseActionPreset::from_index(idx as usize) {
+                m.draft.mouse.thumb_back = preset.as_str().to_string();
+            }
+            if let Some(w) = window_weak.upgrade() {
+                sync_model_to_ui(&w, &m);
+            }
+        });
+    }
+    {
+        let model_rc = Rc::clone(model);
+        let window_weak = main_window.as_weak();
+        main_window.on_thumb_forward_changed(move |idx| {
+            let mut m = model_rc.borrow_mut();
+            if let Some(preset) = shared::MouseActionPreset::from_index(idx as usize) {
+                m.draft.mouse.thumb_forward = preset.as_str().to_string();
+            }
+            if let Some(w) = window_weak.upgrade() {
+                sync_model_to_ui(&w, &m);
+            }
+        });
+    }
+    {
+        let model_rc = Rc::clone(model);
+        let window_weak = main_window.as_weak();
+        main_window.on_tilt_left_changed(move |idx| {
+            let mut m = model_rc.borrow_mut();
+            if let Some(preset) = shared::MouseActionPreset::from_index(idx as usize) {
+                m.draft.mouse.tilt_left = preset.as_str().to_string();
+            }
+            if let Some(w) = window_weak.upgrade() {
+                sync_model_to_ui(&w, &m);
+            }
+        });
+    }
+    {
+        let model_rc = Rc::clone(model);
+        let window_weak = main_window.as_weak();
+        main_window.on_tilt_right_changed(move |idx| {
+            let mut m = model_rc.borrow_mut();
+            if let Some(preset) = shared::MouseActionPreset::from_index(idx as usize) {
+                m.draft.mouse.tilt_right = preset.as_str().to_string();
+            }
             if let Some(w) = window_weak.upgrade() {
                 sync_model_to_ui(&w, &m);
             }

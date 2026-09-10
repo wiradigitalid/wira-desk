@@ -75,6 +75,9 @@ pub const DAEMON_WINDOW_CLASS: &str = "WiraDeskDaemonHiddenWindow";
 /// the `WM_APP_RELOAD_CONFIG` target.
 pub const DAEMON_WINDOW_TITLE: &str = "WiraDeskDaemon";
 
+/// Horizontal tilt-wheel debounce period in milliseconds (SPEC-8, SCN-04).
+pub const TILT_WHEEL_DEBOUNCE_MS: u64 = 150;
+
 // ─────────────────────────────────────────────────────────────────────────
 // Win32 custom window messages for daemon IPC. WM_APP = 0x8000.
 // ─────────────────────────────────────────────────────────────────────────

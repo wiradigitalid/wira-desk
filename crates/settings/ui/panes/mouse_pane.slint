@@ -1,0 +1,243 @@
+import { Palette, Typography } from "../theme.slint";
+import { Card, CardDivider } from "../components/card.slint";
+import { ToggleSwitch } from "../components/toggle_switch.slint";
+
+export struct MousePresetOption {
+    slug: string,
+    label: string,
+}
+
+component MouseActionRow inherits Rectangle {
+    in property <string> title: "";
+    in property <string> description: "";
+    in property <int> selected_index: 0;
+    in property <[MousePresetOption]> options;
+    in property <bool> enabled: true;
+    in property <string> selector_label: "";
+
+    callback selected(int);
+
+    height: 64px;
+
+    HorizontalLayout {
+        padding-left: 16px;
+        padding-right: 16px;
+        alignment: space-between;
+
+        // Title and description block
+        VerticalLayout {
+            alignment: center;
+            spacing: 2px;
+            horizontal-stretch: 1;
+
+            Text {
+                text: root.title;
+                font-family: Typography.font_family;
+                font-size: Typography.size_body;
+                font-weight: 600;
+                color: root.enabled ? Palette.text_primary : Palette.text_tertiary;
+            }
+
+            Text {
+                text: root.description;
+                font-family: Typography.font_family;
+                font-size: Typography.size_caption;
+                color: Palette.text_secondary;
+                wrap: word-wrap;
+            }
+        }
+
+        // Selector / Control
+        HorizontalLayout {
+            alignment: end;
+            VerticalLayout {
+                alignment: center;
+                Rectangle {
+                    width: 210px;
+                    height: 32px;
+                    border-radius: 6px;
+                    background: root.enabled ? (btn_touch.has_hover ? Palette.bg_card_hover : Palette.bg_subtle) : Palette.bg_subtle;
+                    border-width: 1px;
+                    border-color: root.enabled ? (btn_touch.has_hover ? Palette.accent_primary : Palette.stroke_card) : Palette.stroke_card;
+
+                    accessible-role: combobox;
+                    accessible-label: root.selector_label;
+                    accessible-value: root.options[root.selected_index].label;
+                    accessible-action-default => {
+                        if root.enabled && root.options.length > 0 {
+                            root.selected(Math.mod(root.selected_index + 1, root.options.length));
+                        }
+                    }
+
+                    HorizontalLayout {
+                        padding-left: 10px;
+                        padding-right: 10px;
+                        alignment: space-between;
+
+                        Text {
+                            text: (root.selected_index >= 0 && root.selected_index < root.options.length) ? root.options[root.selected_index].label : "Select Action";
+                            font-family: Typography.font_family;
+                            font-size: Typography.size_caption;
+                            font-weight: 500;
+                            color: root.enabled ? Palette.text_primary : Palette.text_tertiary;
+                            vertical-alignment: center;
+                            overflow: elide;
+                        }
+
+                        // Small Chevron Indicator
+                        Path {
+                            width: 8px;
+                            height: 8px;
+                            y: (parent.height - 8px) / 2;
+                            stroke: root.enabled ? Palette.text_secondary : Palette.text_tertiary;
+                            stroke-width: 1.2px;
+                            MoveTo { x: 1; y: 2.5; } LineTo { x: 4; y: 5.5; } LineTo { x: 7; y: 2.5; }
+                        }
+                    }
+
+                    btn_touch := TouchArea {
+                        enabled: root.enabled;
+                        clicked => {
+                            if root.options.length > 0 {
+                                root.selected(Math.mod(root.selected_index + 1, root.options.length));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+export component MousePane inherits VerticalLayout {
+    in-out property <bool> mouse_enabled: true;
+    in property <int> thumb_back_index: 1; // prev_virtual_desktop
+    in property <int> thumb_forward_index: 0; // next_virtual_desktop
+    in property <int> tilt_left_index: 2; // task_view
+    in property <int> tilt_right_index: 3; // show_desktop
+    in property <[MousePresetOption]> preset_options;
+
+    // Accessible labels
+    in property <string> accessible_toggle: "Enable Mouse Navigation";
+    in property <string> accessible_thumb_back: "Thumb Button 1 (Back) Action";
+    in property <string> accessible_thumb_forward: "Thumb Button 2 (Forward) Action";
+    in property <string> accessible_tilt_left: "Tilt Wheel Left Action";
+    in property <string> accessible_tilt_right: "Tilt Wheel Right Action";
+
+    callback toggle_mouse_navigation(bool);
+    callback thumb_back_changed(int);
+    callback thumb_forward_changed(int);
+    callback tilt_left_changed(int);
+    callback tilt_right_changed(int);
+
+    spacing: 12px;
+    alignment: start;
+
+    // Heading Section
+    VerticalLayout {
+        spacing: 2px;
+        Text {
+            text: "Mouse Navigation";
+            font-family: Typography.font_family;
+            font-size: Typography.size_heading;
+            font-weight: 700;
+            color: Palette.text_primary;
+        }
+        Text {
+            text: "Driverless desktop multitasking with auxiliary mouse buttons and tilt wheel.";
+            font-family: Typography.font_family;
+            font-size: Typography.size_caption;
+            color: Palette.text_secondary;
+        }
+    }
+
+    // Card 1: Master Enable / Disable
+    Card {
+        VerticalLayout {
+            padding: 16px;
+            spacing: 12px;
+
+            HorizontalLayout {
+                alignment: space-between;
+                VerticalLayout {
+                    spacing: 2px;
+                    horizontal-stretch: 1;
+                    Text {
+                        text: "Enable Mouse Navigation";
+                        font-family: Typography.font_family;
+                        font-size: Typography.size_subheading;
+                        font-weight: 600;
+                        color: Palette.text_primary;
+                    }
+                    Text {
+                        text: "Intercepts thumb buttons and horizontal tilt wheel for workspace and window commands.";
+                        font-family: Typography.font_family;
+                        font-size: Typography.size_caption;
+                        color: Palette.text_secondary;
+                        wrap: word-wrap;
+                    }
+                }
+
+                ToggleSwitch {
+                    accessible-label: root.accessible_toggle;
+                    checked <=> root.mouse_enabled;
+                    toggled(val) => { root.toggle_mouse_navigation(val); }
+                }
+            }
+        }
+    }
+
+    // Card 2: Button & Wheel Mapping Presets
+    Card {
+        VerticalLayout {
+            padding: 4px;
+            spacing: 0px;
+
+            MouseActionRow {
+                title: "Thumb Button 1 (Back)";
+                description: "Standard lower/rear thumb button (XBUTTON1).";
+                selected_index: root.thumb_back_index;
+                options: root.preset_options;
+                enabled: root.mouse_enabled;
+                selector_label: root.accessible_thumb_back;
+                selected(idx) => { root.thumb_back_changed(idx); }
+            }
+
+            CardDivider {}
+
+            MouseActionRow {
+                title: "Thumb Button 2 (Forward)";
+                description: "Standard upper/front thumb button (XBUTTON2).";
+                selected_index: root.thumb_forward_index;
+                options: root.preset_options;
+                enabled: root.mouse_enabled;
+                selector_label: root.accessible_thumb_forward;
+                selected(idx) => { root.thumb_forward_changed(idx); }
+            }
+
+            CardDivider {}
+
+            MouseActionRow {
+                title: "Tilt Wheel Left";
+                description: "Push scroll wheel horizontally to the left.";
+                selected_index: root.tilt_left_index;
+                options: root.preset_options;
+                enabled: root.mouse_enabled;
+                selector_label: root.accessible_tilt_left;
+                selected(idx) => { root.tilt_left_changed(idx); }
+            }
+
+            CardDivider {}
+
+            MouseActionRow {
+                title: "Tilt Wheel Right";
+                description: "Push scroll wheel horizontally to the right.";
+                selected_index: root.tilt_right_index;
+                options: root.preset_options;
+                enabled: root.mouse_enabled;
+                selector_label: root.accessible_tilt_right;
+                selected(idx) => { root.tilt_right_changed(idx); }
+            }
+        }
+    }
+}

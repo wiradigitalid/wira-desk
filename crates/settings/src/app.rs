@@ -21,14 +21,16 @@ use crate::theme::{self, ThemeMode, LISTENING_ANNOUNCEMENT, TOGGLE_AUTO_START};
 pub enum Pane {
     General,
     Shortcuts,
+    Mouse,
     VmExceptions,
     About,
 }
 
 impl Pane {
-    pub const ALL: [Pane; 4] = [
+    pub const ALL: [Pane; 5] = [
         Pane::General,
         Pane::Shortcuts,
+        Pane::Mouse,
         Pane::VmExceptions,
         Pane::About,
     ];
@@ -38,6 +40,7 @@ impl Pane {
         match self {
             Pane::General => "General",
             Pane::Shortcuts => "Shortcuts",
+            Pane::Mouse => "Mouse",
             Pane::VmExceptions => "VM & Exceptions",
             Pane::About => "About",
         }
@@ -620,6 +623,9 @@ pub fn describe(field: &str, err: ShortcutError) -> String {
                 )
             }
         }
+        ShortcutError::InvalidMousePreset(val) => {
+            format!("'{val}' is not a recognized mouse action preset.")
+        }
     }
 }
 
@@ -1151,6 +1157,13 @@ pub fn focus_order(pane: Pane) -> Vec<&'static str> {
                 order.push(f.label());
             }
         }
+        Pane::Mouse => {
+            order.push(theme::TOGGLE_MOUSE_NAVIGATION.name);
+            order.push(theme::MOUSE_THUMB_BACK_SELECTOR.name);
+            order.push(theme::MOUSE_THUMB_FORWARD_SELECTOR.name);
+            order.push(theme::MOUSE_TILT_LEFT_SELECTOR.name);
+            order.push(theme::MOUSE_TILT_RIGHT_SELECTOR.name);
+        }
         Pane::VmExceptions => {
             order.push(theme::VM_BYPASS_PROCESS_LIST.name);
             order.push(theme::VM_BYPASS_CLASS_LIST.name);
@@ -1533,10 +1546,9 @@ mod tests {
     #[test]
     fn pane_enum_no_longer_declares_layout() {
         // `DEC-014`'s accepted extension: the Layout pane is retired, not merely emptied. Its one
-        // remaining control moves onto the Overlapping Stack row. Asserted on the count as well as
-        // the name, because `Pane::ALL`'s length is itself a hand-written number and a pane list
-        // that still says five is stale whether or not anything in it says "Layout".
-        assert_eq!(Pane::ALL.len(), 4, "Settings ships four panes");
+        // remaining control moves onto the Overlapping Stack row. With SPEC-8 adding the Mouse
+        // pane, Settings ships five panes (General, Shortcuts, Mouse, VM & Exceptions, About).
+        assert_eq!(Pane::ALL.len(), 5, "Settings ships five panes");
         assert!(
             Pane::from_label("Layout").is_none(),
             "no pane answers to the retired name"
@@ -2471,5 +2483,72 @@ mod tests {
         // Clearing beat clears the heartbeat flag
         m.key_check.clear_beat();
         assert!(!m.key_check.beat);
+    }
+
+    #[test]
+    fn five_pane_focus_order_includes_mouse() {
+        assert_eq!(Pane::ALL.len(), 5);
+        assert_eq!(Pane::ALL[0], Pane::General);
+        assert_eq!(Pane::ALL[1], Pane::Shortcuts);
+        assert_eq!(Pane::ALL[2], Pane::Mouse);
+        assert_eq!(Pane::ALL[3], Pane::VmExceptions);
+        assert_eq!(Pane::ALL[4], Pane::About);
+
+        assert_eq!(Pane::Mouse.label(), "Mouse");
+        assert_eq!(Pane::from_index(2), Pane::Mouse);
+
+        let order = focus_order(Pane::Mouse);
+        assert_eq!(order[0], "General");
+        assert_eq!(order[1], "Shortcuts");
+        assert_eq!(order[2], "Mouse");
+        assert_eq!(order[3], "VM & Exceptions");
+        assert_eq!(order[4], "About");
+        assert_eq!(order[5], theme::TOGGLE_MOUSE_NAVIGATION.name);
+        assert_eq!(order[6], theme::MOUSE_THUMB_BACK_SELECTOR.name);
+        assert_eq!(order[7], theme::MOUSE_THUMB_FORWARD_SELECTOR.name);
+        assert_eq!(order[8], theme::MOUSE_TILT_LEFT_SELECTOR.name);
+        assert_eq!(order[9], theme::MOUSE_TILT_RIGHT_SELECTOR.name);
+        assert_eq!(order[order.len() - 2], "Save");
+        assert_eq!(order[order.len() - 1], "Revert");
+    }
+
+    #[test]
+    fn toggling_mouse_navigation_updates_draft() {
+        let mut m = model();
+        assert!(m.draft.mouse.enabled);
+        assert!(!m.is_dirty());
+
+        m.draft.mouse.enabled = false;
+        assert!(m.is_dirty());
+
+        m.revert();
+        assert!(!m.is_dirty());
+        assert!(m.draft.mouse.enabled);
+    }
+
+    #[test]
+    fn mouse_pane_loads_configured_presets() {
+        let mut m = model();
+        m.draft.mouse.thumb_back = "cycle_forward".to_string();
+        m.draft.mouse.thumb_forward = "maximize".to_string();
+        m.draft.mouse.tilt_left = "snap_left".to_string();
+        m.draft.mouse.tilt_right = "snap_right".to_string();
+
+        assert_eq!(
+            shared::MouseActionPreset::parse_slug(&m.draft.mouse.thumb_back),
+            Some(shared::MouseActionPreset::CycleForward)
+        );
+        assert_eq!(
+            shared::MouseActionPreset::parse_slug(&m.draft.mouse.thumb_forward),
+            Some(shared::MouseActionPreset::Maximize)
+        );
+        assert_eq!(
+            shared::MouseActionPreset::parse_slug(&m.draft.mouse.tilt_left),
+            Some(shared::MouseActionPreset::SnapLeft)
+        );
+        assert_eq!(
+            shared::MouseActionPreset::parse_slug(&m.draft.mouse.tilt_right),
+            Some(shared::MouseActionPreset::SnapRight)
+        );
     }
 }

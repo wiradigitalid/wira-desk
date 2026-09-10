@@ -147,7 +147,37 @@ pub const ALL: &[ControlSemantics] = &[
     SHORTCUT_CONFLICT_SWAP,
     SHORTCUT_KEYCAP,
     SHORTCUT_ROW_DESCRIPTION,
+    TOGGLE_MOUSE_NAVIGATION,
+    MOUSE_THUMB_BACK_SELECTOR,
+    MOUSE_THUMB_FORWARD_SELECTOR,
+    MOUSE_TILT_LEFT_SELECTOR,
+    MOUSE_TILT_RIGHT_SELECTOR,
 ];
+
+pub const TOGGLE_MOUSE_NAVIGATION: ControlSemantics = ControlSemantics {
+    name: "Enable Mouse Navigation",
+    description: "When enabled, mouse auxiliary buttons and tilt wheel trigger desktop navigation.",
+};
+
+pub const MOUSE_THUMB_BACK_SELECTOR: ControlSemantics = ControlSemantics {
+    name: "Thumb Button 1 (Back) Action",
+    description: "Select action for mouse thumb button 1.",
+};
+
+pub const MOUSE_THUMB_FORWARD_SELECTOR: ControlSemantics = ControlSemantics {
+    name: "Thumb Button 2 (Forward) Action",
+    description: "Select action for mouse thumb button 2.",
+};
+
+pub const MOUSE_TILT_LEFT_SELECTOR: ControlSemantics = ControlSemantics {
+    name: "Tilt Wheel Left Action",
+    description: "Select action for mouse horizontal tilt left.",
+};
+
+pub const MOUSE_TILT_RIGHT_SELECTOR: ControlSemantics = ControlSemantics {
+    name: "Tilt Wheel Right Action",
+    description: "Select action for mouse horizontal tilt right.",
+};
 
 pub const TOGGLE_AUTO_START: ControlSemantics = ControlSemantics {
     name: "Start Wira Desk with Windows",

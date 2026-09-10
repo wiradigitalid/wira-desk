@@ -18,6 +18,7 @@ pub struct Config {
     pub snapping: SnappingConfig,
     pub layout: LayoutConfig,
     pub vm_bypass: VmBypassConfig,
+    pub mouse: MouseConfig,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -175,6 +176,141 @@ pub struct VmBypassConfig {
     /// `bypass_processes` remains valid and receives this default.
     /// Process and class identifiers are independently configurable.
     pub bypass_classes: Vec<String>,
+}
+
+/// Curated action presets for driverless mouse auxiliary navigation (CAP-17, SPEC-8).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum MouseActionPreset {
+    #[serde(rename = "next_virtual_desktop")]
+    NextVirtualDesktop,
+    #[serde(rename = "prev_virtual_desktop")]
+    PrevVirtualDesktop,
+    #[serde(rename = "task_view")]
+    TaskView,
+    #[serde(rename = "show_desktop")]
+    ShowDesktop,
+    #[serde(rename = "cycle_forward")]
+    CycleForward,
+    #[serde(rename = "snap_left")]
+    SnapLeft,
+    #[serde(rename = "snap_right")]
+    SnapRight,
+    #[serde(rename = "maximize")]
+    Maximize,
+    #[serde(rename = "passthrough")]
+    Passthrough,
+}
+
+impl MouseActionPreset {
+    pub const ALL: [MouseActionPreset; 9] = [
+        MouseActionPreset::NextVirtualDesktop,
+        MouseActionPreset::PrevVirtualDesktop,
+        MouseActionPreset::TaskView,
+        MouseActionPreset::ShowDesktop,
+        MouseActionPreset::CycleForward,
+        MouseActionPreset::SnapLeft,
+        MouseActionPreset::SnapRight,
+        MouseActionPreset::Maximize,
+        MouseActionPreset::Passthrough,
+    ];
+
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::NextVirtualDesktop => "next_virtual_desktop",
+            Self::PrevVirtualDesktop => "prev_virtual_desktop",
+            Self::TaskView => "task_view",
+            Self::ShowDesktop => "show_desktop",
+            Self::CycleForward => "cycle_forward",
+            Self::SnapLeft => "snap_left",
+            Self::SnapRight => "snap_right",
+            Self::Maximize => "maximize",
+            Self::Passthrough => "passthrough",
+        }
+    }
+
+    pub fn display_label(&self) -> &'static str {
+        match self {
+            Self::NextVirtualDesktop => "Next Virtual Desktop",
+            Self::PrevVirtualDesktop => "Previous Virtual Desktop",
+            Self::TaskView => "Task View",
+            Self::ShowDesktop => "Show Desktop",
+            Self::CycleForward => "Cycle Same-App Window Forward",
+            Self::SnapLeft => "Snap Window Left",
+            Self::SnapRight => "Snap Window Right",
+            Self::Maximize => "Maximize Window",
+            Self::Passthrough => "Default / Passthrough",
+        }
+    }
+
+    pub fn parse_slug(s: &str) -> Option<Self> {
+        let s = s.trim();
+        if s.eq_ignore_ascii_case("default") {
+            return Some(Self::Passthrough);
+        }
+        Self::ALL
+            .iter()
+            .copied()
+            .find(|preset| s.eq_ignore_ascii_case(preset.as_str()))
+    }
+
+    pub fn index(&self) -> usize {
+        match self {
+            Self::NextVirtualDesktop => 0,
+            Self::PrevVirtualDesktop => 1,
+            Self::TaskView => 2,
+            Self::ShowDesktop => 3,
+            Self::CycleForward => 4,
+            Self::SnapLeft => 5,
+            Self::SnapRight => 6,
+            Self::Maximize => 7,
+            Self::Passthrough => 8,
+        }
+    }
+
+    pub fn from_index(i: usize) -> Option<Self> {
+        Self::ALL.get(i).copied()
+    }
+}
+
+impl std::str::FromStr for MouseActionPreset {
+    type Err = String;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::parse_slug(s).ok_or_else(|| format!("unknown mouse action preset: {s}"))
+    }
+}
+
+impl std::fmt::Display for MouseActionPreset {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_str())
+    }
+}
+
+/// Auxiliary mouse navigation configuration (SPEC-8, FR-32).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct MouseConfig {
+    /// Enable auxiliary mouse navigation.
+    pub enabled: bool,
+    /// Physical XBUTTON1 (Back) preset action slug.
+    pub thumb_back: String,
+    /// Physical XBUTTON2 (Forward) preset action slug.
+    pub thumb_forward: String,
+    /// Horizontal wheel left tilt preset action slug.
+    pub tilt_left: String,
+    /// Horizontal wheel right tilt preset action slug.
+    pub tilt_right: String,
+}
+
+impl Default for MouseConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            thumb_back: "prev_virtual_desktop".to_string(),
+            thumb_forward: "next_virtual_desktop".to_string(),
+            tilt_left: "task_view".to_string(),
+            tilt_right: "show_desktop".to_string(),
+        }
+    }
 }
 
 // ── Defaults (on-disk config.toml schema) ─────────────────────────────────
@@ -664,5 +800,95 @@ mod tests {
             cfg.vm_bypass.bypass_classes,
             vec!["OnlyClass", "SecondClass"]
         );
+    }
+
+    #[test]
+    fn mouse_config_roundtrips_through_toml() {
+        let mut cfg = Config::default();
+        cfg.mouse.enabled = false;
+        cfg.mouse.thumb_back = "cycle_forward".to_string();
+        cfg.mouse.thumb_forward = "maximize".to_string();
+        cfg.mouse.tilt_left = "snap_left".to_string();
+        cfg.mouse.tilt_right = "snap_right".to_string();
+
+        let toml = cfg.to_toml_string().unwrap();
+        let parsed = Config::from_toml_str(&toml).unwrap();
+        assert_eq!(cfg.mouse, parsed.mouse);
+        assert!(!parsed.mouse.enabled);
+        assert_eq!(parsed.mouse.thumb_back, "cycle_forward");
+        assert_eq!(parsed.mouse.thumb_forward, "maximize");
+        assert_eq!(parsed.mouse.tilt_left, "snap_left");
+        assert_eq!(parsed.mouse.tilt_right, "snap_right");
+    }
+
+    #[test]
+    fn missing_mouse_section_defaults_safely() {
+        let toml = r#"
+            [general]
+            auto_start = true
+        "#;
+        let cfg = Config::from_toml_str(toml).unwrap();
+        assert_eq!(cfg.mouse, MouseConfig::default());
+        assert!(cfg.mouse.enabled);
+        assert_eq!(cfg.mouse.thumb_back, "prev_virtual_desktop");
+        assert_eq!(cfg.mouse.thumb_forward, "next_virtual_desktop");
+        assert_eq!(cfg.mouse.tilt_left, "task_view");
+        assert_eq!(cfg.mouse.tilt_right, "show_desktop");
+    }
+
+    #[test]
+    fn mouse_action_preset_slug_parsing() {
+        assert_eq!(
+            MouseActionPreset::parse_slug("next_virtual_desktop"),
+            Some(MouseActionPreset::NextVirtualDesktop)
+        );
+        assert_eq!(
+            MouseActionPreset::parse_slug("prev_virtual_desktop"),
+            Some(MouseActionPreset::PrevVirtualDesktop)
+        );
+        assert_eq!(
+            MouseActionPreset::parse_slug("task_view"),
+            Some(MouseActionPreset::TaskView)
+        );
+        assert_eq!(
+            MouseActionPreset::parse_slug("show_desktop"),
+            Some(MouseActionPreset::ShowDesktop)
+        );
+        assert_eq!(
+            MouseActionPreset::parse_slug("cycle_forward"),
+            Some(MouseActionPreset::CycleForward)
+        );
+        assert_eq!(
+            MouseActionPreset::parse_slug("snap_left"),
+            Some(MouseActionPreset::SnapLeft)
+        );
+        assert_eq!(
+            MouseActionPreset::parse_slug("snap_right"),
+            Some(MouseActionPreset::SnapRight)
+        );
+        assert_eq!(
+            MouseActionPreset::parse_slug("maximize"),
+            Some(MouseActionPreset::Maximize)
+        );
+        assert_eq!(
+            MouseActionPreset::parse_slug("passthrough"),
+            Some(MouseActionPreset::Passthrough)
+        );
+        assert_eq!(
+            MouseActionPreset::parse_slug("default"),
+            Some(MouseActionPreset::Passthrough)
+        );
+        assert_eq!(
+            MouseActionPreset::parse_slug("  NEXT_VIRTUAL_DESKTOP "),
+            Some(MouseActionPreset::NextVirtualDesktop)
+        );
+        assert_eq!(MouseActionPreset::parse_slug("unknown_preset"), None);
+        assert_eq!(MouseActionPreset::parse_slug(""), None);
+
+        // Verify roundtrip through as_str
+        for preset in MouseActionPreset::ALL {
+            assert_eq!(MouseActionPreset::parse_slug(preset.as_str()), Some(preset));
+            assert!(!preset.display_label().is_empty());
+        }
     }
 }
