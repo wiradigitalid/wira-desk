@@ -80,3 +80,10 @@ npx wdi-method update --yes
 ```
 
 Contributing to the code does not require running those commands.
+
+## AppData Files Inventory
+
+All runtime files reside under `%APPDATA%\WiraDesk`:
+- `config.toml`: Active user preferences (shortcuts, layout, mouse navigation). Persisted atomically via `.tmp` swap.
+- `wiradesk.log`: Tier 2 warning and diagnostic log for non-fatal runtime events, capped at 1 MB active with a single `.old` backup generation (~2 MB total bounded footprint).
+- `wiradesk-debug-trace.log`: Debug assertion trace log for elevated runtime and hook diagnostics, capped at 1 MB active with a single `.old` backup generation, compiled out in production release builds.

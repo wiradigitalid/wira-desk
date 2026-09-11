@@ -48,9 +48,7 @@ pub fn append_debug_trace(msg: &str) {
     use std::io::Write;
     let mut path = shared::log_path();
     path.set_file_name("wiradesk-debug-trace.log");
-    if let Some(parent) = path.parent() {
-        let _ = std::fs::create_dir_all(parent);
-    }
+    crate::log::rotate_at_cap(&path, 1_000_000);
     if let Ok(mut f) = std::fs::OpenOptions::new()
         .create(true)
         .append(true)
@@ -60,6 +58,10 @@ pub fn append_debug_trace(msg: &str) {
     }
     debug_log(msg);
 }
+
+/// In production release builds, debug trace is compiled out.
+#[cfg(not(debug_assertions))]
+pub fn append_debug_trace(_msg: &str) {}
 
 /// Show a modal `MessageBoxW`, centralizing wide-string conversion so each
 /// call site (startup error in `main`, About Check-for-Updates in `menu`) does not
@@ -73,4 +75,48 @@ pub fn message_box(hwnd: HWND, text: &str, title: &str, flags: MESSAGEBOX_STYLE)
     // duration of a normal call. A zero `hwnd` is the documented request for an ownerless
     // box, so it needs no validity proof.
     unsafe { MessageBoxW(hwnd, text_w.as_ptr(), title_w.as_ptr(), flags) }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn fill_wide_buf_zero_length_is_safe() {
+        let mut buf = [0u16; 0];
+        fill_wide_buf(&mut buf, "test");
+    }
+
+    #[test]
+    fn fill_wide_buf_truncates_and_null_terminates() {
+        let mut buf = [0u16; 4];
+        fill_wide_buf(&mut buf, "hello");
+        assert_eq!(buf[3], 0);
+        let s = String::from_utf16_lossy(&buf[..3]);
+        assert_eq!(s, "hel");
+    }
+
+    #[test]
+    fn debug_trace_rotates_at_cap_when_debug_assertions_active() {
+        let mut path = std::env::temp_dir();
+        path.push(format!("wiradesk-trace-test-{}.log", std::process::id()));
+        let mut old = path.clone();
+        old.set_file_name(format!(
+            "wiradesk-trace-test-{}.log.old",
+            std::process::id()
+        ));
+
+        let _ = std::fs::remove_file(&path);
+        let _ = std::fs::remove_file(&old);
+
+        std::fs::write(&path, vec![b'd'; 1_000_000]).unwrap();
+        crate::log::rotate_at_cap(&path, 1_000_000);
+
+        assert!(!path.exists());
+        assert!(old.exists());
+        assert_eq!(std::fs::metadata(&old).unwrap().len(), 1_000_000);
+
+        let _ = std::fs::remove_file(&path);
+        let _ = std::fs::remove_file(&old);
+    }
 }

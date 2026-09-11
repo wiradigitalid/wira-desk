@@ -10,3 +10,13 @@
 
 User-facing policy documents are in the repository root: `README.md`, `SECURITY.md`,
 `PRIVACY.md`, `CONTRIBUTING.md`, `CHANGELOG.md`.
+
+## AppData Files Inventory
+
+All runtime files reside under `%APPDATA%\WiraDesk`:
+
+| File | Purpose | Retention / Cap | Build Target |
+|---|---|---|---|
+| `config.toml` | Active user preferences (shortcuts, layouts, mouse navigation). | Single file, atomic write via `.tmp` and rename. | All builds |
+| `wiradesk.log` | Tier 2 warning and diagnostic log for non-fatal runtime events. | 1 MB active cap with single `.old` backup (~2 MB total bounded footprint). | All builds |
+| `wiradesk-debug-trace.log` | Append-only execution trace for elevated hooks and daemon diagnostics. | 1 MB active cap with single `.old` backup (~2 MB total bounded footprint). | Debug builds only (compiled out in release) |
