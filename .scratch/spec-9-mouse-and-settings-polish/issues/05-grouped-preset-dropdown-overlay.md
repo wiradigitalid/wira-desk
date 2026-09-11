@@ -1,7 +1,7 @@
 ---
 id: SPEC-9-05
 component: settings
-satisfies: [FR-32]
+satisfies: [UC-14]
 blocked_by: [SPEC-9-04]
 status: ready-for-agent
 tests:

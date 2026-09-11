@@ -1,7 +1,7 @@
 ---
 id: SPEC-9-06
-component: daemon
-satisfies: [FR-30, FR-31]
+component: window-management
+satisfies: [UC-13]
 blocked_by: []
 status: ready-for-agent
 tests:

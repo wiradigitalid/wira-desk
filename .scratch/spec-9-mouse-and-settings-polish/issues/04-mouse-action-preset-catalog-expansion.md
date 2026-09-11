@@ -1,7 +1,7 @@
 ---
 id: SPEC-9-04
-component: shared
-satisfies: [FR-30, FR-32]
+component: settings
+satisfies: [UC-14]
 blocked_by: []
 status: ready-for-agent
 tests:
