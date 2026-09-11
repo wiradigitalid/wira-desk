@@ -1,0 +1,51 @@
+import { Palette, Typography } from "../theme.slint";
+import { ToggleSwitch } from "toggle_switch.slint";
+
+export component SettingToggleRow inherits HorizontalLayout {
+    in property <string> title;
+    in property <string> description;
+    in-out property <bool> checked: false;
+    in property <bool> enabled: true;
+    in property <string> toggle_accessible_label: root.title;
+
+    callback toggled(bool);
+
+    padding-left: 16px;
+    padding-right: 16px;
+    padding-top: 12px;
+    padding-bottom: 12px;
+    spacing: 16px;
+    alignment: space-between;
+
+    VerticalLayout {
+        alignment: center;
+        spacing: 2px;
+        horizontal-stretch: 1;
+
+        Text {
+            text: root.title;
+            font-family: Typography.font_family;
+            font-size: Typography.size_subheading;
+            font-weight: 600;
+            color: root.enabled ? Palette.text_primary : Palette.text_tertiary;
+        }
+
+        if root.description != "": Text {
+            text: root.description;
+            font-family: Typography.font_family;
+            font-size: Typography.size_caption;
+            color: root.enabled ? Palette.text_secondary : Palette.text_tertiary;
+            wrap: word-wrap;
+        }
+    }
+
+    VerticalLayout {
+        alignment: center;
+        ToggleSwitch {
+            checked <=> root.checked;
+            enabled: root.enabled;
+            accessible-label: root.toggle_accessible_label;
+            toggled(val) => { root.toggled(val); }
+        }
+    }
+}

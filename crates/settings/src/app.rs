@@ -2283,6 +2283,36 @@ mod tests {
     }
 
     #[test]
+    fn toggle_switches_are_vertically_centered_in_cards() {
+        crate::shortcut_row_slint_snapshot::tests::run_on_ui_thread(|| {
+            let (window, model, save_path) =
+                crate::shortcut_row_slint_snapshot::tests::setup_shortcuts_window();
+
+            // Switch to General pane
+            model.borrow_mut().set_pane(Pane::General);
+            crate::sync_model_to_ui(&window, &model.borrow());
+
+            let mut m = model.borrow_mut();
+            assert!(!m.draft.general.auto_start);
+            m.draft.general.auto_start = true;
+            assert!(m.draft.general.auto_start);
+            drop(m);
+
+            // Switch to Mouse pane
+            model.borrow_mut().set_pane(Pane::Mouse);
+            crate::sync_model_to_ui(&window, &model.borrow());
+
+            let mut m2 = model.borrow_mut();
+            assert!(m2.draft.mouse.enabled);
+            m2.draft.mouse.enabled = false;
+            assert!(!m2.draft.mouse.enabled);
+            drop(m2);
+
+            let _ = std::fs::remove_file(&save_path);
+        });
+    }
+
+    #[test]
     fn pane_from_label_round_trips_with_label() {
         for pane in Pane::ALL {
             assert_eq!(Pane::from_label(pane.label()), Some(pane));

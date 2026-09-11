@@ -333,10 +333,12 @@ export component OnboardingModal inherits Rectangle {
                         glyph: "🔄";
                         title: "Start with Windows";
                         body: "Comes back after every sign-in. Change it any time in Settings.";
-                        ToggleSwitch {
-                            y: 3px;
-                            checked <=> root.auto_start;
-                            toggled(val) => { root.auto_start_toggled(val); }
+                        VerticalLayout {
+                            alignment: center;
+                            ToggleSwitch {
+                                checked <=> root.auto_start;
+                                toggled(val) => { root.auto_start_toggled(val); }
+                            }
                         }
                     }
                 }

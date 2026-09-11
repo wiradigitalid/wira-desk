@@ -116,10 +116,12 @@ export component AboutPane inherits VerticalLayout {
                         wrap: word-wrap;
                     }
                 }
-                ToggleSwitch {
-                    y: 4px;
-                    checked <=> root.check_updates;
-                    toggled(val) => { root.check_updates_toggled(val); }
+                VerticalLayout {
+                    alignment: center;
+                    ToggleSwitch {
+                        checked <=> root.check_updates;
+                        toggled(val) => { root.check_updates_toggled(val); }
+                    }
                 }
             }
 

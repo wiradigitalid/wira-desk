@@ -1,6 +1,6 @@
 import { Palette, Typography } from "../theme.slint";
 import { Card, CardDivider } from "../components/card.slint";
-import { ToggleSwitch } from "../components/toggle_switch.slint";
+import { SettingToggleRow } from "../components/setting_toggle_row.slint";
 
 export struct MousePresetOption {
     slug: string,
@@ -153,37 +153,12 @@ export component MousePane inherits VerticalLayout {
 
     // Card 1: Master Enable / Disable
     Card {
-        VerticalLayout {
-            padding: 16px;
-            spacing: 12px;
-
-            HorizontalLayout {
-                alignment: space-between;
-                VerticalLayout {
-                    spacing: 2px;
-                    horizontal-stretch: 1;
-                    Text {
-                        text: "Enable Mouse Navigation";
-                        font-family: Typography.font_family;
-                        font-size: Typography.size_subheading;
-                        font-weight: 600;
-                        color: Palette.text_primary;
-                    }
-                    Text {
-                        text: "Intercepts thumb buttons and horizontal tilt wheel for workspace and window commands.";
-                        font-family: Typography.font_family;
-                        font-size: Typography.size_caption;
-                        color: Palette.text_secondary;
-                        wrap: word-wrap;
-                    }
-                }
-
-                ToggleSwitch {
-                    accessible-label: root.accessible_toggle;
-                    checked <=> root.mouse_enabled;
-                    toggled(val) => { root.toggle_mouse_navigation(val); }
-                }
-            }
+        SettingToggleRow {
+            title: "Enable Mouse Navigation";
+            description: "Intercepts thumb buttons and horizontal tilt wheel for workspace and window commands.";
+            toggle_accessible_label: root.accessible_toggle;
+            checked <=> root.mouse_enabled;
+            toggled(val) => { root.toggle_mouse_navigation(val); }
         }
     }
 
