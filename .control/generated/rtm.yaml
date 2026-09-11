@@ -814,6 +814,37 @@ rtm:
   broken_at: ''
 - BG: BG-4
   CAP: CAP-17
+  FR: FR-30
+  DEC: []
+  UC: UC-13
+  ticket: SPEC-9-01
+  spec: SPEC-9
+  release: 0.3.0
+  test:
+  - log::tests::shared_log_rotation_caps_file_at_1mb
+  - util::tests::debug_trace_rotates_at_cap_when_debug_assertions_active
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
+- BG: BG-4
+  CAP: CAP-17
+  FR: FR-30
+  DEC: []
+  UC: UC-13
+  ticket: SPEC-9-06
+  spec: SPEC-9
+  release: 0.3.0
+  test:
+  - hook::tests::tilt_hold_without_release_fires_exactly_once
+  - hook::tests::tilt_second_actuation_after_quiet_period_fires_again
+  - config::tests::default_tilt_directions_are_inverted
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
+- BG: BG-4
+  CAP: CAP-17
   FR: FR-31
   DEC: []
   UC: UC-13
@@ -837,6 +868,37 @@ rtm:
   broken_at: ''
 - BG: BG-4
   CAP: CAP-17
+  FR: FR-31
+  DEC: []
+  UC: UC-13
+  ticket: SPEC-9-01
+  spec: SPEC-9
+  release: 0.3.0
+  test:
+  - log::tests::shared_log_rotation_caps_file_at_1mb
+  - util::tests::debug_trace_rotates_at_cap_when_debug_assertions_active
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
+- BG: BG-4
+  CAP: CAP-17
+  FR: FR-31
+  DEC: []
+  UC: UC-13
+  ticket: SPEC-9-06
+  spec: SPEC-9
+  release: 0.3.0
+  test:
+  - hook::tests::tilt_hold_without_release_fires_exactly_once
+  - hook::tests::tilt_second_actuation_after_quiet_period_fires_again
+  - config::tests::default_tilt_directions_are_inverted
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
+- BG: BG-4
+  CAP: CAP-17
   FR: FR-32
   DEC: []
   UC: UC-14
@@ -852,6 +914,64 @@ rtm:
   - app::tests::mouse_pane_loads_configured_presets
   - app::tests::toggling_mouse_navigation_updates_draft
   - app::tests::five_pane_focus_order_includes_mouse
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
+- BG: BG-4
+  CAP: CAP-17
+  FR: FR-32
+  DEC: []
+  UC: UC-14
+  ticket: SPEC-9-02
+  spec: SPEC-9
+  release: 0.3.0
+  test:
+  - app::tests::toggle_switches_are_vertically_centered_in_cards
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
+- BG: BG-4
+  CAP: CAP-17
+  FR: FR-32
+  DEC: []
+  UC: UC-14
+  ticket: SPEC-9-03
+  spec: SPEC-9
+  release: 0.3.0
+  test:
+  - app::tests::card_dividers_render_full_bleed_across_panes
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
+- BG: BG-4
+  CAP: CAP-17
+  FR: FR-32
+  DEC: []
+  UC: UC-14
+  ticket: SPEC-9-04
+  spec: SPEC-9
+  release: 0.3.0
+  test:
+  - config::tests::expanded_mouse_presets_roundtrip_and_parse
+  - hook::tests::all_expanded_presets_map_to_valid_commands
+  status: done
+  exempt: false
+  green: true
+  broken_at: ''
+- BG: BG-4
+  CAP: CAP-17
+  FR: FR-32
+  DEC: []
+  UC: UC-14
+  ticket: SPEC-9-05
+  spec: SPEC-9
+  release: 0.3.0
+  test:
+  - app::tests::mouse_preset_dropdown_opens_overlay_with_groups
+  - app::tests::selecting_preset_from_dropdown_updates_draft
   status: done
   exempt: false
   green: true

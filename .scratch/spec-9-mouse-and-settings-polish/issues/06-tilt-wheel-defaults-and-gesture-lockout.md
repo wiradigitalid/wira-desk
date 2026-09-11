@@ -1,9 +1,9 @@
 ---
 id: SPEC-9-06
-component: daemon
-satisfies: [FR-30, FR-31]
+component: window-management
+satisfies: [UC-13]
 blocked_by: []
-status: ready-for-agent
+status: done
 tests:
   - hook::tests::tilt_hold_without_release_fires_exactly_once
   - hook::tests::tilt_second_actuation_after_quiet_period_fires_again

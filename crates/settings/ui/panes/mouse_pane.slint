@@ -1,6 +1,6 @@
 import { Palette, Typography } from "../theme.slint";
 import { Card, CardDivider } from "../components/card.slint";
-import { ToggleSwitch } from "../components/toggle_switch.slint";
+import { SettingToggleRow } from "../components/setting_toggle_row.slint";
 
 export struct MousePresetOption {
     slug: string,
@@ -10,12 +10,14 @@ export struct MousePresetOption {
 component MouseActionRow inherits Rectangle {
     in property <string> title: "";
     in property <string> description: "";
+    in property <string> action_label: "";
     in property <int> selected_index: 0;
     in property <[MousePresetOption]> options;
     in property <bool> enabled: true;
     in property <string> selector_label: "";
 
     callback selected(int);
+    callback open_selector(length);
 
     height: 64px;
 
@@ -62,10 +64,10 @@ component MouseActionRow inherits Rectangle {
 
                     accessible-role: combobox;
                     accessible-label: root.selector_label;
-                    accessible-value: root.options[root.selected_index].label;
+                    accessible-value: root.action_label != "" ? root.action_label : ((root.selected_index >= 0 && root.selected_index < root.options.length) ? root.options[root.selected_index].label : "Select Action");
                     accessible-action-default => {
-                        if root.enabled && root.options.length > 0 {
-                            root.selected(Math.mod(root.selected_index + 1, root.options.length));
+                        if root.enabled {
+                            root.open_selector(64px);
                         }
                     }
 
@@ -75,7 +77,7 @@ component MouseActionRow inherits Rectangle {
                         alignment: space-between;
 
                         Text {
-                            text: (root.selected_index >= 0 && root.selected_index < root.options.length) ? root.options[root.selected_index].label : "Select Action";
+                            text: root.action_label != "" ? root.action_label : ((root.selected_index >= 0 && root.selected_index < root.options.length) ? root.options[root.selected_index].label : "Select Action");
                             font-family: Typography.font_family;
                             font-size: Typography.size_caption;
                             font-weight: 500;
@@ -98,9 +100,7 @@ component MouseActionRow inherits Rectangle {
                     btn_touch := TouchArea {
                         enabled: root.enabled;
                         clicked => {
-                            if root.options.length > 0 {
-                                root.selected(Math.mod(root.selected_index + 1, root.options.length));
-                            }
+                            root.open_selector(64px);
                         }
                     }
                 }
@@ -111,10 +111,15 @@ component MouseActionRow inherits Rectangle {
 
 export component MousePane inherits VerticalLayout {
     in-out property <bool> mouse_enabled: true;
+    in property <string> thumb_back_label: "Previous Virtual Desktop";
+    in property <string> thumb_forward_label: "Next Virtual Desktop";
+    in property <string> tilt_left_label: "Show Desktop";
+    in property <string> tilt_right_label: "Task View";
+
     in property <int> thumb_back_index: 1; // prev_virtual_desktop
     in property <int> thumb_forward_index: 0; // next_virtual_desktop
-    in property <int> tilt_left_index: 2; // task_view
-    in property <int> tilt_right_index: 3; // show_desktop
+    in property <int> tilt_left_index: 3; // show_desktop
+    in property <int> tilt_right_index: 2; // task_view
     in property <[MousePresetOption]> preset_options;
 
     // Accessible labels
@@ -129,6 +134,7 @@ export component MousePane inherits VerticalLayout {
     callback thumb_forward_changed(int);
     callback tilt_left_changed(int);
     callback tilt_right_changed(int);
+    callback open_selector(int, length);
 
     spacing: 12px;
     alignment: start;
@@ -153,54 +159,31 @@ export component MousePane inherits VerticalLayout {
 
     // Card 1: Master Enable / Disable
     Card {
-        VerticalLayout {
-            padding: 16px;
-            spacing: 12px;
-
-            HorizontalLayout {
-                alignment: space-between;
-                VerticalLayout {
-                    spacing: 2px;
-                    horizontal-stretch: 1;
-                    Text {
-                        text: "Enable Mouse Navigation";
-                        font-family: Typography.font_family;
-                        font-size: Typography.size_subheading;
-                        font-weight: 600;
-                        color: Palette.text_primary;
-                    }
-                    Text {
-                        text: "Intercepts thumb buttons and horizontal tilt wheel for workspace and window commands.";
-                        font-family: Typography.font_family;
-                        font-size: Typography.size_caption;
-                        color: Palette.text_secondary;
-                        wrap: word-wrap;
-                    }
-                }
-
-                ToggleSwitch {
-                    accessible-label: root.accessible_toggle;
-                    checked <=> root.mouse_enabled;
-                    toggled(val) => { root.toggle_mouse_navigation(val); }
-                }
-            }
+        SettingToggleRow {
+            title: "Enable Mouse Navigation";
+            description: "Intercepts thumb buttons and horizontal tilt wheel for workspace and window commands.";
+            toggle_accessible_label: root.accessible_toggle;
+            checked <=> root.mouse_enabled;
+            toggled(val) => { root.toggle_mouse_navigation(val); }
         }
     }
 
     // Card 2: Button & Wheel Mapping Presets
     Card {
         VerticalLayout {
-            padding: 4px;
+            padding: 0px;
             spacing: 0px;
 
             MouseActionRow {
                 title: "Thumb Button 1 (Back)";
                 description: "Standard lower/rear thumb button (XBUTTON1).";
+                action_label: root.thumb_back_label;
                 selected_index: root.thumb_back_index;
                 options: root.preset_options;
                 enabled: root.mouse_enabled;
                 selector_label: root.accessible_thumb_back;
                 selected(idx) => { root.thumb_back_changed(idx); }
+                open_selector(y) => { root.open_selector(0, 180px); }
             }
 
             CardDivider {}
@@ -208,11 +191,13 @@ export component MousePane inherits VerticalLayout {
             MouseActionRow {
                 title: "Thumb Button 2 (Forward)";
                 description: "Standard upper/front thumb button (XBUTTON2).";
+                action_label: root.thumb_forward_label;
                 selected_index: root.thumb_forward_index;
                 options: root.preset_options;
                 enabled: root.mouse_enabled;
                 selector_label: root.accessible_thumb_forward;
                 selected(idx) => { root.thumb_forward_changed(idx); }
+                open_selector(y) => { root.open_selector(1, 245px); }
             }
 
             CardDivider {}
@@ -220,11 +205,13 @@ export component MousePane inherits VerticalLayout {
             MouseActionRow {
                 title: "Tilt Wheel Left";
                 description: "Push scroll wheel horizontally to the left.";
+                action_label: root.tilt_left_label;
                 selected_index: root.tilt_left_index;
                 options: root.preset_options;
                 enabled: root.mouse_enabled;
                 selector_label: root.accessible_tilt_left;
                 selected(idx) => { root.tilt_left_changed(idx); }
+                open_selector(y) => { root.open_selector(2, 310px); }
             }
 
             CardDivider {}
@@ -232,11 +219,13 @@ export component MousePane inherits VerticalLayout {
             MouseActionRow {
                 title: "Tilt Wheel Right";
                 description: "Push scroll wheel horizontally to the right.";
+                action_label: root.tilt_right_label;
                 selected_index: root.tilt_right_index;
                 options: root.preset_options;
                 enabled: root.mouse_enabled;
                 selector_label: root.accessible_tilt_right;
                 selected(idx) => { root.tilt_right_changed(idx); }
+                open_selector(y) => { root.open_selector(3, 375px); }
             }
         }
     }

@@ -25,7 +25,7 @@ use crate::util::debug_log;
 /// per-keystroke or per-heartbeat write), so age-based pruning would cost a
 /// read-filter-rewrite of the whole file on every write for no benefit a
 /// size check does not already give.
-const LOG_MAX_BYTES: u64 = 1_000_000; // 1 MB active + 1 MB `.old` = 2 MB total
+pub const LOG_MAX_BYTES: u64 = 1_000_000; // 1 MB active + 1 MB `.old` = 2 MB total
 
 /// Write one timestamped log line to `shared::log_path`, then notify
 /// `wndproc_impl` to set `Warning` state via `PostMessageW` — only the
@@ -50,10 +50,9 @@ fn write_line(msg: &str) {
     write_line_to(&shared::log_path(), msg);
 }
 
-/// `write_line`'s actual logic, over an explicit path — the seam that makes
-/// the rotation decision testable without touching the real
-/// `%APPDATA%\WiraDesk\wiradesk.log`.
-fn write_line_to(path: &Path, msg: &str) {
+/// Check if `path` has reached `max_bytes`. If so, rotate it to `<path>.old`.
+/// Ensures any parent directory exists, and handles non-existent files gracefully.
+pub fn rotate_at_cap(path: &Path, max_bytes: u64) {
     if let Some(parent) = path.parent() {
         let _ = std::fs::create_dir_all(parent);
     }
@@ -61,11 +60,18 @@ fn write_line_to(path: &Path, msg: &str) {
     // covers exactly that, and any other metadata failure the same way:
     // no rotation is the safe default when the size cannot be determined.
     let at_cap = std::fs::metadata(path)
-        .map(|m| m.len() >= LOG_MAX_BYTES)
+        .map(|m| m.len() >= max_bytes)
         .unwrap_or(false);
     if at_cap {
         rotate(path);
     }
+}
+
+/// `write_line`'s actual logic, over an explicit path — the seam that makes
+/// the rotation decision testable without touching the real
+/// `%APPDATA%\WiraDesk\wiradesk.log`.
+fn write_line_to(path: &Path, msg: &str) {
+    rotate_at_cap(path, LOG_MAX_BYTES);
     let line = format!("[{}] {msg}\n", timestamp());
     match std::fs::OpenOptions::new()
         .create(true)
@@ -259,6 +265,29 @@ mod tests {
             2,
             "repeated rotations must never leave more than the active file plus one .old: {siblings:?}"
         );
+
+        let _ = std::fs::remove_file(&path);
+        let _ = std::fs::remove_file(&old);
+    }
+
+    #[test]
+    fn shared_log_rotation_caps_file_at_1mb() {
+        let path = temp_log_path("shared-rotate-test");
+        let old = old_path(&path);
+        let _ = std::fs::remove_file(&path);
+        let _ = std::fs::remove_file(&old);
+
+        // Non-existent file is a graceful no-op
+        rotate_at_cap(&path, 1_000_000);
+        assert!(!path.exists());
+        assert!(!old.exists());
+
+        std::fs::write(&path, vec![b'z'; 1_000_000]).unwrap();
+        rotate_at_cap(&path, 1_000_000);
+
+        assert!(!path.exists(), "active file must have been rotated away");
+        assert!(old.exists(), "backup .old file must exist");
+        assert_eq!(std::fs::metadata(&old).unwrap().len(), 1_000_000);
 
         let _ = std::fs::remove_file(&path);
         let _ = std::fs::remove_file(&old);

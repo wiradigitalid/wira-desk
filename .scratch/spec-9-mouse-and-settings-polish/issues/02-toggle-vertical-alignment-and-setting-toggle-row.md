@@ -1,9 +1,9 @@
 ---
 id: SPEC-9-02
 component: settings
-satisfies: [FR-32]
+satisfies: [UC-14]
 blocked_by: []
-status: ready-for-agent
+status: done
 tests:
   - app::tests::toggle_switches_are_vertically_centered_in_cards
 ---

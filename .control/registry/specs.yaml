@@ -886,3 +886,71 @@ specs:
           - hook::tests::ring_full_increments_dropped_metric_on_mouse_event
           - hook::tests::dual_hook_heartbeat_refreshes_both_handles
           - worker::tests::mouse_virtual_desktop_commands_dispatch_safely
+
+  - id: SPEC-9
+    release: "0.3.0"
+    prd: [wira-desk]
+    size: M
+    status: closed
+    depends_on: [SPEC-8]
+    spec_folder: .scratch/spec-9-mouse-and-settings-polish/
+    fr: [FR-30, FR-31, FR-32]
+    spec_reviewed:
+      date: "2026-09-11"
+      sha: "a0750a2"
+      lenses: [edge-case-hunter]
+    tickets:
+      - id: SPEC-9-01
+        title: Debug trace log rotation and AppData inventory documentation
+        spec_folder: .scratch/spec-9-mouse-and-settings-polish/
+        component: window-management
+        satisfies: [UC-13]
+        depends_on: []
+        tests:
+          - log::tests::shared_log_rotation_caps_file_at_1mb
+          - util::tests::debug_trace_rotates_at_cap_when_debug_assertions_active
+      - id: SPEC-9-02
+        title: Vertical alignment of toggle switches and SettingToggleRow component
+        spec_folder: .scratch/spec-9-mouse-and-settings-polish/
+        component: settings
+        satisfies: [UC-14]
+        depends_on: []
+        tests:
+          - app::tests::toggle_switches_are_vertically_centered_in_cards
+      - id: SPEC-9-03
+        title: CardDivider full-bleed consistency across all settings panes
+        spec_folder: .scratch/spec-9-mouse-and-settings-polish/
+        component: settings
+        satisfies: [UC-14]
+        depends_on: [SPEC-9-02]
+        tests:
+          - app::tests::card_dividers_render_full_bleed_across_panes
+      - id: SPEC-9-04
+        title: Mouse action preset catalog expansion to full window management suite
+        spec_folder: .scratch/spec-9-mouse-and-settings-polish/
+        component: settings
+        satisfies: [UC-14]
+        depends_on: []
+        tests:
+          - config::tests::expanded_mouse_presets_roundtrip_and_parse
+          - hook::tests::all_expanded_presets_map_to_valid_commands
+      - id: SPEC-9-05
+        title: Grouped preset dropdown overlay in Settings UI
+        spec_folder: .scratch/spec-9-mouse-and-settings-polish/
+        component: settings
+        satisfies: [UC-14]
+        depends_on: [SPEC-9-04]
+        tests:
+          - app::tests::mouse_preset_dropdown_opens_overlay_with_groups
+          - app::tests::selecting_preset_from_dropdown_updates_draft
+      - id: SPEC-9-06
+        title: Tilt wheel default inversion and sustained hold gesture lockout
+        spec_folder: .scratch/spec-9-mouse-and-settings-polish/
+        component: window-management
+        satisfies: [UC-13]
+        depends_on: []
+        tests:
+          - hook::tests::tilt_hold_without_release_fires_exactly_once
+          - hook::tests::tilt_second_actuation_after_quiet_period_fires_again
+          - config::tests::default_tilt_directions_are_inverted
+

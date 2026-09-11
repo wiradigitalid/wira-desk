@@ -3,7 +3,7 @@ spec: SPEC-9
 release: "0.3.0"
 prd: wira-desk
 fr: [FR-30, FR-31, FR-32]
-status: ready-for-agent
+status: closed
 ---
 
 # SPEC-9 — Mouse Navigation Polish, Preset Catalog Expansion & Settings UX Consistency

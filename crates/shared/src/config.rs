@@ -178,7 +178,7 @@ pub struct VmBypassConfig {
     pub bypass_classes: Vec<String>,
 }
 
-/// Curated action presets for driverless mouse auxiliary navigation (CAP-17, SPEC-8).
+/// Curated action presets for driverless mouse auxiliary navigation (CAP-17, SPEC-8, SPEC-9).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum MouseActionPreset {
     #[serde(rename = "next_virtual_desktop")]
@@ -195,14 +195,36 @@ pub enum MouseActionPreset {
     SnapLeft,
     #[serde(rename = "snap_right")]
     SnapRight,
+    #[serde(rename = "snap_top")]
+    SnapTop,
+    #[serde(rename = "snap_bottom")]
+    SnapBottom,
+    #[serde(rename = "snap_third_left")]
+    SnapThirdLeft,
+    #[serde(rename = "snap_third_center")]
+    SnapThirdCenter,
+    #[serde(rename = "snap_third_right")]
+    SnapThirdRight,
+    #[serde(rename = "snap_percent_left")]
+    SnapPercentLeft,
+    #[serde(rename = "snap_percent_right")]
+    SnapPercentRight,
+    #[serde(rename = "snap_percent_top")]
+    SnapPercentTop,
+    #[serde(rename = "snap_percent_bottom")]
+    SnapPercentBottom,
     #[serde(rename = "maximize")]
     Maximize,
+    #[serde(rename = "overlapping_stack")]
+    OverlappingStack,
+    #[serde(rename = "move_next_monitor")]
+    MoveNextMonitor,
     #[serde(rename = "passthrough")]
     Passthrough,
 }
 
 impl MouseActionPreset {
-    pub const ALL: [MouseActionPreset; 9] = [
+    pub const ALL: [MouseActionPreset; 20] = [
         MouseActionPreset::NextVirtualDesktop,
         MouseActionPreset::PrevVirtualDesktop,
         MouseActionPreset::TaskView,
@@ -210,7 +232,18 @@ impl MouseActionPreset {
         MouseActionPreset::CycleForward,
         MouseActionPreset::SnapLeft,
         MouseActionPreset::SnapRight,
+        MouseActionPreset::SnapTop,
+        MouseActionPreset::SnapBottom,
+        MouseActionPreset::SnapThirdLeft,
+        MouseActionPreset::SnapThirdCenter,
+        MouseActionPreset::SnapThirdRight,
+        MouseActionPreset::SnapPercentLeft,
+        MouseActionPreset::SnapPercentRight,
+        MouseActionPreset::SnapPercentTop,
+        MouseActionPreset::SnapPercentBottom,
         MouseActionPreset::Maximize,
+        MouseActionPreset::OverlappingStack,
+        MouseActionPreset::MoveNextMonitor,
         MouseActionPreset::Passthrough,
     ];
 
@@ -223,7 +256,18 @@ impl MouseActionPreset {
             Self::CycleForward => "cycle_forward",
             Self::SnapLeft => "snap_left",
             Self::SnapRight => "snap_right",
+            Self::SnapTop => "snap_top",
+            Self::SnapBottom => "snap_bottom",
+            Self::SnapThirdLeft => "snap_third_left",
+            Self::SnapThirdCenter => "snap_third_center",
+            Self::SnapThirdRight => "snap_third_right",
+            Self::SnapPercentLeft => "snap_percent_left",
+            Self::SnapPercentRight => "snap_percent_right",
+            Self::SnapPercentTop => "snap_percent_top",
+            Self::SnapPercentBottom => "snap_percent_bottom",
             Self::Maximize => "maximize",
+            Self::OverlappingStack => "overlapping_stack",
+            Self::MoveNextMonitor => "move_next_monitor",
             Self::Passthrough => "passthrough",
         }
     }
@@ -237,8 +281,35 @@ impl MouseActionPreset {
             Self::CycleForward => "Cycle Same-App Window Forward",
             Self::SnapLeft => "Snap Window Left",
             Self::SnapRight => "Snap Window Right",
+            Self::SnapTop => "Snap Window Top",
+            Self::SnapBottom => "Snap Window Bottom",
+            Self::SnapThirdLeft => "Snap Left Third",
+            Self::SnapThirdCenter => "Snap Center Third",
+            Self::SnapThirdRight => "Snap Right Third",
+            Self::SnapPercentLeft => "Snap Custom % Left",
+            Self::SnapPercentRight => "Snap Custom % Right",
+            Self::SnapPercentTop => "Snap Custom % Top",
+            Self::SnapPercentBottom => "Snap Custom % Bottom",
             Self::Maximize => "Maximize Window",
+            Self::OverlappingStack => "Overlapping Stack",
+            Self::MoveNextMonitor => "Move to Next Monitor",
             Self::Passthrough => "Default / Passthrough",
+        }
+    }
+
+    pub fn category(&self) -> &'static str {
+        match self {
+            Self::NextVirtualDesktop | Self::PrevVirtualDesktop => "Virtual Desktops",
+            Self::TaskView | Self::ShowDesktop => "Windows Shell",
+            Self::CycleForward => "Switching",
+            Self::SnapLeft | Self::SnapRight | Self::SnapTop | Self::SnapBottom => "Snap to Half",
+            Self::SnapThirdLeft | Self::SnapThirdCenter | Self::SnapThirdRight => "Snap to Third",
+            Self::SnapPercentLeft
+            | Self::SnapPercentRight
+            | Self::SnapPercentTop
+            | Self::SnapPercentBottom => "Snap to Custom",
+            Self::Maximize | Self::OverlappingStack | Self::MoveNextMonitor => "Arrange & Move",
+            Self::Passthrough => "Passthrough",
         }
     }
 
@@ -254,17 +325,7 @@ impl MouseActionPreset {
     }
 
     pub fn index(&self) -> usize {
-        match self {
-            Self::NextVirtualDesktop => 0,
-            Self::PrevVirtualDesktop => 1,
-            Self::TaskView => 2,
-            Self::ShowDesktop => 3,
-            Self::CycleForward => 4,
-            Self::SnapLeft => 5,
-            Self::SnapRight => 6,
-            Self::Maximize => 7,
-            Self::Passthrough => 8,
-        }
+        Self::ALL.iter().position(|p| p == self).unwrap_or(0)
     }
 
     pub fn from_index(i: usize) -> Option<Self> {
@@ -307,8 +368,8 @@ impl Default for MouseConfig {
             enabled: true,
             thumb_back: "prev_virtual_desktop".to_string(),
             thumb_forward: "next_virtual_desktop".to_string(),
-            tilt_left: "task_view".to_string(),
-            tilt_right: "show_desktop".to_string(),
+            tilt_left: "show_desktop".to_string(),
+            tilt_right: "task_view".to_string(),
         }
     }
 }
@@ -832,8 +893,15 @@ mod tests {
         assert!(cfg.mouse.enabled);
         assert_eq!(cfg.mouse.thumb_back, "prev_virtual_desktop");
         assert_eq!(cfg.mouse.thumb_forward, "next_virtual_desktop");
-        assert_eq!(cfg.mouse.tilt_left, "task_view");
-        assert_eq!(cfg.mouse.tilt_right, "show_desktop");
+        assert_eq!(cfg.mouse.tilt_left, "show_desktop");
+        assert_eq!(cfg.mouse.tilt_right, "task_view");
+    }
+
+    #[test]
+    fn default_tilt_directions_are_inverted() {
+        let def = MouseConfig::default();
+        assert_eq!(def.tilt_left, "show_desktop");
+        assert_eq!(def.tilt_right, "task_view");
     }
 
     #[test]
@@ -890,5 +958,45 @@ mod tests {
             assert_eq!(MouseActionPreset::parse_slug(preset.as_str()), Some(preset));
             assert!(!preset.display_label().is_empty());
         }
+    }
+
+    #[test]
+    fn expanded_mouse_presets_roundtrip_and_parse() {
+        assert_eq!(MouseActionPreset::ALL.len(), 20);
+
+        let expected_categories = [
+            "Virtual Desktops",
+            "Windows Shell",
+            "Switching",
+            "Snap to Half",
+            "Snap to Third",
+            "Snap to Custom",
+            "Arrange & Move",
+            "Passthrough",
+        ];
+
+        for (i, preset) in MouseActionPreset::ALL.iter().enumerate() {
+            assert_eq!(preset.index(), i);
+            assert_eq!(MouseActionPreset::from_index(i), Some(*preset));
+            assert_eq!(
+                MouseActionPreset::parse_slug(preset.as_str()),
+                Some(*preset)
+            );
+            assert!(!preset.display_label().is_empty());
+            assert!(
+                expected_categories.contains(&preset.category()),
+                "unexpected category {} for {:?}",
+                preset.category(),
+                preset
+            );
+
+            // Serialization roundtrip
+            let serialized = serde_json::to_string(preset).unwrap();
+            let deserialized: MouseActionPreset = serde_json::from_str(&serialized).unwrap();
+            assert_eq!(*preset, deserialized);
+        }
+
+        assert_eq!(MouseActionPreset::from_index(20), None);
+        assert_eq!(MouseActionPreset::parse_slug("invalid_preset_xyz"), None);
     }
 }

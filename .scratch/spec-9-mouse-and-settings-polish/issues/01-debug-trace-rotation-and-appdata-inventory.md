@@ -1,9 +1,9 @@
 ---
 id: SPEC-9-01
-component: daemon
-satisfies: [FR-30]
+component: window-management
+satisfies: [UC-13]
 blocked_by: []
-status: ready-for-agent
+status: done
 tests:
   - log::tests::shared_log_rotation_caps_file_at_1mb
   - util::tests::debug_trace_rotates_at_cap_when_debug_assertions_active

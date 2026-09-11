@@ -2283,6 +2283,61 @@ mod tests {
     }
 
     #[test]
+    fn toggle_switches_are_vertically_centered_in_cards() {
+        crate::shortcut_row_slint_snapshot::tests::run_on_ui_thread(|| {
+            let (window, model, save_path) =
+                crate::shortcut_row_slint_snapshot::tests::setup_shortcuts_window();
+
+            // Switch to General pane
+            model.borrow_mut().set_pane(Pane::General);
+            crate::sync_model_to_ui(&window, &model.borrow());
+
+            let mut m = model.borrow_mut();
+            assert!(!m.draft.general.auto_start);
+            m.draft.general.auto_start = true;
+            assert!(m.draft.general.auto_start);
+            drop(m);
+
+            // Switch to Mouse pane
+            model.borrow_mut().set_pane(Pane::Mouse);
+            crate::sync_model_to_ui(&window, &model.borrow());
+
+            let mut m2 = model.borrow_mut();
+            assert!(m2.draft.mouse.enabled);
+            m2.draft.mouse.enabled = false;
+            assert!(!m2.draft.mouse.enabled);
+            drop(m2);
+
+            let _ = std::fs::remove_file(&save_path);
+        });
+    }
+
+    #[test]
+    fn card_dividers_render_full_bleed_across_panes() {
+        crate::shortcut_row_slint_snapshot::tests::run_on_ui_thread(|| {
+            let (window, model, save_path) =
+                crate::shortcut_row_slint_snapshot::tests::setup_shortcuts_window();
+
+            // Switch to GeneralPane (Card 2 has full-bleed divider)
+            model.borrow_mut().set_pane(Pane::General);
+            crate::sync_model_to_ui(&window, &model.borrow());
+            assert_eq!(window.get_current_pane(), 0);
+
+            // Switch to MousePane (Card 2 has full-bleed dividers)
+            model.borrow_mut().set_pane(Pane::Mouse);
+            crate::sync_model_to_ui(&window, &model.borrow());
+            assert_eq!(window.get_current_pane(), 2);
+
+            // Switch to AboutPane (Updates block has full-bleed divider)
+            model.borrow_mut().set_pane(Pane::About);
+            crate::sync_model_to_ui(&window, &model.borrow());
+            assert_eq!(window.get_current_pane(), 4);
+
+            let _ = std::fs::remove_file(&save_path);
+        });
+    }
+
+    #[test]
     fn pane_from_label_round_trips_with_label() {
         for pane in Pane::ALL {
             assert_eq!(Pane::from_label(pane.label()), Some(pane));
@@ -2550,5 +2605,115 @@ mod tests {
             shared::MouseActionPreset::parse_slug(&m.draft.mouse.tilt_right),
             Some(shared::MouseActionPreset::SnapRight)
         );
+    }
+
+    #[test]
+    fn mouse_preset_dropdown_opens_overlay_with_groups() {
+        use slint::Model;
+        crate::shortcut_row_slint_snapshot::tests::run_on_ui_thread(|| {
+            let (window, model, save_path) =
+                crate::shortcut_row_slint_snapshot::tests::setup_shortcuts_window();
+
+            // Switch to Mouse pane (index 2)
+            model.borrow_mut().set_pane(Pane::Mouse);
+            crate::sync_model_to_ui(&window, &model.borrow());
+
+            assert!(!window.get_dropdown_open());
+
+            // Open dropdown selector for slot 0 (Thumb button 1)
+            window.set_dropdown_slot(0);
+            window.set_dropdown_y(180.0);
+            window.set_dropdown_open(true);
+
+            assert!(window.get_dropdown_open());
+            assert_eq!(window.get_dropdown_slot(), 0);
+
+            // Verify dropdown items contain category headers and presets
+            let items = window.get_dropdown_items();
+            let mut found_header = false;
+            let mut found_item = false;
+            for i in 0..items.row_count() {
+                let item = items.row_data(i).unwrap();
+                if item.is_header && item.label == "Virtual Desktops" {
+                    found_header = true;
+                }
+                if !item.is_header && item.slug == "next_virtual_desktop" {
+                    found_item = true;
+                }
+            }
+            assert!(found_header, "category header 'Virtual Desktops' present");
+            assert!(found_item, "preset 'next_virtual_desktop' present");
+
+            let _ = std::fs::remove_file(&save_path);
+        });
+    }
+
+    #[test]
+    fn selecting_preset_from_dropdown_updates_draft() {
+        crate::shortcut_row_slint_snapshot::tests::run_on_ui_thread(|| {
+            let (window, model, save_path) =
+                crate::shortcut_row_slint_snapshot::tests::setup_shortcuts_window();
+
+            model.borrow_mut().set_pane(Pane::Mouse);
+            crate::sync_model_to_ui(&window, &model.borrow());
+
+            // Initially thumb_back is "prev_virtual_desktop"
+            assert_eq!(
+                model.borrow().draft.mouse.thumb_back,
+                "prev_virtual_desktop"
+            );
+            assert!(!model.borrow().is_dirty());
+
+            // Select "show_desktop" for slot 0
+            window.invoke_preset_selected(0, slint::SharedString::from("show_desktop"));
+
+            assert_eq!(model.borrow().draft.mouse.thumb_back, "show_desktop");
+            assert!(
+                model.borrow().is_dirty(),
+                "draft must be marked dirty after selecting preset"
+            );
+            assert!(
+                !window.get_dropdown_open(),
+                "overlay closes after selection"
+            );
+
+            let _ = std::fs::remove_file(&save_path);
+        });
+    }
+
+    #[test]
+    fn mouse_preset_dropdown_dismisses_on_escape_without_mutating_draft() {
+        use slint::ComponentHandle;
+        crate::shortcut_row_slint_snapshot::tests::run_on_ui_thread(|| {
+            let (window, model, save_path) =
+                crate::shortcut_row_slint_snapshot::tests::setup_shortcuts_window();
+
+            model.borrow_mut().set_pane(Pane::Mouse);
+            crate::sync_model_to_ui(&window, &model.borrow());
+
+            let initial_draft = model.borrow().draft.clone();
+            assert!(!model.borrow().is_dirty());
+
+            // Open dropdown
+            window.set_dropdown_open(true);
+            assert!(window.get_dropdown_open());
+
+            // Press Escape
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::KeyPressed {
+                    text: slint::platform::Key::Escape.into(),
+                });
+
+            assert!(!window.get_dropdown_open(), "overlay dismisses on escape");
+            assert_eq!(
+                model.borrow().draft,
+                initial_draft,
+                "draft remains unchanged"
+            );
+            assert!(!model.borrow().is_dirty(), "model remains clean");
+
+            let _ = std::fs::remove_file(&save_path);
+        });
     }
 }

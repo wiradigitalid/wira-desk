@@ -1,9 +1,9 @@
 ---
 id: SPEC-9-04
-component: shared
-satisfies: [FR-30, FR-32]
+component: settings
+satisfies: [UC-14]
 blocked_by: []
-status: ready-for-agent
+status: done
 tests:
   - config::tests::expanded_mouse_presets_roundtrip_and_parse
   - hook::tests::all_expanded_presets_map_to_valid_commands
@@ -29,15 +29,15 @@ tests:
 - [ ] Provide group categorization metadata in `shared` (e.g. `category(&self) -> &'static str`) for UI rendering:
       - "Virtual Desktops", "Windows Shell", "Switching", "Snap to Half", "Snap to Third", "Snap to Custom", "Arrange & Move", "Passthrough".
 - [ ] Update `crates/daemon/src/hook.rs::map_preset_to_command`:
-      - Maps `SnapTop` -> `Command::SnapHalfTop` (opcode 13)
-      - Maps `SnapBottom` -> `Command::SnapHalfBottom` (opcode 14)
-      - Maps `SnapThirdLeft` -> `Command::SnapThirdLeft` (opcode 9)
-      - Maps `SnapThirdCenter` -> `Command::SnapThirdCenter` (opcode 10)
-      - Maps `SnapThirdRight` -> `Command::SnapThirdRight` (opcode 11)
-      - Maps `SnapPercentLeft` -> `Command::SnapPercentLeft` (opcode 5)
-      - Maps `SnapPercentRight` -> `Command::SnapPercentRight` (opcode 6)
-      - Maps `SnapPercentTop` -> `Command::SnapPercentTop` (opcode 7)
-      - Maps `SnapPercentBottom` -> `Command::SnapPercentBottom` (opcode 8)
-      - Maps `OverlappingStack` -> `Command::OverlappingStack` (opcode 12)
-      - Maps `MoveNextMonitor` -> `Command::MoveNextMonitor` (opcode 4)
+      - Maps `SnapTop` -> `Command::SnapTop` (opcode 6)
+      - Maps `SnapBottom` -> `Command::SnapBottom` (opcode 7)
+      - Maps `SnapThirdLeft` -> `Command::SnapThirdLeft` (opcode 13)
+      - Maps `SnapThirdCenter` -> `Command::SnapThirdMiddle` (opcode 14)
+      - Maps `SnapThirdRight` -> `Command::SnapThirdRight` (opcode 15)
+      - Maps `SnapPercentLeft` -> `Command::SnapPercentLeft` (opcode 9)
+      - Maps `SnapPercentRight` -> `Command::SnapPercentRight` (opcode 10)
+      - Maps `SnapPercentTop` -> `Command::SnapPercentTop` (opcode 11)
+      - Maps `SnapPercentBottom` -> `Command::SnapPercentBottom` (opcode 12)
+      - Maps `OverlappingStack` -> `Command::OverlappingStack` (opcode 5)
+      - Maps `MoveNextMonitor` -> `Command::MoveToNextMonitor` (opcode 8)
 - [ ] Roundtrip serialization and pre-save validation tests verify all new presets parse cleanly and malformed slugs are rejected.

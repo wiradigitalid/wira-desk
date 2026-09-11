@@ -1,6 +1,6 @@
 import { Palette, Typography } from "../theme.slint";
 import { Card, CardDivider } from "../components/card.slint";
-import { ToggleSwitch } from "../components/toggle_switch.slint";
+import { SettingToggleRow } from "../components/setting_toggle_row.slint";
 
 export component AboutPane inherits VerticalLayout {
     in property <string> version: "0.1.0";
@@ -91,41 +91,23 @@ export component AboutPane inherits VerticalLayout {
     // "which version am I on" and "is there a newer one" are the same question asked twice.
     Card {
         VerticalLayout {
-            padding: 16px;
-            spacing: 10px;
+            padding: 0px;
+            spacing: 0px;
 
-            HorizontalLayout {
-                spacing: 8px;
-                VerticalLayout {
-                    horizontal-stretch: 1;
-                    spacing: 2px;
-                    Text {
-                        text: "Check for updates automatically";
-                        font-family: Typography.font_family;
-                        font-size: Typography.size_subheading;
-                        font-weight: 600;
-                        color: Palette.text_primary;
-                    }
-                    Text {
-                        // The only network request this product makes, and the only place a
-                        // user can stop it. PRIVACY.md describes it line by line.
-                        text: "The only time Wira Desk contacts the internet. Nothing about you is sent.";
-                        font-family: Typography.font_family;
-                        font-size: Typography.size_caption;
-                        color: Palette.text_secondary;
-                        wrap: word-wrap;
-                    }
-                }
-                ToggleSwitch {
-                    y: 4px;
-                    checked <=> root.check_updates;
-                    toggled(val) => { root.check_updates_toggled(val); }
-                }
+            SettingToggleRow {
+                title: "Check for updates automatically";
+                description: "The only time Wira Desk contacts the internet. Nothing about you is sent.";
+                checked <=> root.check_updates;
+                toggled(val) => { root.check_updates_toggled(val); }
             }
 
             CardDivider {}
 
             HorizontalLayout {
+                padding-left: 16px;
+                padding-right: 16px;
+                padding-top: 12px;
+                padding-bottom: 16px;
                 spacing: 10px;
                 alignment: start;
 
@@ -205,21 +187,31 @@ export component AboutPane inherits VerticalLayout {
                 }
             }
 
-            if root.update_ready : Text {
-                text: "Wira Desk will close, Windows will ask for your permission, and version "
-                    + root.update_version + " will install. Your settings are kept.";
-                font-family: Typography.font_family;
-                font-size: Typography.size_caption;
-                color: Palette.text_secondary;
-                wrap: word-wrap;
+            if root.update_ready : HorizontalLayout {
+                padding-left: 16px;
+                padding-right: 16px;
+                padding-bottom: 8px;
+                Text {
+                    text: "Wira Desk will close, Windows will ask for your permission, and version "
+                        + root.update_version + " will install. Your settings are kept.";
+                    font-family: Typography.font_family;
+                    font-size: Typography.size_caption;
+                    color: Palette.text_secondary;
+                    wrap: word-wrap;
+                }
             }
 
-            if root.update_status != "" : Text {
-                text: root.update_status;
-                font-family: Typography.font_family;
-                font-size: Typography.size_caption;
-                color: Palette.text_secondary;
-                wrap: word-wrap;
+            if root.update_status != "" : HorizontalLayout {
+                padding-left: 16px;
+                padding-right: 16px;
+                padding-bottom: 8px;
+                Text {
+                    text: root.update_status;
+                    font-family: Typography.font_family;
+                    font-size: Typography.size_caption;
+                    color: Palette.text_secondary;
+                    wrap: word-wrap;
+                }
             }
         }
     }

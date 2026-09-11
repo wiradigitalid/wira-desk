@@ -42,6 +42,15 @@ dag:
   - parallel:
     - SPEC-8-01
     - SPEC-8-02
+- spec: SPEC-9
+  order:
+  - parallel:
+    - SPEC-9-01
+    - SPEC-9-02
+    - SPEC-9-03
+    - SPEC-9-04
+    - SPEC-9-05
+    - SPEC-9-06
 - spec: W1
   order:
   - parallel:

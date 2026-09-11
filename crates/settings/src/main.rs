@@ -126,6 +126,41 @@ pub(crate) fn sync_key_check(window: &MainWindow, model: &SettingsModel) {
     window.set_kc_beat(model.key_check.beat);
 }
 
+fn build_dropdown_items() -> Vec<DropdownItem> {
+    let categories = [
+        "Virtual Desktops",
+        "Windows Shell",
+        "Switching",
+        "Snap to Half",
+        "Snap to Third",
+        "Snap to Custom",
+        "Arrange & Move",
+        "Passthrough",
+    ];
+
+    let mut items = Vec::new();
+    for cat in categories {
+        items.push(DropdownItem {
+            is_header: true,
+            label: slint::SharedString::from(cat),
+            slug: slint::SharedString::default(),
+            selectable: false,
+        });
+
+        for preset in shared::MouseActionPreset::ALL {
+            if preset.category() == cat {
+                items.push(DropdownItem {
+                    is_header: false,
+                    label: slint::SharedString::from(preset.display_label()),
+                    slug: slint::SharedString::from(preset.as_str()),
+                    selectable: true,
+                });
+            }
+        }
+    }
+    items
+}
+
 pub(crate) fn sync_model_to_ui(window: &MainWindow, model: &SettingsModel) {
     // Mode
     let is_onboarding = model.onboarding.is_some();
@@ -274,10 +309,24 @@ pub(crate) fn sync_model_to_ui(window: &MainWindow, model: &SettingsModel) {
                 .map(|p| p.index() as i32)
                 .unwrap_or(0)
         };
+        let find_preset_label = |slug: &str| -> slint::SharedString {
+            shared::MouseActionPreset::parse_slug(slug)
+                .map(|p| slint::SharedString::from(p.display_label()))
+                .unwrap_or_else(|| slint::SharedString::from("Select Action"))
+        };
         window.set_thumb_back_index(find_preset_index(&model.draft.mouse.thumb_back));
         window.set_thumb_forward_index(find_preset_index(&model.draft.mouse.thumb_forward));
         window.set_tilt_left_index(find_preset_index(&model.draft.mouse.tilt_left));
         window.set_tilt_right_index(find_preset_index(&model.draft.mouse.tilt_right));
+
+        window.set_thumb_back_label(find_preset_label(&model.draft.mouse.thumb_back));
+        window.set_thumb_forward_label(find_preset_label(&model.draft.mouse.thumb_forward));
+        window.set_tilt_left_label(find_preset_label(&model.draft.mouse.tilt_left));
+        window.set_tilt_right_label(find_preset_label(&model.draft.mouse.tilt_right));
+
+        window.set_dropdown_items(slint::ModelRc::new(slint::VecModel::from(
+            build_dropdown_items(),
+        )));
 
         // About
         window.set_app_version(slint::SharedString::from(env!("CARGO_PKG_VERSION")));
@@ -545,6 +594,25 @@ pub(crate) fn bind_callbacks(
                 m.draft.mouse.tilt_right = preset.as_str().to_string();
             }
             if let Some(w) = window_weak.upgrade() {
+                sync_model_to_ui(&w, &m);
+            }
+        });
+    }
+    {
+        let model_rc = Rc::clone(model);
+        let window_weak = main_window.as_weak();
+        main_window.on_preset_selected(move |slot, slug| {
+            let mut m = model_rc.borrow_mut();
+            let slug_str = slug.as_str().to_string();
+            match slot {
+                0 => m.draft.mouse.thumb_back = slug_str,
+                1 => m.draft.mouse.thumb_forward = slug_str,
+                2 => m.draft.mouse.tilt_left = slug_str,
+                3 => m.draft.mouse.tilt_right = slug_str,
+                _ => {}
+            }
+            if let Some(w) = window_weak.upgrade() {
+                w.set_dropdown_open(false);
                 sync_model_to_ui(&w, &m);
             }
         });
