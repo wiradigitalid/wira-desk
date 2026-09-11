@@ -2313,6 +2313,31 @@ mod tests {
     }
 
     #[test]
+    fn card_dividers_render_full_bleed_across_panes() {
+        crate::shortcut_row_slint_snapshot::tests::run_on_ui_thread(|| {
+            let (window, model, save_path) =
+                crate::shortcut_row_slint_snapshot::tests::setup_shortcuts_window();
+
+            // Switch to GeneralPane (Card 2 has full-bleed divider)
+            model.borrow_mut().set_pane(Pane::General);
+            crate::sync_model_to_ui(&window, &model.borrow());
+            assert_eq!(window.get_current_pane(), 0);
+
+            // Switch to MousePane (Card 2 has full-bleed dividers)
+            model.borrow_mut().set_pane(Pane::Mouse);
+            crate::sync_model_to_ui(&window, &model.borrow());
+            assert_eq!(window.get_current_pane(), 2);
+
+            // Switch to AboutPane (Updates block has full-bleed divider)
+            model.borrow_mut().set_pane(Pane::About);
+            crate::sync_model_to_ui(&window, &model.borrow());
+            assert_eq!(window.get_current_pane(), 4);
+
+            let _ = std::fs::remove_file(&save_path);
+        });
+    }
+
+    #[test]
     fn pane_from_label_round_trips_with_label() {
         for pane in Pane::ALL {
             assert_eq!(Pane::from_label(pane.label()), Some(pane));

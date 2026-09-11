@@ -3,7 +3,7 @@ id: SPEC-9-03
 component: settings
 satisfies: [UC-14]
 blocked_by: [SPEC-9-02]
-status: ready-for-agent
+status: done
 tests:
   - app::tests::card_dividers_render_full_bleed_across_panes
 ---
