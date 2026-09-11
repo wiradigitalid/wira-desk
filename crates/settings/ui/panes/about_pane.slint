@@ -19,6 +19,9 @@ export component AboutPane inherits VerticalLayout {
     callback check_updates_clicked();
     callback install_update_clicked();
     callback check_updates_toggled(bool);
+    callback open_publisher_url();
+    callback open_source_url();
+    callback open_support_url();
 
     spacing: 12px;
     alignment: start;
@@ -211,6 +214,106 @@ export component AboutPane inherits VerticalLayout {
                     font-size: Typography.size_caption;
                     color: Palette.text_secondary;
                     wrap: word-wrap;
+                }
+            }
+        }
+    }
+
+    // Publisher, Source Code, and Licensing Card (SPEC-11-03)
+    Card {
+        VerticalLayout {
+            padding: 16px;
+            spacing: 12px;
+
+            // Publisher Attribution Link
+            HorizontalLayout {
+                alignment: start;
+
+                publisher_touch := TouchArea {
+                    accessible-role: button;
+                    accessible-label: "An open-source utility by Wira Digital Indonesia";
+                    clicked => { root.open_publisher_url(); }
+
+                    Text {
+                        text: "An open-source utility by Wira Digital Indonesia";
+                        font-family: Typography.font_family;
+                        font-size: Typography.size_body;
+                        font-weight: 500;
+                        color: publisher_touch.has_hover ? Palette.accent_hover : Palette.accent_primary;
+                    }
+                }
+            }
+
+            CardDivider {}
+
+            // GitHub Repository & Issues Link
+            HorizontalLayout {
+                alignment: start;
+
+                repo_touch := TouchArea {
+                    accessible-role: button;
+                    accessible-label: "Source code & issue tracker on GitHub";
+                    clicked => { root.open_source_url(); }
+
+                    Text {
+                        text: "Source code & issue tracker on GitHub";
+                        font-family: Typography.font_family;
+                        font-size: Typography.size_body;
+                        color: repo_touch.has_hover ? Palette.accent_hover : Palette.text_primary;
+                    }
+                }
+            }
+
+            CardDivider {}
+
+            // License & Offline Statement
+            VerticalLayout {
+                spacing: 4px;
+                Text {
+                    text: "Licensed under GPL-3.0 • Standalone Desktop Utility";
+                    font-family: Typography.font_family;
+                    font-size: Typography.size_caption;
+                    font-weight: 600;
+                    color: Palette.text_secondary;
+                }
+                Text {
+                    text: "No telemetry, no account, no background updater service — HTTPS requests to GitHub occur only when checking for or installing updates, which you can switch off.";
+                    font-family: Typography.font_family;
+                    font-size: Typography.size_caption;
+                    color: Palette.text_tertiary;
+                    wrap: word-wrap;
+                }
+            }
+
+            CardDivider {}
+
+            // Support Development Action
+            HorizontalLayout {
+                alignment: start;
+
+                Rectangle {
+                    width: 160px;
+                    height: 32px;
+                    border-radius: 6px;
+                    background: support_touch.has_hover ? Palette.bg_card_hover : Palette.bg_subtle;
+                    border-width: 1px;
+                    border-color: Palette.stroke_card;
+
+                    Text {
+                        text: "Support development";
+                        font-family: Typography.font_family;
+                        font-size: 12.5px;
+                        font-weight: 600;
+                        color: Palette.text_primary;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+
+                    support_touch := TouchArea {
+                        accessible-role: button;
+                        accessible-label: "Support development";
+                        clicked => { root.open_support_url(); }
+                    }
                 }
             }
         }

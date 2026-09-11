@@ -75,6 +75,11 @@ jobs:
       - name: Build release
         run: cargo build --workspace --release --locked
 
+      - name: Verify release binary dependencies
+        shell: pwsh
+        run: |
+          .\scripts\verify-release-binary.ps1 -Path target\release -AllowDynamicCrtIfBundled
+
       - name: Install Inno Setup
         shell: pwsh
         run: |
@@ -194,6 +199,7 @@ jobs:
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
+          WINGET_LIVE: ${{ vars.WINGET_PACKAGE_LIVE }}
         run: |
           # Two ways to install, and neither is presented as the way to update. Updating is
           # a button inside the application -- Settings, "Check for updates" -- which
@@ -203,14 +209,26 @@ jobs:
           # The changelog section first, then the boilerplate that is true of every
           # release. The section is the part written for a person; everything below it is
           # standing information, and the last two lines are a licence term.
+          $wingetInstruction = if ($env:WINGET_LIVE -eq 'true') {
+            @(
+              'Install with the setup executable, or through winget:',
+              '',
+              '    winget install WiraDigitalIndonesia.WiraDesk'
+            ) -join "`n"
+          } else {
+            @(
+              'Install with the setup executable.',
+              '',
+              '*WinGet package submission pending official approval on microsoft/winget-pkgs (PR #426321).*'
+            ) -join "`n"
+          }
+
           $notes = @(
             (Get-Content changelog-section.md -Raw).Trim(),
             '',
             '---',
             '',
-            'Install with the setup executable, or through winget:',
-            '',
-            '    winget install WiraDigitalIndonesia.WiraDesk',
+            $wingetInstruction,
             '',
             'Updating is built in: Settings has a "Check for updates" button. Whichever way',
             'you installed, that button is the update path, and it needs no command line.',

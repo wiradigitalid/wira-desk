@@ -2795,4 +2795,23 @@ mod tests {
             let _ = std::fs::remove_file(&save_path);
         });
     }
+
+    #[test]
+    fn about_pane_renders_publisher_and_links() {
+        crate::shortcut_row_slint_snapshot::tests::run_on_ui_thread(|| {
+            let (window, model, save_path) =
+                crate::shortcut_row_slint_snapshot::tests::setup_shortcuts_window();
+
+            model.borrow_mut().set_pane(Pane::About);
+            crate::sync_model_to_ui(&window, &model.borrow());
+
+            assert_eq!(window.get_current_pane(), 4);
+            // Verify callbacks can be invoked safely
+            window.invoke_open_publisher_url();
+            window.invoke_open_source_url();
+            window.invoke_open_support_url();
+
+            let _ = std::fs::remove_file(&save_path);
+        });
+    }
 }

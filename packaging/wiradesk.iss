@@ -195,6 +195,8 @@ Source: "{#STAGE_DIR}\{#DaemonExe}";   DestDir: "{app}"; Flags: ignoreversion
 Source: "{#STAGE_DIR}\{#SettingsExe}"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#STAGE_DIR}\LICENSE";        DestDir: "{app}"; DestName: "LICENSE.txt"; Flags: ignoreversion
 Source: "{#STAGE_DIR}\NOTICE";         DestDir: "{app}"; DestName: "NOTICE.txt";  Flags: ignoreversion
+; Fallback branch: bundle Visual C++ Redistributable when present in staging directory
+Source: "{#STAGE_DIR}\vc_redist.x64.exe"; DestDir: "{tmp}"; Flags: ignoreversion deleteafterinstall; Check: FileExists(ExpandConstant('{#STAGE_DIR}\vc_redist.x64.exe'))
 
 [Icons]
 ; The daemon is the entry point. The settings window is reached from its tray
@@ -203,6 +205,9 @@ Source: "{#STAGE_DIR}\NOTICE";         DestDir: "{app}"; DestName: "NOTICE.txt";
 Name: "{group}\{#AppName}"; Filename: "{app}\{#DaemonExe}"
 
 [Run]
+; Fallback branch: silently install VC++ runtime if bundled in staging directory
+Filename: "{tmp}\vc_redist.x64.exe"; Parameters: "/install /quiet /norestart"; StatusMsg: "Installing Visual C++ Redistributable..."; Flags: waituntilterminated runascurrentuser; Check: FileExists(ExpandConstant('{tmp}\vc_redist.x64.exe'))
+
 ; TWO ENTRIES, AND THE SECOND ONE IS A BUG FIX RATHER THAN A FEATURE.
 ;
 ; The first is the finish-page checkbox: `postinstall` makes it a checkbox rather

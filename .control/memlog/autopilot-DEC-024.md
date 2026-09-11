@@ -8,12 +8,12 @@ date: 2026-09-11
 
 ## Resume
 
-Iteration: 1 (boundary: HEAD)
-Run branch: autopilot/DEC-024, PR not opened yet
-Stopped at: SPEC-10 closed (4/4 tickets done), continuing to SPEC-11
+Iteration: 2 (boundary: HEAD)
+Run branch: autopilot/DEC-024, PR opened for owner review
+Stopped at: Finish (all specifications closed: SPEC-10 and SPEC-11 delivered, promise progress 100%, 72/72 counted RTM rows green)
 Blocked: —
 Parked: —
-Next: Open SPEC-11 and implement ticket SPEC-11-01
+Next: —
 
 ## Decisions
 
@@ -26,3 +26,7 @@ Next: Open SPEC-11 and implement ticket SPEC-11-01
 | Iter 1 | SPEC-10-02 | Auto-dismiss preset dropdown overlay on tab switch and sidebar click via backdrop and callback | Leaving overlay floating across panes | Dropdown remains visible over wrong tab | crates/settings/ui/, crates/settings/src/main.rs |
 | Iter 1 | SPEC-10-03 | Add config reload tests and scripts/restart-daemon.ps1 polling WiraDeskDaemonHiddenWindow | Unverified daemon reload behavior | Stale daemon running during manual testing | crates/daemon/src/config.rs, scripts/restart-daemon.ps1 |
 | Iter 1 | SPEC-10-04 | Add synthetic multi-tick hardware tilt lockout verification test suite asserting 400ms boundary | Unverified hardware repeat behavior | Tilt hold rapid repeat regressions | crates/daemon/src/hook.rs |
+| Iter 2 | SPEC-11-01 | Document Skia C++ runtime fallback branch with vc_redist bundling in Inno installer | Breaking Slint renderer-skia build | Installer missing runtime for bare OS installs | packaging/wiradesk.iss, crates/shared/src/lib.rs |
+| Iter 2 | SPEC-11-02 | Implement pure in-memory PE import scanner and scripts/verify-release-binary.ps1 guard in release CI | Runtime DLL failures on clean Windows | Dynamic CRT import regressions pass undetected | crates/shared/src/binary.rs, scripts/verify-release-binary.ps1, .github/workflows/release.yml |
+| Iter 2 | SPEC-11-03 | Add publisher branding, GitHub links, GPL-3.0 license, and support navigation with strict HTTPS allowlist | Generic about pane with no links | Unverified external browser navigation | crates/settings/ui/panes/about_pane.slint, crates/settings/src/update.rs |
+| Iter 2 | SPEC-11-04 | Correct false 'no network path' claims across security docs to accurately disclose GitHub update requests | Inaccurate security documentation | Loss of security trust in elevated software | SECURITY.md, docs/threat-model.md, README.md |

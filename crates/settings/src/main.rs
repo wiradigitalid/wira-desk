@@ -1245,6 +1245,16 @@ fn main() -> Result<(), slint::PlatformError> {
         });
     }
 
+    main_window.on_open_publisher_url(|| {
+        update::open_in_browser("https://wiradigital.id");
+    });
+    main_window.on_open_source_url(|| {
+        update::open_in_browser("https://github.com/wiradigitalid/wira-desk/");
+    });
+    main_window.on_open_support_url(|| {
+        update::open_in_browser("https://wiradigital.id/wira-desk");
+    });
+
     let update_timer = slint::Timer::default();
     {
         let model_rc = Rc::clone(&model);

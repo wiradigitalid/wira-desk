@@ -3,7 +3,7 @@ id: SPEC-11-03
 component: settings
 satisfies: []
 blocked_by: []
-status: ready-for-agent
+status: done
 tests:
   - app::tests::about_pane_renders_publisher_and_links
   - update::tests::open_in_browser_accepts_publisher_and_repo_domains

@@ -3,7 +3,7 @@ id: SPEC-11-01
 component: window-management
 satisfies: []
 blocked_by: []
-status: ready-for-agent
+status: done
 tests:
   - shared::tests::msvc_target_compiles_with_crt_static
 ---

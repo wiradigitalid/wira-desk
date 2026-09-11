@@ -7,9 +7,7 @@
 use std::sync::mpsc::{channel, Receiver, Sender};
 
 use shared::https::HttpError;
-use shared::update::{
-    decide, latest_json_url, split_https, Decision, Rejected, Release, DESCRIPTOR_LIMIT, REPOSITORY,
-};
+use shared::update::{decide, latest_json_url, Decision, Rejected, Release, DESCRIPTOR_LIMIT};
 
 use crate::sha256::{CngError, Sha256, DIGEST_LEN};
 
@@ -277,25 +275,41 @@ fn launch_installer(path: &std::path::Path) -> Result<(), String> {
     ))
 }
 
-/// Open a release-notes URL in the user's browser.
+/// Validate whether a URL is in the strict allowlist of browser navigation targets.
 ///
-/// **Validated before it is handed to the shell, and by the same rule as the installer
-/// download.** `notes_url` arrives in the same descriptor as `setup_url`, so it deserves the
-/// same suspicion: a tampered file could otherwise use this to open any address it liked, in
-/// a browser, at a moment the user is expecting a page from this project. The host and
-/// repository are pinned; anything else is silently not opened, because a failed link is a
-/// smaller harm than a link somewhere else.
+/// Pinned targets allowed:
+/// - Exact `https://wiradigital.id` or `https://wiradigital.id/`
+/// - Exact `https://wiradigital.id/wira-desk` or `https://wiradigital.id/wira-desk/`
+/// - Pinned GitHub repository prefix `https://github.com/wiradigitalid/wira-desk` or subpaths
+///
+/// All non-HTTPS schemes, dot-segments (`..`), userinfo (`@`), or unpinned hosts are rejected.
+pub fn is_allowed_browser_url(url: &str) -> bool {
+    let url = url.trim();
+    if !url.starts_with("https://") {
+        return false;
+    }
+    if url.contains("..") || url.contains('@') {
+        return false;
+    }
+    if url == "https://wiradigital.id" || url == "https://wiradigital.id/" {
+        return true;
+    }
+    if url == "https://wiradigital.id/wira-desk" || url == "https://wiradigital.id/wira-desk/" {
+        return true;
+    }
+    const REPO_BASE: &str = "https://github.com/wiradigitalid/wira-desk";
+    if url == REPO_BASE || url.starts_with("https://github.com/wiradigitalid/wira-desk/") {
+        return true;
+    }
+    false
+}
+
+/// Open an allowed URL in the user's default browser.
 pub fn open_in_browser(url: &str) {
     use windows_sys::Win32::UI::Shell::ShellExecuteW;
     use windows_sys::Win32::UI::WindowsAndMessaging::SW_SHOWNORMAL;
 
-    let Some((repo_host, _)) = split_https(REPOSITORY) else {
-        return;
-    };
-    let Some((host, _)) = split_https(url) else {
-        return;
-    };
-    if host != repo_host || !url.starts_with(REPOSITORY) {
+    if !is_allowed_browser_url(url) {
         return;
     }
 
@@ -398,5 +412,41 @@ mod tests {
             matches,
             "downloaded bytes did not match the published checksum"
         );
+    }
+
+    #[test]
+    fn open_in_browser_accepts_publisher_and_repo_domains() {
+        assert!(is_allowed_browser_url("https://wiradigital.id"));
+        assert!(is_allowed_browser_url("https://wiradigital.id/"));
+        assert!(is_allowed_browser_url("https://wiradigital.id/wira-desk"));
+        assert!(is_allowed_browser_url("https://wiradigital.id/wira-desk/"));
+        assert!(is_allowed_browser_url(
+            "https://github.com/wiradigitalid/wira-desk"
+        ));
+        assert!(is_allowed_browser_url(
+            "https://github.com/wiradigitalid/wira-desk/"
+        ));
+        assert!(is_allowed_browser_url(
+            "https://github.com/wiradigitalid/wira-desk/releases"
+        ));
+        assert!(is_allowed_browser_url(
+            "https://github.com/wiradigitalid/wira-desk/issues"
+        ));
+
+        // Reject non-https
+        assert!(!is_allowed_browser_url("http://wiradigital.id"));
+        assert!(!is_allowed_browser_url(
+            "http://github.com/wiradigitalid/wira-desk/"
+        ));
+
+        // Reject dot-segments and userinfo
+        assert!(!is_allowed_browser_url("https://wiradigital.id/../evil"));
+        assert!(!is_allowed_browser_url("https://user:pass@wiradigital.id"));
+
+        // Reject other domains
+        assert!(!is_allowed_browser_url("https://evil.com"));
+        assert!(!is_allowed_browser_url(
+            "https://github.com/otheruser/wira-desk"
+        ));
     }
 }

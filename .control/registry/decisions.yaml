@@ -488,7 +488,7 @@ decisions:
 
   - id: DEC-024
     title: Autopilot mandate for SPEC-10 and SPEC-11 delivery
-    status: accepted
+    status: applied
     file: decisions/DEC-024-autopilot-mandate-for-spec-10-and-spec-11-delivery.md
     created: '2026-09-11'
     touches:
@@ -496,6 +496,38 @@ decisions:
       - .control/memlog/autopilot-DEC-024.md
       - .control/registry/decisions.yaml
       - .control/registry/specs.yaml
+      - .scratch/smoke-dec-024.md
+      - .scratch/spec-10-mouse-navigation-followup/SPEC.md
+      - .scratch/spec-10-mouse-navigation-followup/issues/01-standardize-snap-middle-third-label.md
+      - .scratch/spec-10-mouse-navigation-followup/issues/02-dismiss-dropdown-on-pane-switch.md
+      - .scratch/spec-10-mouse-navigation-followup/issues/03-daemon-process-lifecycle-and-preset-dispatch.md
+      - .scratch/spec-10-mouse-navigation-followup/issues/04-hardware-tilt-lockout-live-verification.md
+      - .scratch/spec-11-app-distribution-and-branding/SPEC.md
+      - .scratch/spec-11-app-distribution-and-branding/issues/01-static-crt-linking.md
+      - .scratch/spec-11-app-distribution-and-branding/issues/02-binary-dependency-ci-guard.md
+      - .scratch/spec-11-app-distribution-and-branding/issues/03-about-pane-branding-and-navigation.md
+      - .scratch/spec-11-app-distribution-and-branding/issues/04-security-disclosure-and-network-boundary.md
+      - 3p.md
+      - README.md
+      - SECURITY.md
+      - docs/threat-model.md
+      - packaging/wiradesk.iss
+      - scripts/restart-daemon.ps1
+      - scripts/verify-release-binary.ps1
+      - .github/workflows/release.yml
+      - crates/daemon/src/config.rs
+      - crates/daemon/src/hook.rs
+      - crates/daemon/src/worker.rs
+      - crates/settings/src/app.rs
+      - crates/settings/src/main.rs
+      - crates/settings/src/update.rs
+      - crates/settings/ui/components/sidebar.slint
+      - crates/settings/ui/main_window.slint
+      - crates/settings/ui/panes/about_pane.slint
+      - crates/shared/src/binary.rs
+      - crates/shared/src/commands.rs
+      - crates/shared/src/config.rs
+      - crates/shared/src/lib.rs
     mandate:
       from_gate: G5
       scope: all

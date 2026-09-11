@@ -3,7 +3,7 @@ id: SPEC-11-04
 component: settings
 satisfies: []
 blocked_by: [SPEC-11-03]
-status: ready-for-agent
+status: done
 tests:
   - shared::update::tests::a_checksum_that_is_not_sha256_is_refused
   - shared::update::tests::a_download_url_off_this_repository_is_refused

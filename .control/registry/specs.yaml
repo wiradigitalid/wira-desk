@@ -1010,7 +1010,7 @@ specs:
     release: "0.3.0"
     prd: [wira-desk]
     size: M
-    status: draft
+    status: closed
     depends_on: [SPEC-10]
     spec_folder: .scratch/spec-11-app-distribution-and-branding/
     fr: []
