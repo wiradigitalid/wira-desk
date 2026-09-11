@@ -764,6 +764,19 @@ mod tests {
                 ShortcutError::InvalidMousePreset("non_existent_preset".to_string())
             ))
         );
+
+        for preset in shared::MouseActionPreset::ALL {
+            let mut cfg = Config::default();
+            cfg.mouse.thumb_back = preset.as_str().to_string();
+            cfg.mouse.thumb_forward = preset.as_str().to_string();
+            cfg.mouse.tilt_left = preset.as_str().to_string();
+            cfg.mouse.tilt_right = preset.as_str().to_string();
+            assert!(
+                validate_config(&cfg).is_ok(),
+                "preset {:?} should pass config validation",
+                preset
+            );
+        }
     }
 
     #[test]

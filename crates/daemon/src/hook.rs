@@ -879,7 +879,18 @@ pub fn map_preset_to_command(preset: shared::MouseActionPreset) -> Option<Comman
         shared::MouseActionPreset::CycleForward => Some(Command::Cycle),
         shared::MouseActionPreset::SnapLeft => Some(Command::SnapLeft),
         shared::MouseActionPreset::SnapRight => Some(Command::SnapRight),
+        shared::MouseActionPreset::SnapTop => Some(Command::SnapTop),
+        shared::MouseActionPreset::SnapBottom => Some(Command::SnapBottom),
+        shared::MouseActionPreset::SnapThirdLeft => Some(Command::SnapThirdLeft),
+        shared::MouseActionPreset::SnapThirdCenter => Some(Command::SnapThirdMiddle),
+        shared::MouseActionPreset::SnapThirdRight => Some(Command::SnapThirdRight),
+        shared::MouseActionPreset::SnapPercentLeft => Some(Command::SnapPercentLeft),
+        shared::MouseActionPreset::SnapPercentRight => Some(Command::SnapPercentRight),
+        shared::MouseActionPreset::SnapPercentTop => Some(Command::SnapPercentTop),
+        shared::MouseActionPreset::SnapPercentBottom => Some(Command::SnapPercentBottom),
         shared::MouseActionPreset::Maximize => Some(Command::SnapMaximize),
+        shared::MouseActionPreset::OverlappingStack => Some(Command::OverlappingStack),
+        shared::MouseActionPreset::MoveNextMonitor => Some(Command::MoveToNextMonitor),
         shared::MouseActionPreset::Passthrough => None,
     }
 }
@@ -3185,5 +3196,18 @@ mod tests {
             next_hook_check_state(HOOK_CHECK_FAIL_THRESHOLD - 1, false);
         assert_eq!(fail_count_crit, HOOK_CHECK_FAIL_THRESHOLD);
         assert!(should_escalate_crit);
+    }
+
+    #[test]
+    fn all_expanded_presets_map_to_valid_commands() {
+        for preset in shared::MouseActionPreset::ALL {
+            let cmd = map_preset_to_command(preset);
+            if preset == shared::MouseActionPreset::Passthrough {
+                assert_eq!(cmd, None);
+            } else {
+                assert!(cmd.is_some(), "preset {:?} must map to a command", preset);
+                assert_ne!(cmd.unwrap(), Command::Nop);
+            }
+        }
     }
 }
