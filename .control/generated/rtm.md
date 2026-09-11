@@ -828,10 +828,10 @@ rtm:
   test:
   - log::tests::shared_log_rotation_caps_file_at_1mb
   - util::tests::debug_trace_rotates_at_cap_when_debug_assertions_active
-  status: ready-for-agent
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-4
   CAP: CAP-17
   FR: FR-30
@@ -844,10 +844,10 @@ rtm:
   - hook::tests::tilt_hold_without_release_fires_exactly_once
   - hook::tests::tilt_second_actuation_after_quiet_period_fires_again
   - config::tests::default_tilt_directions_are_inverted
-  status: ready-for-agent
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-4
   CAP: CAP-17
   FR: FR-31
@@ -882,10 +882,10 @@ rtm:
   test:
   - log::tests::shared_log_rotation_caps_file_at_1mb
   - util::tests::debug_trace_rotates_at_cap_when_debug_assertions_active
-  status: ready-for-agent
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-4
   CAP: CAP-17
   FR: FR-31
@@ -898,10 +898,10 @@ rtm:
   - hook::tests::tilt_hold_without_release_fires_exactly_once
   - hook::tests::tilt_second_actuation_after_quiet_period_fires_again
   - config::tests::default_tilt_directions_are_inverted
-  status: ready-for-agent
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-4
   CAP: CAP-17
   FR: FR-32
@@ -933,10 +933,10 @@ rtm:
   release: 0.3.0
   test:
   - app::tests::toggle_switches_are_vertically_centered_in_cards
-  status: ready-for-agent
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-4
   CAP: CAP-17
   FR: FR-32
@@ -947,10 +947,10 @@ rtm:
   release: 0.3.0
   test:
   - app::tests::card_dividers_render_full_bleed_across_panes
-  status: ready-for-agent
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-4
   CAP: CAP-17
   FR: FR-32
@@ -962,10 +962,10 @@ rtm:
   test:
   - config::tests::expanded_mouse_presets_roundtrip_and_parse
   - hook::tests::all_expanded_presets_map_to_valid_commands
-  status: ready-for-agent
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-4
   CAP: CAP-17
   FR: FR-32
@@ -977,10 +977,10 @@ rtm:
   test:
   - app::tests::mouse_preset_dropdown_opens_overlay_with_groups
   - app::tests::selecting_preset_from_dropdown_updates_draft
-  status: ready-for-agent
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-1
   CAP: CAP-1
   FR: FR-4

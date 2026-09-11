@@ -978,7 +978,10 @@ mod tests {
         for (i, preset) in MouseActionPreset::ALL.iter().enumerate() {
             assert_eq!(preset.index(), i);
             assert_eq!(MouseActionPreset::from_index(i), Some(*preset));
-            assert_eq!(MouseActionPreset::parse_slug(preset.as_str()), Some(*preset));
+            assert_eq!(
+                MouseActionPreset::parse_slug(preset.as_str()),
+                Some(*preset)
+            );
             assert!(!preset.display_label().is_empty());
             assert!(
                 expected_categories.contains(&preset.category()),

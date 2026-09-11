@@ -7,11 +7,11 @@ artifact: .control/decisions/DEC-023-autopilot-mandate-for-spec-9-delivery.md
 ## Resume
 
 Iteration: 1 (boundary: HEAD)
-Run branch: autopilot/DEC-023, PR not open
-Stopped at: SPEC-9-03 completed
+Run branch: autopilot/DEC-023, PR ready for owner review
+Stopped at: Finish (all 6 tickets of SPEC-9 delivered and verified)
 Blocked: —
 Parked: —
-Next: SPEC-9-05 (Grouped preset dropdown overlay in Settings UI)
+Next: —
 
 ## Decisions
 
@@ -23,3 +23,4 @@ Next: SPEC-9-05 (Grouped preset dropdown overlay in Settings UI)
 | iter 1 | SPEC-9-04 | Expand MouseActionPreset from 9 to 20 window management actions across 8 categories and map to wire commands | 9 basic actions | Mouse navigation missing snapping, thirds, custom %, stack, and monitor hopping | crates/shared/src/config.rs, crates/daemon/src/hook.rs, crates/settings/src/persistence.rs |
 | iter 1 | SPEC-9-02 | Extract SettingToggleRow with vertically centered layout and refactor General, Mouse, About, Onboarding panes | Manual y-offset hacks | Toggle switches vertically misaligned with text | crates/settings/ui/, crates/settings/src/app.rs |
 | iter 1 | SPEC-9-03 | Standardize zero-padding card containers with full-bleed CardDivider across General, Mouse, and About panes | Inconsistent container padding and indented dividers | Visual inconsistency with shortcuts_pane reference | crates/settings/ui/panes/, crates/settings/src/app.rs |
+| iter 1 | SPEC-9-05 | Implement grouped preset dropdown overlay at z:1000 with backdrop TouchArea, hover highlighting, and dirty tracking | Flat cycle-on-click control | Non-intuitive action discovery and selection | crates/settings/ui/, crates/settings/src/main.rs, crates/settings/src/app.rs |

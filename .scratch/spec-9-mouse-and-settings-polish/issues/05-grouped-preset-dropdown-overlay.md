@@ -3,7 +3,7 @@ id: SPEC-9-05
 component: settings
 satisfies: [UC-14]
 blocked_by: [SPEC-9-04]
-status: ready-for-agent
+status: done
 tests:
   - app::tests::mouse_preset_dropdown_opens_overlay_with_groups
   - app::tests::selecting_preset_from_dropdown_updates_draft

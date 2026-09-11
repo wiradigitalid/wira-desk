@@ -1,12 +1,13 @@
 ---
 type: mandate
 id: DEC-023
-status: accepted
+status: applied
 touches:
   - .control/decisions/DEC-023-autopilot-mandate-for-spec-9-delivery.md
   - .control/memlog/autopilot-DEC-023.md
   - .control/registry/decisions.yaml
   - .control/registry/specs.yaml
+  - .scratch/smoke-dec-023.md
   - .scratch/spec-9-mouse-and-settings-polish/SPEC.md
   - .scratch/spec-9-mouse-and-settings-polish/issues/01-debug-trace-rotation-and-appdata-inventory.md
   - .scratch/spec-9-mouse-and-settings-polish/issues/02-toggle-vertical-alignment-and-setting-toggle-row.md
@@ -14,6 +15,22 @@ touches:
   - .scratch/spec-9-mouse-and-settings-polish/issues/04-mouse-action-preset-catalog-expansion.md
   - .scratch/spec-9-mouse-and-settings-polish/issues/05-grouped-preset-dropdown-overlay.md
   - .scratch/spec-9-mouse-and-settings-polish/issues/06-tilt-wheel-defaults-and-gesture-lockout.md
+  - 3p.md
+  - CONTRIBUTING.md
+  - docs/README.md
+  - crates/daemon/src/hook.rs
+  - crates/daemon/src/log.rs
+  - crates/daemon/src/util.rs
+  - crates/settings/src/app.rs
+  - crates/settings/src/main.rs
+  - crates/settings/src/persistence.rs
+  - crates/settings/ui/components/setting_toggle_row.slint
+  - crates/settings/ui/main_window.slint
+  - crates/settings/ui/onboarding.slint
+  - crates/settings/ui/panes/about_pane.slint
+  - crates/settings/ui/panes/general_pane.slint
+  - crates/settings/ui/panes/mouse_pane.slint
+  - crates/shared/src/config.rs
 supersedes: null
 superseded_by: null
 created: '2026-09-11'
