@@ -307,8 +307,8 @@ impl Default for MouseConfig {
             enabled: true,
             thumb_back: "prev_virtual_desktop".to_string(),
             thumb_forward: "next_virtual_desktop".to_string(),
-            tilt_left: "task_view".to_string(),
-            tilt_right: "show_desktop".to_string(),
+            tilt_left: "show_desktop".to_string(),
+            tilt_right: "task_view".to_string(),
         }
     }
 }
@@ -832,8 +832,15 @@ mod tests {
         assert!(cfg.mouse.enabled);
         assert_eq!(cfg.mouse.thumb_back, "prev_virtual_desktop");
         assert_eq!(cfg.mouse.thumb_forward, "next_virtual_desktop");
-        assert_eq!(cfg.mouse.tilt_left, "task_view");
-        assert_eq!(cfg.mouse.tilt_right, "show_desktop");
+        assert_eq!(cfg.mouse.tilt_left, "show_desktop");
+        assert_eq!(cfg.mouse.tilt_right, "task_view");
+    }
+
+    #[test]
+    fn default_tilt_directions_are_inverted() {
+        let def = MouseConfig::default();
+        assert_eq!(def.tilt_left, "show_desktop");
+        assert_eq!(def.tilt_right, "task_view");
     }
 
     #[test]

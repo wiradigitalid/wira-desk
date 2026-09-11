@@ -985,6 +985,8 @@ pub fn resolve_mouse_event(
     }
 }
 
+pub const TILT_QUIET_MS: u64 = 400;
+
 pub fn apply_tilt_debounce(last_tilt_ms: u64, now: u64, debounce_ms: u64) -> bool {
     now.saturating_sub(last_tilt_ms) >= debounce_ms
 }
@@ -1051,6 +1053,17 @@ where
             if eval_bypass(rt) {
                 return MouseHandleResult::PassToNext;
             }
+            let prev_event_ms = rt.last_tilt_event_ms;
+            rt.last_tilt_event_ms = now;
+
+            if rt.tilt_gesture_armed {
+                if now.saturating_sub(prev_event_ms) >= TILT_QUIET_MS {
+                    rt.tilt_gesture_armed = false;
+                } else {
+                    return MouseHandleResult::Swallow;
+                }
+            }
+
             if !apply_tilt_debounce(
                 rt.last_tilt_ms,
                 now,
@@ -1063,6 +1076,7 @@ where
                 crate::metrics::DROPPED_FULL.fetch_add(1, Ordering::Relaxed);
             } else {
                 rt.last_tilt_ms = now;
+                rt.tilt_gesture_armed = true;
                 #[cfg(debug_assertions)]
                 crate::metrics::ACCEPTED.fetch_add(1, Ordering::Relaxed);
                 // SAFETY: `PostMessageW` posts to the worker thread window.
@@ -1096,6 +1110,8 @@ pub struct HookRuntime {
     pub mods: ModifierState,
     pub last_throttle_ms: u64,
     pub last_tilt_ms: u64,
+    pub last_tilt_event_ms: u64,
+    pub tilt_gesture_armed: bool,
     pub swallow_release_vk: u16,
     pub keyboard_hook_handle: HHOOK,
     pub mouse_hook_handle: HHOOK,
@@ -1779,6 +1795,8 @@ fn hook_thread_main(worker_hwnd: HWND, h_mod: HINSTANCE) {
             mods: ModifierState::default(),
             last_throttle_ms: 0,
             last_tilt_ms: 0,
+            last_tilt_event_ms: 0,
+            tilt_gesture_armed: false,
             swallow_release_vk: 0,
             keyboard_hook_handle,
             mouse_hook_handle,
@@ -2316,6 +2334,8 @@ mod tests {
             mods: ModifierState::default(),
             last_throttle_ms: 0,
             last_tilt_ms: 0,
+            last_tilt_event_ms: 0,
+            tilt_gesture_armed: false,
             swallow_release_vk: 0,
             keyboard_hook_handle: 0,
             mouse_hook_handle: 0,
@@ -2988,23 +3008,123 @@ mod tests {
         assert_eq!(rt.last_tilt_ms, 2000);
         assert_eq!(queue, vec![Command::ShowDesktop.as_u8()]);
 
-        // Second tick at t = 2150ms (>= 150ms): accepted!
+        // Second tick at t = 2450ms (>= 400ms quiet period after hold): accepted!
         let second = handle_mouse_event_with_sink(
             &mut rt,
             WM_MOUSEHWHEEL,
             tilt_right_data,
             |_| false,
-            2150,
+            2450,
             |c| {
                 queue.push(c);
                 true
             },
         );
         assert_eq!(second, MouseHandleResult::Swallow);
-        assert_eq!(rt.last_tilt_ms, 2150);
+        assert_eq!(rt.last_tilt_ms, 2450);
         assert_eq!(
             queue,
             vec![Command::ShowDesktop.as_u8(), Command::ShowDesktop.as_u8(),]
+        );
+    }
+
+    #[test]
+    fn tilt_hold_without_release_fires_exactly_once() {
+        let mut rt = test_runtime(
+            Shortcut::parse("win+backtick").unwrap(),
+            Shortcut::parse("alt+backtick").unwrap(),
+        );
+        rt.mouse = MouseMapping {
+            enabled: true,
+            thumb_back: None,
+            thumb_forward: None,
+            tilt_left: Some(Command::ShowDesktop),
+            tilt_right: Some(Command::TaskView),
+        };
+
+        let mut queue = Vec::new();
+        let tilt_left_data = (-120i16 as u16 as u32) << 16;
+
+        // Stream of 20 ticks spaced 60ms apart (total duration 1140ms, wheel held down)
+        for i in 0..20 {
+            let t = 1000 + i * 60;
+            let res = handle_mouse_event_with_sink(
+                &mut rt,
+                WM_MOUSEHWHEEL,
+                tilt_left_data,
+                |_| false,
+                t,
+                |c| {
+                    queue.push(c);
+                    true
+                },
+            );
+            assert_eq!(res, MouseHandleResult::Swallow);
+        }
+
+        // Exactly 1 command enqueued, remaining 19 swallowed by gesture lockout
+        assert_eq!(queue, vec![Command::ShowDesktop.as_u8()]);
+    }
+
+    #[test]
+    fn tilt_second_actuation_after_quiet_period_fires_again() {
+        let mut rt = test_runtime(
+            Shortcut::parse("win+backtick").unwrap(),
+            Shortcut::parse("alt+backtick").unwrap(),
+        );
+        rt.mouse = MouseMapping {
+            enabled: true,
+            thumb_back: None,
+            thumb_forward: None,
+            tilt_left: Some(Command::ShowDesktop),
+            tilt_right: Some(Command::TaskView),
+        };
+
+        let mut queue = Vec::new();
+        let tilt_left_data = (-120i16 as u16 as u32) << 16;
+
+        // First actuation: tick at t=1000, and hold tick at t=1070
+        handle_mouse_event_with_sink(
+            &mut rt,
+            WM_MOUSEHWHEEL,
+            tilt_left_data,
+            |_| false,
+            1000,
+            |c| {
+                queue.push(c);
+                true
+            },
+        );
+        handle_mouse_event_with_sink(
+            &mut rt,
+            WM_MOUSEHWHEEL,
+            tilt_left_data,
+            |_| false,
+            1070,
+            |c| {
+                queue.push(c);
+                true
+            },
+        );
+        assert_eq!(queue.len(), 1);
+
+        // Pause 450ms (> 400ms TILT_QUIET_MS) to simulate release
+        let res = handle_mouse_event_with_sink(
+            &mut rt,
+            WM_MOUSEHWHEEL,
+            tilt_left_data,
+            |_| false,
+            1070 + 450,
+            |c| {
+                queue.push(c);
+                true
+            },
+        );
+        assert_eq!(res, MouseHandleResult::Swallow);
+        assert_eq!(queue.len(), 2);
+        assert_eq!(
+            queue,
+            vec![Command::ShowDesktop.as_u8(), Command::ShowDesktop.as_u8()]
         );
     }
 
