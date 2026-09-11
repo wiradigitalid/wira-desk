@@ -4,6 +4,13 @@ dag:
   - parallel:
     - SPEC-1-01
     - SPEC-1-02
+- spec: SPEC-10
+  order:
+  - parallel:
+    - SPEC-10-01
+    - SPEC-10-02
+    - SPEC-10-03
+    - SPEC-10-04
 - spec: SPEC-2
   order:
   - parallel:

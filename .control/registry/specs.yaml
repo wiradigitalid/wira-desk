@@ -954,3 +954,56 @@ specs:
           - hook::tests::tilt_second_actuation_after_quiet_period_fires_again
           - config::tests::default_tilt_directions_are_inverted
 
+  - id: SPEC-10
+    release: "0.3.0"
+    prd: [wira-desk]
+    size: M
+    status: draft
+    depends_on: [SPEC-9]
+    spec_folder: .scratch/spec-10-mouse-navigation-followup/
+    fr: [FR-30, FR-31, FR-32]
+    spec_reviewed:
+      date: "2026-09-11"
+      sha: "8150eb6"
+      lenses: [edge-case-hunter]
+    tickets:
+      - id: SPEC-10-01
+        title: Standardize mouse preset text to "Snap to middle third"
+        spec_folder: .scratch/spec-10-mouse-navigation-followup/
+        component: settings
+        satisfies: [UC-14]
+        depends_on: []
+        tests:
+          - config::tests::snap_middle_third_display_label_matches_shortcuts_pane
+          - app::tests::mouse_preset_dropdown_displays_snap_to_middle_third
+      - id: SPEC-10-02
+        title: Auto-dismiss preset dropdown overlay on tab switch and full-window backdrop
+        spec_folder: .scratch/spec-10-mouse-navigation-followup/
+        component: settings
+        satisfies: [UC-14]
+        depends_on: []
+        tests:
+          - app::tests::switching_panes_while_dropdown_open_automatically_dismisses_overlay
+          - app::tests::clicking_sidebar_outside_content_dismisses_preset_overlay
+      - id: SPEC-10-03
+        title: Daemon process lifecycle, reload validation, and preset dispatch verification
+        spec_folder: .scratch/spec-10-mouse-navigation-followup/
+        component: window-management
+        satisfies: [UC-13]
+        depends_on: []
+        tests:
+          - config::tests::reload_with_all_20_mouse_action_presets_is_accepted
+          - worker::tests::snap_commands_from_mouse_dispatch_to_planning
+          - commands::tests::all_mouse_action_presets_have_corresponding_command_execution
+      - id: SPEC-10-04
+        title: Synthetic multi-tick hardware tilt lockout verification test suite
+        spec_folder: .scratch/spec-10-mouse-navigation-followup/
+        component: window-management
+        satisfies: [UC-13]
+        depends_on: []
+        tests:
+          - hook::tests::tilt_hold_with_rapid_hardware_repeats_swallows_subsequent_ticks
+          - hook::tests::tilt_hold_alternating_directions_maintains_lockout_per_gesture
+          - hook::tests::tilt_quiet_period_boundary_at_399ms_and_400ms
+
+
