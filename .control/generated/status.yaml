@@ -14,6 +14,11 @@ work_progress:
   tickets_done: 0
   tickets_total: 4
   work_progress: 0%
+- spec: SPEC-11
+  status: draft
+  tickets_done: 0
+  tickets_total: 4
+  work_progress: 0%
 - spec: SPEC-2
   status: closed
   tickets_done: 2

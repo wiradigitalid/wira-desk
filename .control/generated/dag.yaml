@@ -11,6 +11,13 @@ dag:
     - SPEC-10-02
     - SPEC-10-03
     - SPEC-10-04
+- spec: SPEC-11
+  order:
+  - parallel:
+    - SPEC-11-01
+    - SPEC-11-02
+    - SPEC-11-03
+    - SPEC-11-04
 - spec: SPEC-2
   order:
   - parallel:

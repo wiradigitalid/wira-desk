@@ -1006,4 +1006,62 @@ specs:
           - hook::tests::tilt_hold_alternating_directions_maintains_lockout_per_gesture
           - hook::tests::tilt_quiet_period_boundary_at_399ms_and_400ms
 
+  - id: SPEC-11
+    release: "0.3.0"
+    prd: [wira-desk]
+    size: M
+    status: draft
+    depends_on: [SPEC-10]
+    spec_folder: .scratch/spec-11-app-distribution-and-branding/
+    fr: []
+    # `lenses` was widened to [structure, prose, edge-case-hunter] earlier in this same revision
+    # round without a session actually dispatching bmad-review at this sha -- wdi-review forbids
+    # that ("filling it as a formality turns review-trace into a rubber stamp, which is worse
+    # than having no validator"). A genuine structure+prose+edge-case-hunter pass WAS run this
+    # session (2026-09-11) over the current, post-fix content and found open findings in both
+    # components -- not clean, so it is NOT re-stamped here. Reverted to the honest prior state
+    # pending resolution; re-run and re-stamp (with the sha of the commit actually reviewed) once
+    # those findings are closed.
+    spec_reviewed:
+      date: "2026-09-11"
+      sha: "09acd73"
+      lenses: [edge-case-hunter]
+    tickets:
+      - id: SPEC-11-01
+        title: Static C-Runtime linking via .cargo/config.toml
+        spec_folder: .scratch/spec-11-app-distribution-and-branding/
+        component: window-management
+        satisfies: []
+        depends_on: []
+        tests:
+          - shared::tests::msvc_target_compiles_with_crt_static
+      - id: SPEC-11-02
+        title: Release binary dependency scanner and CI regression guard
+        spec_folder: .scratch/spec-11-app-distribution-and-branding/
+        component: window-management
+        satisfies: []
+        depends_on: [SPEC-11-01]
+        tests:
+          - shared::binary::tests::pe_import_scanner_detects_dynamic_msvc_imports
+          - shared::binary::tests::pe_import_scanner_passes_clean_static_binary
+      - id: SPEC-11-03
+        title: Settings UI About pane publisher branding, source code, license, and support navigation
+        spec_folder: .scratch/spec-11-app-distribution-and-branding/
+        component: settings
+        satisfies: []
+        depends_on: []
+        tests:
+          - app::tests::about_pane_renders_publisher_and_links
+          - update::tests::open_in_browser_accepts_publisher_and_repo_domains
+      - id: SPEC-11-04
+        title: Application security disclosure, network boundary correction, and honest offline badge
+        spec_folder: .scratch/spec-11-app-distribution-and-branding/
+        component: settings
+        satisfies: []
+        depends_on: [SPEC-11-03]
+        tests:
+          - shared::update::tests::a_checksum_that_is_not_sha256_is_refused
+          - shared::update::tests::a_download_url_off_this_repository_is_refused
+
+
 
