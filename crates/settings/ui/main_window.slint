@@ -299,7 +299,14 @@ export component MainWindow inherits Window {
 
                 Sidebar {
                     current_pane: root.current_pane;
-                    pane_selected(idx) => { root.pane_selected(idx); }
+                    dropdown_open: root.dropdown_open;
+                    pane_selected(idx) => {
+                        root.dropdown_open = false;
+                        root.pane_selected(idx);
+                    }
+                    dismiss_dropdown => {
+                        root.dropdown_open = false;
+                    }
                 }
 
                 Rectangle {

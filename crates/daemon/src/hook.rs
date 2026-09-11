@@ -3140,6 +3140,184 @@ mod tests {
     }
 
     #[test]
+    fn tilt_hold_with_rapid_hardware_repeats_swallows_subsequent_ticks() {
+        let mut rt = test_runtime(
+            Shortcut::parse("win+backtick").unwrap(),
+            Shortcut::parse("alt+backtick").unwrap(),
+        );
+        rt.mouse = MouseMapping {
+            enabled: true,
+            thumb_back: None,
+            thumb_forward: None,
+            tilt_left: Some(Command::ShowDesktop),
+            tilt_right: Some(Command::TaskView),
+        };
+
+        let mut queue = Vec::new();
+        let tilt_left_data = (-120i16 as u16 as u32) << 16;
+
+        // 20 consecutive events arriving at 100ms intervals (t=1000, 1100, 1200, ... 2900)
+        let mut swallowed_count = 0;
+        for i in 0..20 {
+            let t = 1000 + i * 100;
+            let res = handle_mouse_event_with_sink(
+                &mut rt,
+                WM_MOUSEHWHEEL,
+                tilt_left_data,
+                |_| false,
+                t,
+                |c| {
+                    queue.push(c);
+                    true
+                },
+            );
+            if res == MouseHandleResult::Swallow {
+                swallowed_count += 1;
+            }
+        }
+
+        assert_eq!(
+            swallowed_count, 20,
+            "all tilt events are swallowed by the hook"
+        );
+        assert_eq!(
+            queue.len(),
+            1,
+            "exactly one command enqueued across 2.0s sustained hold"
+        );
+        assert_eq!(queue[0], Command::ShowDesktop.as_u8());
+    }
+
+    #[test]
+    fn tilt_quiet_period_boundary_at_399ms_and_400ms() {
+        let mut rt = test_runtime(
+            Shortcut::parse("win+backtick").unwrap(),
+            Shortcut::parse("alt+backtick").unwrap(),
+        );
+        rt.mouse = MouseMapping {
+            enabled: true,
+            thumb_back: None,
+            thumb_forward: None,
+            tilt_left: Some(Command::ShowDesktop),
+            tilt_right: Some(Command::TaskView),
+        };
+
+        let mut queue = Vec::new();
+        let tilt_left_data = (-120i16 as u16 as u32) << 16;
+
+        // Actuation at t=1000
+        handle_mouse_event_with_sink(
+            &mut rt,
+            WM_MOUSEHWHEEL,
+            tilt_left_data,
+            |_| false,
+            1000,
+            |c| {
+                queue.push(c);
+                true
+            },
+        );
+        assert_eq!(queue.len(), 1);
+
+        // Hardware repeat tick at t=1080 (arms lockout)
+        handle_mouse_event_with_sink(
+            &mut rt,
+            WM_MOUSEHWHEEL,
+            tilt_left_data,
+            |_| false,
+            1080,
+            |c| {
+                queue.push(c);
+                true
+            },
+        );
+        assert_eq!(queue.len(), 1);
+
+        // Next tick arrives at 1080 + 399 = 1479ms (< 400ms quiet period boundary)
+        handle_mouse_event_with_sink(
+            &mut rt,
+            WM_MOUSEHWHEEL,
+            tilt_left_data,
+            |_| false,
+            1479,
+            |c| {
+                queue.push(c);
+                true
+            },
+        );
+        assert_eq!(queue.len(), 1, "event at 399ms must remain locked out");
+
+        // Next tick arrives at 1479 + 400 = 1879ms (>= 400ms quiet period boundary: lockout disarmed)
+        handle_mouse_event_with_sink(
+            &mut rt,
+            WM_MOUSEHWHEEL,
+            tilt_left_data,
+            |_| false,
+            1879,
+            |c| {
+                queue.push(c);
+                true
+            },
+        );
+        assert_eq!(
+            queue.len(),
+            2,
+            "event at >=400ms quiet period disarms lockout and actuates"
+        );
+    }
+
+    #[test]
+    fn tilt_hold_alternating_directions_maintains_lockout_per_gesture() {
+        let mut rt = test_runtime(
+            Shortcut::parse("win+backtick").unwrap(),
+            Shortcut::parse("alt+backtick").unwrap(),
+        );
+        rt.mouse = MouseMapping {
+            enabled: true,
+            thumb_back: None,
+            thumb_forward: None,
+            tilt_left: Some(Command::ShowDesktop),
+            tilt_right: Some(Command::TaskView),
+        };
+
+        let mut queue = Vec::new();
+        let tilt_left_data = (-120i16 as u16 as u32) << 16;
+        let tilt_right_data = (120i16 as u16 as u32) << 16;
+
+        // Initial left tilt at t=1000
+        handle_mouse_event_with_sink(
+            &mut rt,
+            WM_MOUSEHWHEEL,
+            tilt_left_data,
+            |_| false,
+            1000,
+            |c| {
+                queue.push(c);
+                true
+            },
+        );
+        assert_eq!(queue.len(), 1);
+
+        // Rapid hardware bounce / direction alternation at t=1050 (right tilt)
+        handle_mouse_event_with_sink(
+            &mut rt,
+            WM_MOUSEHWHEEL,
+            tilt_right_data,
+            |_| false,
+            1050,
+            |c| {
+                queue.push(c);
+                true
+            },
+        );
+        assert_eq!(
+            queue.len(),
+            1,
+            "alternating tilt direction during hold does not circumvent lockout"
+        );
+    }
+
+    #[test]
     fn ring_full_increments_dropped_metric_on_mouse_event() {
         let mut rt = test_runtime(
             Shortcut::parse("win+backtick").unwrap(),

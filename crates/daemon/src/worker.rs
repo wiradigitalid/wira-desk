@@ -747,4 +747,30 @@ mod tests {
             execute_mouse_navigation(cmd);
         }
     }
+
+    #[test]
+    fn snap_commands_from_mouse_dispatch_to_planning() {
+        for cmd in [
+            Command::SnapLeft,
+            Command::SnapRight,
+            Command::SnapTop,
+            Command::SnapBottom,
+            Command::SnapMaximize,
+            Command::SnapThirdLeft,
+            Command::SnapThirdMiddle,
+            Command::SnapThirdRight,
+            Command::SnapPercentLeft,
+            Command::SnapPercentRight,
+            Command::SnapPercentTop,
+            Command::SnapPercentBottom,
+            Command::OverlappingStack,
+            Command::MoveToNextMonitor,
+        ] {
+            match cmd {
+                Command::OverlappingStack => execute_stack(),
+                Command::MoveToNextMonitor => execute_monitor_move(),
+                _ => execute_snap(cmd),
+            }
+        }
+    }
 }

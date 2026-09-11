@@ -801,10 +801,10 @@ rtm:
   - config::tests::reload_with_all_20_mouse_action_presets_is_accepted
   - worker::tests::snap_commands_from_mouse_dispatch_to_planning
   - commands::tests::all_mouse_action_presets_have_corresponding_command_execution
-  status: ready-for-agent
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-4
   CAP: CAP-17
   FR: FR-30
@@ -817,10 +817,10 @@ rtm:
   - hook::tests::tilt_hold_with_rapid_hardware_repeats_swallows_subsequent_ticks
   - hook::tests::tilt_hold_alternating_directions_maintains_lockout_per_gesture
   - hook::tests::tilt_quiet_period_boundary_at_399ms_and_400ms
-  status: ready-for-agent
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-4
   CAP: CAP-17
   FR: FR-30
@@ -887,10 +887,10 @@ rtm:
   - config::tests::reload_with_all_20_mouse_action_presets_is_accepted
   - worker::tests::snap_commands_from_mouse_dispatch_to_planning
   - commands::tests::all_mouse_action_presets_have_corresponding_command_execution
-  status: ready-for-agent
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-4
   CAP: CAP-17
   FR: FR-31
@@ -903,10 +903,10 @@ rtm:
   - hook::tests::tilt_hold_with_rapid_hardware_repeats_swallows_subsequent_ticks
   - hook::tests::tilt_hold_alternating_directions_maintains_lockout_per_gesture
   - hook::tests::tilt_quiet_period_boundary_at_399ms_and_400ms
-  status: ready-for-agent
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-4
   CAP: CAP-17
   FR: FR-31
@@ -972,10 +972,10 @@ rtm:
   test:
   - config::tests::snap_middle_third_display_label_matches_shortcuts_pane
   - app::tests::mouse_preset_dropdown_displays_snap_to_middle_third
-  status: ready-for-agent
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-4
   CAP: CAP-17
   FR: FR-32
@@ -987,10 +987,10 @@ rtm:
   test:
   - app::tests::switching_panes_while_dropdown_open_automatically_dismisses_overlay
   - app::tests::clicking_sidebar_outside_content_dismisses_preset_overlay
-  status: ready-for-agent
+  status: done
   exempt: false
-  green: false
-  broken_at: status
+  green: true
+  broken_at: ''
 - BG: BG-4
   CAP: CAP-17
   FR: FR-32

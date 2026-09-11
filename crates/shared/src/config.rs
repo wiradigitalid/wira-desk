@@ -284,7 +284,7 @@ impl MouseActionPreset {
             Self::SnapTop => "Snap Window Top",
             Self::SnapBottom => "Snap Window Bottom",
             Self::SnapThirdLeft => "Snap Left Third",
-            Self::SnapThirdCenter => "Snap Center Third",
+            Self::SnapThirdCenter => "Snap to middle third",
             Self::SnapThirdRight => "Snap Right Third",
             Self::SnapPercentLeft => "Snap Custom % Left",
             Self::SnapPercentRight => "Snap Custom % Right",
@@ -998,5 +998,13 @@ mod tests {
 
         assert_eq!(MouseActionPreset::from_index(20), None);
         assert_eq!(MouseActionPreset::parse_slug("invalid_preset_xyz"), None);
+    }
+
+    #[test]
+    fn snap_middle_third_display_label_matches_shortcuts_pane() {
+        assert_eq!(
+            MouseActionPreset::SnapThirdCenter.display_label(),
+            "Snap to middle third"
+        );
     }
 }

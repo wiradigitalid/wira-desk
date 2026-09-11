@@ -3,7 +3,7 @@ id: SPEC-10-04
 component: window-management
 satisfies: [UC-13]
 blocked_by: []
-status: ready-for-agent
+status: done
 tests:
   - hook::tests::tilt_hold_with_rapid_hardware_repeats_swallows_subsequent_ticks
   - hook::tests::tilt_hold_alternating_directions_maintains_lockout_per_gesture

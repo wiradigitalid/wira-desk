@@ -3,7 +3,7 @@ id: SPEC-10-01
 component: settings
 satisfies: [UC-14]
 blocked_by: []
-status: ready-for-agent
+status: done
 tests:
   - config::tests::snap_middle_third_display_label_matches_shortcuts_pane
   - app::tests::mouse_preset_dropdown_displays_snap_to_middle_third

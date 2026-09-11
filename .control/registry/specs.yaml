@@ -958,7 +958,7 @@ specs:
     release: "0.3.0"
     prd: [wira-desk]
     size: M
-    status: draft
+    status: closed
     depends_on: [SPEC-9]
     spec_folder: .scratch/spec-10-mouse-navigation-followup/
     fr: [FR-30, FR-31, FR-32]

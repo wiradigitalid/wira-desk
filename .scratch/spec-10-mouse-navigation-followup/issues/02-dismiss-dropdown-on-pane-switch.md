@@ -3,7 +3,7 @@ id: SPEC-10-02
 component: settings
 satisfies: [UC-14]
 blocked_by: []
-status: ready-for-agent
+status: done
 tests:
   - app::tests::switching_panes_while_dropdown_open_automatically_dismisses_overlay
   - app::tests::clicking_sidebar_outside_content_dismisses_preset_overlay

@@ -114,10 +114,20 @@ export component SidebarItem inherits Rectangle {
 
 export component Sidebar inherits Rectangle {
     in property <int> current_pane: 0;
+    in property <bool> dropdown_open: false;
     callback pane_selected(int);
+    callback dismiss_dropdown();
 
     width: 175px;
     background: Palette.bg_sidebar;
+
+    sidebar_bg_touch := TouchArea {
+        clicked => {
+            if root.dropdown_open {
+                root.dismiss_dropdown();
+            }
+        }
+    }
 
     VerticalLayout {
         padding-top: 12px;

@@ -3,7 +3,7 @@ spec: SPEC-10
 release: "0.3.0"
 prd: wira-desk
 fr: [FR-30, FR-31, FR-32]
-status: draft
+status: closed
 ---
 
 # SPEC-10 — Mouse Navigation Follow-up & Hardware Lifecycle Polish
