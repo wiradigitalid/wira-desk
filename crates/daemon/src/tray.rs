@@ -23,7 +23,7 @@ use windows_sys::Win32::UI::WindowsAndMessaging::{
     FindWindowW, GetMessageW, GetWindowLongPtrW, PostQuitMessage, PostThreadMessageW,
     RegisterClassW, RegisterWindowMessageW, SetWindowLongPtrW, TranslateMessage, CREATESTRUCTW,
     GWLP_USERDATA, HICON, MSG, MSGFLT_ALLOW, WM_CONTEXTMENU, WM_CREATE, WM_DESTROY, WM_RBUTTONUP,
-    WNDCLASSW, WS_EX_TOOLWINDOW, WS_OVERLAPPED,
+    WM_TIMER, WNDCLASSW, WS_EX_TOOLWINDOW, WS_OVERLAPPED,
 };
 
 use shared::constants::{
@@ -306,6 +306,7 @@ unsafe fn wndproc_impl(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> 
         let cs = lparam as *const CREATESTRUCTW;
         let data_ptr = (*cs).lpCreateParams as isize;
         SetWindowLongPtrW(hwnd, GWLP_USERDATA, data_ptr);
+        worker::set_worker_hwnd(hwnd);
         return DefWindowProcW(hwnd, msg, wparam, lparam);
     }
 
@@ -339,6 +340,10 @@ unsafe fn wndproc_impl(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> 
         }
         m if m == WM_APP_COMMAND_READY => {
             worker::drain_commands();
+            0
+        }
+        WM_TIMER => {
+            worker::handle_timer(hwnd, wparam);
             0
         }
         m if m == WM_APP_HOOK_READY => {

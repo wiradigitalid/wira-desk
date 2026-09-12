@@ -10,10 +10,10 @@ date: 2026-09-12
 
 Iteration: 1 (boundary: in progress)
 Run branch: autopilot/DEC-025, PR not opened yet
-Stopped at: in progress (SPEC-12 delivered and closed, proceeding to SPEC-13)
+Stopped at: in progress (SPEC-13-01 delivered, proceeding to SPEC-13-02)
 Blocked: —
 Parked: —
-Next: SPEC-13 implementation
+Next: SPEC-13-02 implementation
 
 ## Decisions
 
@@ -25,3 +25,4 @@ Next: SPEC-13 implementation
 | Iter 1 | SPEC-12-01 | Restructured About pane with 3-pillar statement, in-process disclosure, OpenLinkIcon vector path, and reordered hierarchy | Stale single-feature copy and plain text links | About pane remains outdated across pillars | crates/settings/ui/panes/about_pane.slint, crates/settings/src/app.rs |
 | Iter 1 | SPEC-12-02 | Added click-absorbing inert TouchArea on category headers with default cursor | Allowing clicks to fall through to backdrop dismiss | Accidental category clicks dismiss dropdown overlay | crates/settings/ui/main_window.slint, crates/settings/src/app.rs |
 | Iter 1 | SPEC-12-03 | Bound Save Changes visual styling and enabled state to is_dirty with accessible-action-default gating | Static active styling while clean and un-gated accessible action | Clean configuration allows redundant save clicks and lacks visual dirty feedback | crates/settings/ui/main_window.slint, crates/settings/src/app.rs |
+| Iter 1 | SPEC-13-01 | Implemented same-app visual switcher tracer with DWM thumbnail projection, Worker hold timer, watchdog, and cross-thread sync | Blind cycle only or heavy UI framework in daemon | Feature undemoable and blind cycle hard to navigate across many windows | crates/shared/src/commands.rs, crates/daemon/src/switcher/, crates/daemon/src/hook.rs, crates/daemon/src/worker.rs, crates/daemon/src/tray.rs |
