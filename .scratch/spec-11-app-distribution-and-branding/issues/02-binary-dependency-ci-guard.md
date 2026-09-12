@@ -3,7 +3,7 @@ id: SPEC-11-02
 component: window-management
 satisfies: []
 blocked_by: [SPEC-11-01]
-status: ready-for-agent
+status: done
 tests:
   - shared::binary::tests::pe_import_scanner_detects_dynamic_msvc_imports
   - shared::binary::tests::pe_import_scanner_passes_clean_static_binary

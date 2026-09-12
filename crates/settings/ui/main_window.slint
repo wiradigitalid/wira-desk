@@ -136,6 +136,9 @@ export component MainWindow inherits Window {
     callback check_updates_clicked();
     callback install_update_clicked();
     callback check_updates_toggled(bool);
+    callback open_publisher_url();
+    callback open_source_url();
+    callback open_support_url();
     in property <string> app_version: "0.1.0";
     in property <string> app_typeface: "Segoe UI Variable Text (System Loaded)";
 
@@ -299,7 +302,14 @@ export component MainWindow inherits Window {
 
                 Sidebar {
                     current_pane: root.current_pane;
-                    pane_selected(idx) => { root.pane_selected(idx); }
+                    dropdown_open: root.dropdown_open;
+                    pane_selected(idx) => {
+                        root.dropdown_open = false;
+                        root.pane_selected(idx);
+                    }
+                    dismiss_dropdown => {
+                        root.dropdown_open = false;
+                    }
                 }
 
                 Rectangle {
@@ -401,6 +411,9 @@ export component MainWindow inherits Window {
                                 check_updates_clicked => { root.check_updates_clicked(); }
                                 install_update_clicked => { root.install_update_clicked(); }
                                 check_updates_toggled(val) => { root.check_updates_toggled(val); }
+                                open_publisher_url => { root.open_publisher_url(); }
+                                open_source_url => { root.open_source_url(); }
+                                open_support_url => { root.open_support_url(); }
                             }
                         }
                     }

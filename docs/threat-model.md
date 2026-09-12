@@ -82,10 +82,20 @@ bounded, and the bound is enforced by design rather than by review:
 - Matched shortcuts are swallowed; modifier releases are never swallowed. Swallowing a
   modifier release leaves the focused application believing the key is still held, which is
   a worse bug than an occasional Start Menu.
-- There is no network path in the product. No socket, HTTP client, or telemetry call exists
-  in `crates/`.
+- Outbound network requests are strictly limited to the updater. No background socket or telemetry
+  exists in `crates/`. Outbound HTTPS is restricted to `github.com/wiradigitalid/wira-desk` for
+  version check (`latest.json`) and user-confirmed installer downloads.
 
 ## Trust boundaries and attack surface
+
+### Outbound network boundary and updater trust model
+
+The application contains an updater module (`WinHttp` in `crates/daemon/src/updatecheck.rs` and `crates/settings/src/update.rs`). Its trust boundary is bounded and transparent:
+
+- **Strict host and path pinning:** Outbound HTTPS requests are hardcoded to `github.com/wiradigitalid/wira-desk`. Any URL outside this origin or using insecure protocols is rejected.
+- **Payload integrity:** Version descriptors (`latest.json`) are parsed under strict size caps (`DESCRIPTOR_LIMIT`). Binary setup installers are verified against published SHA-256 digests prior to launching.
+- **User consent & elevation boundary:** The installer executable is downloaded only upon explicit user action ("Download and install" in Settings). Launching Setup triggers the standard Windows UAC prompt for elevation, ensuring administrative consent is never bypassed silently.
+- **Opt-out:** Automatic update checking can be toggled off completely in Settings.
 
 ### Configuration is written at medium integrity and read at high
 

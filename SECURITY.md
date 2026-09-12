@@ -12,8 +12,14 @@ Two facts most people want up front:
 - **No keystroke content is recorded.** The hook reads virtual-key codes to match the two
   configured shortcuts and writes none of them to disk, to the log, or to the debug trace.
   No logging call in the codebase takes a key value as an argument.
-- **There is no network path.** No socket, HTTP client, update check, or telemetry exists in
-  the source. Configuration and logs stay in `%APPDATA%\WiraDesk\`.
+- **No telemetry, no user account, no background updater service.** The application makes two
+  distinct outbound HTTPS requests to GitHub under `github.com/wiradigitalid/wira-desk`:
+  1. An update check request (automated or on-demand) fetching version descriptor `latest.json`.
+  2. An installer download request fetching the release setup executable, initiated ONLY when the
+     user explicitly clicks 'Download and install' in Settings.
+  Both requests carry zero machine, user, or configuration telemetry. Update checking can be
+  fully disabled in Settings. Update binaries are verified against published SHA-256 digests
+  before execution. Configuration and logs stay in `%APPDATA%\WiraDesk\`.
 
 ## Reporting a vulnerability
 

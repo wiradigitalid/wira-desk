@@ -158,4 +158,34 @@ mod tests {
         assert_eq!(Command::TaskView as u8, 18);
         assert_eq!(Command::ShowDesktop as u8, 19);
     }
+
+    #[test]
+    fn all_mouse_action_presets_have_corresponding_command_execution() {
+        use crate::config::MouseActionPreset;
+        for preset in MouseActionPreset::ALL {
+            let cmd = match preset {
+                MouseActionPreset::NextVirtualDesktop => Command::NextVirtualDesktop,
+                MouseActionPreset::PrevVirtualDesktop => Command::PrevVirtualDesktop,
+                MouseActionPreset::TaskView => Command::TaskView,
+                MouseActionPreset::ShowDesktop => Command::ShowDesktop,
+                MouseActionPreset::CycleForward => Command::Cycle,
+                MouseActionPreset::SnapLeft => Command::SnapLeft,
+                MouseActionPreset::SnapRight => Command::SnapRight,
+                MouseActionPreset::SnapTop => Command::SnapTop,
+                MouseActionPreset::SnapBottom => Command::SnapBottom,
+                MouseActionPreset::SnapThirdLeft => Command::SnapThirdLeft,
+                MouseActionPreset::SnapThirdCenter => Command::SnapThirdMiddle,
+                MouseActionPreset::SnapThirdRight => Command::SnapThirdRight,
+                MouseActionPreset::SnapPercentLeft => Command::SnapPercentLeft,
+                MouseActionPreset::SnapPercentRight => Command::SnapPercentRight,
+                MouseActionPreset::SnapPercentTop => Command::SnapPercentTop,
+                MouseActionPreset::SnapPercentBottom => Command::SnapPercentBottom,
+                MouseActionPreset::Maximize => Command::SnapMaximize,
+                MouseActionPreset::OverlappingStack => Command::OverlappingStack,
+                MouseActionPreset::MoveNextMonitor => Command::MoveToNextMonitor,
+                MouseActionPreset::Passthrough => Command::Nop,
+            };
+            assert_ne!(cmd.as_u8(), 255);
+        }
+    }
 }

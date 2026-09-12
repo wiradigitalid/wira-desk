@@ -179,6 +179,9 @@ pub(crate) fn sync_model_to_ui(window: &MainWindow, model: &SettingsModel) {
     } else {
         // Navigation Pane
         window.set_current_pane(model.pane as i32);
+        if model.pane != Pane::Mouse {
+            window.set_dropdown_open(false);
+        }
 
         // General
         window.set_auto_start(model.draft.general.auto_start);
@@ -418,6 +421,9 @@ pub(crate) fn bind_callbacks(
         let window_weak = main_window.as_weak();
         let uncommitted_pct = Rc::clone(&uncommitted_percent);
         main_window.on_pane_selected(move |idx| {
+            if let Some(w) = window_weak.upgrade() {
+                w.set_dropdown_open(false);
+            }
             let mut m = model_rc.borrow_mut();
             if let Some((field, val)) = uncommitted_pct.borrow_mut().take() {
                 if let Some((min, max)) = field.percent_bounds() {
@@ -1238,6 +1244,16 @@ fn main() -> Result<(), slint::PlatformError> {
             update::open_in_browser(&release.notes_url);
         });
     }
+
+    main_window.on_open_publisher_url(|| {
+        update::open_in_browser("https://wiradigital.id");
+    });
+    main_window.on_open_source_url(|| {
+        update::open_in_browser("https://github.com/wiradigitalid/wira-desk/");
+    });
+    main_window.on_open_support_url(|| {
+        update::open_in_browser("https://wiradigital.id/wira-desk");
+    });
 
     let update_timer = slint::Timer::default();
     {

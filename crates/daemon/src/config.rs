@@ -706,4 +706,36 @@ snap_half_bottom = \"ctrl+alt+up\"
             }
         }
     }
+
+    #[test]
+    fn reload_with_all_20_mouse_action_presets_is_accepted() {
+        for preset in shared::MouseActionPreset::ALL {
+            let toml = format!(
+                r#"
+                [general]
+                auto_start = false
+                [switcher]
+                shortcut = "win+backtick"
+                fallback_shortcut = "alt+backtick"
+                [mouse]
+                enabled = true
+                thumb_back = "{}"
+                thumb_forward = "{}"
+                tilt_left = "{}"
+                tilt_right = "{}"
+                "#,
+                preset.as_str(),
+                preset.as_str(),
+                preset.as_str(),
+                preset.as_str(),
+            );
+            let res = validate(&toml);
+            assert!(
+                res.is_ok(),
+                "validate must accept preset {} on all mouse buttons, got {:?}",
+                preset.as_str(),
+                res.err()
+            );
+        }
+    }
 }

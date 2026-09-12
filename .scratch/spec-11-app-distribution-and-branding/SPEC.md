@@ -1,3 +1,11 @@
+---
+spec: SPEC-11
+release: "0.3.0"
+prd: wira-desk
+fr: []
+status: closed
+---
+
 # SPEC-11: Application Distribution, Static C-Runtime, and About Pane Branding
 
 ## Problem Statement

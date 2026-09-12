@@ -3,7 +3,7 @@ id: SPEC-10-03
 component: window-management
 satisfies: [UC-13]
 blocked_by: []
-status: ready-for-agent
+status: done
 tests:
   - config::tests::reload_with_all_20_mouse_action_presets_is_accepted
   - worker::tests::snap_commands_from_mouse_dispatch_to_planning

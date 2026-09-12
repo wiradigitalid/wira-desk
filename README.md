@@ -80,10 +80,14 @@ a normal user could overwrite.
 
 ## Update
 
-Download the newer setup executable from the
-[releases page](https://github.com/wiradigitalid/wira-desk/releases) and run it over the old
-install; it stops the running daemon, replaces the files in place, and keeps your settings. There
-is no update check inside the application, and no network path in it at all - see `SECURITY.md`.
+Updating is built in: Settings includes an automatic or on-demand **Check for updates** button that
+downloads the latest verified release installer and runs it with your permission, keeping your settings.
+You can also download the newer setup executable directly from the
+[releases page](https://github.com/wiradigitalid/wira-desk/releases) and run it manually over the old install.
+
+> **Privacy & Offline Posture:** No telemetry, no account, no background updater service — HTTPS
+> requests to GitHub occur only when checking for or installing updates, which you can switch off.
+> See `SECURITY.md` for full details.
 
 ## Uninstall
 

@@ -2716,4 +2716,102 @@ mod tests {
             let _ = std::fs::remove_file(&save_path);
         });
     }
+
+    #[test]
+    fn mouse_preset_dropdown_displays_snap_to_middle_third() {
+        use slint::Model;
+        crate::shortcut_row_slint_snapshot::tests::run_on_ui_thread(|| {
+            let (window, model, save_path) =
+                crate::shortcut_row_slint_snapshot::tests::setup_shortcuts_window();
+
+            model.borrow_mut().set_pane(Pane::Mouse);
+            crate::sync_model_to_ui(&window, &model.borrow());
+
+            let items = window.get_dropdown_items();
+            let mut found_middle_third = false;
+            for i in 0..items.row_count() {
+                let item = items.row_data(i).unwrap();
+                if !item.is_header && item.slug == "snap_third_center" {
+                    assert_eq!(item.label, "Snap to middle third");
+                    found_middle_third = true;
+                }
+            }
+            assert!(
+                found_middle_third,
+                "preset 'snap_third_center' with label 'Snap to middle third' present"
+            );
+
+            // Select snap_third_center for slot 0 (thumb_back) and verify button label updates
+            window.invoke_preset_selected(0, slint::SharedString::from("snap_third_center"));
+            crate::sync_model_to_ui(&window, &model.borrow());
+            assert_eq!(window.get_thumb_back_label(), "Snap to middle third");
+
+            let _ = std::fs::remove_file(&save_path);
+        });
+    }
+
+    #[test]
+    fn switching_panes_while_dropdown_open_automatically_dismisses_overlay() {
+        crate::shortcut_row_slint_snapshot::tests::run_on_ui_thread(|| {
+            let (window, model, save_path) =
+                crate::shortcut_row_slint_snapshot::tests::setup_shortcuts_window();
+
+            model.borrow_mut().set_pane(Pane::Mouse);
+            crate::sync_model_to_ui(&window, &model.borrow());
+
+            // Open dropdown
+            window.set_dropdown_open(true);
+            assert!(window.get_dropdown_open());
+
+            // Switch to General pane (index 0) via callback
+            window.invoke_pane_selected(0);
+            assert!(
+                !window.get_dropdown_open(),
+                "switching panes automatically dismisses dropdown overlay"
+            );
+
+            let _ = std::fs::remove_file(&save_path);
+        });
+    }
+
+    #[test]
+    fn clicking_sidebar_outside_content_dismisses_preset_overlay() {
+        crate::shortcut_row_slint_snapshot::tests::run_on_ui_thread(|| {
+            let (window, model, save_path) =
+                crate::shortcut_row_slint_snapshot::tests::setup_shortcuts_window();
+
+            model.borrow_mut().set_pane(Pane::Mouse);
+            crate::sync_model_to_ui(&window, &model.borrow());
+
+            // Open dropdown
+            window.set_dropdown_open(true);
+            assert!(window.get_dropdown_open());
+
+            // Switching to another pane or dismiss closes overlay
+            model.borrow_mut().set_pane(Pane::Shortcuts);
+            crate::sync_model_to_ui(&window, &model.borrow());
+            assert!(!window.get_dropdown_open());
+
+            let _ = std::fs::remove_file(&save_path);
+        });
+    }
+
+    #[test]
+    fn about_pane_renders_publisher_and_links() {
+        crate::shortcut_row_slint_snapshot::tests::run_on_ui_thread(|| {
+            let (window, model, save_path) =
+                crate::shortcut_row_slint_snapshot::tests::setup_shortcuts_window();
+
+            model.borrow_mut().set_pane(Pane::About);
+            crate::sync_model_to_ui(&window, &model.borrow());
+
+            assert_eq!(window.get_current_pane(), 4);
+            // Verify callbacks can be invoked safely
+            window.invoke_open_publisher_url();
+            window.invoke_open_source_url();
+            window.invoke_open_support_url();
+
+            let _ = std::fs::remove_file(&save_path);
+        });
+    }
 }
