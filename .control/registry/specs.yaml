@@ -1063,5 +1063,54 @@ specs:
           - shared::update::tests::a_checksum_that_is_not_sha256_is_refused
           - shared::update::tests::a_download_url_off_this_repository_is_refused
 
+  - id: SPEC-12
+    release: "0.3.0"
+    prd: [wira-desk]
+    size: M
+    status: open
+    depends_on: [SPEC-11]
+    spec_folder: .scratch/spec-12-about-pane-and-settings-polish/
+    fr: []
+    # Second-opinion peer review (Sonnet, 2026-09-12): structure+prose+edge-case-hunter pass over
+    # SPEC.md and all three ticket files. Found and fixed in place, before this stamp: (1) the About
+    # pane's open_publisher_url() callback relocation and the "Report an Issue" wording question were
+    # left implicit -- both now explicit AC in ticket 01; (2) the updater-disclosure wording diverged
+    # from the handover's T2 draft with no reconciliation -- SPEC.md now declares this spec's wording
+    # canonical and supersedes T2; (3) ticket 03's accessible-action-default binding bypassed the
+    # TouchArea's `enabled` gate entirely, letting assistive tech trigger Save while clean -- now an
+    # explicit AC. Clean after these fixes; stamped against the sha below.
+    spec_reviewed:
+      date: "2026-09-12"
+      sha: "dbab74c"
+      lenses: [structure, prose, edge-case-hunter]
+    tickets:
+      - id: SPEC-12-01
+        title: About pane product pillars, in-process disclosure, and external link icons
+        spec_folder: .scratch/spec-12-about-pane-and-settings-polish/
+        component: settings
+        satisfies: []
+        depends_on: []
+        tests:
+          - app::tests::about_pane_renders_three_pillars_description
+          - app::tests::about_pane_renders_in_process_disclosure
+          - app::tests::about_pane_renders_open_link_icons_and_reordered_hierarchy
+      - id: SPEC-12-02
+        title: Mouse preset dropdown category header inertness and click absorption
+        spec_folder: .scratch/spec-12-about-pane-and-settings-polish/
+        component: settings
+        satisfies: []
+        depends_on: []
+        tests:
+          - app::tests::clicking_preset_dropdown_category_header_does_not_dismiss_overlay
+      - id: SPEC-12-03
+        title: Save Changes button dirty state visual affordance
+        spec_folder: .scratch/spec-12-about-pane-and-settings-polish/
+        component: settings
+        satisfies: []
+        depends_on: []
+        tests:
+          - app::tests::save_changes_button_disabled_when_clean_and_enabled_when_dirty
+
+
 
 

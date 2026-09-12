@@ -23,6 +23,12 @@ dag:
     - SPEC-11-02
     - SPEC-11-03
     - SPEC-11-04
+- spec: SPEC-12
+  order:
+  - parallel:
+    - SPEC-12-01
+    - SPEC-12-02
+    - SPEC-12-03
 - spec: SPEC-2
   order:
   - parallel:
