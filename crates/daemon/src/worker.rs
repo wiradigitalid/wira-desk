@@ -259,13 +259,24 @@ fn open_visual_switcher(hwnd: windows_sys::Win32::Foundation::HWND) {
     }
 
     let origin = SWITCHER_HOLD_ORIGIN.get().unwrap_or(active.foreground);
-    // SAFETY: GetSystemMetrics reads primary screen bounds without pointers.
-    let work_area = crate::switcher::layout::Rect::new(
-        0,
-        0,
-        unsafe { windows_sys::Win32::UI::WindowsAndMessaging::GetSystemMetrics(0) },
-        unsafe { windows_sys::Win32::UI::WindowsAndMessaging::GetSystemMetrics(1) },
-    );
+    let work_area = if let Some(ctx) = crate::arrangement::win32::resolve_context_for(
+        origin.0 as windows_sys::Win32::Foundation::HWND,
+    ) {
+        crate::switcher::layout::Rect::new(
+            ctx.work_area.rect.left,
+            ctx.work_area.rect.top,
+            ctx.work_area.rect.width(),
+            ctx.work_area.rect.height(),
+        )
+    } else {
+        // SAFETY: GetSystemMetrics reads primary screen bounds without pointers.
+        crate::switcher::layout::Rect::new(
+            0,
+            0,
+            unsafe { windows_sys::Win32::UI::WindowsAndMessaging::GetSystemMetrics(0) },
+            unsafe { windows_sys::Win32::UI::WindowsAndMessaging::GetSystemMetrics(1) },
+        )
+    };
 
     SWITCHER.with(|s| {
         s.borrow_mut().open(origin, work_area, eligible_ordered, 0);

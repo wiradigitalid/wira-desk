@@ -8,11 +8,13 @@ use windows_sys::Win32::Graphics::Dwm::{
 };
 use windows_sys::Win32::Graphics::Gdi::{
     BeginPaint, CreateCompatibleBitmap, CreateCompatibleDC, CreateSolidBrush, DeleteDC,
-    DeleteObject, EndPaint, FillRect, SelectObject, PAINTSTRUCT,
+    DeleteObject, DrawTextW, EndPaint, FillRect, FrameRect, SelectObject, SetBkMode, SetTextColor,
+    DT_CENTER, DT_SINGLELINE, DT_VCENTER, PAINTSTRUCT, TRANSPARENT,
 };
 use windows_sys::Win32::UI::WindowsAndMessaging::{
-    CreateWindowExW, DefWindowProcW, DestroyWindow, GetClientRect, RegisterClassExW, ShowWindow,
-    CS_HREDRAW, CS_VREDRAW, SW_HIDE, SW_SHOWNOACTIVATE, WNDCLASSEXW, WS_EX_NOACTIVATE,
+    CreateWindowExW, DefWindowProcW, DestroyWindow, GetClientRect, GetWindowLongPtrW,
+    RegisterClassExW, SetWindowLongPtrW, ShowWindow, CREATESTRUCTW, CS_HREDRAW, CS_VREDRAW,
+    GWLP_USERDATA, SW_HIDE, SW_SHOWNOACTIVATE, WM_CREATE, WNDCLASSEXW, WS_EX_NOACTIVATE,
     WS_EX_TOOLWINDOW, WS_EX_TOPMOST, WS_POPUP,
 };
 
@@ -47,6 +49,7 @@ impl SwitcherOverlay {
                 cards: Vec::new(),
                 total_pages: 0,
                 current_page: 0,
+                page_indicator_rect: None,
             },
             selected_index: 0,
             candidates: Vec::new(),
@@ -147,6 +150,9 @@ impl SwitcherOverlay {
         register_switcher_class();
 
         // SAFETY: `CreateWindowExW` creates a top-level unactivated popup tool window.
+        // `lpCreateParams` passes `self as *mut SwitcherOverlay` which is stored into `GWLP_USERDATA`
+        // on `WM_CREATE`. The pointer remains valid for the window's lifetime because `SwitcherOverlay`
+        // is owned by the worker thread's thread-local `SWITCHER` and is only dismissed/destroyed in-place.
         let hwnd = unsafe {
             CreateWindowExW(
                 WS_EX_TOPMOST | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE,
@@ -160,7 +166,7 @@ impl SwitcherOverlay {
                 0,
                 0,
                 0,
-                std::ptr::null(),
+                self as *mut SwitcherOverlay as *const std::ffi::c_void,
             )
         };
         self.hwnd = hwnd;
@@ -265,6 +271,12 @@ unsafe extern "system" fn switcher_wnd_proc(
     lparam: LPARAM,
 ) -> LRESULT {
     match msg {
+        WM_CREATE => {
+            let cs = lparam as *const CREATESTRUCTW;
+            let data_ptr = (*cs).lpCreateParams as isize;
+            SetWindowLongPtrW(hwnd, GWLP_USERDATA, data_ptr);
+            0
+        }
         windows_sys::Win32::UI::WindowsAndMessaging::WM_PAINT => {
             let mut ps: PAINTSTRUCT = std::mem::zeroed();
             let hdc = BeginPaint(hwnd, &mut ps);
@@ -285,6 +297,79 @@ unsafe extern "system" fn switcher_wnd_proc(
                 let bg_brush = CreateSolidBrush(0x00242020);
                 FillRect(mem_dc, &client_rect, bg_brush);
                 DeleteObject(bg_brush);
+
+                let overlay_ptr = GetWindowLongPtrW(hwnd, GWLP_USERDATA) as *const SwitcherOverlay;
+                if !overlay_ptr.is_null() {
+                    let overlay = &*overlay_ptr;
+                    let per_page = overlay.layout.cols * overlay.layout.rows;
+                    let page_start = overlay.layout.current_page * per_page;
+
+                    for (card_idx, card) in overlay.layout.cards.iter().enumerate() {
+                        let is_selected = (page_start + card_idx) == overlay.selected_index;
+                        let local_x = card.chrome_rect.x - overlay.layout.overlay_rect.x;
+                        let local_y = card.chrome_rect.y - overlay.layout.overlay_rect.y;
+                        let card_rect = RECT {
+                            left: local_x,
+                            top: local_y,
+                            right: local_x + card.chrome_rect.width,
+                            bottom: local_y + card.chrome_rect.height,
+                        };
+
+                        let border_color = if is_selected {
+                            0x00D77800 // Vibrant accent blue in BGR
+                        } else {
+                            0x003A3A3A // Subtle card border in BGR
+                        };
+                        let border_brush = CreateSolidBrush(border_color);
+                        FrameRect(mem_dc, &card_rect, border_brush);
+                        if is_selected {
+                            let inner_rect = RECT {
+                                left: card_rect.left + 1,
+                                top: card_rect.top + 1,
+                                right: card_rect.right - 1,
+                                bottom: card_rect.bottom - 1,
+                            };
+                            FrameRect(mem_dc, &inner_rect, border_brush);
+                        }
+                        DeleteObject(border_brush);
+                    }
+
+                    // Paint page indicator dots if total_pages > 1:
+                    if overlay.layout.total_pages > 1 {
+                        if let Some(indicator_rect) = overlay.layout.page_indicator_rect {
+                            let local_x = indicator_rect.x - overlay.layout.overlay_rect.x;
+                            let local_y = indicator_rect.y - overlay.layout.overlay_rect.y;
+                            let mut text_rect = RECT {
+                                left: local_x,
+                                top: local_y,
+                                right: local_x + indicator_rect.width,
+                                bottom: local_y + indicator_rect.height,
+                            };
+
+                            let mut dot_chars: Vec<u16> = Vec::new();
+                            for p in 0..overlay.layout.total_pages {
+                                if p > 0 {
+                                    dot_chars.push(' ' as u16);
+                                }
+                                if p == overlay.layout.current_page {
+                                    dot_chars.push(0x25CF);
+                                } else {
+                                    dot_chars.push(0x25CB);
+                                }
+                            }
+
+                            SetBkMode(mem_dc, TRANSPARENT as i32);
+                            SetTextColor(mem_dc, 0x00C0C0C0);
+                            DrawTextW(
+                                mem_dc,
+                                dot_chars.as_ptr(),
+                                dot_chars.len() as i32,
+                                &mut text_rect,
+                                DT_CENTER | DT_VCENTER | DT_SINGLELINE,
+                            );
+                        }
+                    }
+                }
 
                 // BitBlt to screen
                 windows_sys::Win32::Graphics::Gdi::BitBlt(

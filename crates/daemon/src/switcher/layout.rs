@@ -39,6 +39,7 @@ pub struct SwitcherLayout {
     pub cards: Vec<CardLayout>,
     pub total_pages: usize,
     pub current_page: usize,
+    pub page_indicator_rect: Option<Rect>,
 }
 
 /// Compute columns, rows, and per-page capacity from work area width and candidate count.
@@ -65,6 +66,7 @@ pub fn compute_layout(work_area: Rect, candidate_count: usize, page: usize) -> S
             cards: Vec::new(),
             total_pages: 0,
             current_page: 0,
+            page_indicator_rect: None,
         };
     }
 
@@ -77,8 +79,9 @@ pub fn compute_layout(work_area: Rect, candidate_count: usize, page: usize) -> S
     let content_w = cols as i32 * CARD_W + (cols as i32 - 1).max(0) * GUTTER;
     let content_h = rows as i32 * CARD_H + (rows as i32 - 1).max(0) * GUTTER;
 
+    let page_indicator_h = if total_pages > 1 { 24 } else { 0 };
     let overlay_w = content_w + 2 * MARGIN;
-    let overlay_h = content_h + 2 * MARGIN;
+    let overlay_h = content_h + 2 * MARGIN + page_indicator_h;
 
     let overlay_x = work_area.x + (work_area.width - overlay_w) / 2;
     let overlay_y = work_area.y + (work_area.height - overlay_h) / 2;
@@ -101,6 +104,17 @@ pub fn compute_layout(work_area: Rect, candidate_count: usize, page: usize) -> S
         });
     }
 
+    let page_indicator_rect = if total_pages > 1 {
+        Some(Rect::new(
+            overlay_x + MARGIN,
+            overlay_y + MARGIN + content_h,
+            content_w,
+            page_indicator_h,
+        ))
+    } else {
+        None
+    };
+
     SwitcherLayout {
         overlay_rect: Rect::new(overlay_x, overlay_y, overlay_w, overlay_h),
         cols,
@@ -108,6 +122,7 @@ pub fn compute_layout(work_area: Rect, candidate_count: usize, page: usize) -> S
         cards,
         total_pages,
         current_page,
+        page_indicator_rect,
     }
 }
 
@@ -127,8 +142,26 @@ pub mod tests {
                     layout.overlay_rect.width,
                     work_area.width
                 );
+                assert!(
+                    layout.overlay_rect.height <= work_area.height,
+                    "overlay height {} exceeds work area height {}",
+                    layout.overlay_rect.height,
+                    work_area.height
+                );
                 assert!(layout.cols >= 1);
                 assert!(layout.rows >= 1 && layout.rows <= MAX_ROWS);
+                assert!(layout.total_pages >= 1);
+
+                // Assert no page is ever empty across all pages
+                for page in 0..layout.total_pages {
+                    let page_layout = compute_layout(work_area, count, page);
+                    assert!(
+                        !page_layout.cards.is_empty(),
+                        "page {} for count {} must not be empty",
+                        page,
+                        count
+                    );
+                }
             }
         }
     }
