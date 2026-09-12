@@ -2796,6 +2796,40 @@ mod tests {
         });
     }
 
+    use slint::ComponentHandle;
+
+    fn find_about_element(
+        window: &crate::MainWindow,
+        label: &str,
+    ) -> Option<i_slint_backend_testing::ElementHandle> {
+        let scroll_by = |delta_y: f32| {
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::PointerScrolled {
+                    position: slint::LogicalPosition::new(300.0, 300.0),
+                    delta_x: 0.0,
+                    delta_y,
+                });
+        };
+
+        scroll_by(1200.0);
+        if let Some(el) =
+            i_slint_backend_testing::ElementHandle::find_by_accessible_label(window, label).next()
+        {
+            return Some(el);
+        }
+        for delta_y in [-200.0, -400.0, -600.0, -800.0, -1000.0] {
+            scroll_by(delta_y);
+            if let Some(el) =
+                i_slint_backend_testing::ElementHandle::find_by_accessible_label(window, label)
+                    .next()
+            {
+                return Some(el);
+            }
+        }
+        None
+    }
+
     #[test]
     fn about_pane_renders_publisher_and_links() {
         crate::shortcut_row_slint_snapshot::tests::run_on_ui_thread(|| {
@@ -2806,6 +2840,98 @@ mod tests {
             crate::sync_model_to_ui(&window, &model.borrow());
 
             assert_eq!(window.get_current_pane(), 4);
+            // Verify callbacks can be invoked safely
+            window.invoke_open_publisher_url();
+            window.invoke_open_source_url();
+            window.invoke_open_support_url();
+
+            let _ = std::fs::remove_file(&save_path);
+        });
+    }
+
+    #[test]
+    fn about_pane_renders_three_pillars_description() {
+        crate::shortcut_row_slint_snapshot::tests::run_on_ui_thread(|| {
+            let (window, model, save_path) =
+                crate::shortcut_row_slint_snapshot::tests::setup_shortcuts_window();
+
+            model.borrow_mut().set_pane(Pane::About);
+            crate::sync_model_to_ui(&window, &model.borrow());
+
+            assert_eq!(window.get_current_pane(), 4);
+
+            let desc = find_about_element(
+                &window,
+                "Wira Desk accelerates desktop multitasking with smooth window switching, flexible edge snapping, and driverless mouse navigation.",
+            );
+            assert!(
+                desc.is_some(),
+                "3-pillar product description found in About pane"
+            );
+
+            let _ = std::fs::remove_file(&save_path);
+        });
+    }
+
+    #[test]
+    fn about_pane_renders_in_process_disclosure() {
+        crate::shortcut_row_slint_snapshot::tests::run_on_ui_thread(|| {
+            let (window, model, save_path) =
+                crate::shortcut_row_slint_snapshot::tests::setup_shortcuts_window();
+
+            model.borrow_mut().set_pane(Pane::About);
+            crate::sync_model_to_ui(&window, &model.borrow());
+
+            assert_eq!(window.get_current_pane(), 4);
+
+            let disclosure = find_about_element(
+                &window,
+                "No telemetry, no account, no separate background service — update checks run entirely in-process against GitHub Releases, which you can switch off.",
+            );
+            assert!(
+                disclosure.is_some(),
+                "In-process disclosure found in About pane"
+            );
+
+            let _ = std::fs::remove_file(&save_path);
+        });
+    }
+
+    #[test]
+    fn about_pane_renders_open_link_icons_and_reordered_hierarchy() {
+        crate::shortcut_row_slint_snapshot::tests::run_on_ui_thread(|| {
+            let (window, model, save_path) =
+                crate::shortcut_row_slint_snapshot::tests::setup_shortcuts_window();
+
+            model.borrow_mut().set_pane(Pane::About);
+            crate::sync_model_to_ui(&window, &model.borrow());
+
+            assert_eq!(window.get_current_pane(), 4);
+
+            let repo_btn = find_about_element(&window, "Source code & issue tracker on GitHub");
+            assert!(repo_btn.is_some(), "Source code button found in About pane");
+
+            let pub_btn = find_about_element(&window, "Publisher website (wiradigital.id)");
+            assert!(
+                pub_btn.is_some(),
+                "Publisher website button found in About pane"
+            );
+
+            let support_btn = find_about_element(&window, "Support development");
+            assert!(
+                support_btn.is_some(),
+                "Support development button found in About pane"
+            );
+
+            let legal_line = find_about_element(
+                &window,
+                "An open-source utility by Wira Digital Indonesia • Licensed under GPL-3.0",
+            );
+            assert!(
+                legal_line.is_some(),
+                "Attribution and licensing line found in About pane"
+            );
+
             // Verify callbacks can be invoked safely
             window.invoke_open_publisher_url();
             window.invoke_open_source_url();

@@ -33,8 +33,8 @@ Execution constraints specified by owner:
 2. Code review performed 2 times: self code review (in-session default, no separate dispatch) + independent peer review shell-out via:
    `$env:ANTHROPIC_BASE_URL = $null; $env:ANTHROPIC_API_KEY = $null; $env:ANTHROPIC_AUTH_TOKEN = $null; $env:CLAUDE_CONFIG_DIR = "$HOME\.claude"; claude --model claude-sonnet-5 --effort high --dangerously-skip-permissions -p "<prompt>"`
 3. Automated smoke testing executed by agent.
-4. Peer review for coding/documents/analysis delegated to Claude Sonnet 5 shell-out — mandate: if draft/code touches architecture spine, SRS, SDD, or SPEC, boleh langsung jalankan `wdi-review` dan edit dokumennya sendiri, tidak perlu tanya dulu.
-5. Application build/run: satu worktree yang sama dipakai bersama untuk semua build/run di run ini (`worktree: .`).
+4. Peer review for coding/documents/analysis delegated to Claude Sonnet 5 shell-out — mandate: if draft/code touches architecture spine, SRS, SDD, or SPEC, run `wdi-review` and edit documents directly without prompting.
+5. Application build/run: one shared worktree used across all build/run operations in this run (`worktree: .`).
 
 ## Why
 

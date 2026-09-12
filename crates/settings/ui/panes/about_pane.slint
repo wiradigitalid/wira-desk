@@ -2,6 +2,25 @@ import { Palette, Typography } from "../theme.slint";
 import { Card, CardDivider } from "../components/card.slint";
 import { SettingToggleRow } from "../components/setting_toggle_row.slint";
 
+component OpenLinkIcon inherits Rectangle {
+    in property <color> icon_color: Palette.text_primary;
+    width: 12px;
+    height: 12px;
+
+    Path {
+        width: 12px;
+        height: 12px;
+        x: 0px;
+        y: 0px;
+        stroke: root.icon_color;
+        stroke-width: 1.2px;
+        MoveTo { x: 5; y: 3; } LineTo { x: 2; y: 3; }
+        LineTo { x: 2; y: 10; } LineTo { x: 9; y: 10; } LineTo { x: 9; y: 7; }
+        MoveTo { x: 6; y: 2; } LineTo { x: 10; y: 2; } LineTo { x: 10; y: 6; }
+        MoveTo { x: 10; y: 2; } LineTo { x: 5; y: 7; }
+    }
+}
+
 export component AboutPane inherits VerticalLayout {
     in property <string> version: "0.1.0";
     in property <string> typeface: "Segoe UI Variable Text (System Loaded)";
@@ -71,7 +90,7 @@ export component AboutPane inherits VerticalLayout {
             spacing: 8px;
 
             Text {
-                text: "Wira Desk switches smoothly between windows of the active application on your current monitor.";
+                text: "Wira Desk accelerates desktop multitasking with smooth window switching, flexible edge snapping, and driverless mouse navigation.";
                 font-family: Typography.font_family;
                 font-size: Typography.size_body;
                 color: Palette.text_secondary;
@@ -219,34 +238,13 @@ export component AboutPane inherits VerticalLayout {
         }
     }
 
-    // Publisher, Source Code, and Licensing Card (SPEC-11-03)
+    // Publisher, Source Code, and Licensing Card (SPEC-11-03, SPEC-12-01)
     Card {
         VerticalLayout {
             padding: 16px;
             spacing: 12px;
 
-            // Publisher Attribution Link
-            HorizontalLayout {
-                alignment: start;
-
-                publisher_touch := TouchArea {
-                    accessible-role: button;
-                    accessible-label: "An open-source utility by Wira Digital Indonesia";
-                    clicked => { root.open_publisher_url(); }
-
-                    Text {
-                        text: "An open-source utility by Wira Digital Indonesia";
-                        font-family: Typography.font_family;
-                        font-size: Typography.size_body;
-                        font-weight: 500;
-                        color: publisher_touch.has_hover ? Palette.accent_hover : Palette.accent_primary;
-                    }
-                }
-            }
-
-            CardDivider {}
-
-            // GitHub Repository & Issues Link
+            // 1. GitHub Repository & Issues Link
             HorizontalLayout {
                 alignment: start;
 
@@ -255,39 +253,64 @@ export component AboutPane inherits VerticalLayout {
                     accessible-label: "Source code & issue tracker on GitHub";
                     clicked => { root.open_source_url(); }
 
-                    Text {
-                        text: "Source code & issue tracker on GitHub";
-                        font-family: Typography.font_family;
-                        font-size: Typography.size_body;
-                        color: repo_touch.has_hover ? Palette.accent_hover : Palette.text_primary;
+                    HorizontalLayout {
+                        spacing: 6px;
+                        alignment: start;
+
+                        Text {
+                            text: "Source code & issue tracker on GitHub";
+                            font-family: Typography.font_family;
+                            font-size: Typography.size_body;
+                            color: repo_touch.has_hover ? Palette.accent_hover : Palette.text_primary;
+                            vertical-alignment: center;
+                        }
+
+                        VerticalLayout {
+                            alignment: center;
+                            OpenLinkIcon {
+                                icon_color: repo_touch.has_hover ? Palette.accent_hover : Palette.text_primary;
+                            }
+                        }
                     }
                 }
             }
 
             CardDivider {}
 
-            // License & Offline Statement
-            VerticalLayout {
-                spacing: 4px;
-                Text {
-                    text: "Licensed under GPL-3.0 • Standalone Desktop Utility";
-                    font-family: Typography.font_family;
-                    font-size: Typography.size_caption;
-                    font-weight: 600;
-                    color: Palette.text_secondary;
-                }
-                Text {
-                    text: "No telemetry, no account, no background updater service — HTTPS requests to GitHub occur only when checking for or installing updates, which you can switch off.";
-                    font-family: Typography.font_family;
-                    font-size: Typography.size_caption;
-                    color: Palette.text_tertiary;
-                    wrap: word-wrap;
+            // 2. Publisher Website Link
+            HorizontalLayout {
+                alignment: start;
+
+                publisher_touch := TouchArea {
+                    accessible-role: button;
+                    accessible-label: "Publisher website (wiradigital.id)";
+                    clicked => { root.open_publisher_url(); }
+
+                    HorizontalLayout {
+                        spacing: 6px;
+                        alignment: start;
+
+                        Text {
+                            text: "Publisher website (wiradigital.id)";
+                            font-family: Typography.font_family;
+                            font-size: Typography.size_body;
+                            color: publisher_touch.has_hover ? Palette.accent_hover : Palette.text_primary;
+                            vertical-alignment: center;
+                        }
+
+                        VerticalLayout {
+                            alignment: center;
+                            OpenLinkIcon {
+                                icon_color: publisher_touch.has_hover ? Palette.accent_hover : Palette.text_primary;
+                            }
+                        }
+                    }
                 }
             }
 
             CardDivider {}
 
-            // Support Development Action
+            // 3. Support Development Action
             HorizontalLayout {
                 alignment: start;
 
@@ -314,6 +337,27 @@ export component AboutPane inherits VerticalLayout {
                         accessible-label: "Support development";
                         clicked => { root.open_support_url(); }
                     }
+                }
+            }
+
+            CardDivider {}
+
+            // 4. Foundational Base: Attribution, License & In-Process Disclosure
+            VerticalLayout {
+                spacing: 4px;
+                Text {
+                    text: "An open-source utility by Wira Digital Indonesia • Licensed under GPL-3.0";
+                    font-family: Typography.font_family;
+                    font-size: Typography.size_caption;
+                    font-weight: 600;
+                    color: Palette.text_secondary;
+                }
+                Text {
+                    text: "No telemetry, no account, no separate background service — update checks run entirely in-process against GitHub Releases, which you can switch off.";
+                    font-family: Typography.font_family;
+                    font-size: Typography.size_caption;
+                    color: Palette.text_tertiary;
+                    wrap: word-wrap;
                 }
             }
         }
