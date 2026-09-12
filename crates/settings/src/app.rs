@@ -2871,6 +2871,47 @@ mod tests {
         });
     }
 
+    #[test]
+    fn save_changes_button_disabled_when_clean_and_enabled_when_dirty() {
+        crate::shortcut_row_slint_snapshot::tests::run_on_ui_thread(|| {
+            let (window, model, save_path) =
+                crate::shortcut_row_slint_snapshot::tests::setup_shortcuts_window();
+
+            // 1. Initially clean state
+            assert!(!model.borrow().is_dirty());
+            assert!(!window.get_is_dirty());
+
+            let save_btn = i_slint_backend_testing::ElementHandle::find_by_accessible_label(
+                &window,
+                "Save Changes",
+            )
+            .next()
+            .expect("Save Changes button found");
+
+            // Invoking default action while clean must not trigger a save or set feedback
+            save_btn.invoke_accessible_default_action();
+            assert!(!window.get_is_dirty());
+            assert!(matches!(model.borrow().feedback, SaveFeedback::None));
+
+            // 2. Transition to dirty state
+            model.borrow_mut().draft.general.auto_start = true;
+            assert!(model.borrow().is_dirty());
+            crate::sync_model_to_ui(&window, &model.borrow());
+            assert!(window.get_is_dirty());
+
+            // 3. Invoking save while dirty persists config and clears dirty
+            save_btn.invoke_accessible_default_action();
+            assert!(!model.borrow().is_dirty());
+            assert!(!window.get_is_dirty());
+            assert!(matches!(
+                model.borrow().feedback,
+                SaveFeedback::Saved { .. }
+            ));
+
+            let _ = std::fs::remove_file(&save_path);
+        });
+    }
+
     use slint::ComponentHandle;
 
     fn find_about_element(

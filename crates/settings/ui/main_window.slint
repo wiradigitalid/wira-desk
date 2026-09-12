@@ -683,12 +683,16 @@ export component MainWindow inherits Window {
                             height: 32px;
                             y: (parent.height - 32px) / 2;
                             border-radius: 6px;
-                            background: save_touch.has_hover ? Palette.accent_hover : Palette.accent_primary;
+                            background: root.is_dirty ? (save_touch.has_hover ? Palette.accent_hover : Palette.accent_primary) : Palette.bg_subtle;
+                            border-width: root.is_dirty ? 0px : 1px;
+                            border-color: Palette.stroke_card;
 
                             accessible-role: button;
                             accessible-label: "Save Changes";
                             accessible-action-default => {
-                                root.save_clicked();
+                                if root.is_dirty {
+                                    root.save_clicked();
+                                }
                             }
 
                             Text {
@@ -696,12 +700,13 @@ export component MainWindow inherits Window {
                                 font-family: Typography.font_family;
                                 font-size: 13px;
                                 font-weight: 700;
-                                color: Palette.text_on_accent;
+                                color: root.is_dirty ? Palette.text_on_accent : Palette.text_tertiary;
                                 horizontal-alignment: center;
                                 vertical-alignment: center;
                             }
 
                             save_touch := TouchArea {
+                                enabled: root.is_dirty;
                                 clicked => {
                                     root.save_clicked();
                                 }
