@@ -3,7 +3,7 @@ spec: SPEC-12
 release: "0.3.0"
 prd: wira-desk
 fr: []
-status: open
+status: closed
 ---
 
 # SPEC-12 — About Pane Hierarchy Overhaul, 3-Pillar Positioning, and Settings Interaction Polish

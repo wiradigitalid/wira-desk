@@ -17,6 +17,7 @@ mod menu;
 #[cfg(debug_assertions)]
 mod metrics;
 mod ring;
+mod switcher;
 mod tray;
 mod updatecheck;
 mod util;

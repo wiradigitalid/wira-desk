@@ -99,7 +99,8 @@ pub fn drain_commands() {
             Command::Cycle => {
                 #[cfg(debug_assertions)]
                 crate::util::append_debug_trace("WORKER_DRAIN: cycle=1");
-                execute_cycle();
+                let mods = crate::hook::get_last_cycle_mods();
+                execute_cycle(Some(mods));
             }
             Command::SnapLeft
             | Command::SnapRight
@@ -123,7 +124,270 @@ pub fn drain_commands() {
             | Command::ShowDesktop => {
                 execute_mouse_navigation(Command::from_u8(raw));
             }
+            Command::SwitcherDisarm
+            | Command::SwitcherNext
+            | Command::SwitcherPrev
+            | Command::SwitcherUp
+            | Command::SwitcherDown
+            | Command::SwitcherCommit
+            | Command::SwitcherCancel => {
+                execute_switcher(Command::from_u8(raw));
+            }
         }
+    }
+}
+
+pub const TIMER_SWITCHER_HOLD: usize = 101;
+pub const TIMER_SWITCHER_WATCHDOG: usize = 102;
+
+thread_local! {
+    static WORKER_HWND: std::cell::Cell<Option<windows_sys::Win32::Foundation::HWND>> =
+        const { std::cell::Cell::new(None) };
+    static SWITCHER: std::cell::RefCell<crate::switcher::SwitcherController> =
+        std::cell::RefCell::new(crate::switcher::SwitcherController::new());
+    static SWITCHER_HOLD_ORIGIN: std::cell::Cell<Option<WindowId>> =
+        const { std::cell::Cell::new(None) };
+    static SWITCHER_CHORD_MODS: std::cell::Cell<Option<crate::hook::ModifierState>> =
+        const { std::cell::Cell::new(None) };
+}
+
+pub fn set_worker_hwnd(hwnd: windows_sys::Win32::Foundation::HWND) {
+    WORKER_HWND.set(Some(hwnd));
+}
+
+pub fn worker_hwnd() -> Option<windows_sys::Win32::Foundation::HWND> {
+    WORKER_HWND.get()
+}
+
+fn are_chord_modifiers_down(mods: &crate::hook::ModifierState) -> bool {
+    use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
+        GetAsyncKeyState, VK_LCONTROL, VK_LMENU, VK_LSHIFT, VK_LWIN, VK_RCONTROL, VK_RMENU,
+        VK_RSHIFT, VK_RWIN,
+    };
+    // SAFETY: `GetAsyncKeyState` queries asynchronous physical key state without pointers or heap allocation.
+    unsafe {
+        let win_down = ((GetAsyncKeyState(VK_LWIN as i32) as u16 & 0x8000) != 0)
+            || ((GetAsyncKeyState(VK_RWIN as i32) as u16 & 0x8000) != 0);
+        let ctrl_down = ((GetAsyncKeyState(VK_LCONTROL as i32) as u16 & 0x8000) != 0)
+            || ((GetAsyncKeyState(VK_RCONTROL as i32) as u16 & 0x8000) != 0);
+        let alt_down = ((GetAsyncKeyState(VK_LMENU as i32) as u16 & 0x8000) != 0)
+            || ((GetAsyncKeyState(VK_RMENU as i32) as u16 & 0x8000) != 0);
+        let shift_down = ((GetAsyncKeyState(VK_LSHIFT as i32) as u16 & 0x8000) != 0)
+            || ((GetAsyncKeyState(VK_RSHIFT as i32) as u16 & 0x8000) != 0);
+
+        (!mods.win || win_down)
+            && (!mods.ctrl || ctrl_down)
+            && (!mods.alt || alt_down)
+            && (!mods.shift || shift_down)
+            && (mods.win || mods.ctrl || mods.alt || mods.shift)
+    }
+}
+
+fn are_any_modifiers_down() -> bool {
+    use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
+        GetAsyncKeyState, VK_LCONTROL, VK_LMENU, VK_LSHIFT, VK_LWIN, VK_RCONTROL, VK_RMENU,
+        VK_RSHIFT, VK_RWIN,
+    };
+    // SAFETY: `GetAsyncKeyState` queries asynchronous physical key state without pointers or heap allocation.
+    unsafe {
+        ((GetAsyncKeyState(VK_LWIN as i32) as u16 & 0x8000) != 0)
+            || ((GetAsyncKeyState(VK_RWIN as i32) as u16 & 0x8000) != 0)
+            || ((GetAsyncKeyState(VK_LCONTROL as i32) as u16 & 0x8000) != 0)
+            || ((GetAsyncKeyState(VK_RCONTROL as i32) as u16 & 0x8000) != 0)
+            || ((GetAsyncKeyState(VK_LMENU as i32) as u16 & 0x8000) != 0)
+            || ((GetAsyncKeyState(VK_RMENU as i32) as u16 & 0x8000) != 0)
+            || ((GetAsyncKeyState(VK_LSHIFT as i32) as u16 & 0x8000) != 0)
+            || ((GetAsyncKeyState(VK_RSHIFT as i32) as u16 & 0x8000) != 0)
+    }
+}
+
+pub fn handle_timer(hwnd: windows_sys::Win32::Foundation::HWND, timer_id: usize) {
+    match timer_id {
+        TIMER_SWITCHER_HOLD => {
+            // SAFETY: `KillTimer` is called with the valid worker window handle and timer id.
+            unsafe {
+                windows_sys::Win32::UI::WindowsAndMessaging::KillTimer(hwnd, TIMER_SWITCHER_HOLD);
+            }
+            let chord_mods = SWITCHER_CHORD_MODS.get().unwrap_or_default();
+            if are_chord_modifiers_down(&chord_mods) {
+                open_visual_switcher(hwnd);
+            }
+        }
+        TIMER_SWITCHER_WATCHDOG => {
+            // If all modifiers are released, commit immediately
+            if !are_any_modifiers_down() {
+                execute_switcher(Command::SwitcherCommit);
+                return;
+            }
+
+            let is_expired = SWITCHER.with(|s| {
+                let sw = s.borrow();
+                sw.is_open() && crate::hook::tick_ms().saturating_sub(sw.open_time_ms()) > 10_000
+            });
+            if is_expired {
+                execute_switcher(Command::SwitcherCancel);
+            }
+        }
+        _ => {}
+    }
+}
+
+fn open_visual_switcher(hwnd: windows_sys::Win32::Foundation::HWND) {
+    let active = capture_active_context();
+    let monitors = Win32Monitors;
+    let spatial = capture_spatial_context(&monitors, active.foreground);
+
+    let (candidates, eligible) = with_virtual_desktops(|desktops| {
+        collect_eligible_candidates(
+            &Win32CandidateSource,
+            &WindowEligibility,
+            &active,
+            &monitors,
+            desktops,
+            &spatial,
+        )
+    });
+
+    if eligible.is_empty() {
+        return;
+    }
+
+    let ordered = crate::switcher::card_order_for_candidates(&candidates, &active);
+    let eligible_ordered: Vec<WindowId> = ordered
+        .into_iter()
+        .filter(|w| eligible.contains(w))
+        .collect();
+
+    if eligible_ordered.is_empty() {
+        return;
+    }
+
+    let origin = SWITCHER_HOLD_ORIGIN.get().unwrap_or(active.foreground);
+    let work_area = if let Some(ctx) = crate::arrangement::win32::resolve_context_for(
+        origin.0 as windows_sys::Win32::Foundation::HWND,
+    ) {
+        crate::switcher::layout::Rect::new(
+            ctx.work_area.rect.left,
+            ctx.work_area.rect.top,
+            ctx.work_area.rect.width(),
+            ctx.work_area.rect.height(),
+        )
+    } else {
+        // SAFETY: GetSystemMetrics reads primary screen bounds without pointers.
+        crate::switcher::layout::Rect::new(
+            0,
+            0,
+            unsafe { windows_sys::Win32::UI::WindowsAndMessaging::GetSystemMetrics(0) },
+            unsafe { windows_sys::Win32::UI::WindowsAndMessaging::GetSystemMetrics(1) },
+        )
+    };
+
+    SWITCHER.with(|s| {
+        s.borrow_mut().open(origin, work_area, eligible_ordered, 0);
+    });
+    crate::hook::set_switcher_active(true);
+
+    // SAFETY: SetTimer initializes the watchdog timer on the worker window.
+    unsafe {
+        windows_sys::Win32::UI::WindowsAndMessaging::SetTimer(
+            hwnd,
+            TIMER_SWITCHER_WATCHDOG,
+            30,
+            None,
+        );
+    }
+}
+
+fn execute_switcher(command: Command) {
+    match command {
+        Command::SwitcherDisarm => {
+            crate::hook::set_switcher_active(false);
+            if let Some(hwnd) = WORKER_HWND.get() {
+                // SAFETY: KillTimer disarms the hold timer.
+                unsafe {
+                    windows_sys::Win32::UI::WindowsAndMessaging::KillTimer(
+                        hwnd,
+                        TIMER_SWITCHER_HOLD,
+                    );
+                }
+            }
+            SWITCHER_HOLD_ORIGIN.set(None);
+        }
+        Command::SwitcherNext => {
+            SWITCHER.with(|s| s.borrow_mut().next());
+        }
+        Command::SwitcherPrev => {
+            SWITCHER.with(|s| s.borrow_mut().prev());
+        }
+        Command::SwitcherUp => {
+            SWITCHER.with(|s| s.borrow_mut().up());
+        }
+        Command::SwitcherDown => {
+            SWITCHER.with(|s| s.borrow_mut().down());
+        }
+        Command::SwitcherCommit => {
+            crate::hook::set_switcher_active(false);
+            if let Some(hwnd) = WORKER_HWND.get() {
+                // SAFETY: KillTimer kills both switcher timers.
+                unsafe {
+                    windows_sys::Win32::UI::WindowsAndMessaging::KillTimer(
+                        hwnd,
+                        TIMER_SWITCHER_HOLD,
+                    );
+                    windows_sys::Win32::UI::WindowsAndMessaging::KillTimer(
+                        hwnd,
+                        TIMER_SWITCHER_WATCHDOG,
+                    );
+                }
+            }
+            let targets = SWITCHER.with(|s| {
+                let mut sw = s.borrow_mut();
+                let list = sw.candidates_from_selection();
+                sw.dismiss();
+                list
+            });
+
+            if !targets.is_empty() {
+                let mut activator = Win32Activator;
+                for target in targets {
+                    let outcome = activator.activate(target);
+                    if outcome == ActivationOutcome::Activated {
+                        break;
+                    }
+                }
+                suppress_start_menu();
+            }
+            SWITCHER_HOLD_ORIGIN.set(None);
+        }
+        Command::SwitcherCancel => {
+            crate::hook::set_switcher_active(false);
+            if let Some(hwnd) = WORKER_HWND.get() {
+                // SAFETY: KillTimer kills both switcher timers.
+                unsafe {
+                    windows_sys::Win32::UI::WindowsAndMessaging::KillTimer(
+                        hwnd,
+                        TIMER_SWITCHER_HOLD,
+                    );
+                    windows_sys::Win32::UI::WindowsAndMessaging::KillTimer(
+                        hwnd,
+                        TIMER_SWITCHER_WATCHDOG,
+                    );
+                }
+            }
+            let origin = SWITCHER.with(|s| {
+                let mut sw = s.borrow_mut();
+                let o = sw.origin_window();
+                sw.dismiss();
+                o
+            });
+
+            if origin.0 != 0 {
+                let mut activator = Win32Activator;
+                let _ = activator.activate(origin);
+            }
+            SWITCHER_HOLD_ORIGIN.set(None);
+        }
+        _ => {}
     }
 }
 
@@ -199,11 +463,12 @@ fn synthesize_chord(keys: &[u16]) {
 /// The active context and the origin monitor are each sampled **once** and
 /// carried through the whole pass, so the result stays deterministic while
 /// windows open, close, and move.
-fn execute_cycle() {
+fn execute_cycle(mods: Option<crate::hook::ModifierState>) {
     #[cfg(debug_assertions)]
     let started = crate::metrics::qpc_now();
 
     let active = capture_active_context();
+    let origin_before = active.foreground;
     let monitors = Win32Monitors;
     let spatial = capture_spatial_context(&monitors, active.foreground);
 
@@ -223,6 +488,26 @@ fn execute_cycle() {
             &spatial,
         )
     });
+
+    if let CycleOutcome::Activated(_) = outcome {
+        if let Some(m) = mods {
+            if m.any() {
+                if let Some(hwnd) = WORKER_HWND.get() {
+                    SWITCHER_HOLD_ORIGIN.set(Some(origin_before));
+                    SWITCHER_CHORD_MODS.set(Some(m));
+                    // SAFETY: SetTimer initializes the hold timer on worker window.
+                    unsafe {
+                        windows_sys::Win32::UI::WindowsAndMessaging::SetTimer(
+                            hwnd,
+                            TIMER_SWITCHER_HOLD,
+                            150,
+                            None,
+                        );
+                    }
+                }
+            }
+        }
+    }
 
     // After the focus change, while Win is still down. Doing it here rather
     // than in the callback keeps `SendInput` off the input-processing path.
@@ -262,6 +547,33 @@ fn execute_cycle() {
     let _ = outcome;
 }
 
+/// Collect candidates and eligible windows according to policy and spatial context.
+pub(crate) fn collect_eligible_candidates<S, P, M, V>(
+    source: &S,
+    policy: &P,
+    active: &ActiveContext,
+    monitors: &M,
+    desktops: Option<&V>,
+    spatial: &crate::context::SpatialContext,
+) -> (Vec<crate::cycling::Candidate>, Vec<WindowId>)
+where
+    S: CandidateSource + ?Sized,
+    P: EligibilityPolicy + ?Sized,
+    M: MonitorSource + ?Sized,
+    V: VirtualDesktopSource + ?Sized,
+{
+    let candidates = source.snapshot();
+
+    let eligible: Vec<WindowId> = candidates
+        .iter()
+        .filter(|c| policy.evaluate(active, c).is_eligible())
+        .filter(|c| context_allows(monitors, desktops, spatial, c))
+        .map(|c| c.facts.window)
+        .collect();
+
+    (candidates, eligible)
+}
+
 /// Cycle driver with the spatial gate layered on top of eligibility.
 /// Both filters must pass. Cycling order and eligibility rules are unchanged;
 /// the spatial adapter only removes candidates, never reorders them.
@@ -282,14 +594,8 @@ where
     M: MonitorSource + ?Sized,
     V: VirtualDesktopSource + ?Sized,
 {
-    let candidates = source.snapshot();
-
-    let eligible: Vec<WindowId> = candidates
-        .iter()
-        .filter(|c| policy.evaluate(active, c).is_eligible())
-        .filter(|c| context_allows(monitors, desktops, spatial, c))
-        .map(|c| c.facts.window)
-        .collect();
+    let (candidates, eligible) =
+        collect_eligible_candidates(source, policy, active, monitors, desktops, spatial);
 
     #[cfg(debug_assertions)]
     crate::util::append_debug_trace(&format!(
@@ -772,5 +1078,37 @@ mod tests {
                 _ => execute_snap(cmd),
             }
         }
+    }
+
+    #[test]
+    fn switcher_commit_falls_through_on_invalid_target() {
+        let mut controller = crate::switcher::SwitcherController::new();
+        let candidates = vec![WindowId(101), WindowId(102), WindowId(103)];
+        controller.open(
+            WindowId(100),
+            crate::switcher::layout::Rect::new(0, 0, 1920, 1080),
+            candidates,
+            0,
+        );
+
+        let targets = controller.candidates_from_selection();
+        assert_eq!(targets, vec![WindowId(101), WindowId(102), WindowId(103)]);
+
+        // Scripted activator returns InvalidTarget for 101, then Activated for 102
+        let mut activator = ScriptedActivator::scripted(vec![
+            (WindowId(101), ActivationOutcome::InvalidTarget),
+            (WindowId(102), ActivationOutcome::Activated),
+        ]);
+
+        let mut activated = None;
+        for target in targets {
+            if activator.activate(target) == ActivationOutcome::Activated {
+                activated = Some(target);
+                break;
+            }
+        }
+
+        assert_eq!(activated, Some(WindowId(102)));
+        assert_eq!(activator.attempts, vec![WindowId(101), WindowId(102)]);
     }
 }

@@ -5,8 +5,13 @@ import { SettingToggleRow } from "../components/setting_toggle_row.slint";
 export component GeneralPane inherits VerticalLayout {
     in-out property <bool> auto_start: false;
     in property <bool> is_elevated: true;
+    in-out property <bool> visual_switcher_enabled: true;
+    in-out property <int> visual_hold_delay_ms: 150;
+    in property <int> revert_generation: 0;
 
     callback auto_start_toggled(bool);
+    callback visual_switcher_toggled(bool);
+    callback visual_hold_delay_changed(int);
 
     spacing: 12px;
     alignment: start;
@@ -39,7 +44,146 @@ export component GeneralPane inherits VerticalLayout {
         }
     }
 
-    // Card 2: Spatial & Isolation Philosophy (Display only)
+    // Card 2: Visual Switcher Overlay
+    Card {
+        VerticalLayout {
+            padding: 0px;
+            spacing: 0px;
+
+            SettingToggleRow {
+                title: "Enable Visual Switcher Overlay";
+                description: "Hold the cycle chord to see live previews of same-app windows on your active monitor.";
+                checked <=> root.visual_switcher_enabled;
+                toggled(val) => { root.visual_switcher_toggled(val); }
+            }
+
+            if root.visual_switcher_enabled : CardDivider {}
+
+            if root.visual_switcher_enabled : HorizontalLayout {
+                padding-left: 16px;
+                padding-right: 16px;
+                padding-top: 10px;
+                padding-bottom: 12px;
+                alignment: space-between;
+
+                VerticalLayout {
+                    spacing: 2px;
+                    alignment: center;
+                    Text {
+                        text: "Hold Delay Threshold";
+                        font-family: Typography.font_family;
+                        font-size: Typography.size_body;
+                        font-weight: 500;
+                        color: Palette.text_primary;
+                    }
+                    Text {
+                        text: "Milliseconds to hold the chord before the visual overlay appears (100–500 ms).";
+                        font-family: Typography.font_family;
+                        font-size: Typography.size_caption;
+                        color: Palette.text_secondary;
+                    }
+                }
+
+                HorizontalLayout {
+                    spacing: 6px;
+                    alignment: end;
+
+                    // Minus button
+                    Rectangle {
+                        width: 30px;
+                        height: 30px;
+                        border-radius: 4px;
+                        background: delay_minus_touch.has_hover ? Palette.bg_card_hover : Palette.bg_keycap;
+                        border-width: 1px;
+                        border-color: Palette.stroke_card;
+
+                        accessible-role: button;
+                        accessible-label: "Decrease hold delay";
+
+                        Text {
+                            text: "−";
+                            font-size: 14px;
+                            font-weight: 700;
+                            color: Palette.text_primary;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+                        delay_minus_touch := TouchArea {
+                            clicked => {
+                                let cur = root.visual_hold_delay_ms;
+                                let next_val = max(100, cur - 25);
+                                root.visual_hold_delay_ms = next_val;
+                                root.visual_hold_delay_changed(next_val);
+                            }
+                        }
+                    }
+
+                    // Value Display
+                    Rectangle {
+                        width: 65px;
+                        height: 30px;
+                        border-radius: 4px;
+                        background: Palette.bg_subtle;
+                        border-width: 1px;
+                        border-color: Palette.stroke_card;
+
+                        HorizontalLayout {
+                            alignment: center;
+                            spacing: 2px;
+                            Text {
+                                text: root.visual_hold_delay_ms;
+                                font-family: Typography.font_mono;
+                                font-size: 12px;
+                                font-weight: 600;
+                                color: Palette.text_primary;
+                                vertical-alignment: center;
+                            }
+                            Text {
+                                text: "ms";
+                                font-family: Typography.font_mono;
+                                font-size: 11px;
+                                font-weight: 600;
+                                color: Palette.text_secondary;
+                                vertical-alignment: center;
+                            }
+                        }
+                    }
+
+                    // Plus button
+                    Rectangle {
+                        width: 30px;
+                        height: 30px;
+                        border-radius: 4px;
+                        background: delay_plus_touch.has_hover ? Palette.bg_card_hover : Palette.bg_keycap;
+                        border-width: 1px;
+                        border-color: Palette.stroke_card;
+
+                        accessible-role: button;
+                        accessible-label: "Increase hold delay";
+
+                        Text {
+                            text: "+";
+                            font-size: 14px;
+                            font-weight: 700;
+                            color: Palette.text_primary;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+                        delay_plus_touch := TouchArea {
+                            clicked => {
+                                let cur = root.visual_hold_delay_ms;
+                                let next_val = min(500, cur + 25);
+                                root.visual_hold_delay_ms = next_val;
+                                root.visual_hold_delay_changed(next_val);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Card 3: Spatial & Isolation Philosophy (Display only)
     Card {
         VerticalLayout {
             padding: 0px;

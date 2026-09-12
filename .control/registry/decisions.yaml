@@ -540,6 +540,52 @@ decisions:
       build_target_dir: target
       ledger: .control/memlog/autopilot-DEC-024.md
 
+  - id: DEC-025
+    title: Autopilot mandate for SPEC-12 and SPEC-13 delivery
+    status: applied
+    file: decisions/DEC-025-autopilot-mandate-for-spec-12-and-spec-13-delivery.md
+    created: '2026-09-12'
+    touches:
+      - .control/decisions/DEC-025-autopilot-mandate-for-spec-12-and-spec-13-delivery.md
+      - .control/memlog/autopilot-DEC-025.md
+      - .control/registry/decisions.yaml
+      - .control/registry/specs.yaml
+      - .scratch/smoke-dec-025.md
+      - .scratch/spec-12-about-pane-and-settings-polish/SPEC.md
+      - .scratch/spec-13-same-app-visual-switcher/SPEC.md
+      - 3p.md
+      - crates/daemon/Cargo.toml
+      - crates/daemon/src/arrangement/mod.rs
+      - crates/daemon/src/config.rs
+      - crates/daemon/src/hook.rs
+      - crates/daemon/src/main.rs
+      - crates/daemon/src/switcher/layout.rs
+      - crates/daemon/src/switcher/mod.rs
+      - crates/daemon/src/switcher/overlay.rs
+      - crates/daemon/src/switcher/selection.rs
+      - crates/daemon/src/switcher/thumbnail.rs
+      - crates/daemon/src/tray.rs
+      - crates/daemon/src/worker.rs
+      - crates/settings/src/app.rs
+      - crates/settings/src/main.rs
+      - crates/settings/src/persistence.rs
+      - crates/settings/ui/main_window.slint
+      - crates/settings/ui/panes/about_pane.slint
+      - crates/settings/ui/panes/general_pane.slint
+      - crates/shared/src/commands.rs
+      - crates/shared/src/config.rs
+    mandate:
+      from_gate: G5
+      scope: all
+      parked: [ad-n]
+      smoke_test: agent
+      loop: 10m
+      expires: '2026-09-19'
+      run_branch: autopilot/DEC-025
+      worktree: .
+      build_target_dir: target
+      ledger: .control/memlog/autopilot-DEC-025.md
+
 
 
 

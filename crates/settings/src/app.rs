@@ -626,6 +626,9 @@ pub fn describe(field: &str, err: ShortcutError) -> String {
         ShortcutError::InvalidMousePreset(val) => {
             format!("'{val}' is not a recognized mouse action preset.")
         }
+        ShortcutError::InvalidHoldDelay(val) => {
+            format!("Visual switcher hold delay ({val}ms) must be between 100ms and 500ms.")
+        }
     }
 }
 
@@ -2797,6 +2800,156 @@ mod tests {
     }
 
     #[test]
+    fn clicking_preset_dropdown_category_header_does_not_dismiss_overlay() {
+        use slint::ComponentHandle;
+        crate::shortcut_row_slint_snapshot::tests::run_on_ui_thread(|| {
+            let (window, model, save_path) =
+                crate::shortcut_row_slint_snapshot::tests::setup_shortcuts_window();
+
+            model.borrow_mut().set_pane(Pane::Mouse);
+            crate::sync_model_to_ui(&window, &model.borrow());
+
+            let initial_draft = model.borrow().draft.clone();
+
+            // Open dropdown
+            window.set_dropdown_slot(0);
+            window.set_dropdown_y(180.0);
+            window.set_dropdown_open(true);
+            assert!(window.get_dropdown_open());
+
+            // Click on the first category header ("Virtual Desktops")
+            // The overlay is inside the middle body (below the 36px titlebar).
+            let window_width = window.window().size().width as f32;
+            let overlay_x = window_width - 250.0 - 32.0;
+            let header_x = overlay_x + 24.0;
+            let header_y = 36.0 + 180.0 + 12.0;
+
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::PointerPressed {
+                    position: slint::LogicalPosition::new(header_x, header_y),
+                    button: slint::platform::PointerEventButton::Left,
+                });
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::PointerReleased {
+                    position: slint::LogicalPosition::new(header_x, header_y),
+                    button: slint::platform::PointerEventButton::Left,
+                });
+
+            // The dropdown overlay MUST remain open after clicking the category header
+            assert!(
+                window.get_dropdown_open(),
+                "dropdown overlay must remain open after clicking category header"
+            );
+            assert_eq!(
+                model.borrow().draft,
+                initial_draft,
+                "draft configuration must not be mutated"
+            );
+            assert!(
+                !model.borrow().is_dirty(),
+                "model must not be marked dirty after header click"
+            );
+
+            // In contrast, clicking outside the overlay (on the backdrop) dismisses it
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::PointerPressed {
+                    position: slint::LogicalPosition::new(100.0, 100.0),
+                    button: slint::platform::PointerEventButton::Left,
+                });
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::PointerReleased {
+                    position: slint::LogicalPosition::new(100.0, 100.0),
+                    button: slint::platform::PointerEventButton::Left,
+                });
+            assert!(
+                !window.get_dropdown_open(),
+                "clicking backdrop outside overlay must dismiss dropdown"
+            );
+
+            let _ = std::fs::remove_file(&save_path);
+        });
+    }
+
+    #[test]
+    fn save_changes_button_disabled_when_clean_and_enabled_when_dirty() {
+        crate::shortcut_row_slint_snapshot::tests::run_on_ui_thread(|| {
+            let (window, model, save_path) =
+                crate::shortcut_row_slint_snapshot::tests::setup_shortcuts_window();
+
+            // 1. Initially clean state
+            assert!(!model.borrow().is_dirty());
+            assert!(!window.get_is_dirty());
+
+            let save_btn = i_slint_backend_testing::ElementHandle::find_by_accessible_label(
+                &window,
+                "Save Changes",
+            )
+            .next()
+            .expect("Save Changes button found");
+
+            // Invoking default action while clean must not trigger a save or set feedback
+            save_btn.invoke_accessible_default_action();
+            assert!(!window.get_is_dirty());
+            assert!(matches!(model.borrow().feedback, SaveFeedback::None));
+
+            // 2. Transition to dirty state
+            model.borrow_mut().draft.general.auto_start = true;
+            assert!(model.borrow().is_dirty());
+            crate::sync_model_to_ui(&window, &model.borrow());
+            assert!(window.get_is_dirty());
+
+            // 3. Invoking save while dirty persists config and clears dirty
+            save_btn.invoke_accessible_default_action();
+            assert!(!model.borrow().is_dirty());
+            assert!(!window.get_is_dirty());
+            assert!(matches!(
+                model.borrow().feedback,
+                SaveFeedback::Saved { .. }
+            ));
+
+            let _ = std::fs::remove_file(&save_path);
+        });
+    }
+
+    use slint::ComponentHandle;
+
+    fn find_about_element(
+        window: &crate::MainWindow,
+        label: &str,
+    ) -> Option<i_slint_backend_testing::ElementHandle> {
+        let scroll_by = |delta_y: f32| {
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::PointerScrolled {
+                    position: slint::LogicalPosition::new(300.0, 300.0),
+                    delta_x: 0.0,
+                    delta_y,
+                });
+        };
+
+        scroll_by(1200.0);
+        if let Some(el) =
+            i_slint_backend_testing::ElementHandle::find_by_accessible_label(window, label).next()
+        {
+            return Some(el);
+        }
+        for delta_y in [-200.0, -400.0, -600.0, -800.0, -1000.0] {
+            scroll_by(delta_y);
+            if let Some(el) =
+                i_slint_backend_testing::ElementHandle::find_by_accessible_label(window, label)
+                    .next()
+            {
+                return Some(el);
+            }
+        }
+        None
+    }
+
+    #[test]
     fn about_pane_renders_publisher_and_links() {
         crate::shortcut_row_slint_snapshot::tests::run_on_ui_thread(|| {
             let (window, model, save_path) =
@@ -2810,6 +2963,127 @@ mod tests {
             window.invoke_open_publisher_url();
             window.invoke_open_source_url();
             window.invoke_open_support_url();
+
+            let _ = std::fs::remove_file(&save_path);
+        });
+    }
+
+    #[test]
+    fn about_pane_renders_three_pillars_description() {
+        crate::shortcut_row_slint_snapshot::tests::run_on_ui_thread(|| {
+            let (window, model, save_path) =
+                crate::shortcut_row_slint_snapshot::tests::setup_shortcuts_window();
+
+            model.borrow_mut().set_pane(Pane::About);
+            crate::sync_model_to_ui(&window, &model.borrow());
+
+            assert_eq!(window.get_current_pane(), 4);
+
+            let desc = find_about_element(
+                &window,
+                "Wira Desk accelerates desktop multitasking with smooth window switching, flexible edge snapping, and driverless mouse navigation.",
+            );
+            assert!(
+                desc.is_some(),
+                "3-pillar product description found in About pane"
+            );
+
+            let _ = std::fs::remove_file(&save_path);
+        });
+    }
+
+    #[test]
+    fn about_pane_renders_in_process_disclosure() {
+        crate::shortcut_row_slint_snapshot::tests::run_on_ui_thread(|| {
+            let (window, model, save_path) =
+                crate::shortcut_row_slint_snapshot::tests::setup_shortcuts_window();
+
+            model.borrow_mut().set_pane(Pane::About);
+            crate::sync_model_to_ui(&window, &model.borrow());
+
+            assert_eq!(window.get_current_pane(), 4);
+
+            let disclosure = find_about_element(
+                &window,
+                "No telemetry, no account, no separate background service — update checks run entirely in-process against GitHub Releases, which you can switch off.",
+            );
+            assert!(
+                disclosure.is_some(),
+                "In-process disclosure found in About pane"
+            );
+
+            let _ = std::fs::remove_file(&save_path);
+        });
+    }
+
+    #[test]
+    fn about_pane_renders_open_link_icons_and_reordered_hierarchy() {
+        crate::shortcut_row_slint_snapshot::tests::run_on_ui_thread(|| {
+            let (window, model, save_path) =
+                crate::shortcut_row_slint_snapshot::tests::setup_shortcuts_window();
+
+            model.borrow_mut().set_pane(Pane::About);
+            crate::sync_model_to_ui(&window, &model.borrow());
+
+            assert_eq!(window.get_current_pane(), 4);
+
+            let repo_btn = find_about_element(&window, "Source code & issue tracker on GitHub");
+            assert!(repo_btn.is_some(), "Source code button found in About pane");
+
+            let pub_btn = find_about_element(&window, "Publisher website (wiradigital.id)");
+            assert!(
+                pub_btn.is_some(),
+                "Publisher website button found in About pane"
+            );
+
+            let support_btn = find_about_element(&window, "Support development");
+            assert!(
+                support_btn.is_some(),
+                "Support development button found in About pane"
+            );
+
+            let legal_line = find_about_element(
+                &window,
+                "An open-source utility by Wira Digital Indonesia • Licensed under GPL-3.0",
+            );
+            assert!(
+                legal_line.is_some(),
+                "Attribution and licensing line found in About pane"
+            );
+
+            // Verify callbacks can be invoked safely
+            window.invoke_open_publisher_url();
+            window.invoke_open_source_url();
+            window.invoke_open_support_url();
+
+            let _ = std::fs::remove_file(&save_path);
+        });
+    }
+
+    #[test]
+    fn general_pane_exposes_the_visual_switcher_toggle() {
+        crate::shortcut_row_slint_snapshot::tests::run_on_ui_thread(|| {
+            let (window, model, save_path) =
+                crate::shortcut_row_slint_snapshot::tests::setup_shortcuts_window();
+
+            // 1. Switch to General pane (index 0)
+            model.borrow_mut().set_pane(Pane::General);
+            crate::sync_model_to_ui(&window, &model.borrow());
+            assert_eq!(window.get_current_pane(), 0);
+
+            // Verify defaults
+            assert!(window.get_visual_switcher_enabled());
+            assert_eq!(window.get_visual_hold_delay_ms(), 150);
+
+            // 2. Toggle visual switcher off
+            window.invoke_visual_switcher_toggled(false);
+            assert!(!model.borrow().draft.switcher.visual_enabled);
+            assert!(model.borrow().is_dirty());
+            assert!(window.get_is_dirty());
+
+            // 3. Change hold delay
+            window.invoke_visual_hold_delay_changed(250);
+            assert_eq!(model.borrow().draft.switcher.visual_hold_delay_ms, 250);
 
             let _ = std::fs::remove_file(&save_path);
         });

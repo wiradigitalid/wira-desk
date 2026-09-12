@@ -204,6 +204,38 @@ pub fn set_report_target(hwnd: HWND) {
     REPORT_TARGET_HWND.store(hwnd, Ordering::Relaxed);
 }
 
+/// Cross-thread atomic indicator for whether the visual switcher overlay is open.
+/// Set by the Worker thread when the hold timer fires and cleared on dismiss/commit/cancel.
+/// Read on the Hook callback path to route switcher navigation keys (arrows, backtick, escape).
+static SWITCHER_ACTIVE: AtomicBool = AtomicBool::new(false);
+static SWITCHER_LAST_CYCLE_MODS: std::sync::atomic::AtomicU8 = std::sync::atomic::AtomicU8::new(0);
+
+pub fn set_switcher_active(active: bool) {
+    SWITCHER_ACTIVE.store(active, Ordering::Release);
+}
+
+pub fn is_switcher_active() -> bool {
+    SWITCHER_ACTIVE.load(Ordering::Acquire)
+}
+
+pub fn set_last_cycle_mods(mods: ModifierState) {
+    let mask = (mods.win as u8)
+        | ((mods.ctrl as u8) << 1)
+        | ((mods.alt as u8) << 2)
+        | ((mods.shift as u8) << 3);
+    SWITCHER_LAST_CYCLE_MODS.store(mask, Ordering::Release);
+}
+
+pub fn get_last_cycle_mods() -> ModifierState {
+    let mask = SWITCHER_LAST_CYCLE_MODS.load(Ordering::Acquire);
+    ModifierState {
+        win: (mask & 1) != 0,
+        ctrl: (mask & 2) != 0,
+        alt: (mask & 4) != 0,
+        shift: (mask & 8) != 0,
+    }
+}
+
 /// Post the chord the hook just observed back to Settings, while the observe
 /// or record lease is armed. A no-op if no target has been resolved (lease is
 /// `none`, or armed but the receiver window was never found).
@@ -318,7 +350,7 @@ fn is_win_vk(vk: u32) -> bool {
 }
 
 fn handle_key_event(rt: &mut HookRuntime, vk: u32, key_down: bool) -> KeyHandleOutcome {
-    handle_key_event_with_bypass(
+    handle_key_event_with_bypass_and_time(
         rt,
         vk,
         key_down,
@@ -327,9 +359,11 @@ fn handle_key_event(rt: &mut HookRuntime, vk: u32, key_down: bool) -> KeyHandleO
                 .is_passthrough()
         },
         |rt| rt.identity.foreground_pid(),
+        tick_ms(),
     )
 }
 
+#[allow(dead_code)]
 fn handle_key_event_with_bypass<F, G>(
     rt: &mut HookRuntime,
     vk: u32,
@@ -340,6 +374,53 @@ fn handle_key_event_with_bypass<F, G>(
 where
     F: FnOnce(&mut HookRuntime) -> bool,
     G: FnOnce(&mut HookRuntime) -> u32,
+{
+    handle_key_event_with_bypass_and_time(
+        rt,
+        vk,
+        key_down,
+        eval_bypass,
+        lease_foreground_pid,
+        tick_ms(),
+    )
+}
+
+fn handle_key_event_with_bypass_and_time<F, G>(
+    rt: &mut HookRuntime,
+    vk: u32,
+    key_down: bool,
+    eval_bypass: F,
+    lease_foreground_pid: G,
+    now: u64,
+) -> KeyHandleOutcome
+where
+    F: FnOnce(&mut HookRuntime) -> bool,
+    G: FnOnce(&mut HookRuntime) -> u32,
+{
+    handle_key_event_with_sink(
+        rt,
+        vk,
+        key_down,
+        eval_bypass,
+        lease_foreground_pid,
+        now,
+        ring::push,
+    )
+}
+
+fn handle_key_event_with_sink<F, G, E>(
+    rt: &mut HookRuntime,
+    vk: u32,
+    key_down: bool,
+    eval_bypass: F,
+    lease_foreground_pid: G,
+    now: u64,
+    enqueue: E,
+) -> KeyHandleOutcome
+where
+    F: FnOnce(&mut HookRuntime) -> bool,
+    G: FnOnce(&mut HookRuntime) -> u32,
+    E: Fn(u8) -> bool,
 {
     rt.mods.apply_vk(vk, key_down);
 
@@ -360,6 +441,48 @@ where
     }
 
     if !key_down {
+        if ModifierState::is_modifier_vk(vk) {
+            if rt.is_switcher_active() {
+                if !rt.mods.has_any_of(&rt.switcher_mods) {
+                    rt.switcher_active = false;
+                    set_switcher_active(false);
+                    rt.switcher_armed = false;
+                    let _ = enqueue(Command::SwitcherCommit.as_u8());
+                    // SAFETY: Worker HWND is verified or null check.
+                    unsafe {
+                        let _ = PostMessageW(rt.worker_hwnd, WM_APP_COMMAND_READY, 0, 0);
+                    }
+                }
+            } else if rt.switcher_armed && !rt.mods.has_any_of(&rt.switcher_mods) {
+                rt.switcher_armed = false;
+                let _ = enqueue(Command::SwitcherDisarm.as_u8());
+                // SAFETY: Worker HWND is verified or null check.
+                unsafe {
+                    let _ = PostMessageW(rt.worker_hwnd, WM_APP_COMMAND_READY, 0, 0);
+                }
+            }
+            return KeyHandleOutcome {
+                disposition: KeyHandleResult::PassToNext,
+                enqueued: false,
+            };
+        }
+
+        if rt.switcher_armed && vk as u16 == rt.switcher_main_vk {
+            if now < rt.switcher_deadline_ms {
+                rt.switcher_armed = false;
+                let _ = enqueue(Command::SwitcherDisarm.as_u8());
+                // SAFETY: Worker HWND is verified or null check.
+                unsafe {
+                    let _ = PostMessageW(rt.worker_hwnd, WM_APP_COMMAND_READY, 0, 0);
+                }
+            }
+            rt.swallow_release_vk = 0;
+            return KeyHandleOutcome {
+                disposition: KeyHandleResult::Swallow,
+                enqueued: false,
+            };
+        }
+
         if rt.swallow_release_vk != 0 && vk as u16 == rt.swallow_release_vk {
             rt.swallow_release_vk = 0;
             return KeyHandleOutcome {
@@ -367,6 +490,14 @@ where
                 enqueued: false,
             };
         }
+
+        if rt.is_switcher_active() {
+            return KeyHandleOutcome {
+                disposition: KeyHandleResult::Swallow,
+                enqueued: false,
+            };
+        }
+
         return KeyHandleOutcome {
             disposition: KeyHandleResult::PassToNext,
             enqueued: false,
@@ -376,6 +507,46 @@ where
     if ModifierState::is_modifier_vk(vk) {
         return KeyHandleOutcome {
             disposition: KeyHandleResult::PassToNext,
+            enqueued: false,
+        };
+    }
+
+    if rt.is_switcher_active() {
+        let nav_cmd = match vk {
+            0x1B => Some(Command::SwitcherCancel), // VK_ESCAPE
+            0x27 => Some(Command::SwitcherNext),   // VK_RIGHT
+            0x25 => Some(Command::SwitcherPrev),   // VK_LEFT
+            0x26 => Some(Command::SwitcherUp),     // VK_UP
+            0x28 => Some(Command::SwitcherDown),   // VK_DOWN
+            _ if vk as u16 == rt.switcher_main_vk => {
+                if rt.mods.shift {
+                    Some(Command::SwitcherPrev)
+                } else {
+                    Some(Command::SwitcherNext)
+                }
+            }
+            _ => None,
+        };
+
+        if let Some(cmd) = nav_cmd {
+            if cmd == Command::SwitcherCancel {
+                rt.switcher_active = false;
+                set_switcher_active(false);
+                rt.switcher_armed = false;
+            }
+            let _ = enqueue(cmd.as_u8());
+            // SAFETY: Worker HWND is verified or null check.
+            unsafe {
+                let _ = PostMessageW(rt.worker_hwnd, WM_APP_COMMAND_READY, 0, 0);
+            }
+            return KeyHandleOutcome {
+                disposition: KeyHandleResult::Swallow,
+                enqueued: true,
+            };
+        }
+
+        return KeyHandleOutcome {
+            disposition: KeyHandleResult::Swallow,
             enqueued: false,
         };
     }
@@ -435,14 +606,14 @@ where
     }
 
     let mut enqueued = false;
-    let now = tick_ms();
+    let cmd_obj = Command::from_u8(cmd);
     // Throttle and capacity rejections are counted separately so the
     // reconciliation can tell an intentional drop from a failure. Atomic
     // increments only — no allocation, no lock, no logging in the callback.
-    if !throttle_allows(rt.last_throttle_ms, now) {
+    if !cmd_obj.is_exempt_from_throttle() && !throttle_allows(rt.last_throttle_ms, now) {
         #[cfg(debug_assertions)]
         crate::metrics::THROTTLED.fetch_add(1, Ordering::Relaxed);
-    } else if !ring::push(cmd) {
+    } else if !enqueue(cmd) {
         #[cfg(debug_assertions)]
         crate::metrics::DROPPED_FULL.fetch_add(1, Ordering::Relaxed);
     } else {
@@ -450,6 +621,25 @@ where
         rt.last_throttle_ms = now;
         #[cfg(debug_assertions)]
         crate::metrics::ACCEPTED.fetch_add(1, Ordering::Relaxed);
+
+        if cmd == Command::Cycle.as_u8() {
+            set_last_cycle_mods(rt.mods);
+            if rt.switcher_visual_enabled && rt.mods.any() {
+                rt.switcher_armed = true;
+                rt.switcher_main_vk = vk as u16;
+                rt.switcher_mods = rt.mods;
+                let delay = if rt.switcher_hold_delay_ms >= 100 && rt.switcher_hold_delay_ms <= 500
+                {
+                    rt.switcher_hold_delay_ms as u64
+                } else {
+                    150
+                };
+                rt.switcher_deadline_ms = now + delay;
+            } else {
+                rt.switcher_armed = false;
+            }
+        }
+
         // SAFETY: `PostMessageW` compares `worker_hwnd` rather than dereferencing it, so a
         // stale handle makes the call fail instead of faulting — hence `let _ =`. Both
         // `wParam` and `lParam` are zero, so no pointer and no ownership crosses the thread
@@ -467,15 +657,6 @@ where
     }
 
     rt.swallow_release_vk = vk as u16;
-    // NOTE: an earlier attempt injected an unassigned key here (`SendInput`)
-    // so the shell would not see a lone Win press. It was removed: calling
-    // `SendInput` from inside the low-level hook callback races the activation
-    // the Worker is about to perform, and cycling stopped moving focus at all.
-    // The Win key-up is deliberately NOT swallowed. Swallowing it leaves the
-    // focused application believing Win is still held, which turns every later
-    // keystroke into Win+key — the sticky-modifier bug. A Start Menu that
-    // occasionally opens is the lesser fault, and the correct fix belongs
-    // outside the callback.
     KeyHandleOutcome {
         disposition: KeyHandleResult::Swallow,
         enqueued,
@@ -566,8 +747,16 @@ impl ModifierState {
     }
 
     /// True while any modifier is still held — i.e. a chord is in progress.
-    fn any(&self) -> bool {
+    pub fn any(&self) -> bool {
         self.win || self.ctrl || self.alt || self.shift
+    }
+
+    /// Returns true if this state still contains any of the modifiers present in `other`.
+    pub fn has_any_of(&self, other: &ModifierState) -> bool {
+        (other.win && self.win)
+            || (other.ctrl && self.ctrl)
+            || (other.alt && self.alt)
+            || (other.shift && self.shift)
     }
 
     fn is_modifier_vk(vk: u32) -> bool {
@@ -1142,6 +1331,35 @@ pub struct HookRuntime {
     /// PID of the Settings process holding the lease (0 when the level is
     /// `CAPTURE_LEASE_NONE`).
     pub capture_lease_pid: u32,
+    pub switcher_visual_enabled: bool,
+    pub switcher_hold_delay_ms: u32,
+    pub switcher_armed: bool,
+    pub switcher_active: bool,
+    pub switcher_main_vk: u16,
+    pub switcher_deadline_ms: u64,
+    pub switcher_mods: ModifierState,
+}
+
+impl HookRuntime {
+    pub fn is_switcher_active(&self) -> bool {
+        self.switcher_active || (self.worker_hwnd != 0 && is_switcher_active())
+    }
+
+    #[allow(dead_code)]
+    pub fn check_switcher_deadline(&mut self, now: u64) -> bool {
+        if self.switcher_armed && !self.switcher_active && now >= self.switcher_deadline_ms {
+            if self.mods.has_any_of(&self.switcher_mods) {
+                self.switcher_active = true;
+                if self.worker_hwnd != 0 {
+                    set_switcher_active(true);
+                }
+                return true;
+            } else {
+                self.switcher_armed = false;
+            }
+        }
+        false
+    }
 }
 
 /// Address of the Hook thread's [`HookRuntime`], which lives on that thread's
@@ -1523,7 +1741,7 @@ unsafe extern "system" fn low_level_keyboard_proc(
     }
 }
 
-fn tick_ms() -> u64 {
+pub(crate) fn tick_ms() -> u64 {
     // SAFETY: `GetTickCount64` takes no arguments, touches no memory we own, and cannot
     // fail; it is `unsafe` only because it is an FFI declaration. It is also callable from
     // the hook callback, which is where the throttle reads it — no allocation, no lock, no
@@ -1660,6 +1878,8 @@ unsafe fn handle_thread_message(rt: &mut HookRuntime, msg: &MSG) -> bool {
                 rt.chords = snapshot.chords;
                 rt.bypass_policy = snapshot.bypass;
                 rt.mouse = snapshot.mouse;
+                rt.switcher_visual_enabled = snapshot.visual_enabled;
+                rt.switcher_hold_delay_ms = snapshot.visual_hold_delay_ms;
                 #[cfg(debug_assertions)]
                 crate::util::append_debug_trace("CONFIG_SNAPSHOT: hook state replaced");
             }
@@ -1817,6 +2037,13 @@ fn hook_thread_main(worker_hwnd: HWND, h_mod: HINSTANCE) {
             bypass_latched: false,
             capture_lease_level: CAPTURE_LEASE_NONE,
             capture_lease_pid: 0,
+            switcher_visual_enabled: cfg.switcher.visual_enabled,
+            switcher_hold_delay_ms: cfg.switcher.visual_hold_delay_ms,
+            switcher_armed: false,
+            switcher_active: false,
+            switcher_main_vk: 0,
+            switcher_deadline_ms: 0,
+            switcher_mods: ModifierState::default(),
         };
 
         // Publish the runtime by address. From here until the null store below,
@@ -2356,7 +2583,131 @@ mod tests {
             bypass_latched: false,
             capture_lease_level: CAPTURE_LEASE_NONE,
             capture_lease_pid: 0,
+            switcher_visual_enabled: true,
+            switcher_hold_delay_ms: 150,
+            switcher_armed: false,
+            switcher_active: false,
+            switcher_main_vk: 0,
+            switcher_deadline_ms: 0,
+            switcher_mods: ModifierState::default(),
         }
+    }
+
+    #[test]
+    fn reload_with_visual_switcher_disabled_leaves_blind_cycling_unchanged() {
+        let queue = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+        let q = std::sync::Arc::clone(&queue);
+        let enqueue = move |cmd: u8| {
+            q.lock().unwrap().push(cmd);
+            true
+        };
+
+        let primary = Shortcut::parse("win+backtick").unwrap();
+        let fallback = Shortcut::parse("alt+backtick").unwrap();
+        let mut rt = test_runtime(primary, fallback);
+        rt.switcher_visual_enabled = false;
+
+        // Key-down at t = 10 with visual switcher disabled
+        let _ = handle_key_event_with_sink(&mut rt, VK_LWIN, true, |_| false, |_| 0, 0, &enqueue);
+        let o =
+            handle_key_event_with_sink(&mut rt, VK_BACKTICK, true, |_| false, |_| 0, 10, &enqueue);
+        assert_eq!(o.disposition, KeyHandleResult::Swallow);
+        assert!(o.enqueued);
+        assert_eq!(queue.lock().unwrap().as_slice(), &[Command::Cycle.as_u8()]);
+
+        // Switcher must NEVER arm when visual_enabled is false!
+        assert!(!rt.switcher_armed);
+        assert!(!rt.switcher_active);
+    }
+
+    #[test]
+    fn main_key_release_before_deadline_disarms_without_delaying_cycle() {
+        let queue = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+        let q = std::sync::Arc::clone(&queue);
+        let enqueue = move |cmd: u8| {
+            q.lock().unwrap().push(cmd);
+            true
+        };
+
+        let primary = Shortcut::parse("win+backtick").unwrap();
+        let fallback = Shortcut::parse("alt+backtick").unwrap();
+        let mut rt = test_runtime(primary, fallback);
+
+        // Win down at t = 0
+        let o1 = handle_key_event_with_sink(&mut rt, VK_LWIN, true, |_| false, |_| 0, 0, &enqueue);
+        assert_eq!(o1.disposition, KeyHandleResult::PassToNext);
+
+        // Backtick down at t = 10 -> Cycle enqueued immediately, switcher armed with deadline = 160
+        let o2 =
+            handle_key_event_with_sink(&mut rt, VK_BACKTICK, true, |_| false, |_| 0, 10, &enqueue);
+        assert_eq!(o2.disposition, KeyHandleResult::Swallow);
+        assert!(o2.enqueued);
+        assert!(rt.switcher_armed);
+        assert_eq!(queue.lock().unwrap().as_slice(), &[Command::Cycle.as_u8()]);
+
+        // Backtick released at t = 60 (< 160) -> Disarms switcher!
+        let o3 =
+            handle_key_event_with_sink(&mut rt, VK_BACKTICK, false, |_| false, |_| 0, 60, &enqueue);
+        assert_eq!(o3.disposition, KeyHandleResult::Swallow);
+        assert!(!rt.switcher_armed);
+        assert!(!rt.switcher_active);
+        assert_eq!(
+            queue.lock().unwrap().as_slice(),
+            &[Command::Cycle.as_u8(), Command::SwitcherDisarm.as_u8()]
+        );
+    }
+
+    #[test]
+    fn deadline_with_modifiers_down_opens_the_switcher() {
+        let primary = Shortcut::parse("win+backtick").unwrap();
+        let fallback = Shortcut::parse("alt+backtick").unwrap();
+        let mut rt = test_runtime(primary, fallback);
+
+        // Win down at t = 0
+        let _ = handle_key_event_with_bypass_and_time(&mut rt, VK_LWIN, true, |_| false, |_| 0, 0);
+
+        // Backtick down at t = 10 -> armed with deadline = 160
+        let _ =
+            handle_key_event_with_bypass_and_time(&mut rt, VK_BACKTICK, true, |_| false, |_| 0, 10);
+        assert!(rt.switcher_armed);
+        assert!(!rt.switcher_active);
+
+        // At t = 170 (past deadline), Win is still held down
+        let opened = rt.check_switcher_deadline(170);
+        assert!(opened);
+        assert!(rt.switcher_active);
+    }
+
+    #[test]
+    fn a_chord_without_a_modifier_never_arms_the_switcher() {
+        let queue = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+        let q = std::sync::Arc::clone(&queue);
+        let enqueue = move |cmd: u8| {
+            q.lock().unwrap().push(cmd);
+            true
+        };
+
+        let primary = Shortcut {
+            win: false,
+            ctrl: false,
+            alt: false,
+            shift: false,
+            vk: 0x70, // VK_F1
+        };
+        assert!(!primary.has_modifier());
+
+        let fallback = primary;
+        let mut rt = test_runtime(primary, fallback);
+
+        // Press bare F1 at t = 10
+        let o = handle_key_event_with_sink(&mut rt, 0x70, true, |_| false, |_| 0, 10, &enqueue);
+        assert_eq!(o.disposition, KeyHandleResult::Swallow);
+        assert!(o.enqueued);
+        assert_eq!(queue.lock().unwrap().as_slice(), &[Command::Cycle.as_u8()]);
+
+        // Switcher must NOT be armed
+        assert!(!rt.switcher_armed);
+        assert!(!rt.switcher_active);
     }
 
     #[test]
@@ -2634,6 +2985,8 @@ mod tests {
             },
             bypass: BypassPolicy::default(),
             mouse: MouseMapping::default(),
+            visual_enabled: true,
+            visual_hold_delay_ms: 150,
         }
     }
 

@@ -3,7 +3,7 @@ spec: SPEC-13
 release: "0.4.0"
 prd: wira-desk
 fr: []
-status: open
+status: closed
 ---
 
 # SPEC-13 — Same-App Visual Switcher: Hold the Cycle Chord to See the Windows

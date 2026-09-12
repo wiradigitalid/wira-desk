@@ -48,6 +48,20 @@ pub enum Command {
     TaskView = 18,
     /// Show Windows Desktop (Win+D).
     ShowDesktop = 19,
+    /// Disarm switcher hold timer before overlay opens (main key released before deadline).
+    SwitcherDisarm = 20,
+    /// Advance switcher selection to next card.
+    SwitcherNext = 21,
+    /// Retreat switcher selection to previous card.
+    SwitcherPrev = 22,
+    /// Move switcher selection up one row.
+    SwitcherUp = 23,
+    /// Move switcher selection down one row.
+    SwitcherDown = 24,
+    /// Commit switcher selection (all modifiers released).
+    SwitcherCommit = 25,
+    /// Cancel switcher and dismiss overlay (Escape or watchdog).
+    SwitcherCancel = 26,
 }
 
 impl Command {
@@ -74,8 +88,31 @@ impl Command {
             17 => Command::PrevVirtualDesktop,
             18 => Command::TaskView,
             19 => Command::ShowDesktop,
+            20 => Command::SwitcherDisarm,
+            21 => Command::SwitcherNext,
+            22 => Command::SwitcherPrev,
+            23 => Command::SwitcherUp,
+            24 => Command::SwitcherDown,
+            25 => Command::SwitcherCommit,
+            26 => Command::SwitcherCancel,
             _ => Command::Nop,
         }
+    }
+
+    /// Whether this command is exempt from `ANTI_MACRO_THROTTLE_MS`.
+    /// Switcher navigation and state commands must never drop held repeat ticks.
+    #[inline]
+    pub fn is_exempt_from_throttle(self) -> bool {
+        matches!(
+            self,
+            Command::SwitcherDisarm
+                | Command::SwitcherNext
+                | Command::SwitcherPrev
+                | Command::SwitcherUp
+                | Command::SwitcherDown
+                | Command::SwitcherCommit
+                | Command::SwitcherCancel
+        )
     }
 
     /// Convert to raw `u8` for writing to the ring buffer.
@@ -112,6 +149,13 @@ mod tests {
             Command::PrevVirtualDesktop,
             Command::TaskView,
             Command::ShowDesktop,
+            Command::SwitcherDisarm,
+            Command::SwitcherNext,
+            Command::SwitcherPrev,
+            Command::SwitcherUp,
+            Command::SwitcherDown,
+            Command::SwitcherCommit,
+            Command::SwitcherCancel,
         ] {
             assert_eq!(Command::from_u8(cmd.as_u8()), cmd);
         }
@@ -119,7 +163,7 @@ mod tests {
 
     #[test]
     fn unknown_values_map_to_nop() {
-        assert_eq!(Command::from_u8(20), Command::Nop);
+        assert_eq!(Command::from_u8(27), Command::Nop);
         assert_eq!(Command::from_u8(255), Command::Nop);
     }
 
