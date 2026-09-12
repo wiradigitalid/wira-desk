@@ -12,24 +12,24 @@ already enabled and is the whole toolkit.
 
 **Blocked by:** 02
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Opaque window painted in `WM_PAINT` through a memory DC, sized to the visible surface
+- [x] Opaque window painted in `WM_PAINT` through a memory DC, sized to the visible surface
       only — not `WS_EX_LAYERED`, whose per-pixel-alpha DIB would cost a back buffer the size of
       the overlay and would strip the alpha from every GDI glyph and icon
-- [ ] Rounded corners via `DWMWA_WINDOW_CORNER_PREFERENCE`; background follows the system light
+- [x] Rounded corners via `DWMWA_WINDOW_CORNER_PREFERENCE`; background follows the system light
       or dark theme
-- [ ] Application icon and window title in each card's chrome box, never over the preview box
-- [ ] Titles read in the switcher's own path, not in the `cycling/source.rs` sweep, and only for
+- [x] Application icon and window title in each card's chrome box, never over the preview box
+- [x] Titles read in the switcher's own path, not in the `cycling/source.rs` sweep, and only for
       the cards actually drawn; the comment at the call site states why `GetWindowTextW` is
       admissible here (cached caption cross-process, documented not to hang on a hung owner)
       when the sweep forbids it
-- [ ] A window that fails thumbnail registration, or whose display affinity is
+- [x] A window that fails thumbnail registration, or whose display affinity is
       `WDA_EXCLUDEFROMCAPTURE` and composes black, shows icon and title in a card of the same
       size
-- [ ] Selection halo drawn in the chrome area around the selected card
-- [ ] Mouse hover moves the selection; a click commits that card. The overlay still never
+- [x] Selection halo drawn in the chrome area around the selected card
+- [x] Mouse hover moves the selection; a click commits that card. The overlay still never
       activates on click
-- [ ] Text and icon metrics scale with the monitor's DPI
-- [ ] All `unsafe` blocks carry `SAFETY:` comments; every GDI object created is selected out and
+- [x] Text and icon metrics scale with the monitor's DPI
+- [x] All `unsafe` blocks carry `SAFETY:` comments; every GDI object created is selected out and
       deleted on the same path that created it

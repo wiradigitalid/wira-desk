@@ -155,6 +155,10 @@ pub fn set_worker_hwnd(hwnd: windows_sys::Win32::Foundation::HWND) {
     WORKER_HWND.set(Some(hwnd));
 }
 
+pub fn worker_hwnd() -> Option<windows_sys::Win32::Foundation::HWND> {
+    WORKER_HWND.get()
+}
+
 fn are_chord_modifiers_down(mods: &crate::hook::ModifierState) -> bool {
     use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
         GetAsyncKeyState, VK_LCONTROL, VK_LMENU, VK_LSHIFT, VK_LWIN, VK_RCONTROL, VK_RMENU,
