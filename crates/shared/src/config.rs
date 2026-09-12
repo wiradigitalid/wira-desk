@@ -55,6 +55,10 @@ pub struct SwitcherConfig {
     /// Fallback shortcut (e.g. "alt+backtick").
     pub fallback_shortcut: String,
     pub fallback_shortcut_enabled: bool,
+    /// Enable heads-up visual switcher overlay on chord hold.
+    pub visual_enabled: bool,
+    /// Threshold in milliseconds before visual switcher opens.
+    pub visual_hold_delay_ms: u32,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -383,6 +387,8 @@ impl Default for SwitcherConfig {
             shortcut_enabled: true,
             fallback_shortcut: "alt+backtick".to_string(),
             fallback_shortcut_enabled: true,
+            visual_enabled: true,
+            visual_hold_delay_ms: 150,
         }
     }
 }
@@ -509,6 +515,29 @@ pub fn log_path() -> PathBuf {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_pre_spec_13_config_gains_both_fields_without_migration() {
+        let legacy_toml = r#"
+            [switcher]
+            shortcut = "win+backtick"
+            shortcut_enabled = true
+            fallback_shortcut = "alt+backtick"
+            fallback_shortcut_enabled = true
+        "#;
+        let cfg = Config::from_toml_str(legacy_toml).unwrap();
+        assert!(
+            cfg.switcher.visual_enabled,
+            "defaults visual_enabled to true"
+        );
+        assert_eq!(
+            cfg.switcher.visual_hold_delay_ms, 150,
+            "defaults visual_hold_delay_ms to 150ms"
+        );
+        let serialized = cfg.to_toml_string().unwrap();
+        assert!(serialized.contains("visual_enabled = true"));
+        assert!(serialized.contains("visual_hold_delay_ms = 150"));
+    }
 
     #[test]
     fn default_roundtrips_through_toml() {

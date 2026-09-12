@@ -626,6 +626,9 @@ pub fn describe(field: &str, err: ShortcutError) -> String {
         ShortcutError::InvalidMousePreset(val) => {
             format!("'{val}' is not a recognized mouse action preset.")
         }
+        ShortcutError::InvalidHoldDelay(val) => {
+            format!("Visual switcher hold delay ({val}ms) must be between 100ms and 500ms.")
+        }
     }
 }
 
@@ -3052,6 +3055,35 @@ mod tests {
             window.invoke_open_publisher_url();
             window.invoke_open_source_url();
             window.invoke_open_support_url();
+
+            let _ = std::fs::remove_file(&save_path);
+        });
+    }
+
+    #[test]
+    fn general_pane_exposes_the_visual_switcher_toggle() {
+        crate::shortcut_row_slint_snapshot::tests::run_on_ui_thread(|| {
+            let (window, model, save_path) =
+                crate::shortcut_row_slint_snapshot::tests::setup_shortcuts_window();
+
+            // 1. Switch to General pane (index 0)
+            model.borrow_mut().set_pane(Pane::General);
+            crate::sync_model_to_ui(&window, &model.borrow());
+            assert_eq!(window.get_current_pane(), 0);
+
+            // Verify defaults
+            assert!(window.get_visual_switcher_enabled());
+            assert_eq!(window.get_visual_hold_delay_ms(), 150);
+
+            // 2. Toggle visual switcher off
+            window.invoke_visual_switcher_toggled(false);
+            assert!(!model.borrow().draft.switcher.visual_enabled);
+            assert!(model.borrow().is_dirty());
+            assert!(window.get_is_dirty());
+
+            // 3. Change hold delay
+            window.invoke_visual_hold_delay_changed(250);
+            assert_eq!(model.borrow().draft.switcher.visual_hold_delay_ms, 250);
 
             let _ = std::fs::remove_file(&save_path);
         });

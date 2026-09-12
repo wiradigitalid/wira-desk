@@ -8,12 +8,12 @@ date: 2026-09-12
 
 ## Resume
 
-Iteration: 1 (boundary: in progress)
-Run branch: autopilot/DEC-025, PR not opened yet
-Stopped at: in progress (SPEC-13-03 delivered, proceeding to SPEC-13-04)
+Iteration: 1 (boundary: HEAD)
+Run branch: autopilot/DEC-025, PR opened for owner review
+Stopped at: Finish (all specifications closed: SPEC-12 and SPEC-13 delivered, promise progress 100%, 72/72 counted RTM rows green)
 Blocked: —
 Parked: —
-Next: SPEC-13-04 implementation
+Next: —
 
 ## Decisions
 
@@ -28,3 +28,4 @@ Next: SPEC-13-04 implementation
 | Iter 1 | SPEC-13-01 | Implemented same-app visual switcher tracer with DWM thumbnail projection, Worker hold timer, watchdog, and cross-thread sync | Blind cycle only or heavy UI framework in daemon | Feature undemoable and blind cycle hard to navigate across many windows | crates/shared/src/commands.rs, crates/daemon/src/switcher/, crates/daemon/src/hook.rs, crates/daemon/src/worker.rs, crates/daemon/src/tray.rs |
 | Iter 1 | SPEC-13-02 | Implemented adaptive grid pagination, in-page spatial navigation clamps, per-monitor work area derivation, and GDI page dots | Fixed-column table or card shrinking on overflow | Multi-window navigation overflows display or becomes unreadable | crates/daemon/src/switcher/{layout.rs, selection.rs, overlay.rs}, crates/daemon/src/worker.rs |
 | Iter 1 | SPEC-13-03 | Implemented card chrome with app icon, cached window title, DWM rounded corners, theme-aware palette, DPI font/icon scaling, and mouse hover/click selection | Bare unstyled thumbnail rectangles | Switcher cards lack title, icon identity, and mouse selection affordances | crates/daemon/src/switcher/overlay.rs, Cargo.toml |
+| Iter 1 | SPEC-13-04 | Implemented visual switcher configuration in SwitcherConfig, 100-500ms validation, GeneralPane toggle and spinner, and daemon reload sync | Hardcoded constants with no user disablement | Users cannot configure hold threshold or revert to pure blind cycle | crates/shared/src/config.rs, crates/settings/, crates/daemon/src/config.rs, crates/daemon/src/hook.rs |

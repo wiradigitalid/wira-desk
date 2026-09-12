@@ -37,6 +37,8 @@ pub enum ShortcutError {
     InvalidPercentage(u32),
     /// An unrecognized or invalid mouse action preset string.
     InvalidMousePreset(String),
+    /// An invalid visual switcher hold delay (valid 100..=500 ms).
+    InvalidHoldDelay(u32),
 }
 
 /// Validate a submitted shortcut **before** any active configuration is
@@ -231,6 +233,13 @@ pub fn validate_config(cfg: &Config) -> Result<(), (&'static str, ShortcutError)
         if shared::MouseActionPreset::parse_slug(val).is_none() {
             return Err((field_name, ShortcutError::InvalidMousePreset(val.clone())));
         }
+    }
+
+    if !(100..=500).contains(&cfg.switcher.visual_hold_delay_ms) {
+        return Err((
+            "switcher.visual_hold_delay_ms",
+            ShortcutError::InvalidHoldDelay(cfg.switcher.visual_hold_delay_ms),
+        ));
     }
 
     Ok(())
@@ -517,6 +526,31 @@ mod tests {
         assert!(cfg.snapping.snap_third_right_enabled);
         assert!(cfg.layout.move_next_monitor_shortcut_enabled);
         assert!(cfg.layout.stack_shortcut_enabled);
+    }
+
+    #[test]
+    fn visual_hold_delay_outside_its_bounds_is_rejected() {
+        let mut cfg = Config::default();
+        cfg.switcher.visual_hold_delay_ms = 50; // Below 100ms
+        assert!(matches!(
+            validate_config(&cfg),
+            Err((
+                "switcher.visual_hold_delay_ms",
+                ShortcutError::InvalidHoldDelay(50)
+            ))
+        ));
+
+        cfg.switcher.visual_hold_delay_ms = 600; // Above 500ms
+        assert!(matches!(
+            validate_config(&cfg),
+            Err((
+                "switcher.visual_hold_delay_ms",
+                ShortcutError::InvalidHoldDelay(600)
+            ))
+        ));
+
+        cfg.switcher.visual_hold_delay_ms = 250; // Within 100..=500
+        assert!(validate_config(&cfg).is_ok());
     }
 
     #[test]

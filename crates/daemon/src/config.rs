@@ -29,6 +29,8 @@ pub struct HookSnapshot {
     pub chords: crate::hook::Chords,
     pub bypass: BypassPolicy,
     pub mouse: crate::hook::MouseMapping,
+    pub visual_enabled: bool,
+    pub visual_hold_delay_ms: u32,
 }
 
 /// Owned, immutable configuration for the Worker actor.
@@ -63,6 +65,8 @@ pub enum RejectReason {
     DuplicateShortcut,
     /// A snap percentage was outside 1..=99.
     InvalidPercentage,
+    /// A visual switcher hold delay was outside 100..=500 ms.
+    InvalidHoldDelay,
 }
 
 impl RejectReason {
@@ -85,6 +89,9 @@ impl RejectReason {
             }
             RejectReason::InvalidPercentage => {
                 "Config reload skipped: snap percentage must be between 1 and 99; keeping current settings"
+            }
+            RejectReason::InvalidHoldDelay => {
+                "Config reload skipped: visual hold delay must be between 100 and 500 ms; keeping current settings"
             }
         }
     }
@@ -167,6 +174,10 @@ pub fn validate(text: &str) -> Result<(Config, HookSnapshot, WorkerSnapshot), Re
         }
     }
 
+    if !(100..=500).contains(&cfg.switcher.visual_hold_delay_ms) {
+        return Err(RejectReason::InvalidHoldDelay);
+    }
+
     let chords = crate::hook::Chords::from_config(&cfg);
 
     // Reject reserved shortcuts on reload. Walked through the declared sequence rather than
@@ -209,6 +220,8 @@ pub fn validate(text: &str) -> Result<(Config, HookSnapshot, WorkerSnapshot), Re
         chords,
         bypass: BypassPolicy::from_config(&cfg.vm_bypass),
         mouse: crate::hook::MouseMapping::from_config(&cfg.mouse),
+        visual_enabled: cfg.switcher.visual_enabled,
+        visual_hold_delay_ms: cfg.switcher.visual_hold_delay_ms,
     };
     let worker = WorkerSnapshot {
         layout: cfg.layout.clone(),

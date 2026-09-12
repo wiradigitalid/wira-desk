@@ -624,11 +624,17 @@ where
 
         if cmd == Command::Cycle.as_u8() {
             set_last_cycle_mods(rt.mods);
-            if rt.mods.any() {
+            if rt.switcher_visual_enabled && rt.mods.any() {
                 rt.switcher_armed = true;
                 rt.switcher_main_vk = vk as u16;
                 rt.switcher_mods = rt.mods;
-                rt.switcher_deadline_ms = now + 150;
+                let delay = if rt.switcher_hold_delay_ms >= 100 && rt.switcher_hold_delay_ms <= 500
+                {
+                    rt.switcher_hold_delay_ms as u64
+                } else {
+                    150
+                };
+                rt.switcher_deadline_ms = now + delay;
             } else {
                 rt.switcher_armed = false;
             }
@@ -1325,6 +1331,8 @@ pub struct HookRuntime {
     /// PID of the Settings process holding the lease (0 when the level is
     /// `CAPTURE_LEASE_NONE`).
     pub capture_lease_pid: u32,
+    pub switcher_visual_enabled: bool,
+    pub switcher_hold_delay_ms: u32,
     pub switcher_armed: bool,
     pub switcher_active: bool,
     pub switcher_main_vk: u16,
@@ -1870,6 +1878,8 @@ unsafe fn handle_thread_message(rt: &mut HookRuntime, msg: &MSG) -> bool {
                 rt.chords = snapshot.chords;
                 rt.bypass_policy = snapshot.bypass;
                 rt.mouse = snapshot.mouse;
+                rt.switcher_visual_enabled = snapshot.visual_enabled;
+                rt.switcher_hold_delay_ms = snapshot.visual_hold_delay_ms;
                 #[cfg(debug_assertions)]
                 crate::util::append_debug_trace("CONFIG_SNAPSHOT: hook state replaced");
             }
@@ -2027,6 +2037,8 @@ fn hook_thread_main(worker_hwnd: HWND, h_mod: HINSTANCE) {
             bypass_latched: false,
             capture_lease_level: CAPTURE_LEASE_NONE,
             capture_lease_pid: 0,
+            switcher_visual_enabled: cfg.switcher.visual_enabled,
+            switcher_hold_delay_ms: cfg.switcher.visual_hold_delay_ms,
             switcher_armed: false,
             switcher_active: false,
             switcher_main_vk: 0,
@@ -2571,12 +2583,41 @@ mod tests {
             bypass_latched: false,
             capture_lease_level: CAPTURE_LEASE_NONE,
             capture_lease_pid: 0,
+            switcher_visual_enabled: true,
+            switcher_hold_delay_ms: 150,
             switcher_armed: false,
             switcher_active: false,
             switcher_main_vk: 0,
             switcher_deadline_ms: 0,
             switcher_mods: ModifierState::default(),
         }
+    }
+
+    #[test]
+    fn reload_with_visual_switcher_disabled_leaves_blind_cycling_unchanged() {
+        let queue = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+        let q = std::sync::Arc::clone(&queue);
+        let enqueue = move |cmd: u8| {
+            q.lock().unwrap().push(cmd);
+            true
+        };
+
+        let primary = Shortcut::parse("win+backtick").unwrap();
+        let fallback = Shortcut::parse("alt+backtick").unwrap();
+        let mut rt = test_runtime(primary, fallback);
+        rt.switcher_visual_enabled = false;
+
+        // Key-down at t = 10 with visual switcher disabled
+        let _ = handle_key_event_with_sink(&mut rt, VK_LWIN, true, |_| false, |_| 0, 0, &enqueue);
+        let o =
+            handle_key_event_with_sink(&mut rt, VK_BACKTICK, true, |_| false, |_| 0, 10, &enqueue);
+        assert_eq!(o.disposition, KeyHandleResult::Swallow);
+        assert!(o.enqueued);
+        assert_eq!(queue.lock().unwrap().as_slice(), &[Command::Cycle.as_u8()]);
+
+        // Switcher must NEVER arm when visual_enabled is false!
+        assert!(!rt.switcher_armed);
+        assert!(!rt.switcher_active);
     }
 
     #[test]
@@ -2944,6 +2985,8 @@ mod tests {
             },
             bypass: BypassPolicy::default(),
             mouse: MouseMapping::default(),
+            visual_enabled: true,
+            visual_hold_delay_ms: 150,
         }
     }
 

@@ -185,6 +185,8 @@ pub(crate) fn sync_model_to_ui(window: &MainWindow, model: &SettingsModel) {
 
         // General
         window.set_auto_start(model.draft.general.auto_start);
+        window.set_visual_switcher_enabled(model.draft.switcher.visual_enabled);
+        window.set_visual_hold_delay_ms(model.draft.switcher.visual_hold_delay_ms as i32);
 
         // Updates
         window.set_check_updates(model.draft.general.check_updates);
@@ -445,6 +447,29 @@ pub(crate) fn bind_callbacks(
         main_window.on_auto_start_toggled(move |val| {
             let mut m = model_rc.borrow_mut();
             m.draft.general.auto_start = val;
+            if let Some(w) = window_weak.upgrade() {
+                sync_model_to_ui(&w, &m);
+            }
+        });
+    }
+    {
+        let model_rc = Rc::clone(model);
+        let window_weak = main_window.as_weak();
+        main_window.on_visual_switcher_toggled(move |val| {
+            let mut m = model_rc.borrow_mut();
+            m.draft.switcher.visual_enabled = val;
+            if let Some(w) = window_weak.upgrade() {
+                sync_model_to_ui(&w, &m);
+            }
+        });
+    }
+    {
+        let model_rc = Rc::clone(model);
+        let window_weak = main_window.as_weak();
+        main_window.on_visual_hold_delay_changed(move |val| {
+            let mut m = model_rc.borrow_mut();
+            let clamped = val.clamp(100, 500) as u32;
+            m.draft.switcher.visual_hold_delay_ms = clamped;
             if let Some(w) = window_weak.upgrade() {
                 sync_model_to_ui(&w, &m);
             }

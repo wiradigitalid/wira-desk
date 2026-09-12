@@ -58,6 +58,10 @@ export component MainWindow inherits Window {
 
     // General Pane Properties
     in-out property <bool> auto_start: false;
+    in-out property <bool> visual_switcher_enabled: true;
+    in-out property <int> visual_hold_delay_ms: 150;
+    callback visual_switcher_toggled(bool);
+    callback visual_hold_delay_changed(int);
 
     // Shortcuts Pane Properties.
     //
@@ -342,7 +346,12 @@ export component MainWindow inherits Window {
 
                             if root.current_pane == 0 : GeneralPane {
                                 auto_start <=> root.auto_start;
+                                visual_switcher_enabled <=> root.visual_switcher_enabled;
+                                visual_hold_delay_ms <=> root.visual_hold_delay_ms;
+                                revert_generation: root.revert_generation;
                                 auto_start_toggled(val) => { root.auto_start_toggled(val); }
+                                visual_switcher_toggled(val) => { root.visual_switcher_toggled(val); }
+                                visual_hold_delay_changed(val) => { root.visual_hold_delay_changed(val); }
                             }
 
                             if root.current_pane == 1 : ShortcutsPane {

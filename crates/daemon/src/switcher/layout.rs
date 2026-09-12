@@ -1,7 +1,8 @@
 //! Adaptive grid layout derived from work area dimensions.
 
 pub const CARD_W: i32 = 240;
-pub const CARD_H: i32 = 160;
+pub const CARD_H: i32 = 180;
+pub const HEADER_H: i32 = 28;
 pub const GUTTER: i32 = 16;
 pub const MARGIN: i32 = 24;
 pub const MAX_ROWS: usize = 3;
@@ -28,6 +29,7 @@ impl Rect {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct CardLayout {
     pub chrome_rect: Rect,
+    pub header_rect: Rect,
     pub preview_rect: Rect,
 }
 
@@ -95,11 +97,18 @@ pub fn compute_layout(work_area: Rect, candidate_count: usize, page: usize) -> S
         let card_y = overlay_y + MARGIN + row * (CARD_H + GUTTER);
 
         let chrome_rect = Rect::new(card_x, card_y, CARD_W, CARD_H);
-        // Previews live inside the card border (4px inset for selection border and padding)
-        let preview_rect = Rect::new(card_x + 4, card_y + 4, CARD_W - 8, CARD_H - 8);
+        let header_rect = Rect::new(card_x + 6, card_y + 4, CARD_W - 12, HEADER_H);
+        // Previews live strictly below the header area (no overlap with DWM thumbnail projection)
+        let preview_rect = Rect::new(
+            card_x + 4,
+            card_y + HEADER_H + 4,
+            CARD_W - 8,
+            CARD_H - HEADER_H - 8,
+        );
 
         cards.push(CardLayout {
             chrome_rect,
+            header_rect,
             preview_rect,
         });
     }
