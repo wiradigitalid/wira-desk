@@ -2796,6 +2796,81 @@ mod tests {
         });
     }
 
+    #[test]
+    fn clicking_preset_dropdown_category_header_does_not_dismiss_overlay() {
+        use slint::ComponentHandle;
+        crate::shortcut_row_slint_snapshot::tests::run_on_ui_thread(|| {
+            let (window, model, save_path) =
+                crate::shortcut_row_slint_snapshot::tests::setup_shortcuts_window();
+
+            model.borrow_mut().set_pane(Pane::Mouse);
+            crate::sync_model_to_ui(&window, &model.borrow());
+
+            let initial_draft = model.borrow().draft.clone();
+
+            // Open dropdown
+            window.set_dropdown_slot(0);
+            window.set_dropdown_y(180.0);
+            window.set_dropdown_open(true);
+            assert!(window.get_dropdown_open());
+
+            // Click on the first category header ("Virtual Desktops")
+            // The overlay is inside the middle body (below the 36px titlebar).
+            let window_width = window.window().size().width as f32;
+            let overlay_x = window_width - 250.0 - 32.0;
+            let header_x = overlay_x + 24.0;
+            let header_y = 36.0 + 180.0 + 12.0;
+
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::PointerPressed {
+                    position: slint::LogicalPosition::new(header_x, header_y),
+                    button: slint::platform::PointerEventButton::Left,
+                });
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::PointerReleased {
+                    position: slint::LogicalPosition::new(header_x, header_y),
+                    button: slint::platform::PointerEventButton::Left,
+                });
+
+            // The dropdown overlay MUST remain open after clicking the category header
+            assert!(
+                window.get_dropdown_open(),
+                "dropdown overlay must remain open after clicking category header"
+            );
+            assert_eq!(
+                model.borrow().draft,
+                initial_draft,
+                "draft configuration must not be mutated"
+            );
+            assert!(
+                !model.borrow().is_dirty(),
+                "model must not be marked dirty after header click"
+            );
+
+            // In contrast, clicking outside the overlay (on the backdrop) dismisses it
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::PointerPressed {
+                    position: slint::LogicalPosition::new(100.0, 100.0),
+                    button: slint::platform::PointerEventButton::Left,
+                });
+            window
+                .window()
+                .dispatch_event(slint::platform::WindowEvent::PointerReleased {
+                    position: slint::LogicalPosition::new(100.0, 100.0),
+                    button: slint::platform::PointerEventButton::Left,
+                });
+            assert!(
+                !window.get_dropdown_open(),
+                "clicking backdrop outside overlay must dismiss dropdown"
+            );
+
+            let _ = std::fs::remove_file(&save_path);
+        });
+    }
+
     use slint::ComponentHandle;
 
     fn find_about_element(

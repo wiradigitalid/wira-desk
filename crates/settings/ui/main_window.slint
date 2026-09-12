@@ -541,31 +541,62 @@ export component MainWindow inherits Window {
                                 for item[idx] in root.dropdown_items: Rectangle {
                                     height: item.is_header ? 24px : 28px;
                                     border-radius: 4px;
-                                    background: item.is_header ? transparent : (item_touch.has_hover ? Palette.bg_card_hover : transparent);
 
-                                    HorizontalLayout {
-                                        padding-left: item.is_header ? 6px : 12px;
-                                        padding-right: 8px;
-                                        alignment: start;
+                                    if item.is_header : Rectangle {
+                                        background: transparent;
 
-                                        Text {
-                                            text: item.label;
-                                            font-family: Typography.font_family;
-                                            font-size: item.is_header ? 10.5px : 12px;
-                                            font-weight: item.is_header ? 700 : 500;
-                                            color: item.is_header ? Palette.text_tertiary : Palette.text_primary;
-                                            vertical-alignment: center;
-                                            overflow: elide;
+                                        HorizontalLayout {
+                                            padding-left: 6px;
+                                            padding-right: 8px;
+                                            alignment: start;
+
+                                            Text {
+                                                text: item.label;
+                                                font-family: Typography.font_family;
+                                                font-size: 10.5px;
+                                                font-weight: 700;
+                                                color: Palette.text_tertiary;
+                                                vertical-alignment: center;
+                                                overflow: elide;
+                                            }
+                                        }
+
+                                        TouchArea {
+                                            mouse-cursor: default;
+                                            clicked => {
+                                                // Absorb click so category headers are inert and don't dismiss overlay
+                                            }
                                         }
                                     }
 
-                                    item_touch := TouchArea {
-                                        enabled: !item.is_header;
-                                        accessible-role: button;
-                                        accessible-label: item.label;
-                                        clicked => {
-                                            root.dropdown_open = false;
-                                            root.preset_selected(root.dropdown_slot, item.slug);
+                                    if !item.is_header : Rectangle {
+                                        background: item_touch.has_hover ? Palette.bg_card_hover : transparent;
+                                        border-radius: 4px;
+
+                                        HorizontalLayout {
+                                            padding-left: 12px;
+                                            padding-right: 8px;
+                                            alignment: start;
+
+                                            Text {
+                                                text: item.label;
+                                                font-family: Typography.font_family;
+                                                font-size: 12px;
+                                                font-weight: 500;
+                                                color: Palette.text_primary;
+                                                vertical-alignment: center;
+                                                overflow: elide;
+                                            }
+                                        }
+
+                                        item_touch := TouchArea {
+                                            mouse-cursor: pointer;
+                                            accessible-role: button;
+                                            accessible-label: item.label;
+                                            clicked => {
+                                                root.dropdown_open = false;
+                                                root.preset_selected(root.dropdown_slot, item.slug);
+                                            }
                                         }
                                     }
                                 }
