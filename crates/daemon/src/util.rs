@@ -61,6 +61,7 @@ pub fn append_debug_trace(msg: &str) {
 
 /// In production release builds, debug trace is compiled out.
 #[cfg(not(debug_assertions))]
+#[allow(dead_code)]
 pub fn append_debug_trace(_msg: &str) {}
 
 /// Show a modal `MessageBoxW`, centralizing wide-string conversion so each
