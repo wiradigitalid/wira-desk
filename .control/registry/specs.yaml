@@ -1111,6 +1111,81 @@ specs:
         tests:
           - app::tests::save_changes_button_disabled_when_clean_and_enabled_when_dirty
 
+  # `fr:` and every ticket's `satisfies:` are deliberately empty. The visual switcher is a new
+  # capability and the corpus has no requirement for it yet: FR-1, FR-2 and UC-1 are the blind
+  # cycle, delivered in SPEC-1, and claiming them would file this work as something it is not.
+  # The precedent is SPEC-8, which minted CAP-17, FR-30..FR-32 and UC-13/UC-14 for driverless
+  # mouse navigation. SPEC-13 owes a new CAP, new FR rows, and a UC — the owner's call at G2.
+  # FR-3 (VM/RDP passthrough) and FR-5 (minimized exclusion) are constraints this spec obeys,
+  # not requirements it satisfies.
+  #
+  # `spec_reviewed` is OWED, not skipped, and `review-trace` is RED until it lands. A genuine
+  # adversarial pass (structure + edge-case-hunter) ran on 2026-09-12 against the draft and the
+  # codebase it targets; it found the draft contradicting the frozen eligibility policy on
+  # minimized windows, colliding with the existing `Config.switcher` field, deferring the blind
+  # cycle past SM-1's latency metric, keying the hold threshold to the modifier instead of the
+  # main key, and specifying a layered window that cannot carry GDI text or a system backdrop.
+  # SPEC.md and all four tickets were rewritten against those findings. The stamp is withheld
+  # only because the reviewed content is uncommitted: stamping against the current HEAD would
+  # name a sha that predates every edit reviewed, which is the rubber stamp the SPEC-11 note
+  # above warns about. Stamp with the sha of the commit that lands these edits.
+  - id: SPEC-13
+    release: "0.4.0"
+    prd: [wira-desk]
+    size: M
+    status: open
+    depends_on: []
+    spec_folder: .scratch/spec-13-same-app-visual-switcher/
+    fr: []
+    spec_reviewed:
+      date: "2026-09-12"
+      sha: "e98b21f"
+      lenses: [structure, prose, edge-case-hunter]
+    tickets:
+      - id: SPEC-13-01
+        title: Tracer — hold the cycle chord, see one row of live previews, release to activate
+        spec_folder: .scratch/spec-13-same-app-visual-switcher/
+        component: window-management
+        satisfies: []
+        depends_on: []
+        tests:
+          - switcher::tests::switcher_candidate_set_equals_blind_cycle_eligible_set
+          - switcher::tests::card_order_equals_cycle_order
+          - hook::tests::main_key_release_before_deadline_disarms_without_delaying_cycle
+          - hook::tests::deadline_with_modifiers_down_opens_the_switcher
+          - hook::tests::a_chord_without_a_modifier_never_arms_the_switcher
+          - switcher::thumbnail::tests::every_registration_is_unregistered_on_dismissal
+      - id: SPEC-13-02
+        title: Adaptive grid derived from the work area, pagination, and spatial navigation
+        spec_folder: .scratch/spec-13-same-app-visual-switcher/
+        component: window-management
+        satisfies: []
+        depends_on: [SPEC-13-01]
+        tests:
+          - switcher::layout::tests::columns_derive_from_the_work_area_and_never_overflow_it
+          - switcher::layout::tests::candidates_beyond_one_page_paginate_rather_than_shrink
+          - switcher::selection::tests::advancing_past_a_page_edge_turns_the_page
+      - id: SPEC-13-03
+        title: Card chrome — icon, title, theme, rounded corners, and mouse selection
+        spec_folder: .scratch/spec-13-same-app-visual-switcher/
+        component: window-management
+        satisfies: []
+        depends_on: [SPEC-13-02]
+        tests:
+          - switcher::overlay::tests::chrome_never_overlaps_the_preview_rectangle
+          - switcher::overlay::tests::a_failed_registration_still_renders_icon_and_title
+      - id: SPEC-13-04
+        title: Two settings — the visual switcher toggle and the hold delay
+        spec_folder: .scratch/spec-13-same-app-visual-switcher/
+        component: settings
+        satisfies: []
+        depends_on: [SPEC-13-01]
+        tests:
+          - config::tests::a_pre_spec_13_config_gains_both_fields_without_migration
+          - persistence::tests::visual_hold_delay_outside_its_bounds_is_rejected
+          - app::tests::general_pane_exposes_the_visual_switcher_toggle
+
+
 
 
 
