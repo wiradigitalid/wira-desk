@@ -9,7 +9,7 @@ Wira Desk adheres to native Windows 11 Fluent 2 Design and Mica Material design 
 1. **Invisibility by Default**: Core window cycling and snapping interactions produce zero on-screen visual clutter, animations, or HUD overlays.
 2. **Harmonious Native Surfaces (Mica Grounding)**: Multi-layered surface hierarchy: Page Canvas (`#121418`) → Mica Window Surface (`#191D23`) → Sidebar Canvas (`#15181E`) → Card Containers (`#20242B`) → Pill Controls.
 3. **Deterministic Keyboard-First Navigation**: 100% accessible via keyboard navigation (Tab traversal, AccessKit/UIA announcements, and physical keycap chord interception).
-4. **Decoupled Architecture**: High-memory UI components are strictly segregated into a standalone on-demand binary (`wiradesk-settings.exe`), preserving a minimal static footprint (<2MB RAM) for the background daemon (`wiradesk.exe`).
+4. **Decoupled Architecture**: High-memory UI components are strictly segregated into a standalone on-demand binary (`wiradesk-settings.exe`), preserving a minimal static footprint (<5MB private bytes, idle — DEC-027) for the background daemon (`wiradesk.exe`).
 
 ## Where Values Live
 

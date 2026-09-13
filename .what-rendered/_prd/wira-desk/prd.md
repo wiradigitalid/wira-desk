@@ -6,7 +6,7 @@
 
 Wira Desk is a lightweight, background Windows productivity utility that brings intuitive same-application window cycling (macOS-style `Win + backtick`) and driverless, zero-overhead mouse desktop navigation to Windows 11 and 10. Windows natively lacks any mechanism to cycle strictly among windows belonging to the current foreground process, forcing users into multi-app `Alt + Tab` switchers or taskbar hunting that breaks focus and disrupts spatial workflows across multi-monitor setups. Concurrently, standard multi-button productivity mice offer physical auxiliary controls (thumb buttons and tilt wheels) that default to basic browser navigation; unlocking them for desktop multitasking traditionally requires heavy, multi-process vendor companion suites that consume gigabytes of disk space, hundreds of megabytes of RAM, and run persistent background telemetry agents.
 
-Built in Rust with pure Win32 bindings (`windows-sys`), Wira Desk runs as an elevated tray daemon with an uncompromising resource budget of under 2 MB idle RAM and near-zero CPU usage. It performs instantaneous, overlay-free window cycling while preserving monitor boundaries and spatial context, and maps standard mouse inputs directly to virtual desktop switching and desktop navigation without third-party vendor bloat. Companion settings and onboarding operations are isolated into a separate process, ensuring the core input interception loop remains lightweight, rock-solid, and responsive.
+Built in Rust with pure Win32 bindings (`windows-sys`), Wira Desk runs as an elevated tray daemon with an uncompromising resource budget of under 5 MB of idle private-bytes RAM and near-zero CPU usage. It performs instantaneous, overlay-free window cycling while preserving monitor boundaries and spatial context, and maps standard mouse inputs directly to virtual desktop switching and desktop navigation without third-party vendor bloat. Companion settings and onboarding operations are isolated into a separate process, ensuring the core input interception loop remains lightweight, rock-solid, and responsive.
 
 Wira Desk establishes itself as the essential, invisible window and desktop navigation companion for power users on Windows—delivering effortless same-application switching and mouse-driven multitasking while honoring the speed, stability, and resource constraints demanded by modern high-performance desktop environments.
 
@@ -16,7 +16,7 @@ Wira Desk establishes itself as the essential, invisible window and desktop navi
 
 Wira Desk brings the seamless same-application window cycling experience of macOS (`Cmd + \``) to the Windows desktop ecosystem (`Win + \``). Windows natively lacks any mechanism to cycle strictly among windows belonging to the current foreground application, forcing users into noisy `Alt + Tab` switchers or taskbar hunting that breaks focus, disrupts spatial memory, and creates severe friction across multi-monitor workstations.
 
-Operating as an ultra-lightweight, invisible background tray utility written in Rust, Wira Desk delivers instant, overlay-free window cycling while strictly respecting physical monitor and virtual desktop boundaries. It runs elevated to guarantee seamless operation across administrator and standard windows (UIPI bypass), pairs with an optional DPI-aware keyboard snapping engine, and maintains a strict memory budget under 2 MB idle RAM without telemetry or cloud dependencies.
+Operating as an ultra-lightweight, invisible background tray utility written in Rust, Wira Desk delivers instant, overlay-free window cycling while strictly respecting physical monitor and virtual desktop boundaries. It runs elevated to guarantee seamless operation across administrator and standard windows (UIPI bypass), pairs with an optional DPI-aware keyboard snapping engine, and maintains a strict memory budget under 5 MB of idle private-bytes RAM (DEC-027) without telemetry or cloud dependencies.
 
 ## Target User
 
@@ -72,7 +72,7 @@ Operating as an ultra-lightweight, invisible background tray utility written in 
 - **Entry state:** Wira Desk daemon running in the tray; foreground focus active in VS Code on Virtual Desktop 1; vendor mouse software is not installed.
 - **Path:** Dimas clicks Thumb Button 2 (forward) to advance to the next virtual desktop, and tilts the scroll wheel to the left to open Task View (Win + Tab).
 - **Climax:** Virtual Desktop transitions smoothly to Desktop 2 with zero perceived latency; tilting the wheel left immediately displays the overview of all open application windows without cursor stutter or hitching.
-- **Resolution:** Dimas navigates between multiple workspaces entirely from his mouse hand without reaching for the keyboard, maintaining high coding flow while consuming under 2 MB background RAM.
+- **Resolution:** Dimas navigates between multiple workspaces entirely from his mouse hand without reaching for the keyboard, maintaining high coding flow while consuming under 5 MB of background RAM.
 - **Edge case:** Rapidly flicking the tilt wheel left triggers exactly one Task View or desktop switch due to software debounce filtering (150–200 ms), preventing erratic multiple transitions.
 
 ## Features
@@ -116,7 +116,7 @@ The system can intercept the cycling action only when the exact configured key c
 **Component:** `window-management`
 
 **Out of Scope:**
-- Rendering graphical thumbnail previews or on-screen switcher HUD overlays during cycling.
+- Rendering graphical thumbnail previews or on-screen switcher HUD overlays **during blind cycling** — the rapid-tap path stays overlay-free, which is the whole of CAP-1. The hold-activated visual switcher (SPEC-12, SPEC-13, DEC-026) is a separate surface and is not governed by this line; it is not yet carried by a capability of its own.
 
 ---
 
@@ -124,7 +124,7 @@ The system can intercept the cycling action only when the exact configured key c
 
 **Capability:** CAP-7 — serves BG-1.
 
-**Description:** Restricts window cycling boundaries strictly to the physical display monitor and active virtual desktop of the currently focused window, eliminating unexpected multi-monitor focus jumps. Realizes UJ-1.
+**Description:** Restricts window cycling boundaries strictly to the physical display monitor and active virtual desktop of the currently focused window, eliminating unexpected multi-monitor focus jumps. Realizes UJ-1. **The virtual-desktop boundary is absolute.** The monitor boundary has one enumeration exception: the hold-activated visual switcher lists candidates across all physical monitors on the current desktop and activates the chosen window in place (DEC-026). Blind cycling is unaffected and stays monitor-locked.
 
 #### FR-2 — Lock cycling to the same physical monitor and virtual desktop as the active window.
 
@@ -226,7 +226,7 @@ The system can read and apply primary (`Win + \``) and fallback (`Alt + \``) sho
 
 The system can maintain its background execution lifecycle exclusively through native Win32 APIs and an `ITaskbarList` tray icon without linking external third-party GUI frameworks.
 
-**Proof of done:** The background daemon runs with an active system tray icon while consuming under 2 MB of static RAM.  
+**Proof of done:** The background daemon runs with an active system tray icon while consuming under 5 MB of static RAM, measured as private bytes on a release build when idle with the overlay closed (DEC-027).  
 **Capability:** `CAP-9`  
 **Component:** `window-management`
 
@@ -510,7 +510,7 @@ The Settings application provides a dedicated Mouse configuration pane containin
 
 ### Non-functional requirements not attached to a feature above
 
-#### NFR-1 — Daemon static RAM under 2 MB; hard ceiling 10 MB.
+#### NFR-1 — Daemon static RAM under 5 MB private bytes, idle; hard ceiling 10 MB (DEC-027).
 
 **Enforced by:** release profile and windows-sys crate choice  
 **Serves:** `BG-2`
@@ -570,7 +570,7 @@ The Settings application provides a dedicated Mouse configuration pane containin
 - **SM-2: Hook Stability & Reliability** — Zero unhandled hook dropouts or unhook events across continuous 7-day user sessions. Validates FR-9, FR-10, FR-11, NFR-2, NFR-6.
 
 ### Secondary Metrics
-- **SM-3: Resource Efficiency** — Idle static RAM consumption of the background daemon remains strictly under 2 MB. Validates FR-9, NFR-1, NFR-5.
+- **SM-3: Resource Efficiency** — Idle static RAM consumption of the background daemon remains strictly under 5 MB, measured as private bytes on a release build with the switcher overlay closed (DEC-027). Validates FR-9, NFR-1, NFR-5.
 
 ### Counter-Metrics (Do Not Optimize)
 - **SM-C1: Binary Size vs Feature Integrity** — Do not sacrifice Rust `std` thread safety or essential error handling to artificially drive binary size below 200 KB. Counterbalances NFR-5.
@@ -581,7 +581,7 @@ The Settings application provides a dedicated Mouse configuration pane containin
 
 | ID | Requirement | Target | Enforced by |
 |---|---|---|---|
-| **NFR-1** | Daemon Static RAM Footprint | < 2 MB idle (hard ceiling < 10 MB) | `windows-sys` crate, absence of managed runtimes, and aggressive release compilation |
+| **NFR-1** | Daemon Static RAM Footprint | < 5 MB private bytes idle, hard ceiling < 10 MB (DEC-027) | `windows-sys` crate, absence of managed runtimes, and aggressive release compilation |
 | **NFR-2** | Hook Callback Execution Time | < 10 ms callback duration (sub-millisecond perceived focus change) | Dedicated `TIME_CRITICAL` hook thread, asynchronous worker handoff, and avoiding COM/heavy APIs in hook |
 | **NFR-3** | Hot Path Heap Allocations | Zero dynamic heap allocations in hook→worker path | 16-slot lock-free static `u8` ring buffer with Copy primitives |
 | **NFR-4** | Non-Blocking Kernel Filtering | Zero synchronous inter-process calls in window enumerator | Strict `EnumWindows` policy using non-blocking kernel reads (`IsWindowVisible`, `GetWindowLong`, `SetWindowPos`) |
@@ -666,5 +666,5 @@ Release-specific exclusions are under **MVP Scope → Out of Scope for MVP** abo
 | 2026-09-03 | Added Update Checking (CAP-13, FR-24, FR-25): the product already shipped an optional, toggleable HTTPS check for a newer release, disclosed in `PRIVACY.md` but never promised here; §7's Constraints corrected to state the one exception instead of an absolute zero; FR-16's tray menu order corrected to match what ships (an "Update to \<version\>..." item only when one is available, not an always-present "Check for Updates...") | `wdi-reconcile` traced the shipped code against the corpus and found the update-check subsystem — real, deliberate, already privacy-documented — had no promise anywhere in `.what/`, and that FR-16's proof no longer matched the running menu | v0.4.0 |
 | 2026-09-06 | Added custom-percentage edge snap (CAP-14, FR-26) and snap-to-thirds (CAP-15, FR-27), both `window-management`; FR-15's proof corrected from `Ctrl + Alt + Shift + Down` to `Ctrl + Alt + Shift + S`, the Overlapping Stack default `DEC-011` moved it to so the new percentage-snap feature could claim the arrow tier | The owner asked for a configurable-percentage snap and a thirds snap, and wanted the first bound to arrow keys; freeing that tier required moving the Overlapping Stack default, recorded as `DEC-011` | Unreleased |
 | 2026-09-07 | Added per-action shortcut enable/disable (CAP-16): FR-28 (`settings`) gives every editable action its own on/off control, distinct from a `DEC-009` chord-collision unbind; FR-29 (`window-management`) excludes a disabled action's chord from hook registration entirely rather than registering and then discarding it | Overlapping Stack was the only action with an on/off control and no `FR`/`UC`/`DEC` explained why. Every other action's chord is claimed from Windows permanently regardless of whether the user wants that feature — and even Overlapping Stack's own existing toggle checked state inside the arrangement planner, after the hook had already consumed the keystroke, so "disabled" still stole the chord without using it | Unreleased |
-| 2026-09-10 | Added driverless mouse desktop navigation (CAP-17, FR-30, FR-31, FR-32): intercepts standard auxiliary mouse buttons (Thumb Button 1/2 via WM_XBUTTONDOWN) and horizontal tilt wheel (WM_MOUSEHWHEEL) with software debounce and zero-overhead WM_MOUSEMOVE passthrough, dispatching to virtual desktop switching, Task View, Show Desktop, or Wira Desk actions via a dedicated Mouse settings pane with preset action dropdowns | Standard productivity mice omit on-board EEPROM macro storage, forcing users into heavy vendor companion suites (>500MB disk, hundreds of MBs RAM, multiple background processes) to customize auxiliary inputs; Wira Desk delivers native, zero-overhead desktop navigation via standard Win32 hooks (<2MB static RAM) without third-party vendor bloat | Unreleased |
+| 2026-09-10 | Added driverless mouse desktop navigation (CAP-17, FR-30, FR-31, FR-32): intercepts standard auxiliary mouse buttons (Thumb Button 1/2 via WM_XBUTTONDOWN) and horizontal tilt wheel (WM_MOUSEHWHEEL) with software debounce and zero-overhead WM_MOUSEMOVE passthrough, dispatching to virtual desktop switching, Task View, Show Desktop, or Wira Desk actions via a dedicated Mouse settings pane with preset action dropdowns | Standard productivity mice omit on-board EEPROM macro storage, forcing users into heavy vendor companion suites (>500MB disk, hundreds of MBs RAM, multiple background processes) to customize auxiliary inputs; Wira Desk delivers native, zero-overhead desktop navigation via standard Win32 hooks (<5MB static RAM, private bytes idle) without third-party vendor bloat | Unreleased |
 

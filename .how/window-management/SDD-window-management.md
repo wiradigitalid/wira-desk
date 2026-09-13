@@ -16,7 +16,7 @@ reviewed:
 
 ## Decision Summary
 
-The `window-management` component is built as an elevated background daemon container (`wiradesk.exe`) decomposed into four isolated logical components: `LC-hook-thread` (input boundary), `LC-worker-thread` (execution and cycling control), `LC-tray-controller` (shell lifecycle and health presentation), and `LC-arrangement-engine` (DPI-aware snap geometry). It executes instant, overlay-free same-application window cycling and screen arrangement with zero cloud telemetry and a static RAM footprint under 2 MB.
+The `window-management` component is built as an elevated background daemon container (`wiradesk.exe`) decomposed into four isolated logical components: `LC-hook-thread` (input boundary), `LC-worker-thread` (execution and cycling control), `LC-tray-controller` (shell lifecycle and health presentation), and `LC-arrangement-engine` (DPI-aware snap geometry). It executes instant, overlay-free same-application window cycling and screen arrangement with zero cloud telemetry and a static RAM footprint under 5 MB of private bytes, idle (DEC-027).
 
 The two most expensive architectural decisions reversed from naive desktop utility designs are:
 1. **Stateless live Z-order traversal over cached window trees (AD-3):** Maintaining an internal window tree model desynchronizes whenever users click, switch apps via Taskbar/Alt-Tab, or close background windows. Querying live OS state just-in-time via non-blocking kernel APIs on each keypress guarantees the traversal always reflects the desktop as it is, at a cost bounded by the hook budget in NFR-2 rather than by a figure asserted here.

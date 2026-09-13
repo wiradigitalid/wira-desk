@@ -3,7 +3,7 @@
 ## Foundation
 
 Wira Desk is an ultra-lightweight Windows desktop utility running silently in the background. To preserve strict resource efficiency, the application is split across two decoupled binaries:
-- `wiradesk.exe`: Ultra-lightweight background daemon with no GUI interface (<2MB RAM).
+- `wiradesk.exe`: Ultra-lightweight background daemon with no GUI interface (<5MB private bytes, idle — DEC-027).
 - `wiradesk-settings.exe`: Native-themed interactive UI window for First-Run Onboarding and on-demand Settings configuration running modern Fluent 2 Mica styling.
 
 ## Information Architecture

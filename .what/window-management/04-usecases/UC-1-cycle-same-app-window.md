@@ -9,9 +9,19 @@ created: '2026-08-21'
 
 # UC-1 — Cycle to the next window of the same app on this monitor
 
+## Scope
+
+This use case covers the **blind cycle** — the rapid tap — which is and remains locked to the active
+physical monitor, exactly as the title says. Holding the same chord past the configured delay opens
+the **visual switcher** instead, which enumerates candidates across all physical monitors on the
+current virtual desktop and activates the chosen window in place (DEC-026). That is a different path
+with a different monitor boundary and it has no use case of its own yet; do not read this one as
+covering it.
+
 ## Trigger
 
-User presses the configured keyboard cycling shortcut (default `Win + \`` or custom modifier chord).
+User presses the configured keyboard cycling shortcut (default `Win + \`` or custom modifier chord)
+and releases it before the visual-switcher hold delay elapses.
 
 ## Precondition
 

@@ -225,6 +225,6 @@ graph LR
 
 | Component | Target | Hard Limit |
 | --- | --- | --- |
-| `wiradesk.exe` (daemon, runtime) | < 2MB | < 10MB |
+| `wiradesk.exe` (daemon, runtime) | < 5MB private, idle | < 10MB |
 | `wiradesk.exe` (binary size on disk) | 250KB–400KB | < 500KB |
 | `wiradesk-settings.exe` (runtime) | Unconstrained | Reasonable (episodic process; not remeasured since the Slint migration — [NEEDS CONFIRMATION]) |

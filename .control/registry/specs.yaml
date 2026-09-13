@@ -1185,7 +1185,227 @@ specs:
           - persistence::tests::visual_hold_delay_outside_its_bounds_is_rejected
           - app::tests::general_pane_exposes_the_visual_switcher_toggle
 
-
-
-
-
+  # Second-opinion peer review (Opus 5, 2026-09-13): structure + prose + edge-case-hunter pass over
+  # SPEC.md and all tickets, verified line by line against the code in this working tree rather than
+  # against the draft's own claims. It was NOT a clean pass. Found and fixed in place:
+  #   (1) the daemon reload root cause was wrong. `HookSnapshot` already carries `visual_enabled` and
+  #       `hook.rs:627` already gates on it -- but that gate feeds only `check_switcher_deadline`,
+  #       which is `#[allow(dead_code)]` with no production caller, while the live arming path is
+  #       `worker.rs::execute_cycle` at a hardcoded 150 ms with no gate at all. The existing test
+  #       `reload_with_visual_switcher_disabled_leaves_blind_cycling_unchanged` is green against the
+  #       bug the owner reported. Retargeted, and the ticket now requires the guard be seen red.
+  #   (2) cross-monitor collection contradicts the Spatial Preservation Invariant (FR-2, CAP-7,
+  #       domain-model.md:55), which names exactly one deliberate crossing. A `DEC-` is mandatory and
+  #       was not proposed. SPEC-14-03 is now blocked on it.
+  #   (3) Shift+cycle entry is impossible without changing `match_shortcut`'s exact-equality contract
+  #       (hook.rs:1023). `Cycle` is first in the declared order, so a Shift-insensitive match silently
+  #       shadows any chord differing only by Shift -- e.g. the default `ctrl+alt+shift+s` stack chord.
+  #       Collides with BR-6/DEC-009 and with DEC-003. SPEC-14-04 part 1 is now blocked on a `DEC-`.
+  #   (4) the "PopupHC" root cause was asserted, not diagnosed. `evaluate_facts` already excludes tool
+  #       windows, ghosts, shell surfaces, cloaked and iconic windows, and `WindowFacts` carries neither
+  #       the rect nor the style bits the draft's filter keyed on. Now gated on `wdi-systematic-debugging`.
+  #   (5) 320x240 cards overflow a 768-tall work area: `compute_grid` derives columns from width but
+  #       pins rows at MAX_ROWS=3 without ever reading height, and the existing guard sweeps four widths
+  #       at a single 1080 height. A height bound and a wider test matrix are now required.
+  #   (6) the Card 3 divider fix (`x: 0; width: 100%`) is a no-op in Slint -- a layout owns its
+  #       children's geometry. The real cause is `padding: 16px` on the parent VerticalLayout.
+  #   (7) measurement errors corrected: the preview rect is 232x144, not ~224x124; HEADER_H is 28, not 40.
+  #   (8) ticket 02 bundled a Slint text wrap with a daemon timer gate -- two Product Components in one
+  #       registry row. Split into SPEC-14-02 (settings) and SPEC-14-05 (window-management).
+  #   (9) two owner notes -- the red tray icon, and 3.6 MB runtime memory against the SRS's "under 2 MB"
+  #       claim -- were dropped without trace. Both are questions, not defects; recorded in SPEC.md and
+  #       routed to `wdi-question` rather than silently omitted.
+  #
+  # `spec_reviewed` is OWED, not skipped, and `review-trace` stays RED until it lands. Same reason
+  # SPEC-13's note gives: the reviewed content is uncommitted, so stamping against current HEAD would
+  # name a sha predating every edit reviewed -- the rubber stamp SPEC-11's note warns about. Stamp with
+  # the sha of the commit that lands these edits. Two `DEC-` records are owed before SPEC-14-03 and
+  # SPEC-14-04 may ship; see SPEC.md "Decisions owed".
+  #
+  # `fr:` and every ticket's `satisfies:` stay empty for the reason SPEC-13's note records: the visual
+  # switcher still has no requirement in the corpus. SPEC-14 adds to that debt -- cross-monitor
+  # candidates and Shift entry are both new promises -- and SPEC.md "Corpus debt carried, not
+  # discharged" lists the places that now read as load-bearing staleness (SRS:53 out-of-scope, SRS:22
+  # "under 2 MB", CAP-1 out-of-scope, UC-1's "on this monitor"). Owner's call at G2.
+  # Second peer-review pass (Opus 5, 2026-09-13), post-DEC-026, lenses [structure, prose,
+  # edge-case-hunter]. DEC-026 clears both blockers the first pass raised, and the tickets are now
+  # ready -- but the decision's four clauses did not survive contact with the code unassisted. Eight
+  # sites turn the stated intent into a silent failure, five of them with no test that would notice.
+  # All eight are settled in DEC-026 "Boundaries settled" (B-1..B-8) and carried into the tickets:
+  #   B-1 clause 2 bans Shift inside the CYCLE chord, which does nothing about other actions' Shift
+  #       chords. A shift-relaxed match still shadows the shipped default `ctrl+alt+shift+s` stack
+  #       chord when cycle is `ctrl+alt+s`, and config.rs:196-206 compares parsed Shortcuts so it
+  #       raises nothing. Resolved as a two-pass match: exact over 16 slots, relaxed over the 2
+  #       Cycle slots only on a None.
+  #   B-2 the derived Shift variant is never reservation-checked. `ctrl+escape` is NOT catalogued
+  #       and is a legal cycle binding; `ctrl+shift+escape` IS, as Immutable/"Task Manager". Binding
+  #       cycle to ctrl+escape would swallow the user's Task Manager escape hatch -- the exact
+  #       invariant DEC-003 exists to hold. Reachable, not theoretical.
+  #   B-3 daemon::config::validate refuses a reload WHOLESALE. Enforcing the Shift ban there would
+  #       cost a pre-DEC-026 user every other setting. Ban is save-time only; legacy chords reload,
+  #       match exactly, and get no relaxed variant.
+  #   B-4 clause 2 promises a "backward blind cycle" that does not exist -- no Command::CyclePrev,
+  #       cycle_order has one direction. Reading direction from SWITCHER_LAST_CYCLE_MODS is a race
+  #       the Hook loses: it overwrites that atomic on every cycle while commands queue in the ring,
+  #       so a second press reverses a command ALREADY IN FLIGHT. Today it only mis-arms a timer,
+  #       which is why nothing caught it. Direction must ride the ring as its own byte.
+  #   B-5 hook.rs:628 and worker.rs:497 both capture rt.mods wholesale. With Shift in switcher_mods,
+  #       releasing Alt while holding Shift hangs the overlay open and the watchdog will not rescue
+  #       it. With Shift in SWITCHER_CHORD_MODS, are_chord_modifiers_down requires it still down at
+  #       fire time, so releasing Shift early silently yields no overlay at all. Both mirror cases,
+  #       both one line, neither previously named.
+  #   B-6 open_visual_switcher hardcodes SWITCHER.open(..., 0). Backward entry must open at len-1.
+  #       Until B-4 lands a Shift-held chord runs a FORWARD blind activation and then opens an
+  #       overlay claiming to be backward -- B-4 and B-6 ship together or neither ships.
+  #   B-7 evaluate_spatial tests the monitor FIRST and returns early, rejecting on
+  #       origin_monitor == None before the virtual-desktop test is reached. "Drop the monitor half"
+  #       is a scope parameter, not a deleted branch; done naively it rejects every candidate where
+  #       the origin monitor cannot be resolved.
+  #   B-8 Option A's visible consequence -- after a cross-monitor commit the NEXT blind cycle locks
+  #       to the new monitor -- is correct behaviour and the likeliest false bug report. Now tested.
+  #
+  # Also changed in this pass: SPEC-14-04 lost `depends_on: [SPEC-14-03]` (no real dependency; the
+  # shared SWITCHER.open call site is a sequencing concern), SPEC-14-03's part 2 was made severable
+  # from part 1 so the diagnosis gate cannot hold the cross-monitor work, and SPEC-14-05 gained the
+  # reload-between-arming-and-firing case -- gating execute_cycle closes the door on new arming only,
+  # while install_config_snapshot never kills an armed TIMER_SWITCHER_HOLD.
+  #
+  # Owner answered four of these on 2026-09-13, all recorded in DEC-026 (and DEC-027 for the last):
+  #   - backward BLIND cycle IS wanted, so B-4 lands at full scope: Command::CyclePrev as its own
+  #     ring byte AND a direction on cycle_order. Two sites compare Command::Cycle by value and are
+  #     silent no-ops if not widened with it -- hook.rs:625 (which guards the ENTIRE arming block, so
+  #     a Shift chord would cycle backward correctly and never open the overlay) and worker.rs:99.
+  #   - card geometry proposed by review and accepted: CARD_W 320, CARD_H 212, HEADER_H stays 28, and
+  #     all of them become LOGICAL units at 96 DPI scaled by the origin monitor. Driven by aspect
+  #     ratio (today's 232x144 preview is 1.61:1 and letterboxes every 16:9 window; 312x176 is 1.773)
+  #     and by a live defect: overlay.rs:504-505 already scales icon and font by DPI while HEADER_H
+  #     stays physical 28, so the icon computes to 28px at 175% (zero margin) and 32px at 200% -- it
+  #     overflows the header today. Scaling the geometry fixes that by construction.
+  #   - a cycle chord whose Shift variant is RESERVED BY WINDOWS is refused, not silently relaxed.
+  #   - mouse gains NO backward cycle; MouseActionPreset is unchanged.
+  # Still owner's call, not blocking: clause 3's undiagnosed subject -- all three things it names
+  # (zero extent, empty title, popup host) are WindowFacts contract changes, not filter rules.
+  - id: SPEC-14
+    release: "0.4.0"
+    prd: [wira-desk]
+    size: M
+    status: open
+    depends_on: [SPEC-13]
+    spec_folder: .scratch/spec-14-visual-switcher-refinements-and-settings-polish/
+    fr: []
+    tickets:
+      - id: SPEC-14-01
+        title: About pane Card 3 inline publisher link and full-bleed dividers
+        spec_folder: .scratch/spec-14-visual-switcher-refinements-and-settings-polish/
+        component: settings
+        satisfies: []
+        depends_on: []
+        tests:
+          - app::tests::about_pane_renders_inline_publisher_link_with_open_icon
+          - app::tests::about_pane_clicking_inline_publisher_opens_url
+          - app::tests::about_pane_standalone_publisher_row_is_gone
+          - app::tests::about_pane_card_dividers_span_the_card
+          - app::tests::about_pane_attribution_line_wraps_without_horizontal_overflow
+          - app::tests::about_pane_focus_order_survives_the_removed_publisher_row
+      - id: SPEC-14-02
+        title: General pane hold-delay caption wraps
+        spec_folder: .scratch/spec-14-visual-switcher-refinements-and-settings-polish/
+        component: settings
+        satisfies: []
+        depends_on: []
+        tests:
+          - app::tests::visual_hold_delay_description_wraps_without_horizontal_scroll
+          - app::tests::every_caption_in_the_general_pane_sets_a_wrap_mode
+      - id: SPEC-14-03
+        title: Visual switcher cross-monitor candidates, and diagnosis of the helper-window cards
+        spec_folder: .scratch/spec-14-visual-switcher-refinements-and-settings-polish/
+        component: window-management
+        satisfies: []
+        depends_on: []
+        # Part 1 unblocked by DEC-026 clause 1 (accepted 2026-09-13). Part 2 -- the helper-window
+        # filter -- is still gated on wdi-systematic-debugging and is severable: it may land in a
+        # later spec without holding part 1. DEC-026 clause 3 authorises the sanitisation but names
+        # no diagnosed subject, and all three subjects it does name (zero extent, empty title,
+        # popup host) are WindowFacts contract changes rather than filter rules.
+        blocked_on: [diagnosis-popup-helper-windows]
+        tests:
+          - context::tests::same_monitor_scope_reproduces_every_existing_spatial_decision
+          - context::tests::any_monitor_scope_excludes_nothing_when_the_origin_monitor_is_unavailable
+          - worker::tests::visual_switcher_collects_candidates_across_all_physical_monitors
+          - worker::tests::visual_switcher_still_excludes_other_virtual_desktops
+          - worker::tests::blind_cycle_stays_locked_to_the_active_monitor
+          - worker::tests::a_cross_monitor_commit_activates_in_place_and_moves_no_window
+          - worker::tests::the_blind_cycle_after_a_cross_monitor_commit_locks_to_the_new_monitor
+          - switcher::tests::switcher_candidate_set_diverges_from_blind_cycle_on_monitor_boundary
+          - switcher::thumbnail::tests::every_registration_is_unregistered_on_dismissal
+          - switcher::thumbnail::tests::a_failed_registration_degrades_one_card_not_the_overlay
+      - id: SPEC-14-04
+        title: Visual switcher Shift-held backward cycling
+        spec_folder: .scratch/spec-14-visual-switcher-refinements-and-settings-polish/
+        component: window-management
+        satisfies: []
+        # Was depends_on: [SPEC-14-03]. Nothing in part 1 or part 2 needs cross-monitor collection;
+        # the only real coupling is that both tickets edit the SWITCHER.open(...) call site in
+        # open_visual_switcher, which is a sequencing concern, not a dependency. Part 2 (geometry)
+        # is independent of both and may ship first.
+        depends_on: []
+        # Unblocked by DEC-026 clause 2 (accepted 2026-09-13). The buildable shape is DEC-026
+        # sections B-1..B-6, not clause 2's prose alone: clause 2's ban on Shift inside the cycle
+        # chord does not prevent a shift-relaxed match from shadowing OTHER actions' Shift chords.
+        blocked_on: []
+        tests:
+          - hook::tests::the_exact_pass_resolves_before_any_shift_relaxed_pass
+          - hook::tests::a_shift_relaxed_cycle_never_shadows_the_default_stack_chord
+          - hook::tests::a_shift_variant_never_shadows_another_configured_chord
+          - hook::tests::cycle_chord_with_shift_held_enters_the_switcher_backward
+          - hook::tests::shift_is_cleared_from_the_switcher_chord_modifiers
+          - hook::tests::releasing_one_chord_modifier_while_shift_is_held_commits_the_overlay
+          - worker::tests::releasing_shift_during_the_hold_window_still_opens_the_overlay
+          - worker::tests::a_backward_entry_opens_on_the_last_card
+          - worker::tests::queued_cycle_and_cycle_prev_each_keep_their_own_direction
+          - cycling::tests::backward_cycle_order_is_the_forward_rotation_unreversed
+          - commands::tests::cycle_prev_is_throttled_exactly_as_cycle_is
+          - persistence::tests::a_cycle_chord_containing_shift_is_refused_at_save
+          - persistence::tests::a_cycle_chord_whose_shift_variant_is_reserved_is_refused
+          - config::tests::a_legacy_shift_bearing_cycle_chord_reloads_without_rejecting_the_config
+      - id: SPEC-14-05
+        title: Worker honours visual_enabled and visual_hold_delay_ms
+        spec_folder: .scratch/spec-14-visual-switcher-refinements-and-settings-polish/
+        component: window-management
+        satisfies: []
+        depends_on: []
+        tests:
+          - config::tests::worker_snapshot_carries_the_visual_switcher_settings
+          - worker::tests::a_cold_start_snapshot_carries_the_on_disk_switcher_settings
+          - worker::tests::disabled_visual_switcher_never_arms_the_hold_timer
+          - worker::tests::enabled_visual_switcher_arms_with_the_configured_hold_delay
+          - worker::tests::an_out_of_range_hold_delay_is_clamped_before_it_reaches_settimer
+          - worker::tests::a_reload_between_arming_and_firing_does_not_open_the_overlay
+      # Split out of SPEC-14-04 part 2 on 2026-09-13 after the owner supplied a screenshot of their
+      # own Alt+Tab (4K at 150%). That part was "raise two constants and add a height bound"; the
+      # screenshot showed Windows uses UNIFORM TILE HEIGHT WITH PER-TILE WIDTH from the source
+      # window's aspect ratio, which a fixed CARD_W x CARD_H grid cannot produce. It is now a layout
+      # engine replacement: compute_grid's (cols, rows, per_page) gives way to row packing, page
+      # capacity becomes a RESULT of packing rather than an input, and selection::select_up/down --
+      # which compute index +/- cols at selection.rs:51-52 -- must become geometric. That last one
+      # changes SPEC-13-02's shipped, accepted spatial navigation and is the largest hidden cost in
+      # SPEC-14. Bundling it with SPEC-14-04's keyboard matching is the same mistake that split
+      # ticket 02. Numbers and reasoning: DEC-026 "Card geometry and DPI".
+      - id: SPEC-14-06
+        title: Aspect-ratio tiles and height-bounded row packing
+        spec_folder: .scratch/spec-14-visual-switcher-refinements-and-settings-polish/
+        component: window-management
+        satisfies: []
+        depends_on: []
+        tests:
+          - switcher::layout::tests::tile_width_follows_the_source_window_aspect_ratio
+          - switcher::layout::tests::every_card_on_a_page_shares_the_scaled_card_height
+          - switcher::layout::tests::an_extreme_aspect_ratio_is_clamped_into_band
+          - switcher::layout::tests::an_unreadable_or_zero_height_rect_falls_back_to_sixteen_by_nine
+          - switcher::layout::tests::no_packed_row_ever_exceeds_the_content_width
+          - switcher::layout::tests::rows_derive_from_work_area_height_on_short_displays
+          - switcher::layout::tests::row_count_is_never_zero
+          - switcher::layout::tests::total_pages_comes_from_packing_and_no_page_is_empty
+          - switcher::layout::tests::geometry_scales_with_monitor_dpi
+          - switcher::layout::tests::candidates_beyond_one_page_paginate_rather_than_shrink
+          - switcher::selection::tests::up_and_down_pick_the_greatest_horizontal_overlap_across_ragged_rows

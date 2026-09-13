@@ -555,7 +555,7 @@ defects:
     owner: repo owner
 
   - id: DEF-11
-    title: The daemon's memory is over the budget FR-9 promises, measured on a stale build
+    title: The daemon's memory budget has never been measured on a fresh idle release build
     status: open
     severity: low
     component: window-management
@@ -564,8 +564,9 @@ defects:
     found_by: Smoke test for mandate DEC-017, 2026-09-08
     tests: []
     summary: >-
-      `FR-9`'s `proof` reads "The background daemon runs with an active system tray icon while
-      consuming under 2 MB of static RAM." The running daemon was measured at
+      `FR-9`'s `proof` read, BEFORE `DEC-027` raised it, "The background daemon runs with an
+      active system tray icon while consuming under 2 MB of static RAM." The running daemon was
+      measured at
       `WorkingSet64 = 31,182,848` bytes (~29.7 MB) and `PrivateMemorySize64 = 4,214,784` bytes
       (~4.0 MB). Even the private-bytes figure, which is the fairer of the two, is double the
       promise; the working set is fifteen times it.
@@ -579,15 +580,19 @@ defects:
       user-visible fault -- nobody has reported the daemon being heavy -- but it is exactly the kind
       of number that gets quoted in a comparison against another tool.
     fix_direction: >-
-      Two things to settle, and the first is the owner's rather than an engineering task. (1) Decide
-      what "static RAM" means and whether 2 MB is still the intended budget: private bytes, working
-      set, and the figure quoted in a README are three different numbers, and `FR-9`'s proof does
-      not say which it meant. (2) MEASURE THE RIGHT BINARY before acting: this reading came from a
-      daemon built 2026-08-28, three weeks before the code it is being judged against, and from a
-      process that had been resident for eight hours. A fresh idle measurement may differ
-      substantially. MUST NOT be "fixed" by editing the number in `FR-9` to match whatever is
-      measured -- that is the corpus learning to agree with whatever was built, and the promise
-      predates the measurement.
+      HALF ANSWERED by `DEC-027` (2026-09-13), half still open. (1) SETTLED: the owner raised the
+      budget to 5 MB and fixed the metric as private bytes on a release build, idle, with the
+      overlay closed -- working set is explicitly not the governed number. The reason recorded is
+      that the visual switcher (SPEC-12, SPEC-13) added an overlay, a GDI buffer, and per-card DWM
+      thumbnails that the 2 MB figure predates, NOT that 3.6 MB was observed. That distinction is
+      what keeps this from being the failure the original wording forbade. (2) STILL OPEN, and this
+      is now the whole of the defect: MEASURE THE RIGHT BINARY. The 4.0 MB private reading came from
+      a daemon built 2026-08-28, three weeks before the code it was judged against, resident for
+      eight hours; the 3.6 MB figure is manual observation, not an instrumented run. 5 MB is a
+      budget set from reasoning, not evidence. Nothing in the workspace asserts any memory ceiling,
+      so the new number is exactly as unenforced as the old one. The standing prohibition is
+      unchanged and still binds every agent: this MUST NOT be closed by editing a number to match a
+      measurement.
     owner: repo owner
 
   - id: DEF-12

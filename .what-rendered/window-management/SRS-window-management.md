@@ -13,7 +13,7 @@ The `window-management` component delivers instant, overlay-free same-applicatio
 
 ## Why
 
-Users manage multiple windows within the same application (multiple browser sessions, code editors, document drafts) and expect immediate, muscle-memory cycling without the cognitive noise of full task switchers or multi-monitor focus jumps. Isolating core window cycling and snapping inside a dedicated, headless daemon container protects input latency (<10 ms hook duration) and guarantees a static RAM footprint under 2 MB.
+Users manage multiple windows within the same application (multiple browser sessions, code editors, document drafts) and expect immediate, muscle-memory cycling without the cognitive noise of full task switchers or multi-monitor focus jumps. Isolating core window cycling and snapping inside a dedicated, headless daemon container protects input latency (<10 ms hook duration) and guarantees a static RAM footprint under 5 MB of private bytes, idle (NFR-1, DEC-027).
 
 
 ## Actor Register
@@ -47,7 +47,7 @@ Rendered from `usecases.yaml`.
 - Must execute live, stateless Z-order window enumeration via `EnumWindows` on every keypress without caching Z-order (AD-3).
 - Must restrict window enumeration to the non-blocking kernel APIs named in the spine's sterilization convention (`IsWindowVisible`, `GetWindowLongPtrW`, `GetWindowThreadProcessId`, `QueryFullProcessImageNameW`, `GetClassNameW`) and never a blocking `SendMessage` or `GetWindowText`, executing off the hook thread on the worker thread (NFR-4, AD-2).
 - Must run with elevated Administrator privileges via application manifest (`requireAdministrator`) to guarantee UIPI focus control (FR-8).
-- Must maintain a static RAM footprint under 2 MB idle (NFR-1) and release binary size under 500 KB (NFR-5).
+- Must maintain a static RAM footprint under 5 MB of private bytes idle, hard ceiling 10 MB (NFR-1, DEC-027), and release binary size under 500 KB (NFR-5).
 - Must not watch configuration files on disk; configuration reload occurs exclusively via explicit `WM_APP_RELOAD_CONFIG` IPC message (BR-1, AD-5).
 - Must bypass shortcut interception when foreground window is a known virtual machine or remote desktop client (FR-3, AD-6).
 - Must never resolve an arrangement target that belongs to Wira Desk itself; the chord is consumed and nothing moves, rather than being passed back to Windows or retargeted at another window (FR-14, LBR-WM-6, DEC-006).
@@ -59,7 +59,7 @@ Rendered from `usecases.yaml`.
 
 ## Non-Goals
 
-- Providing visual switcher HUDs, thumbnail previews, or overlay window task bars (explicitly invisible switching).
+- Overlay window task bars, or any always-present switching surface. The **blind cycle** (rapid tap) remains explicitly invisible and overlay-free. A thumbnail HUD is no longer a non-goal: the hold-activated visual switcher shipped in SPEC-12 and SPEC-13 and is a deliberate, separate surface reached only by holding the chord past a configurable delay (DEC-026). It has no FR or capability of its own yet — see the corpus debt SPEC-14 records.
 - Modifying keyboard shortcuts or configuring onboarding tutorial settings (delegated to `settings` component).
 - Automated tiling window management (e.g. auto-tiling tree layouts like i3 or Komorebi).
 - Cross-machine cloud synchronization or remote telemetry collection.
@@ -189,7 +189,7 @@ A disabled action's chord never enters this lifecycle at all: it is excluded at 
 #### Invariants
 
 - **Live Traversal Invariant:** Window focus state and Z-order stacking must never be cached between shortcut keypresses; each cycle command must traverse live desktop state (AD-3).
-- **Spatial Preservation Invariant:** Target candidate windows for cycling or snapping must reside on the exact same physical monitor and virtual desktop as the foreground window (FR-2, CAP-7). A monitor-move command is the one deliberate crossing of the monitor half of this boundary; it still must not cross the virtual desktop half, and moving a window never changes which desktop shows it (FR-23, AD-9).
+- **Spatial Preservation Invariant:** Target candidate windows for cycling or snapping must reside on the exact same physical monitor and virtual desktop as the foreground window (FR-2, CAP-7). The **virtual desktop half is absolute and has no exception**: no path may ever reach a window on another desktop, and moving a window never changes which desktop shows it (FR-23, AD-9). The monitor half has exactly **two** deliberate crossings, and no more may be added without a `DEC-`: (1) a monitor-move command, which moves a window across the boundary; and (2) the **hold-activated visual switcher**, which *enumerates* candidates across every physical monitor on the current desktop and activates the chosen one **in place**, moving nothing (DEC-026, Option A). The blind cycle — the rapid tap — is not a crossing and stays locked to the active monitor, which is what keeps the muscle-memory path predictable. Both crossings are enumeration-or-movement of the monitor half only; neither touches the desktop half.
 - **Proportional Placement Invariant:** A window moved between monitors must be placed by the share of the destination work area it occupied on the source, never by copying its pixel width and height — otherwise an arrangement dissolves the moment the two monitors differ in size or display scaling (FR-23, DEC-007).
 - **Live Monitor Set Invariant:** The set of attached monitors must be enumerated fresh on every monitor-move command and must never be cached between keypresses. An `HMONITOR` is a handle rather than an identity, and a cached list survives an unplug that the handle does not (AD-14).
 - **One Chord, One Action Invariant:** No two actions may be reachable by the same chord. When configuration says otherwise, the chord belongs to the first action in the fixed precedence order and the later action is unbound rather than ambiguous (BR-6, DEC-009). A `disabled` action (`BR-9`) is a different concept reaching the same registration-time exclusion: it never enters the precedence resolution at all, having no chord to contend with in the first place, so this invariant's collision handling needs no change to also exclude disabled rows.
@@ -330,9 +330,19 @@ stateDiagram-v2
 
 ### UC-1 — Cycle to the next window of the same app on this monitor
 
+#### Scope
+
+This use case covers the **blind cycle** — the rapid tap — which is and remains locked to the active
+physical monitor, exactly as the title says. Holding the same chord past the configured delay opens
+the **visual switcher** instead, which enumerates candidates across all physical monitors on the
+current virtual desktop and activates the chosen window in place (DEC-026). That is a different path
+with a different monitor boundary and it has no use case of its own yet; do not read this one as
+covering it.
+
 #### Trigger
 
-User presses the configured keyboard cycling shortcut (default `Win + \`` or custom modifier chord).
+User presses the configured keyboard cycling shortcut (default `Win + \`` or custom modifier chord)
+and releases it before the visual-switcher hold delay elapses.
 
 #### Precondition
 

@@ -147,8 +147,9 @@ functional:
       The system can maintain its background execution lifecycle exclusively through native Win32
       APIs and an `ITaskbarList` tray icon without linking external third-party GUI frameworks.
     proof: >-
-      The background daemon runs with an active system tray icon while consuming under 2 MB of
-      static RAM.
+      The background daemon runs with an active system tray icon while consuming under 5 MB of
+      static RAM, measured as private bytes on a release build when idle with the overlay closed
+      (DEC-027).
   - id: FR-10
     capability: CAP-9
     component: window-management
@@ -424,7 +425,7 @@ nonfunctional:
   - id: NFR-1
     goal: BG-2
     enforced_by: release profile and windows-sys crate choice
-    text: Daemon static RAM under 2 MB; hard ceiling 10 MB.
+    text: Daemon static RAM under 5 MB private bytes, idle; hard ceiling 10 MB (DEC-027).
   - id: NFR-2
     goal: BG-2
     enforced_by: hook thread priority and worker separation

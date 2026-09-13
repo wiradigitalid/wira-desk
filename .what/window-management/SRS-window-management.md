@@ -19,7 +19,7 @@ The `window-management` component delivers instant, overlay-free same-applicatio
 
 ## Why
 
-Users manage multiple windows within the same application (multiple browser sessions, code editors, document drafts) and expect immediate, muscle-memory cycling without the cognitive noise of full task switchers or multi-monitor focus jumps. Isolating core window cycling and snapping inside a dedicated, headless daemon container protects input latency (<10 ms hook duration) and guarantees a static RAM footprint under 2 MB.
+Users manage multiple windows within the same application (multiple browser sessions, code editors, document drafts) and expect immediate, muscle-memory cycling without the cognitive noise of full task switchers or multi-monitor focus jumps. Isolating core window cycling and snapping inside a dedicated, headless daemon container protects input latency (<10 ms hook duration) and guarantees a static RAM footprint under 5 MB of private bytes, idle (NFR-1, DEC-027).
 
 ## Actor Register
 
@@ -39,7 +39,7 @@ UC Catalogue — see `.control/registry/usecases.yaml`, rows where `component: w
 - Must execute live, stateless Z-order window enumeration via `EnumWindows` on every keypress without caching Z-order (AD-3).
 - Must restrict window enumeration to the non-blocking kernel APIs named in the spine's sterilization convention (`IsWindowVisible`, `GetWindowLongPtrW`, `GetWindowThreadProcessId`, `QueryFullProcessImageNameW`, `GetClassNameW`) and never a blocking `SendMessage` or `GetWindowText`, executing off the hook thread on the worker thread (NFR-4, AD-2).
 - Must run with elevated Administrator privileges via application manifest (`requireAdministrator`) to guarantee UIPI focus control (FR-8).
-- Must maintain a static RAM footprint under 2 MB idle (NFR-1) and release binary size under 500 KB (NFR-5).
+- Must maintain a static RAM footprint under 5 MB of private bytes idle, hard ceiling 10 MB (NFR-1, DEC-027), and release binary size under 500 KB (NFR-5).
 - Must not watch configuration files on disk; configuration reload occurs exclusively via explicit `WM_APP_RELOAD_CONFIG` IPC message (BR-1, AD-5).
 - Must bypass shortcut interception when foreground window is a known virtual machine or remote desktop client (FR-3, AD-6).
 - Must never resolve an arrangement target that belongs to Wira Desk itself; the chord is consumed and nothing moves, rather than being passed back to Windows or retargeted at another window (FR-14, LBR-WM-6, DEC-006).
@@ -50,7 +50,7 @@ UC Catalogue — see `.control/registry/usecases.yaml`, rows where `component: w
 
 ## Non-Goals
 
-- Providing visual switcher HUDs, thumbnail previews, or overlay window task bars (explicitly invisible switching).
+- Overlay window task bars, or any always-present switching surface. The **blind cycle** (rapid tap) remains explicitly invisible and overlay-free. A thumbnail HUD is no longer a non-goal: the hold-activated visual switcher shipped in SPEC-12 and SPEC-13 and is a deliberate, separate surface reached only by holding the chord past a configurable delay (DEC-026). It has no FR or capability of its own yet — see the corpus debt SPEC-14 records.
 - Modifying keyboard shortcuts or configuring onboarding tutorial settings (delegated to `settings` component).
 - Automated tiling window management (e.g. auto-tiling tree layouts like i3 or Komorebi).
 - Cross-machine cloud synchronization or remote telemetry collection.

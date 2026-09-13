@@ -36,6 +36,15 @@ dag:
     - SPEC-13-02
     - SPEC-13-03
     - SPEC-13-04
+- spec: SPEC-14
+  order:
+  - parallel:
+    - SPEC-14-01
+    - SPEC-14-02
+    - SPEC-14-03
+    - SPEC-14-04
+    - SPEC-14-05
+    - SPEC-14-06
 - spec: SPEC-2
   order:
   - parallel:

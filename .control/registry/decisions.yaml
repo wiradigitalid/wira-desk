@@ -586,6 +586,45 @@ decisions:
       build_target_dir: target
       ledger: .control/memlog/autopilot-DEC-025.md
 
+  - id: DEC-026
+    title: Cross-monitor visual switcher candidate collection, Shift backward cycling, and window eligibility refinement
+    status: accepted
+    file: decisions/DEC-026-cross-monitor-switcher-shift-cycle-and-window-eligibility.md
+    created: '2026-09-13'
+    touches:
+      - .control/decisions/DEC-026-cross-monitor-switcher-shift-cycle-and-window-eligibility.md
+      - .control/registry/decisions.yaml
+      - .what/window-management/03-domain/domain-model.md
+      - .scratch/spec-14-visual-switcher-refinements-and-settings-polish/SPEC.md
+      - crates/daemon/src/hook.rs
+      - crates/daemon/src/worker.rs
+      - crates/daemon/src/context/mod.rs
+      - crates/daemon/src/cycling/eligibility.rs
+      - crates/daemon/src/switcher/mod.rs
+      - crates/daemon/src/switcher/layout.rs
+      - crates/shared/src/commands.rs
+      - crates/shared/src/shortcut.rs
+      - crates/settings/src/persistence.rs
+      - crates/settings/ui/panes/general_pane.slint
+
+  - id: DEC-027
+    title: Daemon static RAM budget raised from 2 MB to 5 MB, with private bytes fixed as the metric
+    status: accepted
+    file: decisions/DEC-027-daemon-static-ram-budget-raised-to-5mb.md
+    created: '2026-09-13'
+    touches:
+      - .control/decisions/DEC-027-daemon-static-ram-budget-raised-to-5mb.md
+      - .control/registry/decisions.yaml
+      - .control/registry/goals.yaml
+      - .control/registry/requirements-wira-desk.yaml
+      - .control/registry/defects.yaml
+      - .what/window-management/SRS-window-management.md
+      - .how/window-management/SDD-window-management.md
+      - .how/settings/SDD-settings.md
+      - .how/_platform/ARCHITECTURE-SPINE.md
+      - .how/_platform/design-system.md
+
+
 
 
 

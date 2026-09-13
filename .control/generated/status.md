@@ -34,6 +34,11 @@ work_progress:
   tickets_done: 4
   tickets_total: 4
   work_progress: 100%
+- spec: SPEC-14
+  status: open
+  tickets_done: 0
+  tickets_total: 6
+  work_progress: 0%
 - spec: SPEC-2
   status: closed
   tickets_done: 2
@@ -94,8 +99,9 @@ work_progress:
   tickets_done: 1
   tickets_total: 1
   work_progress: 100%
-gate_readiness: 100%
-validators_red: []
+gate_readiness: 96%
+validators_red:
+- review-trace
 validators_skipped:
   custom-room-declared: the `.constitution/project/` room is empty, and that is a valid state — a generic
     rule MUST NOT be moved here just to give the room content

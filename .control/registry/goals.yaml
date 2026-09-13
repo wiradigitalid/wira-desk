@@ -26,7 +26,8 @@ goals:
   - id: BG-2
     text: >-
       Run as an invisible background utility with near-zero idle CPU and a
-      static RAM footprint under 2 MB for the daemon.
+      static RAM footprint under 5 MB of private bytes, idle, for the daemon
+      (raised from 2 MB by DEC-027 when the visual switcher landed).
   - id: BG-3
     text: >-
       Offer optional keyboard-driven window snapping without turning the product

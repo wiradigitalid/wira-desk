@@ -6,7 +6,7 @@
 
 Wira Desk is a lightweight, background Windows productivity utility that brings intuitive same-application window cycling (macOS-style `Win + backtick`) and driverless, zero-overhead mouse desktop navigation to Windows 11 and 10. Windows natively lacks any mechanism to cycle strictly among windows belonging to the current foreground process, forcing users into multi-app `Alt + Tab` switchers or taskbar hunting that breaks focus and disrupts spatial workflows across multi-monitor setups. Concurrently, standard multi-button productivity mice offer physical auxiliary controls (thumb buttons and tilt wheels) that default to basic browser navigation; unlocking them for desktop multitasking traditionally requires heavy, multi-process vendor companion suites that consume gigabytes of disk space, hundreds of megabytes of RAM, and run persistent background telemetry agents.
 
-Built in Rust with pure Win32 bindings (`windows-sys`), Wira Desk runs as an elevated tray daemon with an uncompromising resource budget of under 2 MB idle RAM and near-zero CPU usage. It performs instantaneous, overlay-free window cycling while preserving monitor boundaries and spatial context, and maps standard mouse inputs directly to virtual desktop switching and desktop navigation without third-party vendor bloat. Companion settings and onboarding operations are isolated into a separate process, ensuring the core input interception loop remains lightweight, rock-solid, and responsive.
+Built in Rust with pure Win32 bindings (`windows-sys`), Wira Desk runs as an elevated tray daemon with an uncompromising resource budget of under 5 MB of idle private-bytes RAM and near-zero CPU usage. It performs instantaneous, overlay-free window cycling while preserving monitor boundaries and spatial context, and maps standard mouse inputs directly to virtual desktop switching and desktop navigation without third-party vendor bloat. Companion settings and onboarding operations are isolated into a separate process, ensuring the core input interception loop remains lightweight, rock-solid, and responsive.
 
 Wira Desk establishes itself as the essential, invisible window and desktop navigation companion for power users on Windows—delivering effortless same-application switching and mouse-driven multitasking while honoring the speed, stability, and resource constraints demanded by modern high-performance desktop environments.
 
@@ -36,7 +36,7 @@ Key capabilities include:
 - **Pure Focus Switching Without Visual Noise:** Unlike `Alt + Tab` replacements or overlay switchers, Wira Desk displays no graphical interface during cycling. Focus shifts instantly beneath the user's fingers.
 - **Zero-Overhead Driverless Peripheral Navigation:** Intercepts standard USB HID mouse messages directly via the OS message stream, eliminating the need for vendor background agents, web-runtime services, or telemetry daemons.
 - **Spatial Preservation:** Window navigation stays bound to the current monitor by default, avoiding unexpected focus jumps across multi-display workspaces.
-- **Extreme Resource Discipline:** Written in Rust using raw `windows-sys` C-FFI rather than heavy COM runtimes or managed frameworks (such as Electron, .NET, or Python), keeping memory overhead under 2 MB.
+- **Extreme Resource Discipline:** Written in Rust using raw `windows-sys` C-FFI rather than heavy COM runtimes or managed frameworks (such as Electron, .NET, or Python), keeping memory overhead under 5 MB (DEC-027).
 - **UX Honesty for Unresponsive Windows:** Rather than silently skipping hung windows and masking application state, Wira Desk surfaces "Not Responding" windows directly to ensure predictable OS behavior.
 - **Full UIPI Compatibility:** Runs with required administrator privileges to seamlessly cycle into elevated windows (e.g., administrator terminals, Task Manager) without OS permission blocks.
 
@@ -58,7 +58,7 @@ Rendered from `.control/registry/goals.yaml`.
 
 ### BG-1 — Give Windows users macOS-style same-application window cycling that feels instant and stays on the current monitor and virtual desktop.
 
-### BG-2 — Run as an invisible background utility with near-zero idle CPU and a static RAM footprint under 2 MB for the daemon.
+### BG-2 — Run as an invisible background utility with near-zero idle CPU and a static RAM footprint under 5 MB of private bytes, idle, for the daemon (raised from 2 MB by DEC-027 when the visual switcher landed).
 
 ### BG-3 — Offer optional keyboard-driven window snapping without turning the product into a full window manager overlay.
 
@@ -66,7 +66,7 @@ Rendered from `.control/registry/goals.yaml`.
 
 ## Success Criteria
 
-Core daemon idle memory footprint remains strictly under 2 MB static working set RAM on Windows 10 and 11 across continuous 7-day workstation sessions.
+Core daemon idle memory footprint remains strictly under 5 MB of private bytes on Windows 10 and 11 across continuous 7-day workstation sessions. Private bytes, not working set: `DEC-027` fixed the metric after `DEF-11` read 29.7 MB working set against 4.0 MB private on the same process, and working set counts shareable pages the daemon does not own.
 
 ## Scope
 
