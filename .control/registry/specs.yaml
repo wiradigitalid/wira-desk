@@ -1291,6 +1291,10 @@ specs:
     size: M
     status: open
     depends_on: [SPEC-13]
+    spec_reviewed:
+      date: '2026-09-13'
+      sha: 'f7c2739'
+      lenses: [structure, prose, edge-case-hunter]
     spec_folder: .scratch/spec-14-visual-switcher-refinements-and-settings-polish/
     fr: []
     tickets:

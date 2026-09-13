@@ -99,17 +99,16 @@ work_progress:
   tickets_done: 1
   tickets_total: 1
   work_progress: 100%
-gate_readiness: 96%
-validators_red:
-- review-trace
+gate_readiness: 100%
+validators_red: []
 validators_skipped:
   custom-room-declared: the `.constitution/project/` room is empty, and that is a valid state — a generic
     rule MUST NOT be moved here just to give the room content
   review-trace: 'advisory — trace stale, re-run before the next gate or spec close: .how/_platform/ARCHITECTURE-SPINE.md
-    (changed at 5584de6, reviewed at 67d9fb5), .how/settings/SDD-settings.md (changed at 5584de6, reviewed
-    at 3b9d51c), .how/window-management/SDD-window-management.md (changed at 5584de6, reviewed at f989238),
+    (changed at f7c2739, reviewed at 67d9fb5), .how/settings/SDD-settings.md (changed at f7c2739, reviewed
+    at 3b9d51c), .how/window-management/SDD-window-management.md (changed at f7c2739, reviewed at f989238),
     .what/settings/SRS-settings.md (changed at 5584de6, reviewed at f989238), .what/window-management/SRS-window-management.md
-    (changed at 5584de6, reviewed at f989238)'
+    (changed at f7c2739, reviewed at f989238)'
 open_questions:
   blocking: 0
   assumptions: 31
